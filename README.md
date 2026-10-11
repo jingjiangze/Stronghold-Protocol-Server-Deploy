@@ -8,6 +8,12 @@
 
 执行顺序：**第 1 步创建仓库 → 第 2 步放默认配置 → 第 3 步配创空间 → 第 4 步推送部署 → 第 5 步验证。**
 
+> **还有一条更简单的路（第 5½ 步「零域名 · 零叠加层方案」）：** 线上清单 `/data/assets.json`
+> 已经写死了绝对 `https://weishucdn.jiangjiangze.icu/…` 地址，浏览器自己直取素材，字节不过容器。
+> 所以你可以**不装边缘层、也不绑自有域名**，容器里只跑游戏、直接监听 7860，用平台 `*.ms.show` 域名。
+> 默认的边缘层（nginx + sidecar 302）对 weishucdn 部署是**可选、且已审计出局**的；只有要做边缘注入 /
+> 多源实时兜底、或私有服没有 weishucdn 清单时才需要。下面两路都会写。
+
 ---
 
 ## 0. 你需要准备什么（信息清单）
@@ -19,11 +25,11 @@
 | ModelScope 账号 | ✅ | 当前使用 `jingjiangze`。没有就先注册。 |
 | ModelScope Access Token | ✅ | 形如 `ms-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`。创空间用它做 git 远程鉴权与重新部署。**不要用主密码**。 |
 | 游戏服务端代码 | ✅ | 上游 `sganggs/Stronghold-Protocol` 的 fork，或本仓库（本仓库 `Dockerfile` 假定 `server/ public/ data/ tools/` 在同目录，详见第 2 步）。 |
-| 素材 CDN 源 | ⚠️ 默认已给 | 容器不存素材字节，只做 302。默认两个源：`modelscope`（数据集镜像，公开）与 `r2`（`weishucdn.jiangjiangze.icu`）。默认 `sources.json` 已写好，见第 8 步。 |
+| 素材 CDN 源 | ⚠️ 默认已给 | 线上清单已写死绝对 `weishucdn.jiangjiangze.icu` 地址，浏览器直取，容器不存素材字节。**零叠加层方案**就用它；边缘层另给 `modelscope` 数据集镜像作 302 兜底源（见第 8 步与第 5½ 步）。 |
 | 创空间基础镜像 | ⚠️ | `node:22-alpine`。本项目是 Node 应用，**不需要** torch 镜像（`ubuntu22.04-py312-torch2.10.0-…` 也能跑但浪费）。 |
 | 硬件规格 | ⚠️ | `platform/2v-cpu-8g-mem`（免费 CPU，2 vCPU / 8 GB）。 |
 | 对外端口 | ⚠️ | **7860，硬锁**（`deploy_schema.json` 的 `port.const = 7860`；8080 已被平台进程占用，不能改）。 |
-| 对外域名 | ⚠️ | 平台分配 `https://jingjiangze-stronghold-protocol.ms.show/`，不能自定义。要自有域名需走 Cloudflare Worker 代理（见第 10 步）。 |
+| 对外域名 | ⚠️ | 平台分配 `https://jingjiangze-stronghold-protocol.ms.show/`，不能自定义。**最简方案直接用这个域名**即可（不绑自有域名），要塞进自有站点用 `iframe referrerpolicy="no-referrer"`（见第 5½ 步）。 |
 | 实例数 | 建议 | 1（免费档默认）。 |
 
 > 端口、镜像、硬件都改不了——它们是 ModelScope 创空间的平台约束，不是本项目的选择。
@@ -31,6 +37,9 @@
 ---
 
 ## 1. 架构总览（先看这个，下面每一步都对应它）
+
+> 下面是**边缘层（默认）**的拓扑。若走**零叠加层方案**（第 5½ 步），则没有 nginx 也没有 sidecar——
+> 游戏进程直接监听 7860 对外口，素材靠清单里的绝对 weishucdn 地址直取，容器里只剩一个进程。
 
 三个进程共用一个对外端口 `7860`，按路径分流：
 
@@ -47,6 +56,10 @@
 
 为什么这么分：创空间只给一个公网口（7860），所以 nginx 占住它，另外两个退到内部端口。这是与
 Stardust 的 compose 同构的设计（游戏 3120 / 素材解析器 3130 / 一个 nginx 在前面）。
+
+> **零叠加层拓扑（第 5½ 步）：** 只有一个游戏进程监听 `7860`，清单里的素材地址已是绝对
+> `https://weishucdn.jiangjiangze.icu/…`，玩家浏览器直接取字节。没有 nginx 分流、也没有 sidecar 302，
+> 部署面更小、出问题的点更少。
 
 ---
 
@@ -67,6 +80,10 @@ Stardust 的 compose 同构的设计（游戏 3120 / 素材解析器 3130 / 一�
 ---
 
 ## 3. 第二步：把默认配置放进你的服务端代码
+
+> **边缘层是可选的。** 下面这套（nginx + sidecar 302）适合要边缘注入 / 多源实时兜底、或私有服没有
+> weishucdn 清单的场景。若走**零叠加层方案**（第 5½ 步），**这 5 个文件一个都不用复制**——
+> 游戏直接监听 7860，素材靠清单里的绝对 weishucdn 地址。
 
 本仓库已经把边缘层的 5 个默认文件放在 `deploy/stardust/ms-edge/`，**逐字可用**：
 
@@ -126,8 +143,10 @@ cd ~/stronghold-server
 git remote add ms "https://oauth2:${MS_TOKEN}@www.modelscope.cn/studios/jingjiangze/Stronghold-Protocol.git"
 
 # 2) 提交默认配置（本机若开了 SSH 签字，构建/提交用一次性覆盖，避免 agent 缺失导致失败）
+#    边缘层：加 ms-edge + Dockerfile；零叠加层（见第 5½ 步）：只加 Dockerfile
 git add deploy/stardust/ms-edge Dockerfile
 git -c commit.gpgsign=false commit -m "deploy: 内置边缘层默认配置（ms-edge）"
+# git add Dockerfile && git -c commit.gpgsign=false commit -m "deploy: 零叠加层游戏服"
 
 # 3) 推到创空间的 git 远程（分支名看创空间默认分支，通常是 master）
 git push ms HEAD:master
@@ -156,13 +175,79 @@ wss://jingjiangze-stronghold-protocol.ms.show/ws
 预期：healthz 返回 200；素材请求返回 `302` 且 `Location` 指向 `sources.json` 里的某个 `base`；
 WebSocket 能握手。
 
+> **零叠加层方案的验收不同**：没有 nginx，直连游戏 7860；素材不靠 302，而是清单里的绝对
+> `weishucdn` 地址。把上面的第 2 条换成：
+> `curl -fsS https://…ms.show/data/assets.json | grep -c "https://weishucdn.jiangjiangze.icu"`（应 > 0）。
+
+---
+
+## 5½. 零域名 · 零叠加层方案（最简）
+
+这条是给「只想让游戏服跑起来、不折腾代理」的人。它**不申请自有域名、不套 Cloudflare Worker、也不装边缘层**，
+直接用平台分配的 `*.ms.show` 域名，容器里只跑游戏进程。前提：清单里的素材地址已经是绝对
+`https://weishucdn.jiangjiangze.icu/…`（线上就是）。**注意：不是「不绑 CDN」，而是不绑自有域名**——
+素材依旧走 weishucdn，只是不经过任何叠在游戏前面的代理。
+
+**为什么可行**
+
+- **素材不过容器，靠清单绝对地址**：玩家浏览器读 `/data/assets.json` 拿到的是完整
+  `https://weishucdn.jiangjiangze.icu/…` URL，自己直连 CDN 取字节。容器既不用存素材，也不用 302 转发——
+  边缘层的存在理由被清单直接抹掉了。
+- **`*.ms.show` 域名能直接进游戏**：平台 WAF 对浏览器 UA 放行 7860；但要塞进自有站点必须用
+  `<iframe referrerpolicy="no-referrer">`（直链会 302 到门户）。自定义 SNI / 自有域名在 WAF 层是默认证书，
+  接不通——所以本方案干脆不绑。
+
+**部署步骤**
+
+1. **准备一个只跑游戏的容器**：把服务端代码（`server/ public/ data/ tools/`）和下面这个极简 `Dockerfile`
+   放进创空间仓库即可，**不要**复制 `deploy/stardust/ms-edge/`。
+2. **极简 Dockerfile**（游戏直接监听 7860，不再经 nginx 分流）：
+
+   ```dockerfile
+   FROM node:22-alpine
+   WORKDIR /app
+   COPY package*.json ./
+   RUN npm ci --omit=dev
+   COPY server public data tools ./
+   ENV NODE_ENV=production \
+       PORT=7860 HOST=0.0.0.0
+   EXPOSE 7860
+   CMD ["node", "server/index.js"]
+   ```
+
+3. **确认素材地址是绝对 weishucdn URL**：部署前一行命令核对清单：
+
+   ```sh
+   curl -fsS https://jingjiangze-stronghold-protocol.ms.show/data/assets.json \
+     | grep -c "https://weishucdn.jiangjiangze.icu"
+   ```
+
+   若清单里是相对路径（旧版），要么把游戏配成带 `SP_ASSET_CDN` 基址，要么退回上面的边缘层——否则玩家会 404。
+
+4. **推送并点「重新部署」**：同第 5 步的 push 命令（只 `git add Dockerfile` 即可），push 后在控制台点「重新部署」。
+
+5. **把游戏塞进你的站点（不绑域名的关键）**：在自己的页面里用如下 iframe 内嵌，**必须带
+   `referrerpolicy="no-referrer"`**，否则 WAF 把直链 302 到 ModelScope 门户：
+
+   ```html
+   <iframe
+     src="https://jingjiangze-stronghold-protocol.ms.show/"
+     referrerpolicy="no-referrer"
+     allow="autoplay; fullscreen"
+     style="width:100%;height:80vh;border:0"></iframe>
+   ```
+
+**取舍**：零叠加层省掉了 nginx + sidecar 两个进程和一套源表，部署面更小、出问题的点更少；代价是你不能做边缘注入 /
+多源实时兜底（这些要靠清单本身带绝对地址）。**自己搭的私有服没有这份 weishucdn 清单**时，还是得用边缘层或另配
+`SP_ASSET_CDN`。本方案专为「用现成 weishucdn 清单」的场景。
+
 ---
 
 ## 7. 客户端怎么连
 
-- 页面与 WebSocket 都走 `https://jingjiangze-stronghold-protocol.ms.show/`（WSS 同域）。
-- 外部嵌入：用 `iframe` + `referrerpolicy="no-referrer"`，或直接走 Cloudflare Worker 代理（见第 10 步）。
-- 不能直接绑自有域名：平台 WAF 对未知 `Host` 返回 410，对带非 ModelScope `Referer` 的请求 302。
+- **最简（零叠加层）**：直接用平台域名 `https://jingjiangze-stronghold-protocol.ms.show/`（页面 / WebSocket 都走它，WSS 同域）。要塞进自有站点，用 `iframe referrerpolicy="no-referrer"`（见第 5½ 步）。
+- **边缘层 / 自有域名**：走 Cloudflare Worker 代理（本工作区 `arknights-gateway` 类做法，见第 10 步）。
+- 不能直接绑自有域名裸连：平台 WAF 对未知 `Host` 返回 410，对带非 ModelScope `Referer` 的请求 302——所以零叠加层干脆用 `*.ms.show` 域名 + iframe no-referrer。
 
 ---
 
@@ -227,10 +312,10 @@ ENV NODE_ENV=production \
 
 | 现象 | 原因 / 处理 |
 |---|---|
-| 构建失败，日志报 `nginx -t` 错 | `sources.json` 渲染不出 `sources-nginx.conf`，或 `nginx.conf` 有语法错。本地先 `node deploy/stardust/ms-edge/render-nginx.mjs /tmp/t.conf && nginx -t -c deploy/stardust/ms-edge/nginx.conf` 复现。 |
+| 构建失败，日志报 `nginx -t` 错 | **只在边缘层出现**：`sources.json` 渲染不出 `sources-nginx.conf`，或 `nginx.conf` 有语法错。本地先 `node deploy/stardust/ms-edge/render-nginx.mjs /tmp/t.conf && nginx -t -c deploy/stardust/ms-edge/nginx.conf` 复现。零叠加层没有 nginx。 |
 | 容器起不来、restart 循环 | 旧镜像继续服务是预期保护；看构建日志，别急着强推。 |
-| 素材 404 | 命中了 `exceptions` 没覆盖的被审核拒收的路径，或 `order` 里的源挂了。查 `sources.json` 覆盖率。 |
-| 玩家连不上自有域名 | 平台 WAF 拦了：用 Cloudflare Worker 代理，或直接用 `*.ms.show` 域名 + `iframe no-referrer`。 |
+| 素材 404 | 零叠加层：清单地址不是绝对 weishucdn URL（旧版相对路径），或 weishucdn 挂了；边缘层：命中了 `exceptions` 没覆盖的被审核拒收的路径，或 `order` 里的源挂了。查 `sources.json` 覆盖率。 |
+| 直链打开跳到 ModelScope 门户 | WAF 把裸 `*.ms.show` 直链 302 到门户。塞进自有站点必须 `iframe referrerpolicy="no-referrer"`；自定义域名在 WAF 层是默认证书，接不通。 |
 | push 成功但没生效 | 忘了点「重新部署」。push ≠ 部署。 |
 | 本地 `git commit` 报 `Couldn't get agent socket?` | 本机 SSH 签字 agent 没起。用 `git -c commit.gpgsign=false commit …`（CI 里脚本已这么设）。 |
 
@@ -239,8 +324,9 @@ ENV NODE_ENV=production \
 ## 10. 安全与发布边界
 
 - **素材字节不经过容器**：`/assets/**`、`/fonts/**` 只返回 302，容器零带宽成本。
-- **域名为平台分配**：不能自定义；自有域名必须走 Cloudflare Worker 代理（本工作区 `arknights-gateway`
-  类的做法），不能直连 IP（WAF 对未知 Host 回 410）。
+- **域名为平台分配**：不能自定义裸连；最简单是用平台 `*.ms.show` 域名 + `iframe referrerpolicy="no-referrer"`
+  （见第 5½ 步），自有域名则必须走 Cloudflare Worker 代理（本工作区 `arknights-gateway` 类做法），
+  不能直连 IP（WAF 对未知 Host 回 410）。
 - **零冲突叠加层**：默认配置直接放进你的服务端代码，不改上游文件；上游同步时叠加层不冲突。
 - **别把 Access Token 当密码用**：只在 git remote URL 与「重新部署」API 里用 `ms-...` token。
 - **发布需授权**：重新部署、改线上、推远程都是向外操作，按本工作区规则需你确认后才做。
