@@ -1,0 +1,82 @@
+# syntax=docker/dockerfile:1
+# 卫戍协议：盟约 · production image (server + static client + ms-edge layer).
+#
+# 这个 Dockerfile 假定同目录已经有游戏服务端代码：server/ public/ data/ tools/ shared/ docs/
+# 把本仓库的 deploy/stardust/ms-edge/ 五个文件复制进来即可（路径不变）。
+#
+# 边缘层：普通的 nginx 做分流，素材的判定在 edge-sidecar.mjs（一个 Node 进程）里。
+# 刻意不用 nginx 的 Lua 模块：那是动态模块，配置里少一行 include 就会让所有 lua_* 变成未知指令、
+# nginx 直接起不来；换成普通 nginx 就没有这个失败模式，而且那段逻辑能用 node --test 直接测。
+# 用 aliyun 镜像源：构建机在境内，alpine 官方源实测不可达；万一 aliyun 也不通就退回原源。
+
+ARG NODE_IMAGE=node:22-alpine
+
+# ---- 1. production dependencies (cached while package*.json are unchanged) -------------------------
+FROM ${NODE_IMAGE} AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund && npm cache clean --force
+
+# ---- 2. vendor libs + optional art download ---------------------------------------------------------
+FROM deps AS build
+ARG FETCH_ASSETS=0
+COPY shared ./shared
+COPY server ./server
+COPY tools ./tools
+COPY data ./data
+COPY public ./public
+COPY docs/research ./docs/research
+RUN node tools/vendor.mjs \
+ && if [ "$FETCH_ASSETS" = "1" ]; then \
+      node tools/fetch-assets.mjs || echo "WARNING: art download incomplete; the image falls back to placeholder art"; \
+    fi \
+ && rm -rf .cache
+
+# ---- 3. runtime ---------------------------------------------------------------------------------------
+FROM ${NODE_IMAGE}
+# ModelScope 创空间要求容器监听 0.0.0.0:7860，且端口不可改
+# (deploy_schema.json: port.const = 7860；8080 被平台进程占用)
+# nginx 占 7860（对外）；游戏与素材解析器退到内部端口，端口号照抄 Stardust 的
+# compose（游戏 3120 / 解析器 3130）。
+RUN cp /etc/apk/repositories /tmp/repos.bak \
+ && sed -i 's|dl-cdn.alpinelinux.org|mirrors.aliyun.com|g' /etc/apk/repositories \
+ && (apk add --no-cache nginx \
+     || { cp /tmp/repos.bak /etc/apk/repositories; apk add --no-cache nginx; }) \
+ && mkdir -p /tmp/sp-edge \
+ && chown -R node:node /tmp/sp-edge
+
+ENV NODE_ENV=production \
+    SP_PUBLIC_PORT=7860 \
+    SP_GAME_PORT=3120 \
+    SP_EDGE_PORT=3130 \
+    PORT=3120 \
+    HOST=127.0.0.1
+WORKDIR /app
+COPY --from=deps /app/package.json ./package.json
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=build /app/shared ./shared
+COPY --from=build /app/server ./server
+COPY --from=build /app/data ./data
+COPY --from=build /app/public ./public
+COPY --from=build /app/docs/research ./docs/research
+
+# 边缘层：配置、解析器与入口。nginx.conf / sources.json 是数据，edge-sidecar.mjs 是决策。
+COPY deploy/stardust/ms-edge/nginx.conf /app/deploy/stardust/ms-edge/nginx.conf
+COPY deploy/stardust/ms-edge/edge-sidecar.mjs /app/deploy/stardust/ms-edge/edge-sidecar.mjs
+COPY deploy/stardust/ms-edge/render-nginx.mjs /app/deploy/stardust/ms-edge/render-nginx.mjs
+COPY deploy/stardust/ms-edge/sources.json /app/deploy/stardust/ms-edge/sources.json
+COPY deploy/stardust/ms-edge/entrypoint.sh /app/deploy/stardust/ms-edge/entrypoint.sh
+
+# 构建期就验一次，而不是让容器上线后崩在起不来：一个坏的 nginx 配置或一份渲染不出的
+# sources.json 应该让这次构建失败（旧镜像继续服务），而不是产出一个 restart 循环的镜像。
+# 顺序要紧：先渲染 sources-nginx.conf，否则 nginx.conf 里的 include 扑空、nginx -t 必红。
+RUN chmod +x /app/deploy/stardust/ms-edge/entrypoint.sh \
+ && node /app/deploy/stardust/ms-edge/render-nginx.mjs /app/deploy/stardust/ms-edge/sources-nginx.conf \
+ && nginx -t -c /app/deploy/stardust/ms-edge/nginx.conf
+
+USER node
+EXPOSE 7860
+# 探的是对外那个口，因为现在 7860 是 nginx：它活着且能代理到游戏，才算这个容器健康。
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD wget -q -O /dev/null "http://127.0.0.1:7860/healthz" || exit 1
+CMD ["/app/deploy/stardust/ms-edge/entrypoint.sh"]
