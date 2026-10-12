@@ -295,6 +295,30 @@ ENV NODE_ENV=production \
     HOST=127.0.0.1
 ```
 
+#### `SP_ANNOUNCEMENTS_URL`——发公告不用重新部署
+
+大厅公告默认是 `data/announcements.json`，它被 `Dockerfile` 烘焙进镜像，改一条公告要走
+「改文件 → 提交 → push → 控制台点重新部署」。设了这个变量之后，公告改由**外部 URL** 提供。
+
+现成的源就是后台站点（**推荐直接用**）：
+
+```dockerfile
+ENV SP_ANNOUNCEMENTS_URL=https://arknights.jiangjiangze.icu/api/announcements/game
+```
+
+在 <https://arknights.jiangjiangze.icu/admin> 登录后可编辑、发布；发布后本服最多 60 秒自动生效。
+
+- **生效方式**：服务器每 60 秒拉一次源，玩家端最多 60 秒后自动弹出新公告（客户端另有 60 秒轮询与
+  内容哈希去重，关过的不会重复打扰）。**发布即可见，不用动服务器、不用重新部署。**
+- **内容是 JSON 数组**，与 `data/announcements.json` 同构：`[{ title, date, paragraphs: [...] }]`，
+  必须能被 `JSON.parse`，且 `content-type` 得是 JSON（静态源返回 `text/plain` 也可）。
+- **源挂了不会出事**：拉不到就回退到镜像里那份 `data/announcements.json`，源恢复后自动切回。
+  公告是可选装饰，不参与健康检查。
+- **不设这个变量时，行为和以前完全一样**（不拉、不记日志、不新增任何东西）。
+- 源需要能被**容器**访问。浏览器不直连源，所以源不需要 CORS 头。
+
+改完变量本身仍需一次重新部署（这是唯一一次），之后发公告就永久免部署了。
+
 ### 8.3 创空间规格（不可改）
 
 | 项 | 值 |
