@@ -1,19 +1,23 @@
 {
-  "_comment": "边缘层的分流表。容器的 /assets/** 与 /fonts/** 按这里的顺序 302 出去，字节从不落在容器上。",
+  "_comment": "边缘层的分流表。容器的 /assets/** 与 /fonts/** 按这里的顺序 302 出去，字节从不落在容器上。镜像对应：r2 = 第一镜像（R2 私有桶，门牌 speedcdn）；openi = 第二镜像（OpenI，浏览器 CORS 不可用，仅 ?sp_source=openi 点名可达）；modelscope = 第三镜像（ModelScope 创空间）的 HTTP 运行时形态——创空间 cdn 分支本身无文件直链、只作 git 镜像，其同族数据集即本条目，也是默认 302 目标。",
   "_order_note": "这是静态顺序，不是实时测速：容器在 ModelScope 机房，玩家在全国各地，容器量出来的链路速度不代表玩家的。真正按玩家网络选最快是客户端 pick.js 的事，两者分工。客户端可用 ?sp_source=<id> 覆盖这里的顺序。",
-  "_order_basis": "顺序按直连实测（本机 --noproxy，非代理）：小文件 TTFB modelscope 0.21s / r2 0.66s；855 KB 大文件 modelscope 0.26s(3.3 MB/s) / r2 1.9s(0.4 MB/s)。",
+  "_order_basis": "顺序按直连实测（本机 --noproxy，非代理）：小文件 TTFB modelscope 0.21s / r2 0.66s；855 KB 大文件 modelscope 0.26s(3.3 MB/s) / r2 1.9s(0.4 MB/s)。2026-10-15 复核：modelscope 同图 0.17s 即到 302，speedcdn 56 KB png TTFB 1.0–1.1s（缓存 MISS）——顺序不变。",
+  "_order_reason": "2026-10-14 用户指令：R2 只作最后备选源，顺序逆序为 modelscope → r2。**省钱与提速同向**——2026-10-14 实测 R2 Class B 31,093,153 次/30d（免费额度 10M，超限 21.1M 次，月账单 $7.59），而 modelscope 抽样 120/120 全覆盖、TTFB 中位 149 ms vs R2 1771 ms（快 11.9×）。把 modelscope 放首跳后 Class B 大头转嫁给 ModelScope（0 成本），R2 退回 10M 免费额度内 ⇒ $7.59 → $0。注意 rank 只能在这些已配置源之间重排，不会把列表外的源拉进来。账单根因是「R2 当首跳」这个 order 位置，与门牌用哪个域名无关（同桶按对象操作次数计费）。",
   "schemaVersion": 1,
-  "order": ["modelscope", "r2"],
+  "order": [
+    "modelscope",
+    "r2"
+  ],
   "sources": [
     {
       "id": "modelscope",
       "base": "https://modelscope.cn/datasets/jingjiangze/Stronghold-Protocol-Assets/resolve/master/releases/v1-trial",
-      "note": "自建数据集镜像（公开）。15,979 assets + 7 fonts，逐字节校验过，Range 返 206，ACAO 可用。用 master 而不是钉 40-hex：镜像还在追加文件，钉版会让新素材在换版前不可见。"
+      "note": "自建数据集镜像（公开；= 第三镜像 ModelScope 创空间 的运行时入口，见本文件 _comment）。15,979 assets + 7 fonts，逐字节校验过，Range 返 206，ACAO 可用，直连比 r2 快约 3×。**不钉 40hex**（2026-10-11 决定）：镜像还在追加文件，钉死后新素材要等换版才可见；路径本身不变，可变 master 不会让同一路径指向不同内容。"
     },
     {
       "id": "r2",
-      "base": "https://weishucdn.jiangjiangze.icu",
-      "note": "现有主源（R2 私有桶 + 自有域）。作为兜底，并且是下面 exceptions 的目标。"
+      "base": "https://speedcdn.jiangjiangze.icu",
+      "note": "**最后备选源**（R2 私有桶的规范门牌。2026-10-15 用户指令：默认门牌统一用 speedcdn；此前 10-14 曾写 weishucdn——**同桶同字节**，实测 probe.bin 与 char_003_kalts.png 的 SHA-256 逐字一致，换域名零功能差异）。只承接 modelscope 缺件与 exceptions，常态流量已转走——Class B 计费按对象操作次数、与域名无关，所以省钱靠的是上面的 order，不是域名字符串。已知残留不一致：CDN 那份绝对清单 11,637 条 URL 与 APK 端 site/manifest.json 的 art.packs 25 条仍写 weishucdn 别名（取字节照常成功）。"
     },
     {
       "id": "openi",
@@ -24,5 +28,16 @@
   "_exceptions_note": "数据集不是逐字节完整的：ModelScope 的内容审核会拒收个别文件（实测拒了 char_340_shwaz_snow_1/illustration.png，提交被平台 reverted）。这些路径必须落到别的源，否则玩家拿到 404。Stardust 的 material-lb 有同一张表（MATERIAL-SOURCES.md 里是同一个文件的同一条例外），说明这是会复发的类型，不是一次性事故。",
   "exceptions": {
     "/assets/skins/char_340_shwaz_snow_1/illustration.png": "r2"
-  }
+  },
+  "_prefix_rules_note": "**前缀级规避**（2026-10-14 实测）。魔搭数据集不是缺个别文件，是**整棵目录**供不了——150 条大样本实测：voice 0/15、char 21%、ui 20%、spine 45%、local 36%、band/prof 0/1；而 skins 100%、audio 97%、enemy 67%。缺口是目录级的，所以「逐条存在性缓存」救不了第一次请求（它会先 302 到魔搭→404→再重来）。这里让第一次请求就直奔正确的源。语义是「这个前缀**不许**用这些源」，与 exceptions 的「这条路径**必须**用某个源」相反。⚠️ **规则会过期**：魔搭可能补齐素材，须定期用 `_tmp/ms-failover-2026-10-14/dircov.mjs` 复核（走 GitHub Actions，不在本机跑）。",
+  "prefixRules": [
+    { "prefix": "/assets/voice/", "skip": ["modelscope"], "reason": "2026-10-14 实测 0/15，整目录无（魔搭审核拒收语音）" },
+    { "prefix": "/assets/char/", "skip": ["modelscope"], "reason": "2026-10-14 实测覆盖 21%（3/14）" },
+    { "prefix": "/assets/ui/", "skip": ["modelscope"], "reason": "2026-10-14 实测覆盖 20%（1/5）" },
+    { "prefix": "/assets/spine/", "skip": ["modelscope"], "reason": "2026-10-14 实测覆盖 45%（14/31），缺件过半" },
+    { "prefix": "/assets/local/", "skip": ["modelscope"], "reason": "2026-10-14 实测覆盖 36%（8/22）" },
+    { "prefix": "/assets/band/", "skip": ["modelscope"], "reason": "2026-10-14 实测 0/1" },
+    { "prefix": "/assets/prof/", "skip": ["modelscope"], "reason": "2026-10-14 实测 0/1" },
+    { "prefix": "/assets/art-index.json", "skip": ["modelscope"], "reason": "2026-10-14 实测 404，索引文件魔搭不供" }
+  ]
 }
