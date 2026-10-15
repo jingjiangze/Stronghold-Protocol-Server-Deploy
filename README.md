@@ -8,10 +8,11 @@
 
 执行顺序：**第 1 步创建仓库 → 第 2 步放默认配置 → 第 3 步配创空间 → 第 4 步推送部署 → 第 5 步验证。**
 
-> **还有一条更简单的路（第 5½ 步「零域名 · 零叠加层方案」）：** 素材默认 CDN 是
-> `https://speedcdn.jiangjiangze.icu/`（同桶别名 `weishucdn.jiangjiangze.icu` 仍在服务，字节逐字一致），
-> 素材字节不过容器——你可以**不装边缘层、也不绑自有域名**，容器里只跑游戏、直接监听 7860，
-> 用平台 `*.ms.show` 域名。
+> **还有一条更简单的路（第 5½ 步「零域名 · 零叠加层方案」）：** 默认 CDN 源是
+> `https://speedcdn.jiangjiangze.icu/`（源表里的 `cdn`，**自动测速层**，自带 `/cdn/v1/rank.json`；
+> 它和 `r2` 那条 R2 私有桶规范门牌 `weishucdn.jiangjiangze.icu` 是**两条独立的源**，只是当前同一对象
+> 的 ETag 与字节逐字相同），素材字节不过容器——你可以**不装边缘层、也不绑自有域名**，容器里只跑游戏、
+> 直接监听 7860，用平台 `*.ms.show` 域名。
 > ⚠️ 但**前提是清单里的相对路径有人替你 302 出去**。线上 `*.ms.show` 那份 `/data/assets.json` 实测
 > **全是相对路径**（2026-10-15：1.3 MB 清单，0 条绝对 CDN 地址），它能跑是因为**跳转层在跑**（素材请求回
 > `302`，响应头带 `X-SP-Edge: order`）。这个头**分不清**是边缘 sidecar 还是游戏进程内 `asset-jump.js` 打的
@@ -31,7 +32,7 @@
 | ModelScope 账号 | ✅ | 当前使用 `jingjiangze`。没有就先注册。 |
 | ModelScope Access Token | ✅ | 形如 `ms-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`。创空间用它做 git 远程鉴权与重新部署。**不要用主密码**。 |
 | 游戏服务端代码 | ✅ | 上游 `sganggs/Stronghold-Protocol` 的 fork，或本仓库（本仓库 `Dockerfile` 假定 `server/ public/ data/ tools/` 在同目录，详见第 2 步）。 |
-| 素材 CDN 源 | ⚠️ 默认已给 | 默认 CDN 基址 `https://speedcdn.jiangjiangze.icu/`（同桶别名 `weishucdn.jiangjiangze.icu`，实测逐字节一致）。零叠加层有两条走法：**A** 镜像里只带一张 `sources.json`，缺失素材由游戏进程自己 302（需 fork 的 `server/http/asset-jump.js`）；**B** 换成 CDN 那份**绝对地址清单** `https://speedcdn.jiangjiangze.icu/data/assets.json`（实测 1.9 MB / 11,637 条绝对 URL / `200 application/json`）。⚠️ 上游 `tools/fetch-assets.mjs` 生成的 `data/assets.json` 是**相对路径**，单独用会 404。边缘层另给 `modelscope` 数据集镜像作 302 首跳源（见第 5½、8 步）。 |
+| 素材 CDN 源 | ⚠️ 默认已给 | 默认 CDN 源 `https://speedcdn.jiangjiangze.icu/`（源表 `cdn`，自动测速层，自带 `/cdn/v1/rank.json`；与 `r2` 那条 `weishucdn.jiangjiangze.icu` 分列，不合并）。零叠加层有两条走法：**A** 镜像里只带一张 `sources.json`，缺失素材由游戏进程自己 302（需 fork 的 `server/http/asset-jump.js`）；**B** 换成 CDN 那份**绝对地址清单** `https://speedcdn.jiangjiangze.icu/data/assets.json`（实测 1.9 MB / 11,637 条绝对 URL / `200 application/json`）。⚠️ 上游 `tools/fetch-assets.mjs` 生成的 `data/assets.json` 是**相对路径**，单独用会 404。源表另有 `modelscope` 数据集镜像（2026-10-15 的 rank 里内地实测第 1，见第 5½、8 步）。 |
 | 创空间基础镜像 | ⚠️ | `node:22-alpine`。本项目是 Node 应用，**不需要** torch 镜像（`ubuntu22.04-py312-torch2.10.0-…` 也能跑但浪费）。 |
 | 硬件规格 | ⚠️ | `platform/2v-cpu-8g-mem`（免费 CPU，2 vCPU / 8 GB）。 |
 | 对外端口 | ⚠️ | **7860，硬锁**（`deploy_schema.json` 的 `port.const = 7860`；8080 已被平台进程占用，不能改）。 |
@@ -191,9 +192,9 @@ wss://jingjiangze-stronghold-protocol.ms.show/ws
 （响应头带 `X-SP-Edge: order`——边缘 sidecar 或游戏进程内 jump 都可能打这个头，它们用的是同一份
 `decide()`）；WebSocket 能握手。
 
-上面第 2 条探的是 `/assets/char/…`，**按本仓库默认源表它会直奔 `speedcdn` 而不是魔搭**——那是
-`prefixRules` 的功劳（魔搭对 `assets/char/` 实测只覆盖 21%，第一次请求就不该去试错，见 8.1）。
-2026-10-15 线上那台还跑着没有 `prefixRules` 的旧表，所以同一条命令线上量到的是魔搭。
+上面第 2 条探的是 `/assets/char/…`，**按本仓库默认源表它会直奔 `speedcdn`**（`order` 首跳就是 `cdn`；
+`prefixRules` 另外保证这类魔搭整目录供不了的前缀，即使 cdn 挂了也不会退回魔搭）。2026-10-15 线上那台
+还跑着旧表（`order` = modelscope → r2、无 `prefixRules`），所以同一条命令线上量到的是魔搭。
 
 > ⚠️ **必须带浏览器 UA**：平台 WAF 对裸 `curl`（无 `-A`）在 `*.ms.show` 上一律回 **403**，
 > `/healthz` 也一样——实测 2026-10-15。看到 403 不是你的容器挂了，是没带 UA。
@@ -264,7 +265,7 @@ nginx + sidecar**，直接用平台分配的 `*.ms.show` 域名，容器里只�
    ls server/http/asset-jump.js
    ```
 
-   要走法 B 又想统一到 speedcdn 门牌：CDN 那份绝对清单目前写的是同桶别名 `weishucdn`（逐字节同桶），
+   要走法 B 又想统一到默认门牌 `speedcdn`：CDN 那份绝对清单目前写的是 R2 规范门牌 `weishucdn`，
    `sed -i 's|https://weishucdn\.jiangjiangze\.icu|https://speedcdn.jiangjiangze.icu|g' data/assets.json`
    之后 **必须** `node -e "JSON.parse(require('fs').readFileSync('data/assets.json','utf8'))"` 复验一次，
    清单被改坏是整站白屏级别的事故。
@@ -313,17 +314,22 @@ curl -fsS -o /dev/null -w '%{http_code} %{content_type} %{size_download}\n' \
 ```json
 {
   "schemaVersion": 1,
-  "order": ["modelscope", "r2"],
+  "order": ["cdn", "modelscope", "r2"],
   "sources": [
+    {
+      "id": "cdn",
+      "base": "https://speedcdn.jiangjiangze.icu",
+      "note": "默认 CDN 源（自动测速层，自带 /cdn/v1/rank.json）。"
+    },
     {
       "id": "modelscope",
       "base": "https://modelscope.cn/datasets/jingjiangze/Stronghold-Protocol-Assets/resolve/master/releases/v1-trial",
-      "note": "自建数据集镜像（公开）。15,979 assets + 7 fonts，逐字节校验过。"
+      "note": "自建数据集镜像（公开）。15,979 assets + 7 fonts，逐字节校验过；2026-10-15 rank 里内地实测第 1。"
     },
     {
       "id": "r2",
-      "base": "https://speedcdn.jiangjiangze.icu",
-      "note": "R2 私有桶的规范门牌（2026-10-15 起默认用 speedcdn；同桶别名 weishucdn.jiangjiangze.icu 逐字节一致）。兜底 + exceptions 目标。"
+      "base": "https://weishucdn.jiangjiangze.icu",
+      "note": "R2 私有桶的规范门牌。exceptions 目标；三条里唯一带 Access-Control-Expose-Headers 的。"
     }
   ],
   "exceptions": {
@@ -353,8 +359,11 @@ curl -fsS -o /dev/null -w '%{http_code} %{content_type} %{size_download}\n' \
   「这个前缀**不许**用这些源」，与 `exceptions` 的「这条路径**必须**用某个源」相反；它让第一次请求就
   直奔正确的源，不用拿玩家的请求去试错。⚠️ **会过期**——魔搭补齐某目录后这条规则就把流量白白推给 R2
   （R2 按 Class B 次数计费），改表前重跑覆盖率复核。
-- **省钱靠的是 `order` 不是域名**：`modelscope` 当首跳把 Class B 操作数转嫁给魔搭，R2 退回 10M 免费额度内
-  （2026-10-14 实测：超限 $7.59/月 → $0）。`r2` 的门牌换成同桶的 speedcdn / weishucdn 都不影响账单。
+- **账单看的是「哪个源被当首跳」，不是域名字符串**：R2 的 Class B 按对象操作次数计。2026-10-14 那笔
+  $7.59 的根因是 R2 当首跳（31M 次/30d，超 10M 免费额度），把 `modelscope` 提到首跳后 → $0。
+  2026-10-15 起默认首跳是 `cdn`（speedcdn），R2 只在 cdn 未命中/被跳过时才挨到——**这条会不会重新产生
+  Class B 取决于 speedcdn 自身的回源命中，没实测过多源自动测速的命中率**，上线后照 10-14 的办法复核台账；
+  `r2` 那条只是后备 + exceptions 目标，域名本身不影响计费。
 
 ### 8.2 Dockerfile 环境变量
 
@@ -433,11 +442,16 @@ ENV SP_ANNOUNCEMENTS_URL=https://arknights.jiangjiangze.icu/api/announcements/ga
 
 **先把三个门牌分清（2026-10-15 实测）**
 
-| 域名 | 是什么 | 能不能当素材基址 |
+| 域名 | 是什么 | 在源表里的位置 |
 |---|---|---|
-| `https://speedcdn.jiangjiangze.icu` | R2 私有桶的**默认素材门牌**（本仓库 `sources.json` 的 `r2`） | ✅ `image/png` 200 / Range 206 / `ACAO *` |
-| `https://weishucdn.jiangjiangze.icu` | **同一个桶的别名**（历史门牌，CDN 那份绝对清单与 APK 侧仍写它） | ✅ 逐字节一致；额外带 `Access-Control-Expose-Headers` |
-| `https://downcdn.jiangjiangze.icu` | **门户 / 文档站**（Pages） | ❌ 任何子路径都回 `200 text/html`，写进清单会把玩家的贴图变成 HTML |
+| `https://speedcdn.jiangjiangze.icu` | **自动测速 CDN**（默认源）。自带 `GET /cdn/v1/rank.json`——按电信/联通/移动内地实测排序；`Range` 206、`ACAO *`、`immutable` | 源 id `cdn`，`order` 首跳 |
+| `https://modelscope.cn/datasets/...` | ModelScope 数据集镜像（2026-10-15 rank 内地实测第 1：85/73/74 ms） | 源 id `modelscope`，第 2 跳 |
+| `https://weishucdn.jiangjiangze.icu` | **R2 私有桶的规范门牌**（2026-10-14 定名；三条里唯一带 `Access-Control-Expose-Headers`，跨域 JS 读 206 的 `Content-Range` 要靠它） | 源 id `r2`，后备 + `exceptions` 目标 |
+| `https://downcdn.jiangjiangze.icu` | **门户 / 文档站**（Pages） | ❌ 不能当素材基址：任何子路径都回 `200 text/html`，写进清单会把玩家贴图变成 HTML |
+
+> `cdn` 与 `r2` 是**两条独立的源，不是同桶别名**（2026-10-15 实测同一对象在两者上 ETag 与字节逐字相同，
+> 但 speedcdn 是自动测速层、自己决定回源，CDN 仓的 rank 台账把它记成 `kind: "r2"` 也只是它的口径）。
+> 客户端可用 `?sp_source=cdn|modelscope|r2|openi` 点名覆盖。
 
 - 素材 CDN 文档站（部署文档、镜像、客户端接入）：<https://downcdn.jiangjiangze.icu/>
 - 上游仓库：<https://github.com/sganggs/Stronghold-Protocol>
