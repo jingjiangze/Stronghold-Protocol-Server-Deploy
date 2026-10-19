@@ -20,13 +20,28 @@ PUBLIC_PORT="${SP_PUBLIC_PORT:-7860}"
 GAME_PORT="${SP_GAME_PORT:-3120}"
 EDGE_PORT="${SP_EDGE_PORT:-3130}"
 
-# 非 root 运行（镜像里是 USER node）：nginx 的 pid 与临时目录都得是可写路径。
-mkdir -p /tmp/sp-edge/client_body /tmp/sp-edge/proxy /tmp/sp-edge/fastcgi \
-         /tmp/sp-edge/uwsgi /tmp/sp-edge/scgi
+# 非 root 运行（镜像里是 USER node），而且平台的运行容器可能把 /app 挂成只读：
+# pid 与 temp 必须探测出一个**真的能写**的目录，再把 nginx.conf 渲染到那里（include 都是绝对路径）。
+EDGE_STATE=""
+for d in "${SP_EDGE_STATE:-}" /dev/shm/sp-edge /tmp/sp-edge "${HOME:-/home/node}/.sp-edge" /app/.sp-edge; do
+    [ -n "$d" ] || continue
+    if mkdir -p "$d/client_body" "$d/proxy" "$d/fastcgi" "$d/uwsgi" "$d/scgi" 2>/dev/null \
+       && touch "$d/.w" 2>/dev/null; then
+        rm -f "$d/.w"
+        EDGE_STATE="$d"
+        break
+    fi
+done
+if [ -z "$EDGE_STATE" ]; then
+    echo "sp-edge: no writable state dir; serving the game directly on ${PUBLIC_PORT}" >&2
+    exec env PORT="$PUBLIC_PORT" HOST=0.0.0.0 node server/index.js
+fi
+NGINX_CONF="$EDGE_STATE/nginx.conf"
+sed "s|/app/.sp-edge|$EDGE_STATE|g" "$EDGE_CONF" > "$NGINX_CONF" 2>/dev/null || NGINX_CONF="$EDGE_CONF"
 
-if ! nginx -t -c "$EDGE_CONF" >/dev/null 2>&1; then
+if ! nginx -t -c "$NGINX_CONF" >/dev/null 2>&1; then
     echo "sp-edge: nginx config rejected; serving the game directly on ${PUBLIC_PORT}" >&2
-    nginx -t -c "$EDGE_CONF" >&2 || true
+    nginx -t -c "$NGINX_CONF" >&2 || true
     exec env PORT="$PUBLIC_PORT" HOST=0.0.0.0 node server/index.js
 fi
 
@@ -57,7 +72,7 @@ const deadline = Date.now() + 60000;
 })();
 ' || { kill "$GAME_PID" "$EDGE_PID" 2>/dev/null || true; exit 1; }
 
-nginx -c "$EDGE_CONF" -g 'daemon off;' &
+nginx -c "$NGINX_CONF" -g 'daemon off;' &
 NGINX_PID=$!
 
 shutdown() {

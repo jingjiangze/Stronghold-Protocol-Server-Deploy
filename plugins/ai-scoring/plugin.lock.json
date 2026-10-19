@@ -1,0 +1,33 @@
+{
+  "lock": 1,
+  "id": "ai-scoring",
+  "version": "0.3.1",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "client/js/ai/lineupStore.js": {
+      "sha256": "6460a6881d5ad11815e1acd9592bcd45d0479eec7db237837bd159b0a8082fcb",
+      "bytes": 4133
+    },
+    "client/js/ai/scoringRunner.js": {
+      "sha256": "0771c760a0319f9c916aebcd923a1506e4061748970021459a8123b46c5d9900",
+      "bytes": 6249
+    },
+    "host/noop.js": {
+      "sha256": "213a56513f8ac828676c28607caab415cc3aab1605cd76cd5d6c3c2bc20c847a",
+      "bytes": 60
+    },
+    "plugin.json": {
+      "sha256": "4e27e303e32834915dc9f796982ad8ddf92b60a77b101196d30063790d5e81ef",
+      "bytes": 584
+    },
+    "shared/scoringPolicy.js": {
+      "sha256": "b56a28b27ce6edbb80de29bafdd4eca033a0b47123b12096aa8057ba22c23558",
+      "bytes": 3943
+    },
+    "shared/scoringQueue.js": {
+      "sha256": "7fde6324013166d48bc43e2f669d26fcf174ac40ced5adfc4c9cf9fa5b34e989",
+      "bytes": 4093
+    }
+  },
+  "spine": {}
+}

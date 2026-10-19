@@ -1,0 +1,30 @@
+{
+  "manifest": 2,
+  "id": "operator-skins",
+  "name": "干员皮肤",
+  "englishName": "Operator skins",
+  "description": "正式皮肤目录（95 名干员 / 127 套时装）+ 选皮器 + 立绘模型；只做外观，不改战斗数值。",
+  "version": "0.3.1",
+  "app": ">=0.3.0 <0.4.0",
+  "api": 2,
+  "class": "trusted",
+  "scope": [
+    "room"
+  ],
+  "loadOrder": 20,
+  "permissions": [
+    "trusted.server"
+  ],
+  "entry": {
+    "server": "host/noop.js"
+  },
+  "code": {
+    "client": [
+      "js/ui/skinAssets.js",
+      "js/ui/skinsModel.js",
+      "js/ui/dynamicIllustration.js",
+      "js/ui/skinPicker.js"
+    ],
+    "data": []
+  }
+}

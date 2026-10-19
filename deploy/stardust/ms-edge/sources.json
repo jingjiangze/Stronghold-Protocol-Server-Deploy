@@ -1,19 +1,26 @@
 {
-  "_comment": "边缘层的分流表。容器的 /assets/** 与 /fonts/** 按这里的顺序 302 出去，字节从不落在容器上。",
+  "_comment": "边缘层的分流表。容器的 /assets/** 与 /fonts/** 按这里的顺序 302 出去，字节从不落在容器上。镜像对应：r2 = 第一镜像（weishucdn）；openi = 第二镜像（OpenI，浏览器 CORS 不可用，仅 ?sp_source=openi 点名可达）；modelscope = 第三镜像（ModelScope 创空间）的 HTTP 运行时形态——创空间 cdn 分支本身无文件直链、只作 git 镜像，其同族数据集即本条目，也是默认 302 目标。",
   "_order_note": "这是静态顺序，不是实时测速：容器在 ModelScope 机房，玩家在全国各地，容器量出来的链路速度不代表玩家的。真正按玩家网络选最快是客户端 pick.js 的事，两者分工。客户端可用 ?sp_source=<id> 覆盖这里的顺序。",
   "_order_basis": "顺序按直连实测（本机 --noproxy，非代理）：小文件 TTFB modelscope 0.21s / r2 0.66s；855 KB 大文件 modelscope 0.26s(3.3 MB/s) / r2 1.9s(0.4 MB/s)。",
+  "_order_reason": "2026-10-19 用户指令：modelscope 第一、r2 垫底。数据集公开后 modelscope 吃首跳；未公开时健康探测把它判 down，自动顺延到 r2（weishucdn）。openi 不进 order（浏览器 CORS 不可用，仅 ?sp_source=openi 点名）。",
   "schemaVersion": 1,
-  "order": ["modelscope", "r2"],
+  "order": [
+    "modelscope",
+    "r2"
+  ],
   "sources": [
     {
       "id": "modelscope",
       "base": "https://modelscope.cn/datasets/jingjiangze/Stronghold-Protocol-Assets/resolve/master/releases/v1-trial",
-      "note": "自建数据集镜像（公开）。15,979 assets + 7 fonts，逐字节校验过，Range 返 206，ACAO 可用。用 master 而不是钉 40-hex：镜像还在追加文件，钉版会让新素材在换版前不可见。"
+      "note": "自建 ModelScope 数据集镜像。2026-10-18 起私有（匿名 resolve 404 / repo/tree 403）；公开后作为**第一顺位**。健康探测每轮打一条必然存在的素材：4xx 即判 down 并顺延，所以「未公开 → 自动落到 r2」不需要改配置。",
+      "redirects": [
+        "https://cdn-lfs-cn-1.modelscope.cn"
+      ]
     },
     {
       "id": "r2",
       "base": "https://weishucdn.jiangjiangze.icu",
-      "note": "现有主源（R2 私有桶 + 自有域）。作为兜底，并且是下面 exceptions 的目标。"
+      "note": "**兜底源**（2026-10-19 用户指令：r2 垫底）。weishucdn 是同桶的另一道门牌：实测对清单内路径 200/56,617B（speedcdn 这道门对同路径 404，不能当兜底）。"
     },
     {
       "id": "openi",
@@ -24,5 +31,7 @@
   "_exceptions_note": "数据集不是逐字节完整的：ModelScope 的内容审核会拒收个别文件（实测拒了 char_340_shwaz_snow_1/illustration.png，提交被平台 reverted）。这些路径必须落到别的源，否则玩家拿到 404。Stardust 的 material-lb 有同一张表（MATERIAL-SOURCES.md 里是同一个文件的同一条例外），说明这是会复发的类型，不是一次性事故。",
   "exceptions": {
     "/assets/skins/char_340_shwaz_snow_1/illustration.png": "r2"
-  }
+  },
+  "_prefix_rules_note": "**prefixRules 已于 2026-10-15 删除。** 曾据「2026-10-14 实测 voice 0/15、char 21%、ui 20%、spine 45%…」写下 8 条前缀规避，全部 `skip: [modelscope]`。那次实测是**探针坏了**：`curl -o /dev/null` 在 Windows 上报 `(23) client returned ERROR on write`，异常被 catch 成 FAIL，48 条全 FAIL ⇒ 看起来 100% 缺失。修正后带对照组（5 条确定不存在的路径 → 5/5 正确 404）重测，从 `origin/assets-raw` 权威树按 22 个 `assets/` 前缀各抽 ≤10 条共 205 条：**205/205 全 200**（含 voice 10/10、char 10/10、ui 10/10、spine 10/10、art-index 1/1）。另注意 LFS 对象第一跳是 302 到 `cdn-lfs-cn-1.modelscope.cn`，必须跟到底，单看第一跳会把「有货」读成 302。⇒ 8 条规则全是基于假缺失的死配置，删除。`edge-sidecar.mjs` 的 `prefixBlocked` 机制保留（没错，只是暂无规则可命中）；若将来真出现目录级缺口，先用带对照组的探针复核再写规则。",
+  "prefixRules": []
 }

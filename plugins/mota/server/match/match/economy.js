@@ -1,0 +1,1098 @@
+// server/match/match/economy.js — Match methods: the co-op team economy (DESIGN §28) and the 协同共竞 borrow layer
+// (§29) — the team reserve and its conversion, the 全员无伤 perfect reward, the logistics projects a mode ships, the
+// 救济 draw on the reserve, the transfer requests (TTL, caps, the ready lock), the debt ledger the requests leave behind
+// (方案 B: repaid out of the next income), the PvE 兜底 interest (holding teammates' leaked enemies) and the death
+// dividend.
+// Installed on Match.prototype by server/match/Match.js (a method container: never instantiated; `this` is the match).
+//
+// Everything here is gated by `this.teamEcon` (GameData.teamEconomy, null unless the mode or config.economy.team turns
+// the rule set on and the match is not solo), so the whole layer is inert — and every protocol addition optional —
+// while it is off. State lives on the Match: `econRequests`, `econRound`, `econDebts`, `econCover*`, `teamReserve`,
+// `teamProjects` (personal funds stay on PlayerState).
+
+import { PHASE, ERR } from '../../../shared/constants.js';
+import { OK, fail } from './common.js';
+import { createRng, deriveSeed } from '../../sim/rng.js';
+import { buildNormalWave, buildBossWave } from '../waves.js';
+import { botEconRespond } from '../bot.js';
+import { msg, N_ } from '../../../shared/i18n.js';
+
+
+/** 借钱喊话（业主：「随机几句借钱的话」）。服务端从这张表里选一句挂在那条广播上。 */
+// 每条都过 `N_()`（标记为 msgid）：文案随视图下发到客户端，由客户端 `t()` 翻译（test/i18n 的门禁要求服务端消息
+// 也必须可翻译；裸中文字面量会红）。
+export const ECON_PHRASES = Object.freeze([
+  N_('谁借我一块钱，下回合就还！'),
+  N_('救急！差一块钱买不起牌了…'),
+  N_('兄弟们，支援一块，回头双倍奉还'),
+  N_('就差这一块钱！借我，我记着你的好'),
+  N_('谁行行好，借我一块翻本'),
+  N_('断粮了，借一块续命'),
+  N_('一块钱，救我一命'),
+  N_('有钱的捧个钱场，一块就行'),
+]);
+
+/**
+ * 赏金加时（业主 2026-10-18：「赏金机制，花钱买时间」）：休整期用**协同资金**给全队买一段准备时间。
+ *
+ * 价格按本回合的购买次数递增，一回合最多 3 次（+60 秒）。只有这一回合本来就有倒计时时才卖——无时限的回合
+ * （solo、或数据没给 prepTime）没有时间可买，卖出去等于凭空造一个截止时间，会把「休整期不限时」的规则改掉。
+ * 买到的秒数**续在**当前截止时间上，不是重置成满格：已经在倒计时的人立刻看到数字变大。
+ */
+export const BOUNTY_SECONDS = 20;
+export const BOUNTY_COSTS = Object.freeze([4, 6, 8]);
+/** 每回合赏金加时的总时长封顶（不再是次数封顶）。 */
+export const BOUNTY_MAX_SECONDS = 120;
+
+/**
+ * 按座位数缩放房间级经济额度：4 人房 k=1（与旧行为逐字节一致）。
+ * 个人额度（maxPerRequest / requestsPerRound / convertPerPlayerMax / perPlayerPerRound）不缩放。
+ */
+export function scaleTeamEcon(base, seats) {
+  if (!base) return null;
+  // 比例缩放：4 席 = 1×，之后每多 2 席 +0.5×（6/8/10/…/20 各自 1.5/2/2.5/…/5×）。
+  // 不再用 ceil —— 6 席不该直接吃 2×，18 席也不该和 20 席同档。
+  const k = Math.max(1, (Number(seats) || 4) / 4);
+  if (k === 1) return base;
+  const mul = (n) => (Number.isFinite(n) ? Math.round(n * k) : n);
+  const mulArr = (x) => (Array.isArray(x) ? x.map(mul) : x);
+  return {
+    ...base,
+    transfer: { ...base.transfer, teamCapPerRound: mul(base.transfer.teamCapPerRound) },
+    reserve: { ...base.reserve, perfectReward: mul(base.reserve.perfectReward), fullDefenceReward: mul(base.reserve.fullDefenceReward), perfectRewardCapPerRound: mul(base.reserve.perfectRewardCapPerRound) },
+    relief: { ...base.relief, teamPerRound: mul(base.relief.teamPerRound) },
+    projects: Object.fromEntries(Object.entries(base.projects || {}).map(([id, p]) => [id, { ...p, costs: mulArr(p.costs), teamCapBonus: mulArr(p.teamCapBonus) }])),
+  };
+}
+
+export class MatchEconomy {
+  /** The econ state (called from the Match constructor once the seed and GameData exist). */
+  econInit() {
+    // 房间级额度按座位数缩放（seatCap 口径：开局按最大人数定价，减员不变便宜）
+    this.teamEcon = scaleTeamEcon(this.gd.teamEconomy, this.players ? this.players.size : 4);
+    this.teamReserve = 0;
+    /** @type {Map<string, { id: string, from: string, targets: string[], amount: number, round: number, deadline: number, timer: any }>} */
+    this.econRequests = new Map();
+    /** 进行中的升级提案（同一时刻至多一条）：{ id, project, level, cost, by, agree:Set, reject:Set } | null */
+    this.projectVote = null;
+    this.econRound = { round: 0, spent: 0, byPlayer: new Map(), perfectGranted: 0, bounty: 0 };
+    /** The ids this player has already been refused by this round (被拒后可换人再借, user decision 2026-10-08). */
+    this.econDeniedBy = new Map();
+    /**
+     * 方案 B: what each borrower owes, paid out of the income of the next round — Map<borrowerId, { to, amount, round }[]>.
+     * Funds still clear every round; only the debt rides on income. A borrower who is eliminated before paying voids
+     * it, and the survivors dice out what they would have earned (deathDividend).
+     */
+    this.econDebts = new Map();
+    /**
+     * 兜底利息 (PvE): holding teammates' leaked enemies earns interest on a repaid loan. `econCover` counts the kills a
+     * 联防 helper made, `econCoverTotal` is the match's planned enemy total, and the rate is
+     * `min(capPct, floor(100 × kills / total))` percent — a rate the first nine rounds cannot fill, because they can
+     * only spawn ~50% of the match's enemies at all (calibrated 2026-10-07: 125 of 251 in 标准).
+     * 兜底分红 (user decision 2026-10-09): one repayment mints ONE interest pool that every teammate who has covered
+     * shares in proportion to its own rate — the old rule paid it all to the lender. Interest is paid in whole funds;
+     * the fraction that does not make one rides `econCoverCarry` to the next repayment.
+     */
+    this.econCover = new Map();
+    /**
+     * The sub-1 fraction of the interest pool that the last repayment(s) could not pay out in whole funds. It is one
+     * number, not one per player: the pool is shared, so the remainder is shared too — the next repayment's pool adds
+     * to it and the whole funds it crosses are handed out by largest remainder.
+     */
+    this.econCoverCarry = 0;
+    /** Whole funds each teammate has collected as 兜底利息 this match, and the funds of the last repayment that paid. */
+    this.econCoverEarned = new Map();
+    this.econCoverLastBonus = new Map();
+    /**
+     * Σ of the principals repaid through a 兜底 dividend and Σ of the interest minted out of them. The pool is capped
+     * at its principal, so the second can never pass the first — the difference is the accrual still waiting to be paid.
+     */
+    this.econCoverRepaid = 0;
+    this.econCoverPaid = 0;
+    this.econCoverTotal = 0;
+    /**
+     * The levels of the projects this mode ships (GameData.teamEconomy.projects): 协同共竞 lists 应急仓储 and 后勤调度
+     * only, so 联合采购 has no entry here and `econBuyProject` cannot sell it (user decision 2026-10-09).
+     */
+    this.teamProjects = {};
+    /**
+     * 救济 (DESIGN §28, user decision 2026-10-09): how much the team has taken out of the reserve this round, and how
+     * many times each player has taken. Both are re-armed by `econNewRound` — they are per round, like every other
+     * economy counter.
+     */
+    this.econReliefSpent = 0;
+    this.econReliefByPlayer = new Map();
+    if (!this.teamEcon) return;
+    for (const id of Object.keys(this.teamEcon.projects)) this.teamProjects[id] = 0;
+    this.rngEcon = createRng(deriveSeed(this.seed, 'econ'));
+    if (this.teamEcon.coverInterest.enabled) this.econCoverTotal = this._econCoverTotal();
+  }
+
+  // ---- gates and caps ------------------------------------------------------------------------------
+
+  /** The econ gate: alive and in PREP; humans also obey the ready lock, a bot seat answers any time (it has no UI). */
+  econGate(ps) {
+    if (!ps.alive) return fail(ERR.ELIMINATED);
+    if (this.phase !== PHASE.PREP) return fail(ERR.WRONG_PHASE);
+    if (!ps.isBot && ps.ready) return fail(ERR.WRONG_PHASE, 'ready');
+    return null;
+  }
+
+  /**
+   * The per-player request budget of this round (后勤调度 L3 raises it), capped by **what the borrower will earn next
+   * round** (user decision 2026-10-08): every loan is repaid out of that income, so a budget above it could not be
+   * repaid — the debt is solvent by construction, and `econSettleDebts` never has to forgive.
+   *
+   * 协同共竞 ships `requestsPerRound: 4` and the L3 bonus takes it to 5 — both at or under the match's income floor
+   * (`income(round + 1)` ≥ 5 from round 1 in 标准), so the clamp never swallows the bonus. That is what makes
+   * `extraRequestsAtL3` live: a config of 12 used to sit above every income the clamp allows, so L3 changed nothing.
+   */
+  econRequestsPerRound(ps = null) {
+    if (!this.teamEcon) return 0;
+    const extra = this.teamProjects.logistics >= 3 ? this.teamEcon.projects.logistics.extraRequestsAtL3 || 0 : 0;
+    const base = this.teamEcon.transfer.requestsPerRound + extra;
+    if (!ps) return base;
+    return Math.max(0, Math.min(base, Math.trunc(this.gd.income(this.round + 1))));
+  }
+
+  /**
+   * The round start re-arms the per-round counters: how many asks each player may still open, how much the team may
+   * still move, and who has already said no (被拒后可换人再借, user decision 2026-10-08).
+   */
+  econNewRound() {
+    if (!this.teamEcon) return;
+    this.econRound.round = this.round;
+    this.econRound.spent = 0;
+    this.econRound.perfectGranted = 0;
+    this.econRound.bounty = 0;
+    // 赏金加时的封顶是**每回合** 120 s：计数不随房间走，回合边界必须复位
+    this.econRound.bountySec = 0;
+    this.econRound.byPlayer.clear();
+    this.econDeniedBy.clear();
+    // 救济 is per round like everything else here: the team allowance and every player's count re-arm together
+    this.econReliefSpent = 0;
+    this.econReliefByPlayer.clear();
+    // 后勤项目的升级提案也是**回合内**的事：回合边界一到就作废。没有这一句，一条谁都不再表态的提案会永久挂住，
+    // 把 `canPropose` 一直卡在 false，全队此后再也无法提案（业主 2026-10-12 的口径里提案只发生在休整期）。
+    this.projectVote = null;
+  }
+
+  /** Funds the team may still move this round (the base cap + 后勤调度). */
+  teamTransferCap() {
+    if (!this.teamEcon) return 0;
+    const lv = this.teamProjects.logistics;
+    const bonus = lv > 0 ? this.teamEcon.projects.logistics.teamCapBonus[lv - 1] || 0 : 0;
+    return this.teamEcon.transfer.teamCapPerRound + bonus;
+  }
+
+  /** Leftover funds a player keeps at the prep end (应急仓储). 坎诺特 bands keep everything and skip this reading. */
+  teamKeepFor(ps) {
+    void ps;
+    return this.teamEcon ? this.teamProjects.storehouse : 0;
+  }
+
+  /**
+   * 后勤项目的「等级读数」— what one level of a project actually does, as one number (user 2026-10-17: 「长按这些按钮
+   * 显示备注，如升级效果」). storehouse: the funds kept at the prep end (teamKeepFor reads the level itself); logistics:
+   * the team's per-round transfer bonus (teamTransferCap's teamCapBonus). A project this table does not know reads 0.
+   * @param {string} id project id
+   * @param {number} lv its level (0 = not built)
+   * @returns {number}
+   */
+  teamProjectRead(id, lv) {
+    if (!this.teamEcon || !(lv > 0)) return 0;
+    if (id === 'storehouse') return lv;
+    if (id === 'logistics') return (this.teamEcon.projects.logistics.teamCapBonus || [])[lv - 1] || 0;
+    return 0;
+  }
+
+  /** Free refreshes the round start grants (联合采购) — 0 when the mode does not ship that project. */
+  teamFreeRefreshes() {
+    return this.teamEcon ? (this.teamProjects.procure || 0) : 0;
+  }
+
+  // ---- views ---------------------------------------------------------------------------------------
+
+  /** m.public.econ — the key exists only while the rule set is on (the client's capability probe). */
+  /** m.public.econ：共享池读数 + 进行中的广播（谁在喊借钱）+ 升级提案 + 项目表（含 maxed）。 */
+  econPublicView() {
+    if (!this.teamEcon) return null;
+    const base = {
+      reserve: Number.isFinite(this.teamReserve) ? this.teamReserve : 0,
+      transferLeft: Math.max(0, this.teamTransferCap() - this.econRound.spent),
+      requests: [...this.econRequests.values()].map((req) => ({
+        id: req.id, from: req.from, amount: req.amount, phrase: req.phrase || '', lent: req.lent.length,
+      })),
+      vote: this.projectVote
+        ? { id: this.projectVote.id, project: this.projectVote.project, level: this.projectVote.level, cost: this.projectVote.cost, by: this.projectVote.by, agree: [...this.projectVote.agree], reject: [...this.projectVote.reject] }
+        : null,
+    };
+    // 协同共竞: the borrow-only variant advertises no reserve, no projects and no relief — the client renders the asks
+    if (this.teamEcon.borrowOnly) {
+      return { ...base, borrowOnly: true, reserve: 0, projects: [], relief: null };
+    }
+    const relief = this.teamEcon.relief;
+    return {
+      ...base,
+      // exactly the projects this mode ships, in the order its config names them
+      projects: Object.keys(this.teamProjects).map((id) => {
+        const level = this.teamProjects[id];
+        const costs = this.teamEcon.projects[id].costs;
+        const read = (lv) => this.teamProjectRead(id, lv);
+        return {
+          id, level, max: costs.length,
+          cost: level < costs.length ? costs[level] : null,
+          maxed: level >= costs.length,
+          // what this level does / what the next one would do — the client's long-press note reads these two
+          // (user 2026-10-17: 「长按这些按钮显示备注，如升级效果」); plain numbers, the sentence lives in the client i18n
+          now: read(level),
+          next: level < costs.length ? read(level + 1) : null,
+        };
+      }),
+      // 救济: the reserve the weakest player may draw on — `threshold`/`amount` are public, eligibility is private
+      relief: relief.enabled
+        ? { amount: relief.amount, threshold: relief.lpThreshold, left: Math.max(0, relief.teamPerRound - this.econReliefSpent) }
+        : null,
+      // 赏金加时: 仅协同共竞，且只在这一回合真的跑着倒计时时出现（null ⇒ 客户端不画按钮）
+      bounty: this.isXie && this.deadline > 0 && this.phase === PHASE.PREP
+        ? (() => {
+          const usedSec = this.econRound.bountySec || 0;
+          const used = Math.floor(usedSec / BOUNTY_SECONDS);
+          const step = Math.min(used, BOUNTY_COSTS.length - 1);
+          const nextCost = usedSec + BOUNTY_SECONDS <= BOUNTY_MAX_SECONDS ? BOUNTY_COSTS[step] : null;
+          return {
+            seconds: BOUNTY_SECONDS, used, max: Math.floor(BOUNTY_MAX_SECONDS / BOUNTY_SECONDS), nextCost, usedSec, maxSec: BOUNTY_MAX_SECONDS,
+            affordable: nextCost != null && this.teamReserve >= nextCost,
+            leftSec: Math.max(0, Math.round((this.deadline - this.sched.now()) / 1000)),
+          };
+        })()
+        : null,
+    };
+  }
+
+  /** m.private.econ for one player (null while the rule set is off). */
+  /** m.private.econ：我的钱 / 别人向我借 / 我发出的广播 / 项目与提案 —— 与面板逐键对应。 */
+  econPrivateFor(ps) {
+    if (!this.teamEcon) return null;
+    const alive = this.order.filter((p) => p.alive && !p.left && this.players.get(p.playerId) === p);
+    const voters = alive.map((p) => p.playerId);
+    const inbound = [];
+    const mine = [];
+    for (const req of this.econRequests.values()) {
+      if (req.from === ps.playerId) mine.push(req);
+      else if (Array.isArray(req.targets) && req.targets.includes(ps.playerId) && !req.answers.has(ps.playerId)) inbound.push(req);
+    }
+    const v = this.projectVote;
+    const myVote = v && voters.includes(ps.playerId) && !v.agree.has(ps.playerId) && !v.reject.has(ps.playerId)
+      ? {
+        id: v.id, project: v.project, level: v.level, cost: v.cost, by: v.by,
+        agree: [...v.agree], need: voters.filter((id) => !v.agree.has(id)),
+      }
+      : null;
+    return {
+      funds: ps.funds,
+      // 借还牌把这两格当**单个对象**读（`public/js/ui/econBar.js`）：`requestIn` = 别人向我借的那一条、
+      // `requestOut` = 我发出的那一条。⚠ 不能发数组：空数组在 JS 里 truthy，会把「主动借钱」那颗按钮顶掉。
+      requestIn: inbound.length
+        ? { id: inbound[0].id, from: inbound[0].from, amount: inbound[0].amount, deadline: inbound[0].deadline, phrase: inbound[0].phrase || '' }
+        : null,
+      requestOut: mine.length
+        ? { id: mine[0].id, to: mine[0].targets.length === 1 ? mine[0].targets[0] : null, amount: mine[0].amount, deadline: mine[0].deadline, phrase: mine[0].phrase || '' }
+        : null,
+      // 广播借款的进度（诊断与将来的读者）
+      myRequests: mine.map((r) => ({
+        id: r.id, amount: r.amount, phrase: r.phrase || '',
+        to: r.targets.length === 1 ? r.targets[0] : null,
+        lent: [...r.lent], answered: r.answers.size, targets: r.targets.length,
+      })),
+      requestLeft: Math.max(0, this.econRequestsPerRound(ps) - (this.econRound.byPlayer.get(ps.playerId) || 0)),
+      // the teammates who refused this player this round (被拒后可换人再借): the client drops them from the picker, so
+      // the 已拒绝 refusal never has to be shown as an error (user report 2026-10-08). ⚠ 这里的元素必须是 **playerId**
+      // —— econBar.js 用 `refused.has(p.playerId)` 过滤，发名字会把被拒的人重新放回选择器。
+      refused: [...(this.econDeniedBy.get(ps.playerId) || [])],
+      keep: this.teamKeepFor(ps),
+      maxPerRequest: this.teamEcon.transfer.maxPerRequest,
+      // 方案 B: what this player must pay back at the next income, and what teammates owe them
+      owe: this.econDebtSummary(ps.playerId, 'from'),
+      due: this.econDebtSummary(ps.playerId, 'to'),
+      // 兜底利息: the coverage that buys interest on a repaid loan (null while the rule is off)
+      cover: this.teamEcon.coverInterest.enabled
+        ? {
+          kills: this.econCover.get(ps.playerId) || 0,
+          total: this.econCoverTotal,
+          ratePct: this.econCoverRate(ps.playerId),
+          capPct: this.teamEcon.coverInterest.capPct,
+          // 兜底分红: the pool pays whole funds only, so this is my slice of the fraction still waiting to be paid —
+          // `earned` is what this match has already handed me and `lastBonus` what the last repayment did (0 = none)
+          pending: Math.round(this.econCoverPending(ps.playerId) * 100) / 100,
+          earned: this.econCoverEarned.get(ps.playerId) || 0,
+          lastBonus: this.econCoverLastBonus.get(ps.playerId) || 0,
+          // 兜底率分红: outstanding debts owed to me that were taken on while the borrower trailed the team's median —
+          // those earn `lagPremium` on repayment (the client shows it, user report 2026-10-08: 兜底率没有变化)
+          lag: this.econDebtsOwedTo(ps.playerId, { lagOnly: true }).total,
+          lagPremium: this.teamEcon.coverInterest.lagPremium,
+        }
+        : null,
+      // 救济 (DESIGN §28): whether this player may draw on the reserve right now (the weakest, hurt enough, not spent
+      // out) and how much of the round's allowance is left. The server is the authority; the client only renders it.
+      relief: this.teamEcon.relief.enabled
+        ? {
+          eligible: this.econReliefEligible(ps),
+          amount: this.teamEcon.relief.amount,
+          threshold: this.teamEcon.relief.lpThreshold,
+          left: Math.max(0, this.teamEcon.relief.perPlayerPerRound - (this.econReliefByPlayer.get(ps.playerId) || 0)),
+        }
+        : null,
+      // 后勤项目（含 maxed/affordable）与进行中的升级提案 —— 面板据此渲染「发起提案/同意/拒绝」。
+      projects: this.teamEcon.borrowOnly ? [] : Object.keys(this.teamProjects).map((id) => {
+        const level = this.teamProjects[id];
+        const costs = this.teamEcon.projects[id].costs;
+        return { id, level, max: costs.length, cost: level < costs.length ? costs[level] : null, maxed: level >= costs.length, affordable: level < costs.length && this.teamReserve >= costs[level] };
+      }),
+      vote: myVote,
+      canPropose: !this.projectVote,
+    };
+  }
+
+  /** What teammates owe one player (`econDebtSummary` with the option of counting only the 兜底率分红 debts). */
+  econDebtsOwedTo(playerId, { lagOnly = false } = {}) {
+    let total = 0;
+    for (const list of this.econDebts.values()) {
+      for (const d of list) if (d.to === playerId && (!lagOnly || d.lag)) total += d.amount;
+    }
+    return { total };
+  }
+
+  /** `{ total, next }` for one side of the debt ledger (`from`: what I owe, `to`: what I am owed), null when clean. */
+  econDebtSummary(playerId, side) {
+    let total = 0;
+    const rows = new Map();
+    for (const [borrower, list] of this.econDebts) {
+      for (const d of list) {
+        if (side === 'from' ? borrower === playerId : d.to === playerId) {
+          total += d.amount;
+          const who = side === 'from' ? d.to : borrower;
+          rows.set(who, (rows.get(who) || 0) + d.amount);
+        }
+      }
+    }
+    if (total <= 0) return null;
+    // `list`：按人拆开的欠款（催钱要按人发，UI 也要能显示「谁欠我多少」）
+    const list = [...rows].map(([id, amount]) => ({ playerId: id, name: this.players.get(id)?.name || id, amount }));
+    return { total, next: Math.max(0, Math.trunc(this.gd.income(this.round + 1))), list };
+  }
+
+  // ---- willingness (DESIGN §28) -------------------------------------------------------------------
+
+  /** Median board size and LP of the alive team — the "behind the team" yardstick (upper median on an even count). */
+  _econMedians() {
+    const alive = [...this.players.values()].filter((p) => p.alive && !p.left);
+    const pick = (vals) => {
+      const s = vals.sort((a, b) => a - b);
+      return s.length ? s[Math.floor(s.length / 2)] : 0;
+    };
+    return { units: pick(alive.map((p) => Math.max(0, Math.trunc(p.deployCount) || 0))), lp: pick(alive.map((p) => Number(p.lp) || 0)) };
+  }
+
+  /**
+   * How far behind the team's median board a player is: 0 (at or above it, or nobody has units yet) .. 1 (half the
+   * median or less — an empty board is 1). Used twice: the bot's willingness roll and the 兜底率分红 snapshot on a
+   * debt (`lag` is simply "> 0", i.e. strictly below the team's median).
+   */
+  econBorrowerBehind(playerId) {
+    const ps = this.players.get(playerId);
+    if (!ps) return 0;
+    const { units } = this._econMedians();
+    if (units <= 0) return 0;
+    return Math.max(0, Math.min(1, (2 * (units - Math.max(0, Math.trunc(ps.deployCount) || 0))) / units));
+  }
+
+  /**
+   * 借款意愿 (DESIGN §28, user decision 2026-10-08): the percent chance a bot lender approves a request —
+   * `basePct + weakPct · weak + solventPct · solvent + coverPct · cover`, capped at `maxPct` (50).
+   *   weak    the borrower's board trails the team's median (the under-developed teammate this mode carries);
+   *   solvent the borrower looks able to repay what the income ledger will charge (units on the board and LP at or
+   *           above the median — the debt itself is always affordable, so death is the only way to default);
+   *   cover   the lender's own 兜底 rate: the teammate who holds the leaks is the one who pays it forward.
+   * Pure — the roll (`rngEcon.int(100) < p`) belongs to the caller.
+   */
+  econBotLendChance(lender, borrowerId) {
+    const bl = this.teamEcon && this.teamEcon.botLend;
+    if (!bl || !bl.enabled) return 0;
+    const borrower = this.players.get(borrowerId);
+    if (!borrower) return 0;
+    const { lp } = this._econMedians();
+    const mine = Math.max(0, Math.trunc(borrower.deployCount) || 0);
+    const weak = this.econBorrowerBehind(borrowerId);
+    const solvent = mine > 0 && (Number(borrower.lp) || 0) >= lp ? 1 : 0;
+    const cover = this.econCoverRate(lender.playerId) / 100;
+    const p = bl.basePct + Math.round(bl.weakPct * weak) + Math.round(bl.solventPct * solvent) + Math.round(bl.coverPct * cover);
+    return Math.max(0, Math.min(bl.maxPct, p));
+  }
+
+  // ---- intents -------------------------------------------------------------------------------------
+
+  /**
+   * 借钱：**默认广播**（业主 2026-10-12：「借钱按钮改为默认广播到另外三个人」），
+   * 但保留 v1 的**指定队友**（`to`）—— v1 的借还牌有队友选择器（业主 2026-10-13 要求把那版 UI 原样搬回来）。
+   * 一次问遍其余存活队友；**每人各自可借 1 资金**，一人同意**不**关闭其他人的应答 —— 全员应答、或 TTL 到期才关单。
+   * 额度仍是每人每回合 4 次、单次 1。
+   *
+   * @param {any} ps 发起人
+   * @param {string|null|undefined} to 指定的队友（v1 语义）；缺省 / `null` = 广播（2026-10-12 语义）
+   * @param {number} amount 金额
+   */
+  econRequest(ps, to, amount) {
+    if (!this.teamEcon) return fail(ERR.WRONG_PHASE, 'team economy disabled');
+    const g = this.econGate(ps);
+    if (g) return g;
+    if (!Number.isInteger(amount) || amount < 1 || amount > this.teamEcon.transfer.maxPerRequest) return fail(ERR.BAD_TARGET, 'amount');
+    // 额度先判（原口径）：额度用完就报 budget，而不是笼统的「你还有一条在途」——两者同时成立时以前者为准
+    if ((this.econRound.byPlayer.get(ps.playerId) || 0) >= this.econRequestsPerRound(ps)) return fail(ERR.ALREADY, 'budget');
+    for (const req of this.econRequests.values()) if (req.from === ps.playerId) return fail(ERR.ALREADY, 'pending');
+    if (this.econRound.spent + amount > this.teamTransferCap()) return fail(ERR.BAD_TARGET, 'team cap');
+    // 被拒过的人这一回合不再问（被拒后可换人再借, user decision 2026-10-08）；已 ready 的人类不能应答，也不问。
+    const denied = this.econDeniedBy.get(ps.playerId) || new Set();
+    const eligible = (p) => p !== ps && p.alive && !p.left && !denied.has(p.playerId) && (p.isBot || !p.ready);
+    // 指定了队友就只问他一个；没指定就是广播（两者的其余判据完全一致 —— 目标必须仍然合格）。
+    const targets = to == null ? this.order.filter(eligible) : this.order.filter((p) => p.playerId === to && eligible(p));
+    if (!targets.length) {
+      // 指名却借不到：把原因说清楚（客户端按 detail 出提示，而不是笼统的「已完成该操作」）
+      if (to != null) {
+        const t = this.players.get(to);
+        if (!t || t === ps || !t.alive || t.left) return fail(ERR.BAD_TARGET, 'target');
+        if (!t.isBot && t.ready) return fail(ERR.WRONG_PHASE, 'target ready');
+        if (denied.has(t.playerId)) return fail(ERR.ALREADY, 'already refused');
+      }
+      return fail(ERR.BAD_TARGET, 'no target');
+    }
+    const ttl = this.teamEcon.transfer.ttlSec * 1000;
+    const req = {
+      id: `req:${this.nextUid()}`, from: ps.playerId, amount, round: this.round,
+      deadline: this.sched.now() + ttl, timer: null,
+      targets: targets.map((p) => p.playerId), answers: new Map(), lent: [],
+      phrase: ECON_PHRASES[this.rngEcon ? this.rngEcon.int(ECON_PHRASES.length) : 0],
+      decideAtBy: new Map(),
+    };
+    req.timer = this.later(ttl, () => { if (this.econRequests.get(req.id) === req) this.econCloseRequest(req, 'expired'); });
+    this.econRequests.set(req.id, req);
+    this.econRound.byPlayer.set(ps.playerId, (this.econRound.byPlayer.get(ps.playerId) || 0) + 1);
+    // 每个 bot 席位各自一个「想一会儿」的时钟（0.6–2.2 s）；decideAtBy 也用来压住它自己的普通 prep 切片。
+    const bl = this.teamEcon.botLend;
+    for (const t of targets) {
+      this.markPrivate(t);
+      if (!t.isBot) continue;
+      const delay = bl && bl.enabled && bl.delayMsMax > 0 ? bl.delayMsMin + this.rngEcon.int(bl.delayMsMax - bl.delayMsMin + 1) : 0;
+      if (delay > 0) req.decideAtBy.set(t.playerId, this.sched.now() + delay);
+      this.later(delay, () => { if (this.econRequests.get(req.id) === req) botEconRespond(this, t, req.id); });
+    }
+    this.markPrivate(ps);
+    this.markPublic();
+    return OK;
+  }
+
+  /**
+   * 应答一条广播请求。同意 = 从自己资金借出 1（一条广播可由多人各借 1）；拒绝只记名，**不关单**。
+   * 全员应答后关单：一条都没借到则退回这次请求的额度（保留「被拒不算花额度」的旧口径）。
+   */
+  econRespond(ps, id, approve) {
+    if (!this.teamEcon) return fail(ERR.WRONG_PHASE, 'team economy disabled');
+    const req = typeof id === 'string' ? this.econRequests.get(id) : null;
+    if (!req || req.round !== this.round || !Array.isArray(req.targets) || !req.targets.includes(ps.playerId)) return fail(ERR.BAD_TARGET);
+    if (req.answers.has(ps.playerId)) return fail(ERR.ALREADY, 'answered');
+    const g = this.econGate(ps);
+    if (g) return g;
+    const sender = this.players.get(req.from);
+    if (!sender || !sender.alive || sender.left) {
+      this.econCloseRequest(req, 'gone');
+      return fail(ERR.BAD_TARGET, 'target');
+    }
+    if (!approve) {
+      // 拒绝只记名、不关单：其余队友仍然可以借。这一票没有资金前置检查，所以直接记。
+      req.answers.set(ps.playerId, 'no');
+      let denied = this.econDeniedBy.get(req.from);
+      if (!denied) this.econDeniedBy.set(req.from, (denied = new Set()));
+      denied.add(ps.playerId);
+      this.toast(sender, 'warn', msg('{name} 拒绝了你的支援请求', { name: ps.name }));
+      this.markPrivate(ps);
+      this.markPrivate(sender);
+      this._econMaybeCloseRequest(req);
+      return OK;
+    }
+    // 同意：**先过资金与额度检查，再记这一票**。若先记「已应答」，一次失败（全队额度已满 / 自己钱不够）
+    // 会留下一个「答了却没借出」的幻影票，别人应答时还会把这条请求提前关掉（也堵死了自己后面再借）。
+    if (this.econRound.spent + req.amount > this.teamTransferCap()) return fail(ERR.BAD_TARGET, 'team cap');
+    if (ps.funds < req.amount) return fail(ERR.NO_FUNDS);
+    req.answers.set(ps.playerId, 'yes');
+    ps.funds -= req.amount;
+    sender.addFunds(req.amount, { reason: 'transfer' });
+    this.econRound.spent += req.amount;
+    req.lent.push(ps.playerId);
+    // 方案 B + 兜底利息: the loan is paid back out of the borrower's next income — the principal, plus whatever
+    // `transfer.repayInterest` charges; the PvE 兜底 interest rides on the same settlement. A mode with either rule on
+    // keeps the ledger. `lag` is the 兜底率分红 snapshot: the borrower's board trailed the team's median when the loan
+    // was made, so this debt earns the premium on repayment (the risk premium for carrying the under-developed).
+    const interest = this.teamEcon.transfer.repayInterest;
+    if (interest > 0 || this.teamEcon.coverInterest.enabled) {
+      const list = this.econDebts.get(sender.playerId) || [];
+      list.push({ to: ps.playerId, amount: req.amount + interest, round: this.round, lag: this.econBorrowerBehind(sender.playerId) > 0 });
+      this.econDebts.set(sender.playerId, list);
+    }
+    if (interest > 0) {
+      this.toast(ps, 'info', msg('已向 {name} 提供 {amount} 资金（下回合归还 {total}）', { name: sender.name, amount: req.amount, total: req.amount + interest }));
+      this.toast(sender, 'info', msg('{name} 提供了 {amount} 资金（下回合归还 {total}）', { name: ps.name, amount: req.amount, total: req.amount + interest }));
+    } else {
+      this.toast(ps, 'info', msg('已向 {name} 提供 {amount} 资金（下回合归还）', { name: sender.name, amount: req.amount }));
+      this.toast(sender, 'info', msg('{name} 提供了 {amount} 资金（下回合归还）', { name: ps.name, amount: req.amount }));
+    }
+    ps.dirty();
+    sender.dirty();
+    this.markPrivate(ps);
+    this.markPrivate(sender);
+    this.markPublic();
+    this._econMaybeCloseRequest(req);
+    return OK;
+  }
+
+  /** 全员应答后关单；一个都没借到则退回额度。 */
+  _econMaybeCloseRequest(req) {
+    if (!req || !Array.isArray(req.targets)) return;
+    if (req.answers.size < req.targets.length) return;
+    if (!req.lent.length) this._econRefundAsk(req);
+    this.econCloseRequest(req, req.lent.length ? 'settled' : 'refused');
+    this.markPublic();
+  }
+
+  /** g.econ.project: buy one level of a logistics project out of the team reserve. */
+  econBuyProject(ps, project) {
+    if (!this.teamEcon) return fail(ERR.WRONG_PHASE, 'team economy disabled');
+    if (this.teamEcon.borrowOnly) return fail(ERR.WRONG_PHASE, 'projects disabled');
+    const g = this.econGate(ps);
+    if (g) return g;
+    if (!Object.hasOwn(this.teamProjects, project)) return fail(ERR.BAD_TARGET, 'project');
+    const def = this.teamEcon.projects[project];
+    const level = this.teamProjects[project];
+    if (level >= def.costs.length) return fail(ERR.MAX_LEVEL);
+    const cost = def.costs[level];
+    if (this.teamReserve < cost) return fail(ERR.NO_FUNDS, 'reserve');
+    // 业主 2026-10-17 裁决：取消「提案 + 全员确认」。点一下就升级 —— 钱够就生效，任何人可点，资金是团队共享的，
+    // 一个人升级 = 全队升级（teamReserve / teamProjects 本来就是 Match 级状态，markPublic 一广播所有人都看到）。
+    const lv = level + 1;
+    this.teamReserve -= cost;
+    this.teamProjects[project] = lv;
+    this.projectVote = null; // 旧提案机器留作兼容，但不再产生
+    this.markPublic();
+    // 业主 2026-10-17：升级要广播给全队，并且弹窗里要写清「这一级现在是什么效果」。
+    // 效果数字取 teamProjectRead（与客户端长按备注、面板读数同一来源，不另造一套说法）。
+    const n = this.teamProjectRead(project, lv);
+    const text = project === 'storehouse'
+      ? msg('应急仓储 已升至 Lv{lv}：休整结束时最多保留 {n} 资金到下一回合', { lv, n })
+      : project === 'logistics'
+        ? msg('后勤调度 已升至 Lv{lv}：全队每回合可调拨上限 +{n}', { lv, n })
+        : msg('联合采购 已升至 Lv{lv}：每回合开始多 {n} 次免费刷新', { lv, n: n || lv });
+    for (const p of this.players.values()) this.toast(p, 'info', text);
+    return OK;
+  }
+
+  /**
+   * g.econ.bounty — 赏金加时：花钱买时间。
+   *
+   * 买到的秒数**续在**当前截止时间上：`setDeadline` 会取消旧定时器再按「剩余 + 加时」重排，所以倒计时是从
+   * 现在起继续走，而不是被重置成满格。无时限的回合（`this.deadline === 0`）直接拒绝——那里没有时间可买。
+   * 钱从协同资金出（全队共享池，和后勤项目同一口径），因此任何一位队员都能为全队买。
+   */
+  econBuyTime(ps) {
+    if (!this.teamEcon) return fail(ERR.WRONG_PHASE, 'team economy disabled');
+    if (!this.isXie) return fail(ERR.WRONG_PHASE, 'time purchase disabled');
+    const g = this.econGate(ps);
+    if (g) return g;
+    if (!(this.deadline > 0)) return fail(ERR.WRONG_PHASE, 'untimed');
+    const usedSec = this.econRound.bountySec || 0;
+    if (usedSec + BOUNTY_SECONDS > BOUNTY_MAX_SECONDS) return fail(ERR.MAX_LEVEL, 'bounty');
+    const step = Math.floor(usedSec / BOUNTY_SECONDS);
+    const cost = BOUNTY_COSTS[Math.min(step, BOUNTY_COSTS.length - 1)];
+    if (this.teamReserve < cost) return fail(ERR.NO_FUNDS, 'reserve');
+    this.teamReserve -= cost;
+    this.econRound.bountySec = usedSec + BOUNTY_SECONDS;
+    this.econRound.bounty = Math.floor(this.econRound.bountySec / BOUNTY_SECONDS);
+    const left = Math.max(0, (this.deadline - this.sched.now()) / 1000);
+    this.setDeadline(left + BOUNTY_SECONDS, () => this.prepDeadline());
+    this.markPublic();
+    const text = msg('赏金加时：准备时间 +{s} 秒（消耗 {c} 协同资金）', { s: BOUNTY_SECONDS, c: cost });
+    for (const p of this.players.values()) this.toast(p, 'info', text);
+    return OK;
+  }
+
+  /** 队友对升级提案表态：全票同意才升级；任一人拒绝即作废。 */
+  econVote(ps, id, approve) {
+    if (!this.teamEcon) return fail(ERR.WRONG_PHASE, 'team economy disabled');
+    const v = this.projectVote;
+    if (!v || (typeof id === 'string' && id !== v.id)) return fail(ERR.BAD_TARGET, 'no vote');
+    const g = this.econGate(ps);
+    if (g) return g;
+    const voters = this.order.filter((p) => p.alive && !p.left && this.players.get(p.playerId) === p);
+    if (!voters.some((p) => p.playerId === ps.playerId)) return fail(ERR.BAD_TARGET, 'not a voter');
+    if (v.agree.has(ps.playerId) || v.reject.has(ps.playerId)) return fail(ERR.ALREADY, 'voted');
+    if (!approve) {
+      v.reject.add(ps.playerId);
+      this.projectVote = null;
+      const by = this.players.get(v.by);
+      if (by) this.toast(by, 'warn', msg('{name} 拒绝了升级提案', { name: ps.name }));
+      for (const p of voters) this.markPrivate(p);
+      this.markPublic();
+      return OK;
+    }
+    v.agree.add(ps.playerId);
+    if (voters.every((p) => v.agree.has(p.playerId))) {
+      const def = this.teamEcon.projects[v.project];
+      if (this.teamProjects[v.project] !== v.level || v.level >= def.costs.length) { this.projectVote = null; return fail(ERR.ALREADY, 'stale'); }
+      if (this.teamReserve < v.cost) { this.projectVote = null; return fail(ERR.NO_FUNDS, 'reserve'); }
+      this.teamReserve -= v.cost;
+      this.teamProjects[v.project] = v.level + 1;
+      this.projectVote = null;
+      // 旧提案路径（已不再产生，仅兼容在飞的消息）：与直购一样广播给全队并带效果
+      const lv = v.level + 1;
+      const n = this.teamProjectRead(v.project, lv);
+      const text = v.project === 'storehouse'
+        ? msg('应急仓储 已升至 Lv{lv}：休整结束时最多保留 {n} 资金到下一回合', { lv, n })
+        : v.project === 'logistics'
+          ? msg('后勤调度 已升至 Lv{lv}：全队每回合可调拨上限 +{n}', { lv, n })
+          : msg('联合采购 已升至 Lv{lv}：每回合开始多 {n} 次免费刷新', { lv, n: n || lv });
+      for (const p of this.players.values()) this.toast(p, 'info', text);
+    }
+    for (const p of voters) this.markPrivate(p);
+    this.markPublic();
+    return OK;
+  }
+
+  /** bot 席位的自动同意（业主：「ai 自动同意」），延迟一小段像在思考。 */
+  _scheduleBotVote(bot) {
+    const delay = 400 + (this.rngEcon ? this.rngEcon.int(600) : 0);
+    this.later(delay, () => {
+      const v = this.projectVote;
+      if (!v || !bot.alive || bot.left) return;
+      this.econVote(bot, v.id, true);
+    });
+  }
+
+  /**
+   * 救济 (DESIGN §28, user decision 2026-10-09): whether this player may draw on the team reserve right now — alive,
+   * in PREP, not ready, at or below `relief.lpThreshold` and (tied for) the team's lowest LP, with its own round
+   * allowance left. A healthy team has nobody eligible: this is a lifeline for the player about to be eliminated, not
+   * an income. Shared by the private view and the intent, so what the client shows and what the server accepts agree.
+   * @param {any} ps
+   * @returns {boolean}
+   */
+  econReliefEligible(ps) {
+    const rl = this.teamEcon && this.teamEcon.relief;
+    if (!rl || !rl.enabled || !ps || !ps.alive || ps.left) return false;
+    if (this.phase !== PHASE.PREP || (!ps.isBot && ps.ready)) return false;
+    if ((this.econReliefByPlayer.get(ps.playerId) || 0) >= rl.perPlayerPerRound) return false;
+    const lp = Number(ps.lp) || 0;
+    if (lp > rl.lpThreshold) return false;
+    // the weakest: nobody alive sits strictly below this player (a tie lets both take)
+    for (const p of this.players.values()) {
+      if (!p.alive || p.left || p === ps) continue;
+      if ((Number(p.lp) || 0) < lp) return false;
+    }
+    return true;
+  }
+
+  /**
+   * g.econ.relief (DESIGN §28, user decision 2026-10-09): the weakest player takes funds straight out of the team
+   * reserve — itself, not on anyone's behalf (「血最少的人自己选择取还是不取」), `relief.amount` at a time (「每次取1」).
+   * Caps: `relief.perPlayerPerRound` per player and `relief.teamPerRound` for the team, both re-armed every round. It
+   * is a grant, not a loan: nothing is owed back (the debt ledger belongs to the borrow protocol).
+   */
+  econRelief(ps) {
+    const rl = this.teamEcon && this.teamEcon.relief;
+    if (!rl || !rl.enabled) return fail(ERR.WRONG_PHASE, 'relief disabled');
+    const g = this.econGate(ps);
+    if (g) return g;
+    if ((this.econReliefByPlayer.get(ps.playerId) || 0) >= rl.perPlayerPerRound) return fail(ERR.ALREADY, 'relief budget');
+    if (!this.econReliefEligible(ps)) return fail(ERR.BAD_TARGET, 'not the weakest');
+    if (this.econReliefSpent + rl.amount > rl.teamPerRound) return fail(ERR.ALREADY, 'team relief cap');
+    if (this.teamReserve < rl.amount) return fail(ERR.NO_FUNDS, 'reserve');
+    this.teamReserve -= rl.amount;
+    this.econReliefSpent += rl.amount;
+    this.econReliefByPlayer.set(ps.playerId, (this.econReliefByPlayer.get(ps.playerId) || 0) + 1);
+    ps.addFunds(rl.amount, { reason: 'relief' });
+    ps.dirty();
+    this.toast(ps, 'info', msg('从协同资金领取了 {n} 资金', { n: rl.amount }));
+    this.markPublic();
+    this.markPrivate(ps);
+    return OK;
+  }
+
+  // ---- closing -------------------------------------------------------------------------------------
+
+  /**
+   * A request that never reached anyone — its TTL ran out, or everyone answered and nobody lent — gives the budget
+   * back: the asker did not get the funds, so it may still turn to another teammate this round.
+   */
+  _econRefundAsk(req) {
+    const used = this.econRound.byPlayer.get(req.from) || 0;
+    if (used > 0) this.econRound.byPlayer.set(req.from, used - 1);
+  }
+
+  /** Close one request (its TTL, a deny/approve, the prep end, a leave, an elimination) — idempotent by identity. */
+  econCloseRequest(req, reason) {
+    if (!req) return;
+    this.cancel(req.timer);
+    req.timer = null;
+    if (this.econRequests.get(req.id) !== req) return;
+    this.econRequests.delete(req.id);
+    const from = this.players.get(req.from);
+    if (from) this.markPrivate(from);
+    for (const id of req.targets || []) {
+      const t = this.players.get(id);
+      if (t) this.markPrivate(t);
+    }
+    if (reason === 'expired') {
+      // nobody ever said yes: the budget comes back and the asker may still try another teammate this round
+      this._econRefundAsk(req);
+      if (from && from.alive && !from.isBot) this.toast(from, 'warn', '支援请求已超时');
+    } else if (reason === 'prep-end' && from && from.alive && !from.isBot) {
+      this.toast(from, 'warn', '休整期结束，支援请求已取消');
+    }
+  }
+
+  /** Every pending request of one player (a leave, an elimination) — as the asker or as one of the targets. */
+  econCloseAllFor(playerId, reason) {
+    for (const req of [...this.econRequests.values()]) {
+      if (req.from === playerId || (Array.isArray(req.targets) && req.targets.includes(playerId))) this.econCloseRequest(req, reason);
+    }
+  }
+
+  /** The outgoing requests of one player (it readied up). */
+  econCloseAllFrom(playerId, reason) {
+    for (const req of [...this.econRequests.values()]) if (req.from === playerId) this.econCloseRequest(req, reason);
+  }
+
+  /** Every pending request (the prep end). */
+  econCloseAll(reason) {
+    for (const req of [...this.econRequests.values()]) this.econCloseRequest(req, reason);
+  }
+
+  // ---- prep end, debts and the two PvE rewards -----------------------------------------------------
+
+  /** Prep end: leftover funds convert into the team reserve, capped (design §28). 坎诺特 bands keep everything. */
+  econConvertLeftover(ps) {
+    if (!this.teamEcon || this.teamEcon.borrowOnly) return;
+    if (this.gd.leftoverKeptBands.includes(ps.bandId)) return;
+    const conv = Math.min(Math.max(0, ps.funds - this.teamKeepFor(ps)), this.teamEcon.reserve.convertPerPlayerMax);
+    if (conv <= 0) return;
+    ps.funds -= conv;
+    this.teamReserve += conv;
+    ps.dirty();
+    this.markPublic();
+  }
+
+  /**
+   * 联防奖励（业主 2026-10-18）：防住了就给协同资金。
+   *
+   *   · 联防没漏 —— 有人漏进来、联防把漏进来的敌人全挡住（0 穿透）→ `perfectReward`（默认 1）；
+   *   · 全员都防住 —— 自家阵地和联防都没有穿透 → `fullDefenceReward`（默认 2），**取代**上面那一档，不叠加。
+   *
+   * 每回合最多进 `perfectRewardCapPerRound`（默认 2），所以一次结算最多发一次。settle.js 在算完各家的
+   * 漏怪数与联防穿透之后调用它。
+   */
+  econDefenceReward({ full = false } = {}) {
+    if (!this.teamEcon || this.teamEcon.borrowOnly) return 0;
+    // 一次结算只发一次：已经发过就不再「补差价」，否则同一回合的两次调用会把两档叠起来。
+    if (this.econRound.perfectGranted > 0) return 0;
+    const cfg = this.teamEcon.reserve;
+    const amount = full ? cfg.fullDefenceReward : cfg.perfectReward;
+    const left = cfg.perfectRewardCapPerRound - this.econRound.perfectGranted;
+    const n = Math.min(amount, Math.max(0, left));
+    if (!(n > 0)) return 0;
+    this.teamReserve += n;
+    this.econRound.perfectGranted += n;
+    this.markPublic();
+    const text = full ? msg('全员都防住了：协同资金 +{n}', { n }) : msg('联防没漏：协同资金 +{n}', { n });
+    for (const p of this.players.values()) this.toast(p, 'info', text);
+    return n;
+  }
+
+  /**
+   * 方案 B (user decision 2026-10-07): every borrower pays what it owes out of the income it was just granted
+   * (`PlayerState.startRound`), so the debt never touches the round-clearing funds rule. The round's budget is capped
+   * by that very income, so a debt is always payable; whatever still cannot be paid is forgiven rather than rolled over.
+   */
+  econSettleDebts(alive) {
+    // 业主 2026-10-17：**取消「下回合强制还」**。这一轮只提醒，不再从收入里扣 —— 债务留在 econDebts 上，
+    // 由借款人自己点「还钱」（g.econ.repay）结清，队友可以点「催钱」（g.econ.nudge）提醒。
+    if (!this.teamEcon || !this.econDebts.size) return;
+    for (const ps of alive) {
+      const list = this.econDebts.get(ps.playerId);
+      if (!list || !list.length) continue;
+      const owe = list.reduce((n, d) => n + (Number(d.amount) || 0), 0);
+      this.toast(ps, 'info', msg('你还有 {n} 资金欠款未还，可以在「借钱」旁点「还钱」结清', { n: owe }));
+      this.markPrivate(ps);
+    }
+  }
+
+  /** 还钱 (业主 2026-10-17)：借款人主动结清，按欠款逐笔付给债权人；钱不够就付到付不动为止。 */
+  econRepay(ps, { to = null } = {}) {
+    if (!this.teamEcon) return fail(ERR.WRONG_PHASE, 'team economy disabled');
+    const g = this.econGate(ps);
+    if (g) return g;
+    const list = this.econDebts.get(ps.playerId);
+    if (!list || !list.length) return fail(ERR.BAD_TARGET, 'no-debt');
+    let paid = 0;
+    for (const d of [...list]) {
+      if (to && d.to !== to) continue;
+      const creditor = this.players.get(d.to);
+      const pay = Math.max(0, Math.min(Number(d.amount) || 0, ps.funds - paid));
+      if (pay <= 0) break; // 手头没钱了：剩下的留到下次
+      paid += pay;
+      d.amount -= pay;
+      if (creditor && creditor.alive && !creditor.left) {
+        creditor.addFunds(pay, { reason: 'repay' });
+        creditor.dirty();
+        this.toast(creditor, 'info', msg('{name} 归还了 {pay} 资金', { name: ps.name, pay }));
+        this.markPrivate(creditor);
+      }
+      // 兜底利息：还了才铸利息池，和原来的机制一致
+      const ci = this.teamEcon.coverInterest;
+      const lag = ci && d.lag ? ci.lagPremium : 1;
+      for (const row of this.econCoverSplit(pay, lag, ps.playerId)) {
+        if (row.bonus <= 0) continue;
+        row.ps.addFunds(row.bonus, { reason: 'cover' });
+        row.ps.dirty();
+        this.toast(row.ps, 'info', msg('兜底利息 +{bonus}（覆盖率 {rate}%）', { bonus: row.bonus, rate: row.rate }));
+      }
+      if (d.amount <= 0) list.splice(list.indexOf(d), 1);
+    }
+    if (paid <= 0) return fail(ERR.NO_FUNDS, 'repay-no-funds');
+    ps.funds -= paid;
+    ps.dirty();
+    if (!list.length) this.econDebts.delete(ps.playerId);
+    this.toast(ps, 'ok', msg('已归还 {paid} 资金', { paid }));
+    this.markPrivate(ps);
+    this.markPublic();
+    return OK;
+  }
+
+  /** 催钱 (业主 2026-10-17)：债权人提醒还欠自己钱的人。每人每回合对同一债务人限一次。 */
+  econNudge(ps, borrowerId) {
+    if (!this.teamEcon) return fail(ERR.WRONG_PHASE, 'team economy disabled');
+    const g = this.econGate(ps);
+    if (g) return g;
+    const list = this.econDebts.get(borrowerId);
+    const debt = (list || []).find((d) => d.to === ps.playerId && d.amount > 0);
+    if (!debt) return fail(ERR.BAD_TARGET, 'nothing-owed');
+    const borrower = this.players.get(borrowerId);
+    if (!borrower || borrower.left) return fail(ERR.BAD_TARGET, 'borrower-gone');
+    this.econNudged = this.econNudged || new Map();
+    const key = `${ps.playerId}>${borrowerId}:${this.round}`;
+    if (this.econNudged.has(key)) return fail(ERR.ALREADY, 'nudged');
+    this.econNudged.set(key, true);
+    this.toast(borrower, 'warn', msg('{name} 催你还钱：还欠 {n} 资金', { name: ps.name, n: debt.amount }));
+    this.toast(ps, 'info', msg('已提醒 {name} 还 {n} 资金', { name: borrower.name, n: debt.amount }));
+    this.markPrivate(borrower);
+    this.markPrivate(ps);
+    return OK;
+  }
+
+  /** 旧的自动扣款路径保留成死代码以外的东西：这里不再被调用（econSettleDebts 已改成只提醒）。 */
+  _econSettleDebtsLegacy(alive) {
+    if (!this.teamEcon || !this.econDebts.size) return;
+    for (const ps of alive) {
+      const list = this.econDebts.get(ps.playerId);
+      if (!list || !list.length) continue;
+      this.econDebts.delete(ps.playerId);
+      let paid = 0;
+      let due = 0;
+      for (const d of list) {
+        due += d.amount;
+        const creditor = this.players.get(d.to);
+        const pay = Math.max(0, Math.min(d.amount, ps.funds - paid));
+        if (pay <= 0) continue;
+        paid += pay;
+        // a creditor who is gone takes nothing: the funds are not created anywhere else either
+        if (creditor && creditor.alive && !creditor.left) {
+          creditor.addFunds(pay, { reason: 'repay' });
+          creditor.dirty();
+          this.toast(creditor, 'info', msg('{name} 归还了 {pay} 资金', { name: ps.name, pay }));
+        }
+        // 兜底分红 (user decision 2026-10-09): the interest of a repayment is ONE pool, minted here and split between
+        // every teammate who has covered — the borrower itself is never one of them (it is the one being helped), and
+        // a helper that is gone takes nothing. The pool is capped at the principal, so a loan still never pays back
+        // more than double however many teammates covered it.
+        const ci = this.teamEcon.coverInterest;
+        const lag = ci && d.lag ? ci.lagPremium : 1;
+        for (const row of this.econCoverSplit(pay, lag, ps.playerId)) {
+          if (row.bonus <= 0) continue;
+          row.ps.addFunds(row.bonus, { reason: 'cover' });
+          row.ps.dirty();
+          this.toast(row.ps, 'info', msg('兜底利息 +{bonus}（覆盖率 {rate}%）', { bonus: row.bonus, rate: row.rate }));
+        }
+      }
+      if (paid <= 0) continue;
+      ps.funds -= paid;
+      ps.dirty();
+      this.toast(ps, 'warn', due > paid
+        ? msg('归还借款 {paid} 资金（差额已免除）', { paid })
+        : msg('归还借款 {paid} 资金', { paid }));
+    }
+  }
+
+  /** The match's planned enemy total (every round's wave, boss rounds included), built on a scratch rng. */
+  _econCoverTotal() {
+    const rng = createRng(deriveSeed(this.seed, 'econ-plan'));
+    const last = Math.max(1, Number(this.gd.lastRound) || 1);
+    let n = 0;
+    for (let r = 1; r <= last; r++) {
+      const boss = r === this.gd.bossRound || r === this.gd.hiddenRound;
+      const wave = boss
+        ? buildBossWave(this.gd, rng, this.factions, r, {
+          bossId: r === this.gd.hiddenRound && r !== this.gd.bossRound ? this.hiddenBossId : this.bossId,
+          solo: this.isSolo,
+        })
+        : buildNormalWave(this.gd, rng, this.factions, r);
+      for (const s of wave.spawns || []) n += Math.max(1, Number(s.count) || 1);
+    }
+    return n;
+  }
+
+  /**
+   * 兜底利息: how many of a teammate's leaked enemies this player's board held (the kills a 联防 field attributed to
+   * it — the field's players are the helpers), and the integer percent that buys on a repaid loan.
+   */
+  econCoverTally(res, helpers) {
+    if (!this.teamEcon || !this.teamEcon.coverInterest.enabled) return;
+    for (const pid of helpers) {
+      const k = Number(res && res.perPlayer && res.perPlayer[pid] && res.perPlayer[pid].killed) || 0;
+      if (k > 0) {
+        this.econCover.set(pid, (this.econCover.get(pid) || 0) + Math.trunc(k));
+        // the rate lives in m.private.econ.cover — without this the chip only refreshed at the next event that
+        // dirtied the seat (user report 2026-10-08: 兜底率没有变化)
+        const ps = this.players.get(pid);
+        if (ps) this.markPrivate(ps);
+      }
+    }
+  }
+
+  /** `min(capPct, floor(100 × 兜底 kills / the match's enemy total))` — an integer percent, 0 when the rule is off. */
+  econCoverRate(playerId) {
+    const ci = this.teamEcon && this.teamEcon.coverInterest;
+    if (!ci || !ci.enabled || this.econCoverTotal <= 0) return 0;
+    const kills = this.econCover.get(playerId) || 0;
+    return Math.max(0, Math.min(ci.capPct, Math.floor((100 * kills) / this.econCoverTotal)));
+  }
+
+  /**
+   * The teammates who draw on a repayment's 兜底利息: a cover rate above zero, alive and still in the match — and never
+   * the borrower itself (audit P1-4, user decision 2026-10-09: covering for others is what pays, and the one repaying
+   * is the one being helped, not a helper). A rate above zero already means "has a 兜底 record" (the rate floors to 0
+   * without kills), so this is the whole payee rule.
+   */
+  econCoverPayees(borrowerId = null) {
+    const ci = this.teamEcon && this.teamEcon.coverInterest;
+    const out = [];
+    if (!ci || !ci.enabled) return out;
+    for (const ps of this.players.values()) {
+      if (ps.playerId === borrowerId || !ps.alive || ps.left) continue;
+      const rate = this.econCoverRate(ps.playerId);
+      if (rate > 0) out.push({ ps, rate });
+    }
+    return out;
+  }
+
+  /**
+   * 兜底分红 (user decision 2026-10-09): one repaid principal mints ONE interest pool — the payees' own credits
+   * (`本金 × 覆盖率 × 溢价`) summed — and every payee takes a share of it in proportion to its own rate. The pool is
+   * capped at that principal, a **per-loan** cap (not per-lender): two 100% helpers split one fund of interest instead
+   * of minting two, so "借 1 永远不会收回 2" holds however many teammates covered (user decision 2026-10-07, audit
+   * P0-1). Interest is paid in whole funds: the funds available this repayment are `floor(池 + 结转)`, handed out by
+   * largest remainder (阵亡分红's convention — 余数给覆盖率最高的), and the sub-1 fraction rides `econCoverCarry` to
+   * the next repayment, so no fraction is ever lost. Returns `{ ps, rate, share, bonus }` per payee — `share` is this
+   * repayment's fractional credit, `bonus` the whole funds it was paid. The caller adds them.
+   */
+  econCoverSplit(principal, mult = 1, borrowerId = null) {
+    const ci = this.teamEcon && this.teamEcon.coverInterest;
+    if (!ci || !ci.enabled || !(principal > 0)) return [];
+    const payees = this.econCoverPayees(borrowerId);
+    if (!payees.length) return [];
+    const sumRate = payees.reduce((n, p) => n + p.rate, 0);
+    const m = Math.max(1, mult);
+    let raw = 0;
+    for (const p of payees) raw += (principal * p.rate * m) / 100;
+    const pool = Math.min(principal, raw);
+    const rows = payees.map((p) => ({ ps: p.ps, rate: p.rate, share: (pool * p.rate) / sumRate, bonus: 0 }));
+    this.econCoverRepaid += principal;
+    // whole funds only: the pool's carry joins this repayment's pool, everything under one fund stays for the next one
+    const carried = this.econCoverCarry + pool;
+    const whole = Math.floor(carried);
+    this.econCoverCarry = Math.max(0, carried - whole);
+    if (whole > 0) {
+      // largest remainder: everybody takes its floor share of the whole funds, the leftovers go to the largest
+      // fractions (ties → the higher rate, then whoever has earned least, then the lower seat: deterministic, and an
+      // even split alternates instead of always paying the same teammate)
+      const earned = (row) => this.econCoverEarned.get(row.ps.playerId) || 0;
+      const order = rows.map((row, i) => ({ i, frac: ((whole * row.share) / pool) % 1 }))
+        .sort((a, b) => (b.frac - a.frac) || (rows[b.i].rate - rows[a.i].rate) || (earned(rows[a.i]) - earned(rows[b.i])) || (a.i - b.i));
+      for (const row of rows) row.bonus = Math.floor((whole * row.share) / pool);
+      let left = whole - rows.reduce((n, row) => n + row.bonus, 0);
+      for (let k = 0; left > 0; k++) { rows[order[k].i].bonus += 1; left -= 1; }
+    }
+    for (const row of rows) {
+      this.econCoverLastBonus.set(row.ps.playerId, row.bonus);
+      if (row.bonus <= 0) continue;
+      this.econCoverPaid += row.bonus;
+      this.econCoverEarned.set(row.ps.playerId, (this.econCoverEarned.get(row.ps.playerId) || 0) + row.bonus);
+    }
+    return rows;
+  }
+
+  /** One payee's slice of the pool fraction that has not crossed a whole fund yet — what its next repayments pay first. */
+  econCoverPending(playerId) {
+    const ps = this.players.get(playerId);
+    if (!ps || !ps.alive || ps.left || this.econCoverCarry <= 0) return 0;
+    const rate = this.econCoverRate(playerId);
+    if (rate <= 0) return 0;
+    const payees = this.econCoverPayees(null);
+    const sum = payees.reduce((n, p) => n + p.rate, 0);
+    return sum > 0 ? (this.econCoverCarry * rate) / sum : 0;
+  }
+
+  /**
+   * A teammate is out. Its outstanding debts are void (the lender gets a warning), and — when the mode turns the rule
+   * on (`teamEconomy.deathDividend`) — the income it would have earned next round is diced out to the survivors: every
+   * survivor rolls 1..dice, the shares follow the rolls, the remainder goes to the highest roll and the total never
+   * exceeds that income (user decision 2026-10-07).
+   */
+  econOnEliminated(ps, round) {
+    if (!this.teamEcon) return;
+    const owed = this.econDebts.get(ps.playerId);
+    if (owed && owed.length) {
+      this.econDebts.delete(ps.playerId);
+      for (const d of owed) {
+        const creditor = this.players.get(d.to);
+        if (creditor && creditor.alive && !creditor.left) this.toast(creditor, 'warn', msg('{name} 已阵亡：{amount} 借款无法归还', { name: ps.name, amount: d.amount }));
+      }
+    }
+    const dd = this.teamEcon.deathDividend;
+    if (!dd || !dd.enabled) return;
+    const pool = Math.max(0, Math.trunc(this.gd.income(round + 1)) + Math.max(0, Math.trunc(ps.pendingFunds) || 0));
+    const survivors = [...this.players.values()].filter((p) => p !== ps && p.alive && !p.left);
+    if (pool <= 0 || !survivors.length) return;
+    const rolls = survivors.map(() => this.rngEcon.int(dd.dice) + 1);
+    const totalRoll = rolls.reduce((n, r) => n + r, 0) || 1;
+    const shares = survivors.map((p, i) => ({ p, roll: rolls[i], share: Math.floor((pool * rolls[i]) / totalRoll) }));
+    const given = shares.reduce((n, s) => n + s.share, 0);
+    if (pool - given > 0) {
+      let best = 0;
+      for (let i = 1; i < shares.length; i++) if (shares[i].roll > shares[best].roll) best = i;
+      shares[best].share += pool - given;
+    }
+    for (const s of shares) {
+      if (s.share <= 0) continue;
+      s.p.addFunds(s.share, { reason: 'dividend' });
+      s.p.dirty();
+      this.toast(s.p, 'info', msg('{name} 已阵亡：随机分得 {share} 资金（骰 {roll}）', { name: ps.name, share: s.share, roll: s.roll }));
+    }
+    this.tickerText(msg('{name}博士的资金由队友随机继承', { name: ps.name }), 0);
+  }
+}
