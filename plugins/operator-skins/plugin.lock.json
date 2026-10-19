@@ -1,0 +1,41 @@
+{
+  "lock": 1,
+  "id": "operator-skins",
+  "version": "0.3.1",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "client/js/ui/dynamicIllustration.js": {
+      "sha256": "dcec533fd7f0065ab6bc8f9880993046268748c783486ae0275681f093f8f8e0",
+      "bytes": 5971
+    },
+    "client/js/ui/skinAssets.js": {
+      "sha256": "b00acebb65124363b9cd0bc1ee0ee6710f22b3a4e5f0b38c172c1dcee42d5d38",
+      "bytes": 739
+    },
+    "client/js/ui/skinPicker.js": {
+      "sha256": "f902951e12dde067a98ced99427fb2aa718311ad2ed504242ebc298cb619351e",
+      "bytes": 6082
+    },
+    "client/js/ui/skinsModel.js": {
+      "sha256": "d7e02758b928e15b4098f91e2cf9947815e0c11cb0bfb75050f4ab2ae800386c",
+      "bytes": 1847
+    },
+    "host/noop.js": {
+      "sha256": "60f0f107c874ae35cccf4171a35a3b2739c8c8ffc40d810dfc11b74bcc4558bc",
+      "bytes": 69
+    },
+    "plugin.json": {
+      "sha256": "3cf6ef058ada828d96c7707354126dbe666dc2f57c7204d518d8b4302ba121f2",
+      "bytes": 647
+    },
+    "shared/skin-catalogue.js": {
+      "sha256": "af225a465fcbad89d572c851d7a74e2c1fc0dcbc8b02b16c8e4185616799534f",
+      "bytes": 80347
+    },
+    "shared/skins.js": {
+      "sha256": "a35bba124a5ca9d240c304ff0c3351ee7c1fa0aad2f1ca9556a4d7962dd63257",
+      "bytes": 1589
+    }
+  },
+  "spine": {}
+}
