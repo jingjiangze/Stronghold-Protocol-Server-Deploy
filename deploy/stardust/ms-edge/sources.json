@@ -30,7 +30,18 @@
   ],
   "_exceptions_note": "数据集不是逐字节完整的：ModelScope 的内容审核会拒收个别文件（实测拒了 char_340_shwaz_snow_1/illustration.png，提交被平台 reverted）。这些路径必须落到别的源，否则玩家拿到 404。Stardust 的 material-lb 有同一张表（MATERIAL-SOURCES.md 里是同一个文件的同一条例外），说明这是会复发的类型，不是一次性事故。",
   "exceptions": {
-    "/assets/skins/char_340_shwaz_snow_1/illustration.png": "r2"
+    "/assets/skins/char_340_shwaz_snow_1/illustration.png": "r2",
+    "/assets/local/scene/act1autochess_m01/scene.bin": "r2",
+    "/assets/local/scene/act1autochess_m02/scene.bin": "r2",
+    "/assets/local/scene/act1autochess_m03/scene.bin": "r2",
+    "/assets/local/scene/act1autochess_m04/scene.bin": "r2",
+    "/assets/local/scene/act1autochess_m05/scene.bin": "r2",
+    "/assets/local/scene/act1autochess_m06/scene.bin": "r2",
+    "/assets/local/scene/act1autochess_m07/scene.bin": "r2",
+    "/assets/local/scene/act2autochess_m01/scene.bin": "r2",
+    "/assets/local/scene/act2autochess_m02/scene.bin": "r2",
+    "/assets/local/scene/act2autochess_m03/scene.bin": "r2",
+    "/assets/local/scene/act2autochess_m04/scene.bin": "r2"
   },
   "_prefix_rules_note": "**prefixRules 已于 2026-10-15 删除。** 曾据「2026-10-14 实测 voice 0/15、char 21%、ui 20%、spine 45%…」写下 8 条前缀规避，全部 `skip: [modelscope]`。那次实测是**探针坏了**：`curl -o /dev/null` 在 Windows 上报 `(23) client returned ERROR on write`，异常被 catch 成 FAIL，48 条全 FAIL ⇒ 看起来 100% 缺失。修正后带对照组（5 条确定不存在的路径 → 5/5 正确 404）重测，从 `origin/assets-raw` 权威树按 22 个 `assets/` 前缀各抽 ≤10 条共 205 条：**205/205 全 200**（含 voice 10/10、char 10/10、ui 10/10、spine 10/10、art-index 1/1）。另注意 LFS 对象第一跳是 302 到 `cdn-lfs-cn-1.modelscope.cn`，必须跟到底，单看第一跳会把「有货」读成 302。⇒ 8 条规则全是基于假缺失的死配置，删除。`edge-sidecar.mjs` 的 `prefixBlocked` 机制保留（没错，只是暂无规则可命中）；若将来真出现目录级缺口，先用带对照组的探针复核再写规则。",
   "prefixRules": []
