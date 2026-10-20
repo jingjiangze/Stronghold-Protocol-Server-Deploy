@@ -82,12 +82,16 @@ export async function handleOfflineLineup(req, res, opts = {}) {
     return;
   }
 
-  let body = '';
+  // 按**字节**累计（MAX_BODY_BYTES 是字节）：body += chunk 会把 Buffer 转成 UTF-16 字符串，
+  // 既让上限随内容丰富度浮动，也会在 UTF-8 多字节字符跨块时切坏它。收块、按字节判、最后一次性解码。
+  const chunks = [];
+  let bytes = 0;
   let tooBig = false;
   try {
     for await (const chunk of req) {
-      body += chunk;
-      if (body.length > MAX_BODY_BYTES) { tooBig = true; break; }
+      bytes += chunk.length;
+      if (bytes > MAX_BODY_BYTES) { tooBig = true; break; }
+      chunks.push(chunk);
     }
   } catch (e) {
     log.warn?.('[offline-lineup] body read failed', e && e.message);
@@ -99,6 +103,7 @@ export async function handleOfflineLineup(req, res, opts = {}) {
     reply({ ok: true, accepted: 0, dropped: 'size' });
     return;
   }
+  const body = Buffer.concat(chunks).toString('utf8');
 
   let doc;
   try { doc = JSON.parse(body); } catch { doc = null; }
