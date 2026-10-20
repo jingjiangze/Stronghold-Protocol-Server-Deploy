@@ -144,7 +144,7 @@ export function aiLastOption(room, myId) {
  * 自己的 `jingjiangze-stronghold-protocol.ms.show` —— 后者经 ModelScope 门户打开会套一层平台外壳，而且换入口就失效。
  * 本地/局域网调试可以用 `globalThis.__SP_SHARE_BASE__` 覆盖。
  */
-const SHARE_BASE_DEFAULT = 'https://jingjiangze-stronghold-protocol.ms.show/';
+const SHARE_BASE_DEFAULT = 'https://superbig.jiangjiangze.icu/';
 /** 邀请链接：服务端登记到 openp2p 平台后下发的 `room.inviteUrl` 优先，没有才回退到本地按 location 拼的那条。 */
 export function inviteLinkFor(room) {
   const direct = room && typeof room.inviteUrl === 'string' ? room.inviteUrl.trim() : '';
