@@ -256,7 +256,7 @@ function wireNet() {
   net.on('unhandledError', (err) => toastError(err));
   net.on('room.state', onRoomState);
   // 断线重建：服务端每回合把这一局交给我们保管；它重启后（房间还在、对局没了）会来要回去。
-  net.on('b.snapshot', (msg) => { const p = payload(msg); if (p && p.snapshot && typeof p.snapshot === 'object') matchSnapshot = p.snapshot; });
+  net.on('b.snapshot', (msg) => { const p = payload(msg); if (p && p.snapshot && typeof p.snapshot === 'object') { matchSnapshot = p.snapshot; try { globalThis.__spSnapshot = matchSnapshot; } catch { /* debug hook */ } } });
   net.on('b.snapshotRequest', () => { if (matchSnapshot) net.send('b.snapshot', { snapshot: matchSnapshot }); });
   net.on('room.closed', (msg) => {
     backToLobby();
