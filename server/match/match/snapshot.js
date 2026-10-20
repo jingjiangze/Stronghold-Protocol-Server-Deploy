@@ -29,18 +29,38 @@ export class MatchSnapshot {
       };
     }
     try {
-      return makeSnapshot({ round: this.round, phase: this.phase, players });
+      return makeSnapshot({
+      round: this.round, phase: this.phase, players,
+      // 进程重启后房间本身也没了：把房间骨架一起带上，回来的人才能把它重建出来。
+      room: {
+        code: this.roomCode, mode: this.mode, difficulty: this.difficulty,
+        variant: this.variant || null,
+        seats: [...this.players.values()].map((ps) => ({ seat: ps.seat, playerId: ps.playerId, name: ps.name, isBot: ps.isBot })),
+      },
+    });
     } catch { return null; }
   }
 
-  /** Broadcast the snapshot to every human seat (spectators and bots are not stores). Fail-open. */
+  /**
+   * Hand the snapshot to a bounded set of keepers. 20 humans x 37 KB is 750 KB per round start, and a recovery
+   * needs only a few copies: up to 4 humans every seat keeps one, above that the host plus two backups that rotate
+   * by round. Spectators and bots are not stores. Fail-open.
+   */
   broadcastSnapshot() {
     if (this.snapshotDisabled) return;
     let snap = null;
     try { snap = this.snapshotNow(); } catch { snap = null; }
-    if (!snap) return;
-    for (const ps of this.players.values()) {
-      if (ps.isBot) continue;
+    if (!snap) return;   // over the frame budget: no store this round (the previous one stays valid)
+    const humans = [...this.players.values()].filter((ps) => !ps.isBot && !ps.left);
+    if (!humans.length) return;
+    let keepers = humans;
+    if (humans.length > 4) {
+      const host = humans.find((ps) => ps.playerId === this.hostId) || humans[0];
+      const backups = humans.filter((ps) => ps !== host);
+      const start = (Number(this.round) || 0) % backups.length;
+      keepers = [host, backups[start], backups[(start + 1) % backups.length]].filter(Boolean);
+    }
+    for (const ps of new Set(keepers)) {
       try { this.sendTo(ps.playerId, { t: 'b.snapshot', snapshot: snap }); } catch { /* one dead socket must not stop the rest */ }
     }
   }
