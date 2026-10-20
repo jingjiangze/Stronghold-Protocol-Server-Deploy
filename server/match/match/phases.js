@@ -262,6 +262,14 @@ export class MatchPhases {
    * content set without a window continues exactly as before (`openOfferWindow` returns before it touches anything).
    */
   afterBattleCheck() {
+    // 断线重建：快照来自第 N 回合的回合开始，那就从第 N 回合起，并把数字/棋盘铺回去。
+    // 走的是同一个 startRound，所以波次、计时器、字段全部由本轮正常生成，没有第二条流程。
+    const b = this.bootstrap;
+    if (b && Number.isInteger(b.round) && b.round > 1) {
+      this.bootstrap = null;
+      this.startRound(b.round, () => this.applyBootstrap(b));
+      return;
+    }
     this.startRound(1);
   }
 
@@ -297,6 +305,8 @@ export class MatchPhases {
     }
     for (const ps of alive) ps.startRound(r);
     for (const ps of alive) this.dispatch(ps, 'onRoundStart', { round: r });
+    // 每回合开始把这一局交给客户端的页面保管（服务端重启后由它把局面送回来）。
+    try { this.broadcastSnapshot(); } catch { /* 快照失败不影响对局 */ }
     // an eliminated player's pending 信标 gift still goes to its teammate (effects flagged afterElimination; GitHub #86)
     for (const ps of this.order) {
       if (ps.alive) continue;

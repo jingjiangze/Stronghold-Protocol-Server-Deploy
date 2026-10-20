@@ -93,6 +93,8 @@ let welcomeAt = 0;
 let roomStateAt = 0;
 let matchAt = 0;
 let restoreTimer = null;
+/** 服务端交给我们保管的最后一回合快照（服务端重启后送回）。 */
+let matchSnapshot = null;
 let joinTimer = null;
 let joinInFlight = false;
 /** The rehearsal installer (battle/rehearsal.js): its tasks follow the match on screen (see wireNet's store hook). */
@@ -253,6 +255,9 @@ function wireNet() {
   net.on('replaced', () => toast(t('该身份已在其他页面登录，本页已断开'), 'warn', { ttl: 6000 }));
   net.on('unhandledError', (err) => toastError(err));
   net.on('room.state', onRoomState);
+  // 断线重建：服务端每回合把这一局交给我们保管；它重启后（房间还在、对局没了）会来要回去。
+  net.on('b.snapshot', (msg) => { const p = payload(msg); if (p && p.snapshot && typeof p.snapshot === 'object') matchSnapshot = p.snapshot; });
+  net.on('b.snapshotRequest', () => { if (matchSnapshot) net.send('b.snapshot', { snapshot: matchSnapshot }); });
   net.on('room.closed', (msg) => {
     backToLobby();
     const known = Object.hasOwn(CLOSE_REASON, String(msg.reason)) ? CLOSE_REASON[msg.reason] : null;
