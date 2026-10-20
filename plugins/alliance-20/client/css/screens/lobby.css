@@ -1738,22 +1738,8 @@ button.ally-card:disabled { filter: grayscale(.7) brightness(.7); cursor: defaul
 
 .rs-seats { flex: 1 1 auto; min-height: 0; display: flex; align-items: stretch; justify-content: center; gap: max(.3rem, 2.2vw); padding: .3rem .4rem .1rem;
   overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
-/* 20 人自适应：每行固定 10 人（--cols 由脚本给出，最多 10） */
-.rs--big .rs-seats {
-  display: grid;
-  flex: 1 1 auto;
-  min-height: 0;
-  grid-template-columns: repeat(var(--cols, 10), minmax(0, 1fr));
-  justify-items: stretch; align-content: start;
-  gap: .18rem .14rem;
-  width: 100%;
-  max-width: min(96vw, 1100px);
-  margin-left: .8rem; margin-right: auto;   /* 往左靠 */
-  overflow: visible;
-}
-/* 座位卡加高：两行时每张也要够高，立绘才看得清 */
-.rs--big .rseat { --w: auto; width: auto; flex: initial; min-width: 0; height: 340px; }
-.rs--big .rs-seats { grid-auto-rows: auto; row-gap: .3rem; padding-bottom: .1rem; align-content: start; }
+/* 20 人：单行横向，滚轮左右滚（业主 2026-10-20：回退成之前的横版，不要两行网格） */
+.rs--big .rs-seats { justify-content: flex-start; gap: .16rem; }
 .rseat { --w: min(18vw, 3.4rem, calc((100vw - 1.6rem) / var(--n, 4) - .3rem)); position: relative; flex: none; width: var(--w); display: flex; flex-direction: column;
   animation: sw-in 260ms var(--ease-out) backwards; animation-delay: calc(var(--i) * 60ms); }
 .rs--big .rseat { /* 宽度见上面的自适应规则 */ }

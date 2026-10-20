@@ -29,8 +29,8 @@
       "bytes": 7134
     },
     "client/css/screens/loadout.css": {
-      "sha256": "4137f3ecff85e63ce06217f963ca26aebf6aba51dc29530d2e7c28d5bb68dcc1",
-      "bytes": 92848
+      "sha256": "44ce44a0a961ec5e7b5df4888bed99eea156b4b93eaf08ba25859e4ccbcac6d7",
+      "bytes": 91710
     },
     "client/css/screens/lobby.css": {
       "sha256": "0280eb3719bbf3de709650f89b71e855f3d66fd85da2e7d458200a290091e352",
@@ -149,8 +149,8 @@
       "bytes": 127078
     },
     "client/js/screens/loadout.js": {
-      "sha256": "5835bfe965ae748b7a50ec521b8846b64c8bc7519fe91d39b1b59aad75515539",
-      "bytes": 98915
+      "sha256": "475a2a94b2f2b82bc769875dc6455816997302fb20e841083e4626e6754d7873",
+      "bytes": 98875
     },
     "client/js/screens/lobby.js": {
       "sha256": "49c0b64840f64046e52e03aff1c10072be18786de1fa78da5481b435ac6eaa53",
@@ -437,8 +437,8 @@
       "bytes": 80
     },
     "plugin.json": {
-      "sha256": "847bbd4d9afa8b8f15ca2318abb4e225957f19284899e64d3d9df1a4d80a9cb6",
-      "bytes": 3560
+      "sha256": "23f8aeca738b157a9dfb9c92546a2c2f7066d268a399952df0bda0e41471f7b8",
+      "bytes": 3443
     },
     "server/data.js": {
       "sha256": "a286b7bafb289988e081c1dbc7415488f1f1f82a2d775f4d4640a046d9ff9107",

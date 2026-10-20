@@ -122,61 +122,28 @@ export function prefixBlocked(config, pathname) {
 }
 
 
-// ---- 源健康与「这个文件它有没有」（与 server/http/asset-jump.js 同一套判据）--------------------------
-// 为什么侧车也要有：nginx 把 /assets|fonts/** 交给侧车，进程内那一份逻辑根本走不到。
-// 少了这两条，一个不可达或供不了这个文件的源仍会作为 302 目标发给玩家 ⇒ 玩家拿到 404。
-const HEALTH_PATH = process.env.SP_ASSET_HEALTH_PATH || '/assets/char/avatar/char_003_kalts.png';
-const HEALTH_TTL_MS = Number(process.env.SP_ASSET_HEALTH_TTL_MS || 3 * 60_000);
-const HEALTH_TIMEOUT_MS = 4000;
-const EXIST_TTL_MS = Number(process.env.SP_ASSET_EXIST_TTL_MS || 30 * 60_000);
-const EXIST_TIMEOUT_MS = 5000;
-const HEALTH_STRIKES = Math.max(1, Number(process.env.SP_ASSET_HEALTH_STRIKES || 1));
-const health = new Map();          // 源 id → { v:'ok'|'down', structural, strikes, at }
-const exists = new Map();          // 源 id + '\n' + 路径 → { v:'ok'|'miss'|null, at }
-const probing = new Set();
+// ---- 源健康与「这个文件它有没有」--------------------------------------------------------------------
+// 判据不在这里重算：进程内跳转（server/http/asset-jump.js）唯一地做探测，并把结论写成一个快照文件，
+// 侧车只读它 —— nginx 把 /assets|fonts/** 交给侧车，少了这两条剔除，一个取不到的源仍会被发给玩家。
+const SNAPSHOT = process.env.SP_EDGE_SNAPSHOT
+  || (process.env.TMPDIR || process.env.TEMP || '/tmp') + '/sp-asset-state.json';
+let snapshot = { down: [], dead: [], miss: [] };
+let snapshotAt = 0;
 
-const knownDown = (id) => { const h = health.get(id); return !!h && h.v === 'down' && Date.now() - h.at < HEALTH_TTL_MS; };
-const knownDead = (id) => { const h = health.get(id); return !!h && h.structural === true && Date.now() - h.at < HEALTH_TTL_MS; };
-const keyOf = (id, pathname) => id + '\n' + pathname;
-const knownMiss = (id, pathname) => {
-  const e = exists.get(keyOf(id, pathname));
-  return !!e && e.v === 'miss' && Date.now() - e.at < EXIST_TTL_MS;
-};
-const noteExist = (id, pathname, v) => {
-  if (exists.size >= 4096) { const first = exists.keys().next().value; if (first !== undefined) exists.delete(first); }
-  exists.set(keyOf(id, pathname), { v, at: Date.now() });
-};
-const probeExist = (id, base, pathname) => {
-  if (probing.has(keyOf(id, pathname)) || !base) return;
-  probing.add(keyOf(id, pathname));
-  Promise.resolve()
-    .then(() => fetch(base + pathname, { method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(EXIST_TIMEOUT_MS) }))
-    .then((r) => noteExist(id, pathname, r.status < 400 ? 'ok' : (r.status === 403 || r.status === 404 ? 'miss' : null)))
-    .catch(() => noteExist(id, pathname, null))
-    .finally(() => probing.delete(keyOf(id, pathname)));
-};
-const probeHealth = (id, base) => {
-  if (probing.has('health:' + id) || !base) return;
-  probing.add('health:' + id);
-  Promise.resolve()
-    .then(() => fetch(base + HEALTH_PATH, { method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS) }))
-    .then((r) => {
-      const ok = r.status < 400;
-      const strikes = ok ? 0 : (health.get(id)?.strikes || 0) + 1;
-      const structural = !ok && r.status >= 400 && r.status < 500;
-      health.set(id, { v: ok ? 'ok' : (strikes >= HEALTH_STRIKES ? 'down' : 'unknown'), structural, strikes, status: r.status, at: Date.now() });
-      logLine(ok ? 'debug' : 'warn', `[sp-edge] source ${id} ${ok ? 'ok' : 'answered ' + r.status} on ${HEALTH_PATH}${ok ? '' : (strikes >= HEALTH_STRIKES ? ' — the next source will be used' : ' — strike ' + strikes + '/' + HEALTH_STRIKES)}`);
-    })
-    .catch((e) => {
-      const strikes = (health.get(id)?.strikes || 0) + 1;
-      health.set(id, { v: strikes >= HEALTH_STRIKES ? 'down' : 'unknown', structural: false, strikes, error: String(e?.message || e).slice(0, 80), at: Date.now() });
-      logLine('warn', `[sp-edge] source ${id} unreachable (${health.get(id).error || e}) — ${strikes >= HEALTH_STRIKES ? 'the next source will be used' : 'strike ' + strikes + '/' + HEALTH_STRIKES}`);
-    })
-    .finally(() => probing.delete('health:' + id));
-};
-function logLine(level, msg) {
-  try { if (level === 'warn') console.warn(msg); else if (process.env.SP_EDGE_DEBUG === '1') console.log(msg); } catch { /* never throw on logging */ }
+function readSnapshot(force = false) {
+  if (!force && Date.now() - snapshotAt < 5000) return snapshot;
+  snapshotAt = Date.now();
+  try {
+    const doc = JSON.parse(fs.readFileSync(SNAPSHOT, 'utf8'));
+    snapshot = { down: Array.isArray(doc.down) ? doc.down : [], dead: Array.isArray(doc.dead) ? doc.dead : [], miss: Array.isArray(doc.miss) ? doc.miss : [] };
+  } catch {
+    snapshot = { down: [], dead: [], miss: [] };   // 还没有快照：不做剔除，行为与修复前一致
+  }
+  return snapshot;
 }
+const knownDown = (id) => readSnapshot().down.includes(id);
+const knownDead = (id) => readSnapshot().dead.includes(id);
+const knownMiss = (id, pathname) => readSnapshot().miss.includes(id + '\n' + pathname);
 
 /** First source in config order, or null when the file names none that exist. */
 export function pick(config, id, pathname, skip = null) {
@@ -261,22 +228,6 @@ export function createServer(config, { verbose = false } = {}) {
     let out;
     try {
       out = decide(config, { method: req.method, pathname: url.pathname, query: url.search.slice(1) });
-      // 记住这次把玩家指向了哪个源，顺便探测「它到底有没有这个文件」：
-      // 缺件的源下次就不会再被选中（knownMiss），玩家不会反复撞 404。
-      if (out.status === 302 && out.source) {
-        const chosenId = [...config.byId.entries()].find(([, base]) => base === out.source)?.[0];
-        if (chosenId) probeExist(chosenId, config.byId.get(chosenId), url.pathname);
-      }
-    // 边缘状态（谁被判 down / 已知缺件多少）——只读，不含任何玩家信息。
-    if (url.pathname === '/sp-edge/status') {
-      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
-      res.end(JSON.stringify({
-        order: config.order,
-        health: Object.fromEntries(config.order.map((id) => [id, health.get(id) || null])),
-        exists: { size: exists.size, knownMiss: [...exists.values()].filter((e) => e.v === 'miss').length },
-      }));
-      return;
-    }
     } catch (err) {
       out = { status: 500, headers: { 'Content-Type': 'text/plain' } };
       console.error('sp-edge: decide failed:', err?.message || err);
@@ -300,9 +251,6 @@ function main() {
   }
   const server = createServer(config, { verbose: process.env.SP_EDGE_VERBOSE === '1' });
   server.listen(port, '127.0.0.1', () => {
-    config.order.forEach((id) => probeHealth(id, config.byId.get(id)));
-    const healthTimer = setInterval(() => config.order.forEach((id) => probeHealth(id, config.byId.get(id))), Number(process.env.SP_ASSET_HEALTH_INTERVAL_MS || 60_000));
-    healthTimer.unref?.();
     console.log(`sp-edge: listening on 127.0.0.1:${port}, order=${config.order.join(' > ')}, exceptions=${config.exceptions.size}`);
   });
   // 容器停的时候平台发 TERM；收紧到 in-flight 请求结束为止就够了。

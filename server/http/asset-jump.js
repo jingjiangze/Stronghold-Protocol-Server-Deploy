@@ -10,6 +10,7 @@
 // 语义（本地优先）：static.js 只在**文件本机不存在**时才问这里；有文件仍走文件。
 // 非 /assets|fonts 路径、不允许的扩展名、配置读不到 → 返回 null，交回原来的 404。
 import fs from 'node:fs';
+import fsSync from 'node:fs';
 import path from 'node:path';
 import { ROOT, noopLog } from './config.js';
 import { decide, parseSources, stripSourceParam } from '../../deploy/stardust/ms-edge/edge-sidecar.mjs';
@@ -259,6 +260,24 @@ export function createAssetJump({ sourcesPath = process.env.SP_EDGE_SOURCES || D
   // 后续请求会自动避开；同步补齐（如刚上传的场景素材）在一个 TTL 之后自动恢复。
   const EXIST_TTL_MS = 10 * 60_000;
   const EXIST_MAX = 5000;
+  // 边缘层快照：nginx 把 /assets|fonts/** 交给侧车（deploy/stardust/ms-edge/edge-sidecar.mjs），
+  // 侧车不自己探测，只读这里写出的结论 —— 探测逻辑只有一份，不会两边漂移。
+  const SNAPSHOT_PATH = process.env.SP_EDGE_SNAPSHOT
+    || (process.env.TMPDIR || process.env.TEMP || '/tmp') + '/sp-asset-state.json';
+  const publishSnapshot = () => {
+    try {
+      const down = [], dead = [], miss = [];
+      for (const [id, v] of health) {
+        if (v && v.v === 'down' && Date.now() - v.at < HEALTH_TTL_MS) { down.push(id); if (v.structural === true) dead.push(id); }
+      }
+      for (const [key, e] of exists) if (e && e.v === 'miss' && Date.now() - e.at < EXIST_TTL_MS) miss.push(key);
+      const tmp = `${SNAPSHOT_PATH}.${process.pid}.tmp`;
+      fsSync.writeFileSync(tmp, JSON.stringify({ down, dead, miss, at: Date.now() }));
+      fsSync.renameSync(tmp, SNAPSHOT_PATH);
+    } catch { /* 快照不可写不影响进程内跳转 */ }
+  };
+  const snapshotTimer = setInterval(publishSnapshot, 5000);
+  snapshotTimer?.unref?.();
   const exists = new Map();            // key = 源 id + '\n' + 路径 → { v: 'ok' | 'miss' | null, at }
   const existProbing = new Set();
   const existKey = (id, pathname) => id + '\n' + pathname;
@@ -278,7 +297,8 @@ export function createAssetJump({ sourcesPath = process.env.SP_EDGE_SOURCES || D
     const rest = stripSourceParam(query || '');
     const target = base + pathname + (rest ? `?${rest}` : '');
     Promise.resolve()
-      .then(() => fetchImpl(target, { method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(5000) }))
+      .then(async () => (isModelscopeUrl(target) ? await modelscopeCookie() : null))
+      .then((ck) => fetchImpl(target, { method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(5000), headers: ck ? { Cookie: ck } : {} }))
       .then((r) => noteExist(id, pathname, r.status < 400 ? 'ok' : (r.status === 403 || r.status === 404 ? 'miss' : null)))
       .catch(() => noteExist(id, pathname, null))
       .finally(() => existProbing.delete(key));
@@ -311,7 +331,8 @@ export function createAssetJump({ sourcesPath = process.env.SP_EDGE_SOURCES || D
     healthProbing.add(id);
     const t0 = Date.now();
     return Promise.resolve()
-      .then(() => fetchImpl(base + HEALTH_PATH, { method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS) }))
+      .then(async () => (isModelscopeUrl(base) ? await modelscopeCookie() : null))
+      .then((ck) => fetchImpl(base + HEALTH_PATH, { method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS), headers: ck ? { Cookie: ck } : {} }))
       .then((r) => {
         const ok = r.status < 400;
         if (ok) healthStrikes.set(id, 0);
@@ -464,3 +485,7 @@ export function createAssetJump({ sourcesPath = process.env.SP_EDGE_SOURCES || D
   };
   return jump;
 }
+
+// call the publisher once at module init so a snapshot exists before any request
+if (typeof publishSnapshot === 'function') publishSnapshot();
+if (typeof snapshotTimer !== 'undefined' && snapshotTimer) { void snapshotTimer; }

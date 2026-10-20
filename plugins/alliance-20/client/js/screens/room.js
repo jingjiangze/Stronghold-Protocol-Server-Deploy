@@ -248,7 +248,7 @@ function SeatCapSetter({ room, isHost, onPick }) {
   const shown = asked != null && asked >= range.min && asked <= range.max ? asked : range.value;
   const pct = Math.round(((shown - range.min) / (range.max - range.min)) * 100);
   const commit = async (v) => {
-    const want = Math.min(Math.max(v, range.min), range.max);
+    const want = Math.min(Math.max(Math.round(v / 2) * 2, Math.max(4, Math.ceil(range.min / 2) * 2)), range.max);
     if (want === range.value) { setAsked(null); return; }
     setAsked(want);
     if (!(await onPick(want))) setAsked(null);   // the frame (or the refusal) is the truth again
@@ -256,7 +256,7 @@ function SeatCapSetter({ room, isHost, onPick }) {
   return html`<div class="seat-cap seat-cap--room">
     <${MicroLabel} tone="mint">SEATS<//>
     <span class="seat-cap__name">${t('本房间人数上限')}</span>
-    <input class="seat-cap__slider" type="range" min=${range.min} max=${range.max} step="1" value=${shown}
+    <input class="seat-cap__slider" type="range" min=${Math.min(Math.max(4, Math.ceil(range.min / 2) * 2), range.max)} max=${range.max} step="2" value=${shown}
       style=${`--pct:${pct}%`} aria-label=${t('本房间人数上限')}
       aria-valuemin=${range.min} aria-valuemax=${range.max} aria-valuenow=${shown}
       title=${t('不能小于同盟内现有人数（含 AI 队友）')}
@@ -695,6 +695,22 @@ export function RoomScreen() {
         ? html`<span class="t-mint">${t('已就绪 · 等待创建者开始模拟')}</span>`
         : html`<span class="t-lo">${t('准备就绪后，创建者即可开始模拟')}</span>`;
 
+  // 20 人房一排放不下：鼠标滚轮在座位条上转成横向滚动（触控板已给 deltaX 时照旧）
+  const seatsRef = useRef(null);
+  useEffect(() => {
+    const el = seatsRef.current;
+    if (!el) return undefined;
+    const onWheel = (e) => {
+      if (el.scrollWidth <= el.clientWidth + 1) return;
+      const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (!d) return;
+      el.scrollLeft += d;
+      e.preventDefault();
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [facts.seats.length]);
+
   return html`<div class=${`screen room-screen rs${coop ? '' : ' rs--solo'}${facts.seats.length > DEFAULT_SEATS ? ' rs--big' : ''}${exiting ? ' is-leaving' : ''}`} style=${`--d-color:${DIFFICULTY_COLORS[room.difficulty]}; --n:${facts.seats.length}`}>
     <div class="rs__bg" aria-hidden="true"></div>
     <header class="rs-top">
@@ -727,7 +743,7 @@ export function RoomScreen() {
       </div>
     </header>
 
-    <main class="rs-seats">
+    <main class="rs-seats" ref=${seatsRef}>
       ${facts.seats.map((s, i) => html`<${SeatCard} key=${s ? `p${s.playerId}` : `e${i}`} seat=${s} index=${i} room=${room} facts=${facts}
         myId=${me.playerId} busy=${busy} onKick=${kick} onInvite=${() => copy('code')} searching=${searching} portraits=${portraits}
         onPickCard=${cardList.length ? () => setPicking(true) : null} onAddBot=${addBot} onRemoveBot=${removeBot} />`)}

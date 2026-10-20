@@ -36,10 +36,12 @@ export function SkinPicker({ m, charId, record, choices = {}, sync = 'idle', onC
           return html`<button key=${s.id || 'default'} type="button" role="radio" aria-checked=${on ? 'true' : 'false'} data-skin=${s.id || 'default'}
               class=${`lo-skin${on ? ' is-on' : ''}`} disabled=${!available} onClick=${() => onChange(setSkinChoice(choices, charId, s.id))}>
             <span class="lo-skin__art"><${Img} src=${s.art} fallbackSrc=${defaultArt} fallback=${html`<span class="t-dim">${t('暂无预览')}</span>`} /></span>
-            <span class="lo-skin__name">${t(s.name)}</span>
-            <span class="lo-skin__brand">${available ? t(s.brand) : t('素材未安装')}</span>
-            ${artEntry?.dynamic ? html`<span class="lo-skin__dynamic">${t('动态立绘')}</span>` : artEntry?.dynamicDeclared ? html`<span class="lo-skin__dynamic">${t('动态立绘待补 · 静态预览')}</span>` : null}
-            ${artEntry?.backUnavailable ? html`<span class="lo-skin__brand">${artEntry.battleModelKind === 'unified' ? t('统一战斗模型，正背面共用') : t('背面模型暂缺，使用本套正面')}</span>` : null}
+            <span class="lo-skin__text">
+              <span class="lo-skin__name">${t(s.name)}</span>
+              <span class="lo-skin__brand">${available ? t(s.brand) : t('素材未安装')}</span>
+              ${artEntry?.dynamic ? html`<span class="lo-skin__dynamic">${t('动态立绘')}</span>` : artEntry?.dynamicDeclared ? html`<span class="lo-skin__dynamic">${t('动态立绘待补 · 静态预览')}</span>` : null}
+              ${artEntry?.backUnavailable ? html`<span class="lo-skin__brand">${artEntry.battleModelKind === 'unified' ? t('统一战斗模型，正背面共用') : t('背面模型暂缺，使用本套正面')}</span>` : null}
+            </span>
             ${on ? html`<span class="lo-skin__mark"><${Icon} name="check" />${t('已选择')}</span>` : null}
           </button>`;
         })}
