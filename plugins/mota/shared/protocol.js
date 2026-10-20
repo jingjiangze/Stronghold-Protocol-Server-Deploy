@@ -598,9 +598,12 @@ export const C2S = {
   // spectator seat follows from then on (Match.watchPref; community report of 2026-10-06, item 56)
   'g.watch': { fieldId: (v) => isStr(v, 32), playerId: isId, $optional: ['playerId'] },
   'g.autoplay': { on: isBool },
-  // solo pause (official PauseUp / ResumeUp, DESIGN §14): freezes the running battle (field clock, deadlines, the
-  // browser's local runner) — solo matches only (co-op ⇒ WRONG_PHASE), only while a battle runs; m.public.paused
-  'g.pause': { on: isBool },
+  // 战斗中观看他人布阵 (owner decision 2026-10-20): a viewer's OWN switch (never the room's — every player decides for
+  // itself, like g.autoplay). While it is on, g.watch accepts a teammate's `n:<playerId>` prep board during a battle
+  // too (Match.watch), so the fighting player can read a teammate's layout without leaving its own field. The server
+  // only relays what the player already placed (prepFieldMeta: board, hand, temp, effects, next enemies) — it simulates
+  // nothing. Off by default; a prep-phase scout works with it off, exactly as before.
+  'g.watchLineup': { on: isBool },
   // the stats the own board's units start their next battle with (user playtest #4 item 7; prep phases): answered by
   // the push m.unitStats { seq, round, units: [unitStatsEntry] }; `seq` is echoed so the client keeps the newest answer
   'g.unitStats': { seq: (v) => isInt(v, 0, 2 ** 31), $optional: ['seq'] },

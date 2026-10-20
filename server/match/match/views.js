@@ -123,7 +123,9 @@ export class MatchViews {
         fieldId: this.fieldOf(ps),
         status: this.statusOf(ps),
         autoplay: ps.autoplay,
-        // 干员皮肤 (docs/SKINS.md): PUBLIC on purpose — this is how a teammate sees your skin, and the reason the
+        // 战斗中观看他人布阵 (g.watchLineup, owner decision 2026-10-20): the viewer's own switch — every row carries it
+        // so a player's UI knows which teammates may read a board right now (and its own row mirrors the button state)
+        watchLineup: ps.watchLineup,        // 干员皮肤 (docs/SKINS.md): PUBLIC on purpose — this is how a teammate sees your skin, and the reason the
         // renderer reads the skin off the unit rather than off the local player. Omitted when empty, which is the normal
         // case: the appearance comes from a cosmetic plugin each player switches on for themself, so most have none.
         ...(Object.keys(ps.skins).length ? { skins: ps.skins } : {}),

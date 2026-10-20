@@ -67,6 +67,7 @@ export class MatchIntents {
       // playerId: the player tapped (a shared field names two) — the watch preference (item 56)
       case 'g.watch': return this.watch(ps, msg.fieldId, msg.playerId ?? null);
       case 'g.autoplay': return this.setAutoplay(ps, !!msg.on);
+      case 'g.watchLineup': return this.setWatchLineup(ps, !!msg.on);
       case 'g.pause': return this.setPause(ps, !!msg.on);
       // the stats the board's units start their next battle with (the detail card in prep, user playtest #4 item 7)
       case 'g.unitStats': return this.unitStats(ps, msg.seq ?? null);
@@ -100,6 +101,22 @@ export class MatchIntents {
     ps.autoplay = on;
     this.markPublic();
     if (on) this.kickBot(ps);
+    return OK;
+  }
+
+  /**
+   * 战斗中观看他人布阵 (owner decision 2026-10-20, g.watchLineup): the VIEWER's own switch — every player decides for
+   * itself, so it lives on PlayerState (not the room) and is read in m.public.players[] like `autoplay`. While it is on
+   * Match.watch accepts a teammate's `n:<playerId>` during a battle as well (MatchWatch.watch), and a prep scout's
+   * board change keeps pushing to this viewer (MatchWatch._notifyPrepScouts) — the server relays what the player
+   * already placed and simulates nothing. Any phase, no gate: a player may turn it on mid-battle.
+   */
+  setWatchLineup(ps, on) {
+    if (ps.watchLineup === on) return OK;
+    ps.watchLineup = on;
+    this.markPublic();
+    // turning it ON while a battle runs: an eliminated player / spectator seat already follows a player's board, but a
+    // FIGHTING player was never scouting one — ask for nothing here, the player picks a teammate with the next g.watch.
     return OK;
   }
 
