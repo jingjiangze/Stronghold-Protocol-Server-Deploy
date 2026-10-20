@@ -145,7 +145,7 @@
       "bytes": 22978
     },
     "client/js/screens/game.js": {
-      "sha256": "dcb5ddbb3ce255b95c6fa40a013b62228c6a814c766cbfcec77573114f53b377",
+      "sha256": "ed447aaad2f2f5adf2cfb8bc679d5c480bb830d09122f2ee7a6ed4b2dd664f1e",
       "bytes": 128578
     },
     "client/js/screens/loadout.js": {
@@ -393,8 +393,8 @@
       "bytes": 9071
     },
     "client/js/ui/teamPanel.js": {
-      "sha256": "4b56e447f66b51076c267abe159f17d68896a9f7fdab139643b8f92e6eb4f021",
-      "bytes": 16522
+      "sha256": "07cc6da3174aba6a00577ff53dc76a4be4fab8a82194abcbc48efee957402fe7",
+      "bytes": 16588
     },
     "client/js/ui/toasts.js": {
       "sha256": "195eff887f237239836860a369ab25019e8360ff4fad8cc0dbd746d18f04d92d",
