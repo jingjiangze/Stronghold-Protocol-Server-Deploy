@@ -52,6 +52,18 @@ EDGE_PID=$!
 export PORT="$GAME_PORT"
 export HOST="${SP_GAME_HOST:-127.0.0.1}"
 
+# CF 隧道（可选）：CF_TUNNEL_TOKEN 存在且有 cloudflared 才起。它是出站连接，不需要平台开端口。
+# 退出只记一次日志，绝不影响游戏——隧道只是多一条入口，不是服务本体。
+CF_PID=''
+if [ -n "${CF_TUNNEL_TOKEN:-}" ]; then
+    if [ -x /app/bin/cloudflared ]; then
+        /app/bin/cloudflared tunnel --no-autoupdate run --token "$CF_TUNNEL_TOKEN" > /dev/stderr 2>&1 &
+        CF_PID=$!
+        echo "sp-edge: cloudflared started (pid $CF_PID) → CF 入口指向 127.0.0.1:$PUBLIC_PORT"
+    else
+        echo 'sp-edge: CF_TUNNEL_TOKEN is set but /app/bin/cloudflared is missing; CF entry stays off' >&2
+    fi
+fi
 node server/index.js &
 GAME_PID=$!
 
@@ -88,7 +100,7 @@ EDGE_REPORTED=0
 while :; do
     if ! kill -0 "$GAME_PID" 2>/dev/null; then
         echo "sp-edge: game process exited; stopping everything" >&2
-        kill "$NGINX_PID" "$EDGE_PID" 2>/dev/null || true
+        kill "$NGINX_PID" "$EDGE_PID" "${CF_PID:-}" 2>/dev/null || true
         wait "$NGINX_PID" 2>/dev/null || true
         exit 1
     fi

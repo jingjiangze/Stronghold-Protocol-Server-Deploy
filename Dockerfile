@@ -85,6 +85,7 @@ COPY --from=build /app/docs/research ./docs/research
 # 0.3.0: server/studio/index.js imports tools/assets/atlas.mjs + tools/golden.mjs at boot — the
 # runtime image needs the tools tree too (0.2.6-era Dockerfile.ms predates the studio).
 COPY --from=build /app/tools ./tools
+COPY --from=build /app/bin ./bin
 # 边缘层：配置、解析器与入口。nginx.conf / sources.json 是数据，edge-sidecar.mjs 是决策。
 COPY deploy/stardust/ms-edge/nginx.conf /app/deploy/stardust/ms-edge/nginx.conf
 COPY deploy/stardust/ms-edge/edge-sidecar.mjs /app/deploy/stardust/ms-edge/edge-sidecar.mjs
@@ -96,6 +97,12 @@ COPY deploy/stardust/ms-edge/entrypoint.sh /app/deploy/stardust/ms-edge/entrypoi
 # sources.json 应该让这次构建失败（旧镜像继续服务），而不是产出一个 restart 循环的镜像。
 # 顺序要紧：先渲染 sources-nginx.conf，否则 nginx.conf 里的 include 扑空、nginx -t 必红。
 # （还有一道运行期同款检查在 entrypoint.sh：过不了就整体退回「游戏直接占 7860」。）
+# CF 隧道入口（可选）：把 cloudflared 一起打进镜像。拉不到就让构建继续 —— 没有它容器照常跑，
+# 只是 CF_TUNNEL_TOKEN 那条入口不可用（启动时会打印原因）。
+RUN mkdir -p /app/bin \
+ && (wget -q -T 120 -O /app/bin/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
+     && chmod +x /app/bin/cloudflared && /app/bin/cloudflared --version) \
+ || echo 'WARNING: cloudflared unavailable at build time; the CF tunnel entry stays off'
 RUN chmod +x /app/deploy/stardust/ms-edge/entrypoint.sh \
  && node /app/deploy/stardust/ms-edge/render-nginx.mjs /app/deploy/stardust/ms-edge/sources-nginx.conf \
  && nginx -t -c /app/deploy/stardust/ms-edge/nginx.conf

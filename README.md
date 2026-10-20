@@ -87,3 +87,13 @@ Dockerfile     仅 ms 分支：7860 + nginx + 侧车
 - 索引目前**漏登 2,476 个皮肤文件**（`assets/skins/**`），但桶里实际能取（`HEAD/GET` 均 200，两道门都一样）——所以「索引里没有」不等于「CDN 没有」；对账请以实际请求为准，不要拿索引做缺失判据。
 - `sources.json` 的顺序 `modelscope → r2`：数据集公开后 modelscope 吃首跳；未公开时健康探测判它 down 并顺延到 r2。
 - r2 的 base 用 **weishucdn**：同一 R2 桶的另一道门牌。实测 speedcdn 这道门对部分清单路径返回 404（CORS/供应规则不同），不能当兜底。
+
+## 可选：CF 隧道入口
+
+平台的 `*.ms.show` 域名在部分网络下会被截断/超时（实测 `main.js` 返回 0 字节）。容器的 `7860` 不出网，但**隧道是出站连接**，所以可以给同一个容器再挂一条自有的 Cloudflare 入口：
+
+1. CF 控制台 → Zero Trust → Networks → Tunnels → 新建 `cloudflared` 隧道，公共主机名指向 `http://localhost:7860`，复制 token。
+2. 创空间 → 设置 → 环境变量 → 新增**密钥** `CF_TUNNEL_TOKEN=<token>`（不要写进仓库）。
+3. 重新部署。镜像里已带 `/app/bin/cloudflared`（构建期拉取，拉不到就让构建继续，启动时打印 `CF entry stays off`）。
+
+隧道进程由 `deploy/stardust/ms-edge/entrypoint.sh` 拉起，**退出不影响容器**：它只是多一条入口，不是服务本体。`/assets|fonts` 仍然走容器内同一套 302，两条入口行为一致。
