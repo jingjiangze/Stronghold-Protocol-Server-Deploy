@@ -1,0 +1,153 @@
+{
+  "lock": 1,
+  "id": "stronghold-ui",
+  "version": "0.3.1",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "client/css/components.css": {
+      "sha256": "743b135965c5ba60cb91cf26bbf5d92686830925220d697267d1ff1af0c242ae",
+      "bytes": 55567
+    },
+    "client/css/screens/draft.css": {
+      "sha256": "5f843955f497cbaaa902dd4494ff9d03d159b0cdb044f3cce4203d6871d5140b",
+      "bytes": 22285
+    },
+    "client/css/screens/game.css": {
+      "sha256": "6f181710542012bd34b5630663d32cb66d66644f7d140154d57f5396badf506d",
+      "bytes": 125905
+    },
+    "client/css/screens/loadout.css": {
+      "sha256": "e24fde25f98966cd96ad0d24d2b83c63a31fd6b7d842cf0cff0ca0032ac5a773",
+      "bytes": 88029
+    },
+    "client/css/screens/lobby.css": {
+      "sha256": "c864f14ec2aaf31bab2282115d39e1dc788d7a4abda1f9e61f792efc391e3858",
+      "bytes": 186265
+    },
+    "client/css/screens/result.css": {
+      "sha256": "b963dd5829421dbbfe8d02ee5e2bbccea12eac9929cab44b237891a34a343651",
+      "bytes": 43453
+    },
+    "client/js/audio.js": {
+      "sha256": "41df6bf7039eb3dd1a0f6e6401092c9b5049ee90eb693de1d3205655c9b69da4",
+      "bytes": 91412
+    },
+    "client/js/federation.js": {
+      "sha256": "ad171aa72dc6cac7aa3f207c6a0613fa353b4f942c2d8db4a0780c4dd66f2162",
+      "bytes": 424
+    },
+    "client/js/screens/loadout.js": {
+      "sha256": "fbc489d58efa4103b0a9e229f40c809e6a1136631e4bae98c82ed65012121724",
+      "bytes": 94946
+    },
+    "client/js/screens/lobby.js": {
+      "sha256": "552402ccd900eb7ff748d852754e9a2cdd8b9de8a6daf9c8b23052c27f278225",
+      "bytes": 65199
+    },
+    "client/js/screens/room.js": {
+      "sha256": "1fae34cc8688a2fbd7be7ad4348295172c4fbd768c1e25f0dc15441388c36270",
+      "bytes": 45026
+    },
+    "client/js/screens/settle.js": {
+      "sha256": "aa9964cf651f0056aada78021d5e594903c5411b4b990c8811827f70429bb8e8",
+      "bytes": 38212
+    },
+    "client/js/screens/sweep.js": {
+      "sha256": "5c246844e426b7d80e07d0051e0d72a061cfb02530cc2c787148370019efd8a7",
+      "bytes": 28961
+    },
+    "client/js/screens/title.js": {
+      "sha256": "8ff9e4a91faa912ef24144be981f2af8075b1cf16d3fc594dbd0a0ac4e30f235",
+      "bytes": 15069
+    },
+    "client/js/ui/accounts.js": {
+      "sha256": "e712954bd6ffa7ec7d52dd255d646d3378f173cc20daacea6af5f0e2e22ed7ab",
+      "bytes": 9132
+    },
+    "client/js/ui/achievements.js": {
+      "sha256": "5819fa2c9205c349097a4607ad4225f7c1da2badbb27230ec2871b57eb4fe9d7",
+      "bytes": 28611
+    },
+    "client/js/ui/cloudStats.js": {
+      "sha256": "478950d78a7f477d21677616fa47a191cf7739dc5040df902c948b46c8b4b72a",
+      "bytes": 2439
+    },
+    "client/js/ui/components.js": {
+      "sha256": "a444990723815dda52509088f567e3d863422b98b859428f23fde35314510cba",
+      "bytes": 49382
+    },
+    "client/js/ui/friends.js": {
+      "sha256": "81f23f8b6e590827ac510d7e1bdb50bccf28e9bb8ef07f0fe42541a2997f7c84",
+      "bytes": 1557
+    },
+    "client/js/ui/hubBackdrop.js": {
+      "sha256": "e87d8af2f044521870849903066b02497bc820fba98190c989d80136de35457d",
+      "bytes": 21967
+    },
+    "client/js/ui/loadoutModel.js": {
+      "sha256": "66fcfa2f128b58cce23c419ba8836b3087ce3d877c27be5c2152eb5a8bb8ed90",
+      "bytes": 28179
+    },
+    "client/js/ui/lobbyMusic.js": {
+      "sha256": "1eafd27dcbe880b294fa3f4540363c6d5f7b8602e9c760876b88dbe817d4dcbd",
+      "bytes": 27084
+    },
+    "client/js/ui/matchFlow.js": {
+      "sha256": "5716469b10e8d71f59c9815b1af429e44a665eefee96d493bc07d8d0947c2837",
+      "bytes": 10427
+    },
+    "client/js/ui/matchIntro.js": {
+      "sha256": "04d5e70a81bdcf91d490d0512501ec5dabb15ec8125f14fa27b42892fcd7a959",
+      "bytes": 8826
+    },
+    "client/js/ui/matchPlates.js": {
+      "sha256": "e2b7828e0c92a78f421cc5e94589514abba2ad6d2546987191a9d84b522fb0c4",
+      "bytes": 13822
+    },
+    "client/js/ui/matchmaking.js": {
+      "sha256": "5c22e83ea273307cf42830ce152087acef39eebe9f16cd9b8055ff7f945bb807",
+      "bytes": 637
+    },
+    "client/js/ui/namecards.js": {
+      "sha256": "48cadecf982d5dd4568f50c79029f362c1ce42ee359ba4e686568729c289d4dd",
+      "bytes": 724
+    },
+    "client/js/ui/ownerName.js": {
+      "sha256": "1756f151a6e3cca49e7afcccae59ca24d93fe73f9675f0cf0df3138a3520fa46",
+      "bytes": 752
+    },
+    "client/js/ui/pixbots.js": {
+      "sha256": "9059904e3b6b9ea77cd46b8e5ab0666954dd494f1ff872bb717926c333cced86",
+      "bytes": 7550
+    },
+    "client/js/ui/protocolScene.js": {
+      "sha256": "d4c657994e823ecaecb98770559c54f127d9f77c89371da0446cd395ad02bf0c",
+      "bytes": 7147
+    },
+    "client/js/ui/seatArt.js": {
+      "sha256": "4f7f2adad540ecefff01f2c6c2f29bd30a11f369d9114b9f861e153e65a0b31d",
+      "bytes": 2193
+    },
+    "client/js/ui/transitions.js": {
+      "sha256": "d044c8c7641d2b6d074dfedbc9de49f9ac432fc1edd662f3358fb96bcf974d53",
+      "bytes": 2814
+    },
+    "client/js/ui/trophies.js": {
+      "sha256": "7c53c68efe0f94a0ddaf4ba3878d6603bf54dc2a21e49d1199e56ce4e89fb0a2",
+      "bytes": 2175
+    },
+    "host/noop.js": {
+      "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "bytes": 11
+    },
+    "plugin.json": {
+      "sha256": "29783bc92c898477321aa481410439c25ac618df2b1f2ce718ba9df1a7d5a0b1",
+      "bytes": 1650
+    },
+    "shared/randomMode.js": {
+      "sha256": "615d2d004db965f8fab3cd593e964a6d311f3d0835d1b6dc2581d980165dde96",
+      "bytes": 761
+    }
+  },
+  "spine": {}
+}

@@ -1,0 +1,63 @@
+{
+  "manifest": 2,
+  "id": "stronghold-ui",
+  "name": {
+    "zh": "盟约界面增强",
+    "en": "Alliance UI"
+  },
+  "englishName": "Alliance UI",
+  "description": {
+    "zh": "大厅/房间/调配/结算整包界面，含大厅音乐（网易云搜索与链接播放）、大厅背景、成就、对局动画与结算。",
+    "en": "Lobby/room/loadout/result UI with lobby music (netease search + links), backdrop, achievements, match motion."
+  },
+  "version": "0.3.1",
+  "app": ">=0.3.0 <0.4.0",
+  "api": 2,
+  "class": "trusted",
+  "scope": [
+    "room"
+  ],
+  "permissions": [
+    "trusted.server"
+  ],
+  "entry": {
+    "server": "host/noop.js"
+  },
+  "code": {
+    "client": [
+      "css/components.css",
+      "css/screens/draft.css",
+      "css/screens/game.css",
+      "css/screens/loadout.css",
+      "css/screens/lobby.css",
+      "css/screens/result.css",
+      "js/audio.js",
+      "js/federation.js",
+      "js/screens/loadout.js",
+      "js/screens/lobby.js",
+      "js/screens/room.js",
+      "js/screens/settle.js",
+      "js/screens/sweep.js",
+      "js/screens/title.js",
+      "js/ui/accounts.js",
+      "js/ui/achievements.js",
+      "js/ui/cloudStats.js",
+      "js/ui/components.js",
+      "js/ui/friends.js",
+      "js/ui/hubBackdrop.js",
+      "js/ui/loadoutModel.js",
+      "js/ui/lobbyMusic.js",
+      "js/ui/matchFlow.js",
+      "js/ui/matchIntro.js",
+      "js/ui/matchPlates.js",
+      "js/ui/matchmaking.js",
+      "js/ui/namecards.js",
+      "js/ui/ownerName.js",
+      "js/ui/pixbots.js",
+      "js/ui/protocolScene.js",
+      "js/ui/seatArt.js",
+      "js/ui/transitions.js",
+      "js/ui/trophies.js"
+    ]
+  }
+}

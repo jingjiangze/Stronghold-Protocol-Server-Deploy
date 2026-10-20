@@ -1,0 +1,33 @@
+{
+  "manifest": 2,
+  "id": "hub-sections",
+  "name": {
+    "zh": "大厅栏位开关",
+    "en": "Hub sections"
+  },
+  "englishName": "Hub sections",
+  "description": {
+    "zh": "大厅设置里多一行「大厅栏位」：5 个功能开关 + 折叠把手。原包是 install.mjs 安装器，本包把安装结果固化成 code.client 覆盖层（新增 2 个模块 + settings.js 加 1 行 import / 1 行挂载）。",
+    "en": "Adds a Hub sections row to settings: 5 feature switches + a collapse handle."
+  },
+  "version": "1.3.2",
+  "app": ">=0.3.0 <0.4.0",
+  "api": 2,
+  "class": "trusted",
+  "scope": [
+    "room"
+  ],
+  "permissions": [
+    "trusted.server"
+  ],
+  "entry": {
+    "server": "host/noop.js"
+  },
+  "code": {
+    "client": [
+      "js/ui/hubSections.js",
+      "js/ui/settingsPolish.js",
+      "js/ui/settings.js"
+    ]
+  }
+}

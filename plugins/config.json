@@ -1,0 +1,17 @@
+{
+  "default": [
+    "stronghold-ui",
+    "csp-allow",
+    "hub-sections",
+    "mod-hubmusic"
+  ],
+  "required": [
+    "stronghold-ui"
+  ],
+  "trusted": {
+    "stronghold-ui": "6c23daf793fb09de72a0350a93a843675626d4eabef3458a9a1245376864ca4c",
+    "csp-allow": "05aafd0f7fb855b49fbe6348205d1621a78d5cfbeb5ad268d895882fcc21f171",
+    "hub-sections": "44e9f2c59c0308a75d14607ed0fef0d3e48ca494bc5e5fc99c7c8af62c819921",
+    "mod-hubmusic": "8157e707407881a093a34e518a60ec96f0dfe535ecdbc2b8b3d3d649cf251c13"
+  }
+}

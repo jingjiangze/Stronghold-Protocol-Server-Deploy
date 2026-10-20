@@ -1,0 +1,35 @@
+{
+  "manifest": 2,
+  "id": "mod-hubmusic",
+  "name": {
+    "zh": "大厅音乐 · 在线平台（QQ音乐 / 网易云 / 酷我）",
+    "en": "Lobby music (online)"
+  },
+  "englishName": "Lobby music (online)",
+  "description": {
+    "zh": "大厅音乐升级为在线平台：QQ音乐 / 网易云 / 酷我 搜索与播放、队列、播放列表、歌词、本地文件。原件是 install.mjs 安装器（面向 0.2.5/0.3.0）；本包把**前端部分**固化成 code.client 覆盖层。⚠️ 原件的服务端部分（server/lobbyMusic.js + server/http/routes.js 的 /lobby-music/ 路由）无法通过插件机制装载，已放在包内 manual-server/ 供手工安装 —— 不装它时，搜索/在线解析会 404，本地文件播放仍可用。",
+    "en": "Lobby music online (QQ/Netease/Kuwo). Front-end only; the server half is in manual-server/."
+  },
+  "version": "1.9.0",
+  "app": ">=0.3.0 <0.4.0",
+  "api": 2,
+  "class": "trusted",
+  "scope": [
+    "room"
+  ],
+  "permissions": [
+    "trusted.server"
+  ],
+  "entry": {
+    "server": "host/noop.js"
+  },
+  "code": {
+    "client": [
+      "js/ui/lobbyMusic.js",
+      "js/ui/musicProviders.js",
+      "js/ui/lobbyPlayer.js",
+      "css/screens/lobby-music.css",
+      "js/audio.js"
+    ]
+  }
+}

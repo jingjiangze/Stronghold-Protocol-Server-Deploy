@@ -1,0 +1,41 @@
+{
+  "lock": 1,
+  "id": "mod-hubmusic",
+  "version": "1.9.0",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "client/css/screens/lobby-music.css": {
+      "sha256": "862106530a72188a0f8e4475d49fa40a57f1934928c7e3f0e9288dda962c063f",
+      "bytes": 20013
+    },
+    "client/js/audio.js": {
+      "sha256": "7c168a99f8e75ce6a5a5715fd589b22f1f24f3fcda1f0800f0455c755c565898",
+      "bytes": 91979
+    },
+    "client/js/ui/lobbyMusic.js": {
+      "sha256": "af2b9b41f8d931bd13e9d6d9e31519650d6f4023a656708396b9b9d4f27aaef6",
+      "bytes": 47108
+    },
+    "client/js/ui/lobbyPlayer.js": {
+      "sha256": "06c32d934b73c6deac83cda6e6ae5969b998cdb4b1096432e061e3aa91efc742",
+      "bytes": 20138
+    },
+    "client/js/ui/musicProviders.js": {
+      "sha256": "7df38708086bc70c7b0efe997d88cf712c6528c068c4b4b6532f6a72a30cbf03",
+      "bytes": 4546
+    },
+    "host/noop.js": {
+      "sha256": "f761c91419d0a89422a0004ef1a92929dd4d2d5e5c16758654d8b0467d1998c6",
+      "bytes": 12
+    },
+    "manual-server/lobbyMusic.js": {
+      "sha256": "9dcb67810dd6593a1f1cb244319886323fdd8c406587dee52f7f59a11daf9b3c",
+      "bytes": 48620
+    },
+    "plugin.json": {
+      "sha256": "5f9e50d0245825c6c6c71077c520022ddd1808538707b3f3a27a0d3e70e2ec89",
+      "bytes": 1297
+    }
+  },
+  "spine": {}
+}
