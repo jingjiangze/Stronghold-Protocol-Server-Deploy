@@ -1088,7 +1088,11 @@ export class Lobby {
       });
     }
     rooms.sort((a, b) => (b.humans - a.humans) || a.code.localeCompare(b.code));
-    return { online: humans, roomsCount: this.rooms.size, matchesCount: matches, rooms };
+    // 在线 = 当前连着的真人会话（含还站在大厅、没进房的），不是「坐在房里的人」——后者会出现
+    // 大厅里明明有人却显示 1 的情况（客户端在没数据时还会退回 1）。
+    let live = 0;
+    try { for (const s of this.registry?.byPlayerId?.values?.() || []) if (s && s.connected && !s.isBot) live += 1; } catch { live = 0; }
+    return { online: Math.max(live, humans), roomsCount: this.rooms.size, matchesCount: matches, rooms };
   }
 
   listRooms(session) {

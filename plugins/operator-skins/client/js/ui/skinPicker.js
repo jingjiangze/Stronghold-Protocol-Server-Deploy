@@ -21,7 +21,9 @@ export function SkinPicker({ m, charId, record, choices = {}, sync = 'idle', onC
   const [dynamic, setDynamic] = useState(true);
   const skins = skinsFor(charId);
   const selected = skinIdFor(choices, charId);
-  const defaultArt = chessPortraitUrl(m, { ...record, skinId: null });
+  // 默认外观：chars 记录本身就是立绘（record.portrait），而 chessPortraitUrl 只认 chess.assets.portrait /
+  // chess.charId，对 chars 记录返回 null —— 皮肤列表第一格因此一直是「暂无预览」。
+  const defaultArt = record?.portrait || record?.portraitE2 || chessPortraitUrl(m, { charId, skinId: null });
   return html`<${Fragment}>
     <section class="lo-sec lo-sec--skins" aria-label=${t('干员外观')} data-testid="skin-picker">
       <header class="lo-sec__head">
