@@ -190,6 +190,9 @@ export class MatchViews {
       fieldId: this.fieldOf(ps),
       status: this.statusOf(ps),
       autoplay: ps.autoplay,
+      // 战斗中观看他人布阵 (g.watchLineup, owner decision 2026-10-20): the viewer's own switch — every row carries it
+      // so a player's UI knows which teammates may read a board right now (and its own row mirrors the button state)
+      watchLineup: ps.watchLineup,
       // the LP this round's own battle will cost at settlement so far (COMBAT / 联防 only, omitted when 0)
       // 干员皮肤 (docs/SKINS.md): PUBLIC 是有意的——队友正是靠它看到你的外观；为空时省略。
       ...(Object.keys(ps.skins || {}).length ? { skins: ps.skins } : {}),

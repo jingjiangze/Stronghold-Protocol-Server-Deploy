@@ -176,6 +176,9 @@ export const actions = {
   // `playerId`: the player tapped in the team panel (a shared field shows two) — what an eliminated viewer follows
   watch: (fieldId, playerId = null) => act('g.watch', typeof playerId === 'string' && playerId ? { fieldId, playerId } : { fieldId }, { sfx: 'tab' }),
   autoplay: (on) => act('g.autoplay', { on }),
+  // 战斗中观看他人布阵 (owner decision 2026-10-20): the viewer's own switch (g.watchLineup) — while it is on, the team
+  // panel's 「布阵」 button offers a teammate's settled board during a battle (g.watch 'n:<id>', server relays only)
+  watchLineup: (on) => act('g.watchLineup', { on }),
   // solo battles only (ui/matchStatus.js pauseAvailable): m.public.paused follows
   pause: (on) => act('g.pause', { on: !!on }, { sfx: on ? 'click' : 'confirm' }),
   // 协同经济 (DESIGN §27): the server refuses these unless it advertised m.public.econ — the shop bar only renders the
