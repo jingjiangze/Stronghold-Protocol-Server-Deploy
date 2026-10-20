@@ -51,7 +51,10 @@ export class MatchWatch {
    */
   watch(ps, fieldId, playerId = null) {
     if (typeof fieldId !== 'string') return fail(ERR.BAD_TARGET);
-    if (fieldId.startsWith('n:')) return this._watchPrepBoard(ps, fieldId);
+    // a live client-side combat field is NAMED 'n:<pid>' too (combat.js _ccField) — it must go through the field branch
+    // below (_watchClient's boss rules / spec resend), never through the prep-board relay
+    const liveField = this.fields.some((x) => x.fieldId === fieldId);
+    if (fieldId.startsWith('n:') && !liveField) return this._watchPrepBoard(ps, fieldId);
     if (this.clientCombat && this.fields.length && this.fields.some((x) => x.cc)) return this._watchClient(ps, fieldId, playerId);
     const f = this.fields.find((x) => x.fieldId === fieldId);
     if (f) {
