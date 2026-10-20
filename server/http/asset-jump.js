@@ -140,7 +140,7 @@ export function createAssetJump({ sourcesPath = process.env.SP_EDGE_SOURCES || D
    * 边缘给客户端发的 302 不带凭据，所以私有数据集永远不进默认 302 目标——那是 sources.json 的事。
    */
   const MS_TOKEN = process.env.MODELSCOPE_API_TOKEN || '';
-  const MS_LOGIN_URL = 'https://modelscope.cn/api/v1/login';
+  const MS_LOGIN_URL = 'https://www.modelscope.cn/api/v1/login';
   const MS_COOKIE_TTL_MS = 20 * 60 * 1000;
   let msCookie = null, msCookieAt = 0, msCookieInflight = null;
 
@@ -384,7 +384,7 @@ export function createAssetJump({ sourcesPath = process.env.SP_EDGE_SOURCES || D
     return out.status === 302 && out.location ? out.location : null;
   };
   /** 取（可能被 rank 覆盖过 order 的）当前配置：static.js 在每次请求前 await 一次，命中缓存时是零成本。 */
-  const jump = (pathname, query, method, cfg = null) => {
+  const decideJump = (pathname, query, method, cfg = null) => {
     const conf = cfg || config;
     const order = Array.isArray(conf.order) ? conf.order : [];
     // 两条剔除线：①「这个源没有这个文件」（存在性）②「这个源现在不可达」（健康，本轮新增）。
@@ -426,6 +426,61 @@ export function createAssetJump({ sourcesPath = process.env.SP_EDGE_SOURCES || D
     }
     return { status: out.status, headers };
   };
+  // ---- 私有数据集的签名直链 ------------------------------------------------------------------------
+  // 私有数据集上，sources.json 里的基址只对**持会话的一方**有效：匿名浏览器拿到的就是 404。
+  // 这里在容器内追一次 resolve（带会话），拿它 302 出来的 cdn-lfs 地址（带 auth_key，自足），
+  // 玩家拿这条直链取字节 —— 数据集保持私有，字节仍然不经过容器。
+  const SIGNED_TTL_MS = Number(process.env.SP_ASSET_SIGNED_TTL_MS || 60_000);
+  const SIGNED_MAX = 4096;
+  const signedCache = new Map();
+  const signedInflight = new Map();
+  const signedFor = (target) => {
+    const hit = signedCache.get(target);
+    if (hit && Date.now() - hit.at < SIGNED_TTL_MS) return Promise.resolve(hit.url);
+    const running = signedInflight.get(target);
+    if (running) return running;
+    const p = (async () => {
+      try {
+        const ck = isModelscopeUrl(target) ? await modelscopeCookie() : null;
+        const r = await fetchImpl(target, {
+          method: 'GET', redirect: 'manual', signal: AbortSignal.timeout(6000),
+          headers: ck ? { Cookie: ck } : {},
+        });
+        const loc = r && r.headers && typeof r.headers.get === 'function' ? r.headers.get('location') : null;
+        if (r.status >= 300 && r.status < 400 && loc) {
+          if (signedCache.size >= SIGNED_MAX) { const first = signedCache.keys().next().value; if (first !== undefined) signedCache.delete(first); }
+          signedCache.set(target, { url: loc, at: Date.now() });
+          return loc;
+        }
+        // 公开数据集：基址本身就能取，原样交给浏览器（多一次跳转没有意义）
+        if (r.status < 300) return target;
+        return null;
+      } catch { return null; }
+    })().finally(() => signedInflight.delete(target));
+    signedInflight.set(target, p);
+    return p;
+  };
+
+  const jump = async (pathname, query, method, cfg = null) => {
+    const out = decideJump(pathname, query, method, cfg);
+    if (!out || out.status !== 302) return out;
+    const loc = out.location || (out.headers && out.headers.Location);
+    if (!loc || !isModelscopeUrl(loc)) return out;
+    const signed = await signedFor(loc);
+    if (signed) {
+      out.location = signed;
+      out.headers.Location = signed;
+      // 直链带 auth_key：别让浏览器把这条 302 缓存到它过期之后
+      out.headers['Cache-Control'] = 'private, max-age=60';
+      return out;
+    }
+    const conf = cfg || config;
+    const chosen = (Array.isArray(conf.order) ? conf.order : []).find((id) => conf.byId.get(id) === out.source) || 'modelscope';
+    noteExist(chosen, pathname, 'miss');
+    log.warn?.(`[http] asset jump: ${pathname} has no signed url on ${chosen} — falling through`);
+    return decideJump(pathname, query, method, cfg);
+  };
+
   /** 诊断用：存在性缓存的规模与其中「已判缺件」的条数（/sp-edge/status 会带上）。 */
   jump.exists = () => ({ size: exists.size, known: [...exists.values()].filter((e) => e.v === 'miss').length });
   /** 诊断用：每个源的健康判定 + 因为健康被顺延掉的次数（/sp-edge/status 会带上）。 */

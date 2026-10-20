@@ -195,7 +195,7 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
     const jumpable = /^(\/assets\/|\/fonts\/|\/media\/)/.test(decoded);
     const onDiskLocal = jumpable && localExists(splitHashedPath(decoded).path);
     if (assetJump && jumpable && !onDiskLocal) {
-      const jumped = assetJump(decoded, query, req.method, assetJump.config ? assetJump.config() : null);
+      const jumped = await assetJump(decoded, query, req.method, assetJump.config ? assetJump.config() : null);
       if (jumped) { res.writeHead(jumped.status, jumped.headers); res.end(); return; }
     }
     // the plugin studio's page is never a static file (server/studio/index.js isStudioPath: any spelling of /studio/)

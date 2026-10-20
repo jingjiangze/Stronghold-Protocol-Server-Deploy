@@ -2,7 +2,7 @@
 import { useState } from '../../vendor/hooks.module.js';
 import { useStore } from '../store.js';
 import { useData, data } from '../data.js';
-import { skinsStore, setSkins, SKINS_KEY } from './skins.js';
+import { skinsStore, setSkins, SKINS_KEY, SKINS_SYNC_KEY } from './skins.js';
 import { html, Button, Icon, MicroLabel, Modal, Fragment } from './components.js';
 import { Img } from './gameComponents.js';
 import { chessPortraitUrl } from './assetUrls.js';
@@ -75,7 +75,7 @@ export function SkinSection({ charId, chess }) {
   if (!m) return null;
   const choices = (store && store[SKINS_KEY]) || {};
   return html`<${SkinPicker} m=${m} charId=${id} record=${(m.chars && m.chars[id]) || {}} choices=${choices}
-    sync="idle" onChange=${(next) => { try { setSkins(next); } catch { /* 存储不可用时不阻断渲染 */ } }} />`;
+    sync=${(store && store[SKINS_SYNC_KEY]) || 'idle'} onChange=${(next) => { try { setSkins(next); } catch { /* 存储不可用时不阻断渲染 */ } }} />`;
 }
 
 /** /studio 的皮肤编辑器静态 import 这个名字（public/studio/js/editors/skins.js）；本插件覆盖了整份文件，

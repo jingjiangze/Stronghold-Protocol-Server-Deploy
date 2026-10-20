@@ -11,8 +11,8 @@
   "sources": [
     {
       "id": "modelscope",
-      "base": "https://modelscope.cn/datasets/jingjiangze/Stronghold-Protocol-Assets/resolve/master/releases/v1-trial",
-      "note": "自建 ModelScope 数据集镜像。2026-10-18 起私有（匿名 resolve 404 / repo/tree 403）；公开后作为**第一顺位**。健康探测每轮打一条必然存在的素材：4xx 即判 down 并顺延，所以「未公开 → 自动落到 r2」不需要改配置。",
+      "base": "https://www.modelscope.cn/datasets/jingjiangze/Stronghold-Protocol-Assets/resolve/master/releases/v1-trial",
+      "note": "自建 ModelScope 数据集镜像（**私有**）。匿名 resolve 404，所以浏览器不能直接取这个基址：server/http/asset-jump.js 在容器内用 MODELSCOPE_API_TOKEN 换会话，把这条 resolve 追上一步，拿到 cdn-lfs 的签名直链（auth_key）再 302 给玩家 —— 数据集不必转公开，字节也不经过容器。域名必须是 www.：登录发的 m_session_id 只对 www.modelscope.cn 生效。",
       "redirects": [
         "https://cdn-lfs-cn-1.modelscope.cn"
       ]
