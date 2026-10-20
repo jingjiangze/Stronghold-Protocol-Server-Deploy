@@ -118,7 +118,9 @@
       "js/ui/pluginPanel.js",
       "js/ui/toasts.js",
       "js/ui/clipboard.js",
-      "js/screens/stats.js"
+      "js/screens/stats.js",
+      "js/ui/connBanner.js",
+      "js/ui/assetDownload.js"
     ],
     "data": [
       "data/config.json"

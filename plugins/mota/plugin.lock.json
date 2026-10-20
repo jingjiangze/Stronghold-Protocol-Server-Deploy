@@ -204,6 +204,10 @@
       "sha256": "b90399d55320f8f928410fed6a8a104ba9ff300497a5b58d985ff27c3b868654",
       "bytes": 12716
     },
+    "client/js/ui/assetDownload.js": {
+      "sha256": "84a9ce85c4aa89e50c073b271e6ae204c863d0904ee429db7bbec4f26f8da501",
+      "bytes": 4562
+    },
     "client/js/ui/assetUrls.js": {
       "sha256": "57b609d9106a94c0c57d9a3b746a10409388d1628e8e871a6d9fd746ba2b6f6d",
       "bytes": 9362
@@ -231,6 +235,10 @@
     "client/js/ui/components.js": {
       "sha256": "9df53b76db35e6740ef3466265cf8ba4f09347ece2e28a37c633f4eadc11f621",
       "bytes": 49784
+    },
+    "client/js/ui/connBanner.js": {
+      "sha256": "619e0eea7ddd3b5e7585bcffc2de7a5d0d0cb9f242cb79ef2ad4db7ffd855487",
+      "bytes": 5411
     },
     "client/js/ui/detailPanel.js": {
       "sha256": "3137c5fffaa4be1734a0a58105d666b4bc8519325ecf5fb06a77f976a63a591c",
@@ -437,8 +445,8 @@
       "bytes": 80
     },
     "plugin.json": {
-      "sha256": "23f8aeca738b157a9dfb9c92546a2c2f7066d268a399952df0bda0e41471f7b8",
-      "bytes": 3443
+      "sha256": "c22649a56a85b4c984ece3292a9386514121d5bbb5b4196c185bfbfd799439ba",
+      "bytes": 3504
     },
     "server/data.js": {
       "sha256": "a286b7bafb289988e081c1dbc7415488f1f1f82a2d775f4d4640a046d9ff9107",

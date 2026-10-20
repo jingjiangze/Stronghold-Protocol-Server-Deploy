@@ -11,9 +11,6 @@ import { useStore, shallowEqual } from '../store.js';
 import { useDocClass } from './device.js';
 import { t } from '../../../shared/i18n.js';
 
-/** P2P 房：前几次重连失败只在局内显示一个角标（隧道抖动很常见），超过这个次数才恢复全文案。 */
-export const P2P_QUIET_ATTEMPTS = 5;
-
 /** Whether the banner shows for this connection state (mirrors the early returns below). */
 export function bannerVisible(conn, entered, restoring, buildStale = false) {
   if (!entered || !conn) return false;
@@ -27,7 +24,6 @@ export function ConnectionBanner() {
   const entered = useStore((s) => s.session.entered);
   const restoring = useStore((s) => s.ui.restoring);
   const buildStale = useStore((s) => !!s.ui.buildStale);
-  const p2p = useStore((s) => !!s.ui.p2p, Object.is);
   useTicker(conn.status === 'reconnecting' ? 500 : 0);
   useDocClass('sp-conn', bannerVisible(conn, entered, restoring, buildStale));
   if (!entered) return null;
@@ -45,13 +41,6 @@ export function ConnectionBanner() {
     </div>`;
   }
   if (!conn.everOnline && (conn.status === 'connecting' || conn.status === 'handshaking' || conn.status === 'idle')) return null;
-  // P2P 房主隧道抖动：局内前几次失败只出一个角标，别把整条战斗栏压下去。
-  // 必须保留升级：连续失败超过 P2P_QUIET_ATTEMPTS 就恢复全文案（那是「房主可能已离线」的唯一信号）。
-  const inMatch = typeof document !== 'undefined' && document.documentElement.classList.contains('sp-in-match');
-  const quiet = p2p && inMatch && conn.status === 'reconnecting' && conn.attempt <= P2P_QUIET_ATTEMPTS;
-  if (quiet) {
-    return html`<div class="conn-banner conn-banner--soft" role="status"><${Icon} name="refresh" /><span>${t('连接中断，重连中')}</span></div>`;
-  }
   const secs = conn.retryAt ? Math.max(0, Math.ceil((conn.retryAt - Date.now()) / 1000)) : 0;
   const replaced = conn.status === 'closed' && conn.lastError?.code === 'REPLACED';
   const rejected = conn.status === 'connected' && !!conn.lastError; // hello refused (version, server full…)
@@ -59,7 +48,7 @@ export function ConnectionBanner() {
   // Short transitional states (a rename re-sends hello on the live socket) only show if they linger.
   const transient = conn.status === 'connecting' || conn.status === 'handshaking' || (conn.status === 'connected' && !rejected);
   const text = conn.status === 'reconnecting'
-    ? (p2p && inMatch ? t('与服务器的连接已中断，正在重连（房主可能已离线）') : t('与服务器的连接已中断，正在重连'))
+    ? t('与服务器的连接已中断，正在重连')
     : replaced ? t('该身份已在其他页面登录')
       : conn.status === 'closed' ? t('连接已关闭')
         : rejected ? t(conn.lastError.text) : t('正在连接服务器');
