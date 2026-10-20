@@ -128,6 +128,40 @@ export function PluginPanel({ open, room, myId, onClose }) {
   // a plugin the room has that the catalogue no longer offers (removed, skipped, another scope now) still shows, by its
   // id: its switch only turns it off
   const rows = [...offered, ...f.plugins.filter((p) => !offered.some((o) => o.id === p.id)).map((p) => ({ id: p.id, version: p.version, missing: true }))];
+  // 管理器分组（2026-10-20）：声明了 capabilities:["transport"] 的插件单列一栏，不混进美术/玩法；
+  // 没有这个字段的插件行为完全不变（全部落进下面那一栏）。
+  const capOf = (id) => (cat.plugins.find((x) => x.id === id)?.capabilities) || [];
+  const isTransport = (p) => capOf(p.id).includes('transport');
+  const rowHtml = (p) => {
+          const on = f.on.has(p.id);
+          const auto = f.auto.has(p.id);
+          const content = ['content','script','trusted'].includes(p.class || classOf(p.id));
+          // a gameplay plugin made for other game versions is refused (PLUGIN_INCOMPATIBLE): its switch only turns it off
+          const blocked = content && p.compatible === false && !on;
+          return html`<li key=${p.id} class=${cx('plugrow', on && 'is-on', content && 'is-content')} data-plugin=${p.id}>
+            <button type="button" role="switch" aria-checked=${on ? 'true' : 'false'} class=${cx('set-toggle plugrow__switch', on && 'is-on')}
+              disabled=${!f.editable || !!busy || (p.missing && !on) || (auto && on && !p.missing) || blocked} aria-label=${pluginName(p)}
+              onClick=${() => toggle(p.id, !on)}><i></i><span>${on ? tc('toggle', '开启') : tc('toggle', '关闭')}</span></button>
+            <div class="plugrow__body">
+              <div class="plugrow__name"><b>${pluginName(p)}</b>${p.version ? html`<span class="num t-dim">v${p.version}</span>` : null}
+                ${auto ? html`<span class="plugrow__badge">${t('自动')}</span>` : null}
+                <span class=${cx('plugrow__badge', content && 'is-gameplay')}>${(p.execution || f.plugins.find(x => x.id === p.id)?.execution) === 'sandbox' ? t('脚本（沙箱）') : content ? t('改变玩法') : t('外观')}</span><span class="plugrow__badge is-unofficial">${t('非官方')}</span></div>
+              <div class="plugrow__meta t-dim">
+                ${Array.isArray(p.authors) && p.authors.length ? html`<span>${t('作者 {names}', { names: p.authors.join(', ') })}</span>` : null}
+                ${Number.isFinite(p.artBytes) ? html`<span class="num">${sizeText(p.artBytes)}</span>` : null}
+                ${p.missing ? html`<span>${t('本服务器已不再提供')}</span>` : null}
+              </div>
+              ${on ? companionCosmeticHints(p, cat.plugins, activeCosmetics).map(hint => html`<p class="set-hint" data-testid="companion-cosmetic">${hint}</p>`) : null}
+              ${on && p.settings ? html`<${PluginSettings} definitions=${p.settings} values=${f.plugins.find(x => x.id === p.id)?.settings || {}}
+                disabled=${!f.editable || !!busy || p.missing} onSave=${settings => send([...new Set([...f.chosen, p.id])], p.id, { id: p.id, settings })} />` : null}
+              ${p.compatible === false ? html`<div class="plugrow__warn">${content
+                ? t('适配 {app}，本服务器是 {version}（改变玩法的插件不能启用）', { app: p.app || '', version: APP_VERSION })
+                : t('适配 {app}，本服务器是 {version}（外观插件，仍可使用）', { app: p.app || '', version: APP_VERSION })}</div>` : null}
+            </div>
+          </li>`;
+          };
+  const transportRows = rows.filter(isTransport);
+  const otherRows = rows.filter((p) => !isTransport(p));
   const nameOf = (id) => { const p = cat.plugins.find((x) => x.id === id); return p ? pluginName(p) : String(id ?? ''); };
   const classOf = (id) => cat.plugins.find((x) => x.id === id)?.class || f.plugins.find((x) => x.id === id)?.class || 'cosmetic';
   const anyContent = f.modded || offered.some((p) => ['content','script','trusted'].includes(p.class));
@@ -172,36 +206,9 @@ export function PluginPanel({ open, room, myId, onClose }) {
       ${installed && cat.status === 'loading' && !rows.length ? html`<p class="set-hint">${t('正在读取插件列表…')}</p>` : null}
       ${installed && cat.status === 'failed' && !rows.length ? html`<p class="set-hint is-warn">${t('无法读取插件列表')}</p>` : null}
       ${(!installed || cat.status === 'ready') && !rows.length ? html`<p class="set-hint">${t('本服务器没有可在房间中使用的插件')}</p>` : null}
-      ${rows.length ? html`<ul class="plugpanel__list">
-        ${rows.map((p) => {
-          const on = f.on.has(p.id);
-          const auto = f.auto.has(p.id);
-          const content = ['content','script','trusted'].includes(p.class || classOf(p.id));
-          // a gameplay plugin made for other game versions is refused (PLUGIN_INCOMPATIBLE): its switch only turns it off
-          const blocked = content && p.compatible === false && !on;
-          return html`<li key=${p.id} class=${cx('plugrow', on && 'is-on', content && 'is-content')} data-plugin=${p.id}>
-            <button type="button" role="switch" aria-checked=${on ? 'true' : 'false'} class=${cx('set-toggle plugrow__switch', on && 'is-on')}
-              disabled=${!f.editable || !!busy || (p.missing && !on) || (auto && on && !p.missing) || blocked} aria-label=${pluginName(p)}
-              onClick=${() => toggle(p.id, !on)}><i></i><span>${on ? tc('toggle', '开启') : tc('toggle', '关闭')}</span></button>
-            <div class="plugrow__body">
-              <div class="plugrow__name"><b>${pluginName(p)}</b>${p.version ? html`<span class="num t-dim">v${p.version}</span>` : null}
-                ${auto ? html`<span class="plugrow__badge">${t('自动')}</span>` : null}
-                <span class=${cx('plugrow__badge', content && 'is-gameplay')}>${(p.execution || f.plugins.find(x => x.id === p.id)?.execution) === 'sandbox' ? t('脚本（沙箱）') : content ? t('改变玩法') : t('外观')}</span><span class="plugrow__badge is-unofficial">${t('非官方')}</span></div>
-              <div class="plugrow__meta t-dim">
-                ${Array.isArray(p.authors) && p.authors.length ? html`<span>${t('作者 {names}', { names: p.authors.join(', ') })}</span>` : null}
-                ${Number.isFinite(p.artBytes) ? html`<span class="num">${sizeText(p.artBytes)}</span>` : null}
-                ${p.missing ? html`<span>${t('本服务器已不再提供')}</span>` : null}
-              </div>
-              ${on ? companionCosmeticHints(p, cat.plugins, activeCosmetics).map(hint => html`<p class="set-hint" data-testid="companion-cosmetic">${hint}</p>`) : null}
-              ${on && p.settings ? html`<${PluginSettings} definitions=${p.settings} values=${f.plugins.find(x => x.id === p.id)?.settings || {}}
-                disabled=${!f.editable || !!busy || p.missing} onSave=${settings => send([...new Set([...f.chosen, p.id])], p.id, { id: p.id, settings })} />` : null}
-              ${p.compatible === false ? html`<div class="plugrow__warn">${content
-                ? t('适配 {app}，本服务器是 {version}（改变玩法的插件不能启用）', { app: p.app || '', version: APP_VERSION })
-                : t('适配 {app}，本服务器是 {version}（外观插件，仍可使用）', { app: p.app || '', version: APP_VERSION })}</div>` : null}
-            </div>
-          </li>`;
-        })}
-      </ul>` : null}
+      ${transportRows.length ? html`<p class="plugpanel__group">${t('联机传输')}</p>
+              <ul class="plugpanel__list">${transportRows.map(rowHtml)}</ul>` : null}
+            ${otherRows.length ? html`<ul class="plugpanel__list">${otherRows.map(rowHtml)}</ul>` : null}
       ${f.editable && f.count ? html`<div class="plugpanel__reapply">
         <${Button} variant="secondary" size="sm" icon="refresh" data-testid="plugin-reapply" disabled=${!!busy} onClick=${reapply}>${t('重新应用')}<//>
         <span class="set-hint">${t('插件的文件在服务器上更新后，重新应用才会生效。')}</span>

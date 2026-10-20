@@ -9,13 +9,38 @@
 // allocate: at most SNAPSHOT_MAX_PLAYERS players, SNAPSHOT_MAX_PIECES pieces each, and pieces are plain JSON.
 
 export const SNAPSHOT_VERSION = 1;
-export const SNAPSHOT_MAX_BYTES = 512 * 1024;
+export const SNAPSHOT_MAX_BYTES = 48 * 1024;   // 单帧预算：WS maxPayload 64 KB，留 16 KB 给帧头与压缩失败
 export const SNAPSHOT_MAX_PLAYERS = 40;
 export const SNAPSHOT_MAX_PIECES = 64;
 export const SNAPSHOT_MAX_ROUND = 200;
 
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const int = (v, lo, hi) => (Number.isInteger(v) && v >= lo && v <= hi ? v : null);
+
+/** 线格式：一个棋子一条数组，键名只出现一次（对象形态在 20 人房里光键名就占一半）。 */
+const KIND_CODE = { chess: 0, token: 1, item: 2 };
+export function packPiece(p) {
+  const j = plainPiece(p);
+  if (!j) return null;
+  const k = KIND_CODE[j.kind];
+  if (k == null) return null;
+  return [j.uid, k, j.id, j.dir || null, Array.isArray(j.items) ? j.items : null, j.ownerUid ?? null, Number.isInteger(j.count) ? j.count : null, j.meta && Object.keys(j.meta).length ? j.meta : null];
+}
+const KIND_NAME = ['chess', 'token', 'item'];
+export function unpackPiece(a) {
+  if (!Array.isArray(a) || a.length < 3) return null;
+  const [uid, k, id, dir, items, ownerUid, count, meta] = a;
+  if (!Number.isInteger(uid) || !Number.isInteger(id) || !Number.isInteger(k) || KIND_NAME[k] == null) return null;
+  return {
+    uid, kind: KIND_NAME[k], id,
+    ...(typeof dir === 'string' ? { dir } : {}),
+    ...(Array.isArray(items) ? { items } : {}),
+    ...(ownerUid != null ? { ownerUid } : {}),
+    ...(Number.isInteger(count) ? { count } : {}),
+    meta: meta && typeof meta === 'object' ? meta : {},
+    poolCopies: 0, boughtRound: 0,
+  };
+}
 
 /** JSON-safe copy of a board/hand piece; anything that does not survive a round trip is dropped. */
 export function plainPiece(piece) {
@@ -32,8 +57,19 @@ export function plainPiece(piece) {
  *   `{ lp, funds, bandId, board: [key, piece][], hand: piece[], temp: piece[], shop: { level, upgradePrice } }`
  * @returns {object|null} the snapshot, or null when the payload is too large to send
  */
-export function makeSnapshot({ round, phase, players, at = Date.now() }) {
+export function makeSnapshot({ round, phase, players, room = null, at = Date.now() }) {
   const out = { v: SNAPSHOT_VERSION, at, round, phase, players: {} };
+  if (room && typeof room.code === 'string') {
+    out.room = {
+      code: room.code.slice(0, 12), mode: room.mode === 'solo' ? 'solo' : 'coop',
+      difficulty: typeof room.difficulty === 'string' ? room.difficulty.slice(0, 16) : 'NORMAL',
+      variant: typeof room.variant === 'string' ? room.variant.slice(0, 64) : null,
+      seats: (Array.isArray(room.seats) ? room.seats : []).slice(0, SNAPSHOT_MAX_PLAYERS).map((x) => ({
+        seat: int(x && x.seat, 0, 63), playerId: typeof x?.playerId === 'string' ? x.playerId.slice(0, 40) : null,
+        name: typeof x?.name === 'string' ? x.name.slice(0, 24) : '', isBot: x?.isBot === true,
+      })).filter((x) => x.playerId && x.seat != null),
+    };
+  }
   for (const [id, p] of Object.entries(players || {})) {
     if (Object.keys(out.players).length >= SNAPSHOT_MAX_PLAYERS) break;
     if (!isObj(p)) continue;
@@ -41,10 +77,10 @@ export function makeSnapshot({ round, phase, players, at = Date.now() }) {
     for (const entry of Array.isArray(p.board) ? p.board : []) {
       if (board.length >= SNAPSHOT_MAX_PIECES) break;
       if (!Array.isArray(entry) || typeof entry[0] !== 'string') continue;
-      const piece = plainPiece(entry[1]);
+      const piece = packPiece(entry[1]);
       if (piece) board.push([entry[0], piece]);
     }
-    const list = (v) => (Array.isArray(v) ? v.slice(0, SNAPSHOT_MAX_PIECES).map((x) => plainPiece(x)) : []);
+    const list = (v) => (Array.isArray(v) ? v.slice(0, SNAPSHOT_MAX_PIECES).map((x) => packPiece(x)) : []);
     out.players[id] = {
       lp: int(p.lp, 0, 999), funds: int(p.funds, 0, 1e6), bandId: typeof p.bandId === 'string' ? p.bandId.slice(0, 32) : null,
       board, hand: list(p.hand), temp: list(p.temp),
@@ -78,10 +114,10 @@ export function checkSnapshot(raw) {
     for (const entry of Array.isArray(p.board) ? p.board : []) {
       if (board.length >= SNAPSHOT_MAX_PIECES) break;
       if (!Array.isArray(entry) || typeof entry[0] !== 'string' || entry[0].length > 16) continue;
-      const piece = plainPiece(entry[1]);
+      const piece = unpackPiece(entry[1]);
       if (piece) board.push([entry[0], piece]);
     }
-    const list = (v) => (Array.isArray(v) ? v.slice(0, SNAPSHOT_MAX_PIECES).map((x) => plainPiece(x)) : []);
+    const list = (v) => (Array.isArray(v) ? v.slice(0, SNAPSHOT_MAX_PIECES).map((x) => unpackPiece(x)) : []);
     players[id] = {
       lp: int(p.lp, 0, 999), funds: int(p.funds, 0, 1e6), bandId: typeof p.bandId === 'string' ? p.bandId.slice(0, 32) : null,
       board, hand: list(p.hand), temp: list(p.temp),
@@ -89,5 +125,8 @@ export function checkSnapshot(raw) {
     };
   }
   if (!Object.keys(players).length) return { ok: false, code: 'BAD_SNAPSHOT' };
-  return { ok: true, snapshot: { v: SNAPSHOT_VERSION, at: Number(raw.at) || Date.now(), round, phase, players } };
+  const room = isObj(raw.room) && typeof raw.room.code === 'string'
+    ? { code: raw.room.code.slice(0, 12), mode: raw.room.mode === 'solo' ? 'solo' : 'coop', difficulty: typeof raw.room.difficulty === 'string' ? raw.room.difficulty.slice(0, 16) : 'NORMAL', variant: typeof raw.room.variant === 'string' ? raw.room.variant.slice(0, 64) : null }
+    : null;
+  return { ok: true, snapshot: { v: SNAPSHOT_VERSION, at: Number(raw.at) || Date.now(), round, phase, players, room } };
 }

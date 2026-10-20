@@ -4,6 +4,34 @@
   "version": "0.3.1",
   "generator": "tools/plugin.mjs pack",
   "files": {
+    "bench/README.md": {
+      "sha256": "ee3e6fe98bf2c66fb1fa34d4da86775d1749146a6252e3eae8c768866ac56ffb",
+      "bytes": 1229
+    },
+    "bench/compare.js": {
+      "sha256": "3840edd3f112221a1e72d6239b54d6363b5b2d6e83522025fc7bf20a06423ab1",
+      "bytes": 2574
+    },
+    "bench/make-bench.js": {
+      "sha256": "083fb1a39c61389ea1686c49f51120581a8977afc7b424c33f57841a2be207e3",
+      "bytes": 2784
+    },
+    "bench/provenance.js": {
+      "sha256": "5b92006b1eb6180821143e02ba58e434c3bf1ecd2c0f2bcd18693a89b709508c",
+      "bytes": 1086
+    },
+    "bench/record.js": {
+      "sha256": "a9fe1edce25d4802623a547317a55535606199840746e3cd370d9237f6bd61f9",
+      "bytes": 1490
+    },
+    "bench/run.js": {
+      "sha256": "509ea757b809a7da78c9fc6f3ff4d18bdb0840fa373dfee445b6546969e8e5bb",
+      "bytes": 2829
+    },
+    "bench/seeds.json": {
+      "sha256": "9c44bac2c9e069da356665fd79db6e0b10f41af5b85b16b46ab96308749c85aa",
+      "bytes": 12417
+    },
     "client/js/ai/lineupStore.js": {
       "sha256": "6460a6881d5ad11815e1acd9592bcd45d0479eec7db237837bd159b0a8082fcb",
       "bytes": 4133

@@ -35,7 +35,7 @@ const noopLog = { info() {}, warn() {}, error() {}, debug() {} };
 
 /** The defaults (no file). */
 export const DEFAULT_POLICY = Object.freeze({
-  rooms: 'host', default: Object.freeze([]), required: Object.freeze([]), allow: Object.freeze(['*']),
+  rooms: 'host', default: Object.freeze([]), required: Object.freeze([]), allow: Object.freeze(['*']), enabled: Object.freeze(['*']),
   classes: Object.freeze({ cosmetic: true, content: true }), maxSets: DEFAULT_MAX_SETS, allowIncompatible: false,
 });
 
@@ -58,6 +58,12 @@ export function readPolicy(json, { env = process.env } = {}) {
   if (o.required !== undefined) {
     if (Array.isArray(o.required) && o.required.length <= 32 && o.required.every(isPluginId)) p.required = [...new Set(o.required)];
     else problems.push('"required" must be a list of plugin ids');
+  }
+  // enabled（2026-10-20）：服务端**装了什么**。['*'] = 全部可用（缺省，行为不变）；具体清单 = 只有这些插件能被房间选中。
+  // 管理器的安装/卸载只改这一行，不碰任何运行期代码。
+  if (o.enabled !== undefined) {
+    if (Array.isArray(o.enabled) && o.enabled.every((x) => x === '*' || isPluginId(x))) p.enabled = [...new Set(o.enabled)];
+    else problems.push('"enabled" must be ["*"] or a list of plugin ids');
   }
   if (o.allow !== undefined) {
     if (Array.isArray(o.allow) && o.allow.every((x) => x === '*' || isPluginId(x))) p.allow = [...o.allow];

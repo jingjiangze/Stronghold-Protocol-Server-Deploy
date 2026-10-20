@@ -38,7 +38,7 @@ export function createRoomSets({ registry, visual, contents, policy }) {
     && Array.isArray(p.manifest?.scope) && p.manifest.scope.includes(scope);
   const cosmeticUsable = (p, scope) => !!visual && !!p && p.class === 'cosmetic' && p.status === 'loaded' && !!p.visual
     && Array.isArray(p.manifest?.scope) && p.manifest.scope.includes(scope);
-  const allowed = (p) => !policy || policy.allows(p.id, p.class);
+  const allowed = (p) => (!policy || policy.allows(p.id, p.class)) && (!policy || policy.enabled.includes('*') || policy.enabled.includes(p.id));
 
   /**
    * @param {string[]} ids

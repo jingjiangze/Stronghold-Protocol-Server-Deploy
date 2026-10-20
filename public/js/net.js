@@ -98,6 +98,15 @@ export function backoffDelay(attempt, rand = Math.random) {
  * @returns {string}
  */
 export function defaultWsUrl(loc = globalThis.location) {
+  // 入口与联机解耦（2026-10-20）：页面可以从任何域名来（隧道 / 自有域名），WS 仍可直连服务器本身。
+  // 优先级：?ws=wss://… → globalThis.__SP_WS__ → 同源推导（缺省，行为不变）。
+  const ok = (v) => typeof v === 'string' && /^wss?:\/\//.test(v.trim());
+  try {
+    const q = new URLSearchParams((loc && loc.search) || '').get('ws');
+    if (ok(q)) return q.trim();
+  } catch { /* a caller without a search string */ }
+  const forced = typeof globalThis.__SP_WS__ === 'string' ? globalThis.__SP_WS__ : '';
+  if (ok(forced)) return forced.trim();
   if (!loc || !loc.host) return 'ws://localhost:3000/ws';
   return `${loc.protocol === 'https:' ? 'wss' : 'ws'}://${loc.host}/ws`;
 }
