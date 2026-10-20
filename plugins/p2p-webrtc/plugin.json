@@ -1,0 +1,16 @@
+{
+  "manifest": 2,
+  "id": "p2p-webrtc",
+  "name": { "zh": "P2P 直连（WebRTC）" },
+  "englishName": "P2P direct (WebRTC)",
+  "description": { "zh": "房间内的浏览器点对点通道：信令走现有 /ws，数据走 DataChannel，连不上就回退 WebSocket。默认关闭。" },
+  "version": "0.1.0",
+  "app": ">=0.3.0 <0.4.0",
+  "api": 2,
+  "class": "trusted",
+  "scope": ["room"],
+  "capabilities": ["transport"],
+  "permissions": ["trusted.server"],
+  "entry": { "server": "host/noop.js" },
+  "code": { "client": ["js/p2p.js"] }
+}

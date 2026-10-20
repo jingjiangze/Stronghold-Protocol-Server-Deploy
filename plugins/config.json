@@ -4,7 +4,8 @@
     "mota": "18d3d0db721dec9408412e69f7a2ef32111da721e0e421244bc24b98821f980f",
     "ai-scoring": "ba5c93f1bba4e3f83ff77b5aeb8d1b894cc6efa2c29b66cf23d50cc8c91e5d87",
     "operator-skins": "7f0941a8ceb2f274a07bebb7046bf923198b291d988b6e2d2dd0e3c56811c488",
-    "alliance-20": "47de9ef89cfeb1ffc3ebc01db75cb99b0db0030c73b427788edb0a909d33348d"
+    "alliance-20": "47de9ef89cfeb1ffc3ebc01db75cb99b0db0030c73b427788edb0a909d33348d",
+    "p2p-webrtc": "334c31272401b0db49f8a14763a0fb34882ee00ff982bbc0cf1f3429bdd1b7f5"
   },
   "default": [
     "mota",
