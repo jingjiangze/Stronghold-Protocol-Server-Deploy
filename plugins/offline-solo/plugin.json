@@ -1,0 +1,30 @@
+{
+  "manifest": 2,
+  "id": "offline-solo",
+  "name": "本机独立模拟（纯浏览器）",
+  "englishName": "Offline solo (pure browser)",
+  "description": "不连服务器也能打完一整局独立模拟：页内 loopback + 薄大厅 + 真 Match 引擎。结算的布阵先落本地队列，联网后补传学习库。只加代码，不改玩法数据。",
+  "version": "0.3.1",
+  "app": ">=0.3.0 <0.4.0",
+  "api": 2,
+  "class": "trusted",
+  "scope": [
+    "room"
+  ],
+  "permissions": [
+    "trusted.server"
+  ],
+  "entry": {
+    "server": "host/noop.js"
+  },
+  "code": {
+    "client": [
+      "js/offline/index.js",
+      "js/offline/localSocket.js",
+      "js/offline/localLobby.js",
+      "js/offline/lineupOutbox.js",
+      "js/offline/lineupSync.js"
+    ],
+    "data": []
+  }
+}

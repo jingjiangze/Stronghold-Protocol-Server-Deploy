@@ -23,6 +23,7 @@ import { PROTOCOL_VERSION, APP_VERSION } from '../../shared/constants.js';
 import { buildTag } from './buildTag.js';
 import { setSecurityHeaders, sendError, sendJson, splitUrl } from './common.js';
 import { clientAddress, isLocalIp } from '../net.js';
+import { handleOfflineLineup, OFFLINE_LINEUP_PATH } from './offlineLineup.js';
 
 const MAX_URL_LENGTH = 4096;
 
@@ -94,10 +95,16 @@ export function createRequestHandler({ serveStatic, health, log, trustProxy = 'a
     if (studio && studio.handles(parts.rawPath)) { await studio.handle(req, res, parts.rawPath, parts.query); return; }
     // the mod manager (server/mods/): /mod, /mod/status.json and its two writes — before the GET-only rule below
     if (mods && mods.handles(parts.rawPath)) { await mods.handle(req, res, parts.rawPath, parts.query); return; }
-    // 评分上报是唯一的 POST 端点，放行到下面的分支。
-    if (req.method !== 'GET' && req.method !== 'HEAD' && parts.rawPath !== '/api/lineup-score') {
+    // 两个 POST 端点放行到下面的分支：评分上报，以及离线局的布阵补传。
+    if (req.method !== 'GET' && req.method !== 'HEAD'
+      && parts.rawPath !== '/api/lineup-score' && parts.rawPath !== OFFLINE_LINEUP_PATH) {
       res.setHeader('Allow', 'GET, HEAD');
       sendError(req, res, 405, '不支持的请求方法 · Method not allowed');
+      return;
+    }
+    // 离线局的布阵补传（信任模型与评分端点同一立场）：**永远 200**，收下多少由 accepted 告诉客户端。
+    if (parts.rawPath === OFFLINE_LINEUP_PATH) {
+      await handleOfflineLineup(req, res, { log, clientAddr: clientAddress(req, trustProxy).ip });
       return;
     }
     // 评分上报（信任模型）：每 IP 限速，其余四条由聚合侧裁决；**永远 200**（fail-open，上报失败不影响对局）。
