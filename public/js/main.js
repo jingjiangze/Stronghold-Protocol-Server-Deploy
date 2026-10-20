@@ -98,6 +98,12 @@ let joinInFlight = false;
 /** The rehearsal installer (battle/rehearsal.js): its tasks follow the match on screen (see wireNet's store hook). */
 let rehearsal = null;
 
+/** P2P 房（平台 302 带 ?p2p=1）：局内重连先降为角标，连续失败再恢复全文案（ui/connBanner.js）。 */
+function readP2PFlag() {
+  try { return new URLSearchParams(location.search).get('p2p') === '1'; } catch { return false; }
+}
+if (readP2PFlag()) store.patch('ui', { p2p: true });
+
 function clearPendingJoin() {
   store.patch('ui', { pendingJoin: null });
   clearRoomParam();
@@ -208,6 +214,11 @@ function onRoomState(msg) {
     return;
   }
   const prevRoom = store.get().room;
+  // 局中断线后服务端丢了对局（进程重启）：告知玩家这一局没了，而不是静默退回房间。
+  // 只认「正在打」的阶段（round>0 且不是结算帧），否则正常打完回到房间也会误报。
+  const prevMatch = store.get().match;
+  const wasPlaying = !!(prevMatch && prevMatch.round > 0 && prevMatch.phase && prevMatch.phase !== 'RESULT');
+  if (!room.inMatch && wasPlaying) toast(t('本局已中断（服务器重启），已回到房间'), 'warn');
   // A (new) match starts: forget the previous match's state so stale results never show.
   if (room.inMatch && !(prevRoom && prevRoom.inMatch && prevRoom.code === room.code)) store.set({ match: emptyMatch() });
   store.set({ room });
