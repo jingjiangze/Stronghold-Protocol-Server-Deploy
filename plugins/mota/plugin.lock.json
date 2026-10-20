@@ -161,8 +161,8 @@
       "bytes": 2473
     },
     "client/js/screens/room.js": {
-      "sha256": "b10e60c757d3fc944b2916371806ef825d364debdd8d8c7e20244265411f8b2b",
-      "bytes": 59185
+      "sha256": "8883803ffbd27db2da2a731941487c5cf693c2f3b646cd1b7b34960fc28d9570",
+      "bytes": 59511
     },
     "client/js/screens/settle.js": {
       "sha256": "b24be7296acfddff02d34011becb8f5c9d2eed0796d6cdacb235d924e8471d61",

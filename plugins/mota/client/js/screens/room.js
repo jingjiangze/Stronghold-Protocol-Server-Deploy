@@ -145,6 +145,12 @@ export function aiLastOption(room, myId) {
  * 本地/局域网调试可以用 `globalThis.__SP_SHARE_BASE__` 覆盖。
  */
 const SHARE_BASE_DEFAULT = 'https://superbig.jiangjiangze.icu/';
+/** 邀请链接：服务端登记到 openp2p 平台后下发的 `room.inviteUrl` 优先，没有才回退到本地按 location 拼的那条。 */
+export function inviteLinkFor(room) {
+  const direct = room && typeof room.inviteUrl === 'string' ? room.inviteUrl.trim() : '';
+  return direct || inviteLink(room && room.code);
+}
+
 export function inviteLink(code) {
   const override = typeof globalThis.__SP_SHARE_BASE__ === 'string' ? globalThis.__SP_SHARE_BASE__.trim() : '';
   const base = override || SHARE_BASE_DEFAULT;
@@ -651,7 +657,7 @@ export function RoomScreen() {
   const sit = () => run('sit', () => net.request('room.join', roomMods.buildJoinPayload(room.code)));
   const copy = async (what) => {
     const modeLabel = firepower ? `${RANDOM_MODE_NAME} · ` : '';
-    const ok = await copyText(what === 'code' ? room.code : t('{0} {name}邀请你加入卫戍协议：盟约【{modeLabel}{3}】', { 0: inviteLink(room.code), name: me.name, modeLabel, 3: DIFFICULTY_NAMES[room.difficulty] }));
+    const ok = await copyText(what === 'code' ? room.code : t('{0} {name}邀请你加入卫戍协议：盟约【{modeLabel}{3}】', { 0: inviteLinkFor(room), name: me.name, modeLabel, 3: DIFFICULTY_NAMES[room.difficulty] }));
     if (ok) toast(what === 'code' ? t('同盟密钥复制成功，可前往邀请队友') : t('已复制邀请链接'), 'success');
     else toast(t('复制失败，请手动复制'), 'warn');
   };

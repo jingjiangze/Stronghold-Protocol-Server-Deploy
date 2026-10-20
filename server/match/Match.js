@@ -251,8 +251,12 @@ export function parseVerify(v) {
   const s = String(v ?? '').trim().toLowerCase();
   return s === 'all' || s === 'sample' ? s : 'off';
 }
-/** Default of the bot rehearsal delegation: off — SP_BOT_REHEARSAL=host offers it to the room's host (DESIGN §14). */
-const envBotRehearsal = () => String(env('SP_BOT_REHEARSAL') || '').trim().toLowerCase() === 'host';
+/** Bot rehearsal delegation, ON by default (owner 2026-10-20): the host's browser runs the candidate battles.
+ *  SP_BOT_REHEARSAL=off|0|false|server turns it off; =host keeps the historical 'host only' wording. */
+const envBotRehearsal = () => {
+  const v = String(env('SP_BOT_REHEARSAL') ?? '').trim().toLowerCase();
+  return !(v === 'off' || v === '0' || v === 'false' || v === 'server');
+};
 const noopLog = { info() {}, warn() {}, error() {}, debug() {} };
 
 const dsCache = new WeakMap();

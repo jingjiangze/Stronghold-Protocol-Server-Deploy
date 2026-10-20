@@ -285,6 +285,8 @@ export class Room {
      * put every human seat before every AI seat (Match opts.aiPicksLast). Kept across the room's matches.
      */
     this.aiPicksLast = false;
+    /** P2P 邀请链接（平台握手回的 joinUrl）；没注册/失败时为 null，房间照常可用。 */
+    this.inviteUrl = null;
     /** @type {string | null} */
     this.hostId = null;
     /** @type {(Seat | null)[]} */
@@ -363,6 +365,7 @@ export class Room {
       ...(this.variant ? { variant: this.variant } : {}),   // 协同共竞
       inMatch: !!this.match,
       private: this.private === true,
+      ...(this.inviteUrl ? { inviteUrl: this.inviteUrl } : {}),
       seatCap: this.seats.length,
       seats: this.seats.map((s) => (s
         ? { seat: s.seat, playerId: s.playerId, name: s.name, isBot: s.isBot, ready: s.ready, connected: s.connected && !s.left, team: s.team || null, card: s.card || null }
@@ -761,7 +764,23 @@ export class Lobby {
     session.pendingResult = null;
     this.log.info(`[lobby] ${code} created (${mode}/${difficulty}${room.test ? ', test' : ''}) by ${session.name}`);
     this.broadcastState(room);
+    if (this.platformLink && !room.private) this.registerInvite(room);
     return OK;
+  }
+
+  /** 向 openp2p 平台登记这个房间，拿到 joinUrl 后写回 room.state 并广播。全程 fail-open。 */
+  registerInvite(room) {
+    const link = this.platformLink;
+    if (!link) return;
+    Promise.resolve()
+      .then(() => link.register(room.code))
+      .then((res) => {
+        if (!res || !res.joinUrl || room.disposed) return;
+        room.inviteUrl = res.joinUrl;
+        this.broadcastState(room);
+        this.log.info?.(`[platform] ${room.code} → ${res.joinUrl}`);
+      })
+      .catch((e) => this.log.warn?.(`[platform] ${room.code} register failed: ${e?.message || e}`));
   }
 
   join(session, { code, testAck }) {
@@ -1465,6 +1484,9 @@ export class Lobby {
     info.maxSeats = MAX_SEATS;
     // Omitted when the switch is off, so a welcome from a normal server stays identical.
     if (this.testEnabled === true) info.testMode = true;
+    // WS 传输的生效值（server/wsCompression.js resolveWsTransport）：客户端据此知道压缩到底开没开，
+    // 而不是靠猜。off 档也发，值是 {deflate:false,...}。
+    if (this.transport) info.transport = this.transport;
     return info;
   }
 
@@ -1890,6 +1912,7 @@ export class Lobby {
    */
   disposeRoom(room, reason) {
     if (room.disposed) return;
+    if (this.platformLink) { try { void this.platformLink.release(room.code); } catch { /* 平台失败不影响关房 */ } }
     room.disposed = true;
     if (this.rooms.get(room.code) === room) this.rooms.delete(room.code);
     const ctx = room.matchCtx;
