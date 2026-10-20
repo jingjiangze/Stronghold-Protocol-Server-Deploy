@@ -432,11 +432,13 @@ export function createAssetJump({ sourcesPath = process.env.SP_EDGE_SOURCES || D
   // 玩家拿这条直链取字节 —— 数据集保持私有，字节仍然不经过容器。
   const SIGNED_TTL_MS = Number(process.env.SP_ASSET_SIGNED_TTL_MS || 60_000);
   const SIGNED_MAX = 4096;
+  /** A dataset file the resolve answers inline is proxied instead of redirected; only small tables need this. */
+  const INLINE_MAX_BYTES = 1024 * 1024;
   const signedCache = new Map();
   const signedInflight = new Map();
   const signedFor = (target) => {
     const hit = signedCache.get(target);
-    if (hit && Date.now() - hit.at < SIGNED_TTL_MS) return Promise.resolve(hit.url);
+    if (hit && Date.now() - hit.at < SIGNED_TTL_MS) return Promise.resolve(hit.body ? { body: hit.body, type: hit.type } : { url: hit.url });
     const running = signedInflight.get(target);
     if (running) return running;
     const p = (async () => {
@@ -450,10 +452,20 @@ export function createAssetJump({ sourcesPath = process.env.SP_EDGE_SOURCES || D
         if (r.status >= 300 && r.status < 400 && loc) {
           if (signedCache.size >= SIGNED_MAX) { const first = signedCache.keys().next().value; if (first !== undefined) signedCache.delete(first); }
           signedCache.set(target, { url: loc, at: Date.now() });
-          return loc;
+          return { url: loc };
         }
-        // 公开数据集：基址本身就能取，原样交给浏览器（多一次跳转没有意义）
-        if (r.status < 300) return target;
+        // 200 = 小文件被数据集**内联**返回（没有 302 可跟）。这条 URL 匿名浏览器读不了（私有数据集），
+        // 所以由容器自己把字节转发出去。上限 1 MB：棋盘 tiles.json（8.7 KB）这类表都在这个量级。
+        if (r.status < 300) {
+          const type = (r.headers && typeof r.headers.get === 'function' ? r.headers.get('content-type') : null) || 'application/octet-stream';
+          const buf = Buffer.from(await r.arrayBuffer());
+          if (buf.length <= INLINE_MAX_BYTES) {
+            if (signedCache.size >= SIGNED_MAX) { const first = signedCache.keys().next().value; if (first !== undefined) signedCache.delete(first); }
+            signedCache.set(target, { body: buf, type, at: Date.now() });
+            return { body: buf, type };
+          }
+          return null;
+        }
         return null;
       } catch { return null; }
     })().finally(() => signedInflight.delete(target));
@@ -466,10 +478,14 @@ export function createAssetJump({ sourcesPath = process.env.SP_EDGE_SOURCES || D
     if (!out || out.status !== 302) return out;
     const loc = out.location || (out.headers && out.headers.Location);
     if (!loc || !isModelscopeUrl(loc)) return out;
-    const signed = await signedFor(loc);
-    if (signed) {
-      out.location = signed;
-      out.headers.Location = signed;
+    const resolved = await signedFor(loc);
+    if (resolved && resolved.body) {
+      // 数据集内联返回的文件：容器把字节转发给玩家（原 URL 匿名读不了）
+      return { status: 200, headers: { 'Content-Type': resolved.type, 'Cache-Control': 'private, max-age=60', 'Content-Length': String(resolved.body.length) }, body: resolved.body };
+    }
+    if (resolved && resolved.url) {
+      out.location = resolved.url;
+      out.headers.Location = resolved.url;
       // 直链带 auth_key：别让浏览器把这条 302 缓存到它过期之后
       out.headers['Cache-Control'] = 'private, max-age=60';
       return out;

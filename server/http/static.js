@@ -196,7 +196,7 @@ export function createStaticHandler({ publicDir, dataDir, sharedDir, simDir = pa
     const onDiskLocal = jumpable && localExists(splitHashedPath(decoded).path);
     if (assetJump && jumpable && !onDiskLocal) {
       const jumped = await assetJump(decoded, query, req.method, assetJump.config ? assetJump.config() : null);
-      if (jumped) { res.writeHead(jumped.status, jumped.headers); res.end(); return; }
+      if (jumped) { res.writeHead(jumped.status, jumped.headers); res.end(req.method === 'HEAD' ? undefined : jumped.body || undefined); return; }
     }
     // the plugin studio's page is never a static file (server/studio/index.js isStudioPath: any spelling of /studio/)
     if (isStudioPath(decoded)) { sendError(req, res, 404, '页面不存在 · Not found', decoded.length <= 200 ? decoded : ''); return; }
