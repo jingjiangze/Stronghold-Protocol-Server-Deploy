@@ -51,6 +51,7 @@ export const CORE_ROUTE_PREFIXES = Object.freeze([
   '/data',
   '/shared',
   '/sim',
+  '/match',
   '/i18n',
   '/mods',
   '/media',

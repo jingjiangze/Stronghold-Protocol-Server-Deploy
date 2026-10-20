@@ -1,0 +1,42 @@
+{
+  "lock": {
+    "lock": 1,
+    "id": "offline-solo",
+    "version": "0.3.1",
+    "generator": "tools/plugin.mjs pack",
+    "files": {
+      "client/js/offline/index.js": {
+        "sha256": "70e047cf9ce4e06f9e1d5b0552b9a31fb1e1975e37b88fe4c3ba74ad7160f9a1",
+        "bytes": 5223
+      },
+      "client/js/offline/lineupOutbox.js": {
+        "sha256": "2423e2ac7ce4c09f158d1d0b42096109c3fba0cccfc25b4a1402f21b3edb2230",
+        "bytes": 3729
+      },
+      "client/js/offline/lineupSync.js": {
+        "sha256": "9dec07a61d5eee2e56df54959bbbd3606a75c612884ae991ce336bea3fc97ccc",
+        "bytes": 4261
+      },
+      "client/js/offline/localLobby.js": {
+        "sha256": "2459dfb1b84b02a603e7d5ffd51a85c59a05d684181f9463778558121dc1680d",
+        "bytes": 14947
+      },
+      "client/js/offline/localSocket.js": {
+        "sha256": "d6edd0b3e9e403f460171f801b72dfa7927ad410de921a5ea360b6574abfcdd0",
+        "bytes": 3879
+      },
+      "host/noop.js": {
+        "sha256": "213a56513f8ac828676c28607caab415cc3aab1605cd76cd5d6c3c2bc20c847a",
+        "bytes": 60
+      },
+      "plugin.json": {
+        "sha256": "39eb151cd0f9a5a125b34086f51f4827f5868519532f75e421c86fe624164137",
+        "bytes": 807
+      }
+    },
+    "spine": {}
+  },
+  "problems": [],
+  "warnings": [],
+  "issues": []
+}

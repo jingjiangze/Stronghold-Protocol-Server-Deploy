@@ -352,6 +352,66 @@ export function dropStagedLineups() {
 }
 
 /**
+ * 接收一批**离线局**结算后补传上来的布阵（server/http/offlineLineup.js 唯一调用方）。
+ *
+ * 为什么它不共用 flushMatchLineups：那条路径消费本进程内存里的 staged（由 MatchPrep.endPrep 攒的），离线局的
+ * 棋盘在浏览器里、进程从没见过它。这里接受**已经带完整字段的记录**，但走**同一套门控**，判据一字不改：
+ *   * 结算原因：调用方已按 USABLE_REASONS 过滤（浏览器侧同判据），这里再判一次 rec.t === 'lineup'；
+ *   * 农场检测 isFarm（同一指纹一小时超 40 次丢弃）；
+ *   * 形状校验 validCells（必须在场内、朝向合法）；
+ *   * 库未配置（SP_LINEUP_LIBRARY 未设）时一律不收 —— 与 recordPrepLineups:320 同一条早退。
+ * 去重由 appendLine 的 lib.seen 负责（同指纹不重复写行）。
+ *
+ * @param {Array<object>} entries 每条为学习库记录形状：{ t, at, modeId, stageId, difficulty, round, sig, cells }
+ * @returns {Promise<{ accepted: number, rejected: number }>} accepted = 真正写进库的条数
+ */
+export async function acceptOfflineLineups(entries) {
+  const list = Array.isArray(entries) ? entries : [];
+  if (!list.length) return { accepted: 0, rejected: 0 };
+  if (!lineupFile(NO_MODE, null)) return { accepted: 0, rejected: list.length }; // 功能未开启
+  let accepted = 0;
+  let rejected = 0;
+  /** @type {object[]} 真正写进库的规范化记录（outbox 镜像用，绝不从入参前缀取——被门控拒掉的会混在前面） */
+  const written = [];
+  for (const rec of list) {
+    if (!rec || typeof rec !== 'object' || rec.t !== 'lineup') { rejected++; continue; }
+    if (typeof rec.modeId !== 'string' || !rec.modeId) { rejected++; continue; }
+    if (!Array.isArray(rec.cells) || rec.cells.length < 2) { rejected++; continue; }
+    if (!validCells(rec.cells)) { rejected++; continue; }
+    if (isFarm(rec)) { rejected++; continue; }
+    const row = {
+      t: 'lineup',
+      at: typeof rec.at === 'string' ? rec.at : new Date().toISOString(),
+      modeId: rec.modeId,
+      stageId: rec.stageId ?? null,
+      difficulty: rec.difficulty ?? null,
+      round: Number.isInteger(rec.round) ? rec.round : 0,
+      sig: typeof rec.sig === 'string' && rec.sig ? rec.sig : sigOf(rec.cells),
+      cells: rec.cells,
+      // 来源标记：这些是离线局补传的，排查数据来源时能分开（学习库的读取路径不读这个字段）
+      source: 'offline',
+    };
+    try {
+      await appendLine(row.modeId, row.difficulty, row);
+      written.push(row);
+      accepted++;
+    } catch (e) {
+      console.error('[lineupLibrary] offline append failed:', e && e.message);
+      rejected++;
+    }
+  }
+  if (written.length && outboxEnabled() && !lineupRemoteSpec()) {
+    // 与结算路径同一条发布链：补传进来的批次也进 outbox（它自己负责去重与退避）
+    const dir = lineupDir();
+    if (dir) {
+      void enqueueOutbox(dir, written, { mid: null, outcome: { victory: true, reason: 'defeat' } });
+      try { flushHook?.(); } catch { /* a broken hook must never fail an upload */ }
+    }
+  }
+  return { accepted, rejected };
+}
+
+/**
  * Write the staged lineups. Called exactly where a match settles (MatchSettle.finish), i.e. only for matches that
  * really produced a result; the stage is cleared either way, so an abandoned match's boards are never published.
  * `outcome` is the settlement's reason record ({ victory, reason }): `error` / `abandoned` / `eliminated` never wrote a

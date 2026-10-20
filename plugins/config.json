@@ -1,8 +1,9 @@
 {
   "trusted": {
     "mota-coop": "b1ed43cd3ed500790a534085eaf104d028aca22af5804820597d37a0e592c432",
-    "mota": "1c48b52bf56c2c0aa563f82cbe150693d1bccb79639139e75c87539453d075ee",
+    "mota": "e5fe58ca2c244fd33399b5eed80e0171d8ef4e891319f404b31f9a876dbc14d4",
     "ai-scoring": "d88c4ce98c13e378bcf690890ec8e67b4260bc2339e985760f031b92cd867c38",
+    "offline-solo": "5ffa4de51e62b94a88362cf6cbec2fb19dc771ab03679098ea5a421b0aff4703",
     "operator-skins": "7f0941a8ceb2f274a07bebb7046bf923198b291d988b6e2d2dd0e3c56811c488",
     "alliance-20": "47de9ef89cfeb1ffc3ebc01db75cb99b0db0030c73b427788edb0a909d33348d"
   },

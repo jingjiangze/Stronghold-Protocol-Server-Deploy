@@ -45,6 +45,9 @@ plugins/*
 !plugins/AGENTS.md
 !plugins/_template/
 
+# --- static-site export (tools/pages-build.mjs): the CDN folder, rebuilt on demand ------------------
+_site*/
+
 # --- tests & logs ----------------------------------------------------------------------------------
 test/e2e/out/
 logs/

@@ -439,10 +439,26 @@ async function boot() {
   // Optional local-client art manifest (emotes, tutorial pages, official UI sprites; DESIGN §13).
   data.load('local').catch(() => {});
 
+  // 纯浏览器独立模拟（offline/）：探测这台页面背后到底有没有游戏服务器。没有（静态托管 / 断网 / 服务挂了）
+  // 就把 net 的传输换成页内 loopback + 薄大厅，对局跑**真 Match 引擎**（/match/）——界面零改动。
+  // 有服务器时这里只是一次 HEAD /healthz（与 build guard 的探测同价），一切行为与今天一致。
+  let offlineMode = false;
+  try {
+    const { decideOffline, bootOffline } = await import('./offline/index.js');
+    const probe = () => fetch('/healthz', { method: 'HEAD', cache: 'no-store' });
+    const decision = await decideOffline(location.search, probe);
+    if (decision.offline) {
+      await bootOffline();
+      offlineMode = true;
+    }
+  } catch (err) {
+    console.warn('[app] offline probe failed (staying on the normal socket)', err);
+  }
   const connectWhenReady = identityReady.then(() => {
     if (entered) net.setName(savedName);
     else net.connect();
   });
+
   // the language (and its UI translations) before the first render: no Chinese flash for an English player
   const langReady = initLang().catch((err) => console.warn('[app] language setup failed', err));
   await Promise.all([waitForFonts(1200), connectWhenReady, langReady]);
@@ -454,12 +470,20 @@ async function boot() {
     splash.classList.add('is-done');
     setTimeout(() => splash.remove(), 300);
   }
+  // 布阵补传（纯浏览器独立模拟的后半句）：离线局攒在 localStorage 的布阵，联网后自动 POST /api/offline-lineup；
+  // 离线模式（__SP_OFFLINE__）里没有真服务器可传，这里静默不启动。
+  try {
+    const { installOfflineLineupSync } = await import('./offline/lineupSync.js');
+    installOfflineLineupSync({ log: console });
+  } catch (err) { console.warn('[app] offline lineup sync failed', err); }
+
   globalThis.__SP__ = { store, net, data, version: 1 };
   // A page keeps the modules it imported at load time for its whole lifetime, so a deploy cannot reach an open tab
   // (ui/buildGuard.js): watch `/healthz.build`. Outside a match the page reloads itself; during a match the guard says
   // so instead (the connection banner offers 刷新页面) and reloads once the match — settlement screen included — is over,
   // so a running game is never thrown away.
-  try {
+  // 离线模式：没有部署可对账，build guard 整套不启动（探测每 2 分钟打一次 /healthz 纯属空耗）。
+  if (!offlineMode) try {
     startBuildGuard({
       inMatch: () => selectRoute(store.get()) === 'game',
       onStale: ({ waiting }) => { if (waiting) store.patch('ui', { buildStale: true }); },
