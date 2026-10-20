@@ -5,26 +5,26 @@
   "generator": "tools/plugin.mjs pack",
   "files": {
     "bench/README.md": {
-      "sha256": "e6583264b95f7b4cb01febf19be3c8120f1800db7106de5e4e24442aa54165fe",
-      "bytes": 1237
+      "sha256": "ee3e6fe98bf2c66fb1fa34d4da86775d1749146a6252e3eae8c768866ac56ffb",
+      "bytes": 1229
     },
-    "bench/compare.mjs": {
+    "bench/compare.js": {
       "sha256": "3840edd3f112221a1e72d6239b54d6363b5b2d6e83522025fc7bf20a06423ab1",
       "bytes": 2574
     },
-    "bench/make-bench.mjs": {
+    "bench/make-bench.js": {
       "sha256": "083fb1a39c61389ea1686c49f51120581a8977afc7b424c33f57841a2be207e3",
       "bytes": 2784
     },
-    "bench/provenance.mjs": {
+    "bench/provenance.js": {
       "sha256": "5b92006b1eb6180821143e02ba58e434c3bf1ecd2c0f2bcd18693a89b709508c",
       "bytes": 1086
     },
-    "bench/record.mjs": {
+    "bench/record.js": {
       "sha256": "a9fe1edce25d4802623a547317a55535606199840746e3cd370d9237f6bd61f9",
       "bytes": 1490
     },
-    "bench/run.mjs": {
+    "bench/run.js": {
       "sha256": "509ea757b809a7da78c9fc6f3ff4d18bdb0840fa373dfee445b6546969e8e5bb",
       "bytes": 2829
     },
