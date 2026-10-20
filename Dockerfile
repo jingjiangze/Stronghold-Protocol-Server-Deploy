@@ -85,7 +85,6 @@ COPY --from=build /app/docs/research ./docs/research
 # 0.3.0: server/studio/index.js imports tools/assets/atlas.mjs + tools/golden.mjs at boot — the
 # runtime image needs the tools tree too (0.2.6-era Dockerfile.ms predates the studio).
 COPY --from=build /app/tools ./tools
-COPY --from=build /app/bin ./bin
 # 边缘层：配置、解析器与入口。nginx.conf / sources.json 是数据，edge-sidecar.mjs 是决策。
 COPY deploy/stardust/ms-edge/nginx.conf /app/deploy/stardust/ms-edge/nginx.conf
 COPY deploy/stardust/ms-edge/edge-sidecar.mjs /app/deploy/stardust/ms-edge/edge-sidecar.mjs
