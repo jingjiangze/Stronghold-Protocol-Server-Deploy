@@ -24,6 +24,10 @@
       "sha256": "a9fe1edce25d4802623a547317a55535606199840746e3cd370d9237f6bd61f9",
       "bytes": 1490
     },
+    "bench/run.mjs": {
+      "sha256": "509ea757b809a7da78c9fc6f3ff4d18bdb0840fa373dfee445b6546969e8e5bb",
+      "bytes": 2829
+    },
     "bench/seeds.json": {
       "sha256": "9c44bac2c9e069da356665fd79db6e0b10f41af5b85b16b46ab96308749c85aa",
       "bytes": 12417
