@@ -53,8 +53,8 @@
       "bytes": 424
     },
     "client/js/main.js": {
-      "sha256": "c82c2f40d43865442f294cfe51505cc7f7324b4330256bf4817cc09dc69a897d",
-      "bytes": 25726
+      "sha256": "de3368bbede85abf3dde4e46af16ae25dab66961238daa95ae6a57cbfa182d33",
+      "bytes": 27010
     },
     "client/js/matchDelta.js": {
       "sha256": "854a770d9f3f176caf188447f984fb954b2e210e3bb36d242d3036a45f2b4927",
@@ -153,8 +153,8 @@
       "bytes": 98875
     },
     "client/js/screens/lobby.js": {
-      "sha256": "49c0b64840f64046e52e03aff1c10072be18786de1fa78da5481b435ac6eaa53",
-      "bytes": 71493
+      "sha256": "83cc45a33d007b0e2a7f5cb394162863ad4cd43b4d41308a1f297a6d49e2b318",
+      "bytes": 71375
     },
     "client/js/screens/lobbyLinks.js": {
       "sha256": "9bc64d256ebfa569878082119b997dc5f99f2b9cbdef52e7b9013aa429c9a953",
@@ -189,8 +189,8 @@
       "bytes": 7334
     },
     "client/js/store.js": {
-      "sha256": "0498ee8af8fad0b7fc5e432c1e4184b71f48e4307497ba0096654dccd83ffe56",
-      "bytes": 11325
+      "sha256": "8806de88f776f95355ed61712d33bbb59971fa20ac06a88c7dc6de5c2cc596a2",
+      "bytes": 11337
     },
     "client/js/ui/accounts.js": {
       "sha256": "e712954bd6ffa7ec7d52dd255d646d3378f173cc20daacea6af5f0e2e22ed7ab",
@@ -257,8 +257,8 @@
       "bytes": 1557
     },
     "client/js/ui/gameActions.js": {
-      "sha256": "21c32cb53b9288f76f83c2c66472642976dd2816825a041a84dea0124f3578fa",
-      "bytes": 13455
+      "sha256": "255a9f28161fc92cde5786ee60973f1562147eb07ce9dae1ed2ef7dea399aa8c",
+      "bytes": 13456
     },
     "client/js/ui/gameComponents.js": {
       "sha256": "76e555b4f2b9cc7997389aafed3cee90035f93c8003dde0e3f84378d79eb9aae",
@@ -349,8 +349,8 @@
       "bytes": 7550
     },
     "client/js/ui/pluginPanel.js": {
-      "sha256": "d656e65347b091e4ca205d5ec8b6d9662ba5450e761bedd0d0be7e673968b10a",
-      "bytes": 20330
+      "sha256": "c28027e058eb8416650b28ebcc02bc91babc166fb6126e609d464a0f72f3fb01",
+      "bytes": 21002
     },
     "client/js/ui/portraitChain.js": {
       "sha256": "366ee15af0ee43a8be63fb3ed0d37479575c61d6a3a3eb0c7e790b8a1d95ae5f",

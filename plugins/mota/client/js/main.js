@@ -93,10 +93,18 @@ let welcomeAt = 0;
 let roomStateAt = 0;
 let matchAt = 0;
 let restoreTimer = null;
+/** 服务端交给我们保管的最后一回合快照（服务端重启后送回）。 */
+let matchSnapshot = null;
 let joinTimer = null;
 let joinInFlight = false;
 /** The rehearsal installer (battle/rehearsal.js): its tasks follow the match on screen (see wireNet's store hook). */
 let rehearsal = null;
+
+/** P2P 房（平台 302 带 ?p2p=1）：局内重连先降为角标，连续失败再恢复全文案（ui/connBanner.js）。 */
+function readP2PFlag() {
+  try { return new URLSearchParams(location.search).get('p2p') === '1'; } catch { return false; }
+}
+if (readP2PFlag()) store.patch('ui', { p2p: true });
 
 function clearPendingJoin() {
   store.patch('ui', { pendingJoin: null });
@@ -208,6 +216,10 @@ function onRoomState(msg) {
     return;
   }
   const prevRoom = store.get().room;
+  // 局中断线后服务端丢了对局（进程重启）：告知玩家这一局没了，而不是静默退回房间。
+  const prevMatch = store.get().match;
+  const wasPlaying = !!(prevMatch && prevMatch.round > 0 && prevMatch.phase && prevMatch.phase !== 'RESULT');
+  if (!room.inMatch && wasPlaying) toast(t('本局已中断（服务器重启），已回到房间'), 'warn');
   // A (new) match starts: forget the previous match's state so stale results never show.
   if (room.inMatch && !(prevRoom && prevRoom.inMatch && prevRoom.code === room.code)) store.set({ match: emptyMatch() });
   store.set({ room });
@@ -242,6 +254,9 @@ function wireNet() {
   net.on('replaced', () => toast(t('该身份已在其他页面登录，本页已断开'), 'warn', { ttl: 6000 }));
   net.on('unhandledError', (err) => toastError(err));
   net.on('room.state', onRoomState);
+  // 断线重建：服务端每回合把这一局交给我们保管；它重启后（房间还在、对局没了）会来要回去。
+  net.on('b.snapshot', (msg) => { const p = payload(msg); if (p && p.snapshot && typeof p.snapshot === 'object') { matchSnapshot = p.snapshot; try { globalThis.__spSnapshot = matchSnapshot; } catch { /* debug hook */ } } });
+  net.on('b.snapshotRequest', () => { if (matchSnapshot) net.send('b.snapshot', { snapshot: matchSnapshot }); });
   net.on('room.closed', (msg) => {
     backToLobby();
     const known = Object.hasOwn(CLOSE_REASON, String(msg.reason)) ? CLOSE_REASON[msg.reason] : null;

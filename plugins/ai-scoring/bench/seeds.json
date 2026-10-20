@@ -1,0 +1,590 @@
+{
+  "version": "lineup-bench-v1",
+  "note": "种子按关卡覆盖挑，不看任何策略的胜负；改动评分器后必须跑完整集合。",
+  "generatedAt": "2026-10-20T10:02:36.125Z",
+  "stages": [
+    "act1autochess_escaped_multi",
+    "act1autochess_escaped_single",
+    "act1autochess_m01",
+    "act1autochess_m02",
+    "act1autochess_m03",
+    "act1autochess_m04",
+    "act1autochess_m05",
+    "act1autochess_m06",
+    "act1autochess_m07",
+    "act2autochess_m01",
+    "act2autochess_m02",
+    "act2autochess_m03",
+    "act2autochess_m04"
+  ],
+  "difficulties": {
+    "FUNNY": [
+      {
+        "index": 1,
+        "stage": "act1autochess_escaped_multi",
+        "seed": 1592629968
+      },
+      {
+        "index": 2,
+        "stage": "act1autochess_escaped_single",
+        "seed": 1592670434
+      },
+      {
+        "index": 3,
+        "stage": "act1autochess_m01",
+        "seed": 1592710945
+      },
+      {
+        "index": 4,
+        "stage": "act1autochess_m02",
+        "seed": 1592751454
+      },
+      {
+        "index": 5,
+        "stage": "act1autochess_m03",
+        "seed": 1592791948
+      },
+      {
+        "index": 6,
+        "stage": "act1autochess_m04",
+        "seed": 1592832472
+      },
+      {
+        "index": 7,
+        "stage": "act1autochess_m05",
+        "seed": 1592872952
+      },
+      {
+        "index": 8,
+        "stage": "act1autochess_m06",
+        "seed": 1592913454
+      },
+      {
+        "index": 9,
+        "stage": "act1autochess_m07",
+        "seed": 1592953976
+      },
+      {
+        "index": 10,
+        "stage": "act2autochess_m01",
+        "seed": 1592994487
+      },
+      {
+        "index": 11,
+        "stage": "act2autochess_m02",
+        "seed": 1593034988
+      },
+      {
+        "index": 12,
+        "stage": "act2autochess_m03",
+        "seed": 1593075471
+      },
+      {
+        "index": 13,
+        "stage": "act2autochess_m04",
+        "seed": 1593115976
+      },
+      {
+        "index": 14,
+        "stage": "act1autochess_escaped_multi",
+        "seed": 1593156508
+      },
+      {
+        "index": 15,
+        "stage": "act1autochess_escaped_single",
+        "seed": 1593196974
+      },
+      {
+        "index": 16,
+        "stage": "act1autochess_m01",
+        "seed": 1593237492
+      },
+      {
+        "index": 17,
+        "stage": "act1autochess_m02",
+        "seed": 1593277994
+      },
+      {
+        "index": 18,
+        "stage": "act1autochess_m03",
+        "seed": 1593318493
+      },
+      {
+        "index": 19,
+        "stage": "act1autochess_m04",
+        "seed": 1593359016
+      },
+      {
+        "index": 20,
+        "stage": "act1autochess_m05",
+        "seed": 1593399492
+      },
+      {
+        "index": 21,
+        "stage": "act1autochess_m06",
+        "seed": 1593439997
+      },
+      {
+        "index": 22,
+        "stage": "act1autochess_m07",
+        "seed": 1593480545
+      },
+      {
+        "index": 23,
+        "stage": "act2autochess_m01",
+        "seed": 1593521032
+      },
+      {
+        "index": 24,
+        "stage": "act2autochess_m02",
+        "seed": 1593561542
+      },
+      {
+        "index": 25,
+        "stage": "act2autochess_m03",
+        "seed": 1593602026
+      },
+      {
+        "index": 26,
+        "stage": "act2autochess_m04",
+        "seed": 1593642559
+      },
+      {
+        "index": 27,
+        "stage": "act1autochess_escaped_multi",
+        "seed": 1593683049
+      },
+      {
+        "index": 28,
+        "stage": "act1autochess_escaped_single",
+        "seed": 1593723524
+      }
+    ],
+    "NORMAL": [
+      {
+        "index": 1,
+        "stage": "act1autochess_escaped_multi",
+        "seed": 1592637887
+      },
+      {
+        "index": 2,
+        "stage": "act1autochess_escaped_single",
+        "seed": 1592678353
+      },
+      {
+        "index": 3,
+        "stage": "act1autochess_m01",
+        "seed": 1592718864
+      },
+      {
+        "index": 4,
+        "stage": "act1autochess_m02",
+        "seed": 1592759373
+      },
+      {
+        "index": 5,
+        "stage": "act1autochess_m03",
+        "seed": 1592799867
+      },
+      {
+        "index": 6,
+        "stage": "act1autochess_m04",
+        "seed": 1592840391
+      },
+      {
+        "index": 7,
+        "stage": "act1autochess_m05",
+        "seed": 1592880871
+      },
+      {
+        "index": 8,
+        "stage": "act1autochess_m06",
+        "seed": 1592921373
+      },
+      {
+        "index": 9,
+        "stage": "act1autochess_m07",
+        "seed": 1592961895
+      },
+      {
+        "index": 10,
+        "stage": "act2autochess_m01",
+        "seed": 1593002406
+      },
+      {
+        "index": 11,
+        "stage": "act2autochess_m02",
+        "seed": 1593042907
+      },
+      {
+        "index": 12,
+        "stage": "act2autochess_m03",
+        "seed": 1593083390
+      },
+      {
+        "index": 13,
+        "stage": "act2autochess_m04",
+        "seed": 1593123895
+      },
+      {
+        "index": 14,
+        "stage": "act1autochess_escaped_multi",
+        "seed": 1593164427
+      },
+      {
+        "index": 15,
+        "stage": "act1autochess_escaped_single",
+        "seed": 1593204893
+      },
+      {
+        "index": 16,
+        "stage": "act1autochess_m01",
+        "seed": 1593245411
+      },
+      {
+        "index": 17,
+        "stage": "act1autochess_m02",
+        "seed": 1593285913
+      },
+      {
+        "index": 18,
+        "stage": "act1autochess_m03",
+        "seed": 1593326412
+      },
+      {
+        "index": 19,
+        "stage": "act1autochess_m04",
+        "seed": 1593366935
+      },
+      {
+        "index": 20,
+        "stage": "act1autochess_m05",
+        "seed": 1593407411
+      },
+      {
+        "index": 21,
+        "stage": "act1autochess_m06",
+        "seed": 1593447916
+      },
+      {
+        "index": 22,
+        "stage": "act1autochess_m07",
+        "seed": 1593488464
+      },
+      {
+        "index": 23,
+        "stage": "act2autochess_m01",
+        "seed": 1593528951
+      },
+      {
+        "index": 24,
+        "stage": "act2autochess_m02",
+        "seed": 1593569461
+      },
+      {
+        "index": 25,
+        "stage": "act2autochess_m03",
+        "seed": 1593609945
+      },
+      {
+        "index": 26,
+        "stage": "act2autochess_m04",
+        "seed": 1593650478
+      },
+      {
+        "index": 27,
+        "stage": "act1autochess_escaped_multi",
+        "seed": 1593690968
+      },
+      {
+        "index": 28,
+        "stage": "act1autochess_escaped_single",
+        "seed": 1593731443
+      }
+    ],
+    "HARD": [
+      {
+        "index": 1,
+        "stage": "act1autochess_escaped_multi",
+        "seed": 1592622049
+      },
+      {
+        "index": 2,
+        "stage": "act1autochess_escaped_single",
+        "seed": 1592662515
+      },
+      {
+        "index": 3,
+        "stage": "act1autochess_m01",
+        "seed": 1592703026
+      },
+      {
+        "index": 4,
+        "stage": "act1autochess_m02",
+        "seed": 1592743535
+      },
+      {
+        "index": 5,
+        "stage": "act1autochess_m03",
+        "seed": 1592784029
+      },
+      {
+        "index": 6,
+        "stage": "act1autochess_m04",
+        "seed": 1592824553
+      },
+      {
+        "index": 7,
+        "stage": "act1autochess_m05",
+        "seed": 1592865033
+      },
+      {
+        "index": 8,
+        "stage": "act1autochess_m06",
+        "seed": 1592905535
+      },
+      {
+        "index": 9,
+        "stage": "act1autochess_m07",
+        "seed": 1592946057
+      },
+      {
+        "index": 10,
+        "stage": "act2autochess_m01",
+        "seed": 1592986568
+      },
+      {
+        "index": 11,
+        "stage": "act2autochess_m02",
+        "seed": 1593027069
+      },
+      {
+        "index": 12,
+        "stage": "act2autochess_m03",
+        "seed": 1593067552
+      },
+      {
+        "index": 13,
+        "stage": "act2autochess_m04",
+        "seed": 1593108057
+      },
+      {
+        "index": 14,
+        "stage": "act1autochess_escaped_multi",
+        "seed": 1593148589
+      },
+      {
+        "index": 15,
+        "stage": "act1autochess_escaped_single",
+        "seed": 1593189055
+      },
+      {
+        "index": 16,
+        "stage": "act1autochess_m01",
+        "seed": 1593229573
+      },
+      {
+        "index": 17,
+        "stage": "act1autochess_m02",
+        "seed": 1593270075
+      },
+      {
+        "index": 18,
+        "stage": "act1autochess_m03",
+        "seed": 1593310574
+      },
+      {
+        "index": 19,
+        "stage": "act1autochess_m04",
+        "seed": 1593351097
+      },
+      {
+        "index": 20,
+        "stage": "act1autochess_m05",
+        "seed": 1593391573
+      },
+      {
+        "index": 21,
+        "stage": "act1autochess_m06",
+        "seed": 1593432078
+      },
+      {
+        "index": 22,
+        "stage": "act1autochess_m07",
+        "seed": 1593472626
+      },
+      {
+        "index": 23,
+        "stage": "act2autochess_m01",
+        "seed": 1593513113
+      },
+      {
+        "index": 24,
+        "stage": "act2autochess_m02",
+        "seed": 1593553623
+      },
+      {
+        "index": 25,
+        "stage": "act2autochess_m03",
+        "seed": 1593594107
+      },
+      {
+        "index": 26,
+        "stage": "act2autochess_m04",
+        "seed": 1593634640
+      },
+      {
+        "index": 27,
+        "stage": "act1autochess_escaped_multi",
+        "seed": 1593675130
+      },
+      {
+        "index": 28,
+        "stage": "act1autochess_escaped_single",
+        "seed": 1593715605
+      }
+    ],
+    "ABYSS": [
+      {
+        "index": 1,
+        "stage": "act1autochess_escaped_multi",
+        "seed": 1592629968
+      },
+      {
+        "index": 2,
+        "stage": "act1autochess_escaped_single",
+        "seed": 1592670434
+      },
+      {
+        "index": 3,
+        "stage": "act1autochess_m01",
+        "seed": 1592710945
+      },
+      {
+        "index": 4,
+        "stage": "act1autochess_m02",
+        "seed": 1592751454
+      },
+      {
+        "index": 5,
+        "stage": "act1autochess_m03",
+        "seed": 1592791948
+      },
+      {
+        "index": 6,
+        "stage": "act1autochess_m04",
+        "seed": 1592832472
+      },
+      {
+        "index": 7,
+        "stage": "act1autochess_m05",
+        "seed": 1592872952
+      },
+      {
+        "index": 8,
+        "stage": "act1autochess_m06",
+        "seed": 1592913454
+      },
+      {
+        "index": 9,
+        "stage": "act1autochess_m07",
+        "seed": 1592953976
+      },
+      {
+        "index": 10,
+        "stage": "act2autochess_m01",
+        "seed": 1592994487
+      },
+      {
+        "index": 11,
+        "stage": "act2autochess_m02",
+        "seed": 1593034988
+      },
+      {
+        "index": 12,
+        "stage": "act2autochess_m03",
+        "seed": 1593075471
+      },
+      {
+        "index": 13,
+        "stage": "act2autochess_m04",
+        "seed": 1593115976
+      },
+      {
+        "index": 14,
+        "stage": "act1autochess_escaped_multi",
+        "seed": 1593156508
+      },
+      {
+        "index": 15,
+        "stage": "act1autochess_escaped_single",
+        "seed": 1593196974
+      },
+      {
+        "index": 16,
+        "stage": "act1autochess_m01",
+        "seed": 1593237492
+      },
+      {
+        "index": 17,
+        "stage": "act1autochess_m02",
+        "seed": 1593277994
+      },
+      {
+        "index": 18,
+        "stage": "act1autochess_m03",
+        "seed": 1593318493
+      },
+      {
+        "index": 19,
+        "stage": "act1autochess_m04",
+        "seed": 1593359016
+      },
+      {
+        "index": 20,
+        "stage": "act1autochess_m05",
+        "seed": 1593399492
+      },
+      {
+        "index": 21,
+        "stage": "act1autochess_m06",
+        "seed": 1593439997
+      },
+      {
+        "index": 22,
+        "stage": "act1autochess_m07",
+        "seed": 1593480545
+      },
+      {
+        "index": 23,
+        "stage": "act2autochess_m01",
+        "seed": 1593521032
+      },
+      {
+        "index": 24,
+        "stage": "act2autochess_m02",
+        "seed": 1593561542
+      },
+      {
+        "index": 25,
+        "stage": "act2autochess_m03",
+        "seed": 1593602026
+      },
+      {
+        "index": 26,
+        "stage": "act2autochess_m04",
+        "seed": 1593642559
+      },
+      {
+        "index": 27,
+        "stage": "act1autochess_escaped_multi",
+        "seed": 1593683049
+      },
+      {
+        "index": 28,
+        "stage": "act1autochess_escaped_single",
+        "seed": 1593723524
+      }
+    ]
+  }
+}

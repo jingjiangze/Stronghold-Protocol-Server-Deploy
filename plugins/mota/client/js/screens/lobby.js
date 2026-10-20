@@ -342,7 +342,7 @@ function RecruitCard({ rooms, online, onJoin, onAll, onCreate }) {
       <span class="hub-recruit__title">${t('缺人同盟')}</span>
       <span class="hub-recruit__en">RECRUITING</span>
       <span class="hub-recruit__n num">${open.length}</span>
-      <button type="button" class="hub-recruit__all" onClick=${onAll}>${t('全部')}<${Icon} name="chevronRight" /></button>
+      
     </header>
     <div class="hub-recruit__list">
       ${open.length ? open.slice(0, 3).map((r) => {
