@@ -203,6 +203,8 @@ function MatchScreen() {
   const conn = useStore((s) => s.connection, shallowEqual);
   const emotes = useStore((s) => s.emotes);
   const roomSolo = useStore((s) => s.room?.mode === 'solo');
+  // 战斗中观看他人布阵 (g.watchLineup, owner decision 2026-10-20): the viewer's own switch, mirrored back via m.public
+  const lineupWatch = useStore((s) => !!(Array.isArray(s.match.public?.players) && s.match.public.players.find((p) => p && p.playerId === s.me.playerId)?.watchLineup));
   const spectator = useStore((s) => isSpectating(s.room, s.me.playerId));
   const playerSettings = useSettings();
   const metricsSetting = playerSettings.combatMetrics === true;
@@ -374,7 +376,7 @@ function MatchScreen() {
     getChess: (id) => { const c = gd.chess(id); return ownDiyRecord(c, priv, { chess: data.get('chess'), backups: data.get('backups') }) || c; },
     getToken: gd.token, getItem: gd.item, getEffect: gd.effect, backups: gd.backups, morphMode,
   }), [priv, pub?.stageId, editable, gd.ready, deployField, data.locale(), morphMode]);
-  live.current = { pub, priv, field, view, editable, hasPersonalChoice, placeCtx, watching, watchWho, watchingOther, home, myId, alive, spectator, detail, drawer, bondOpen, emoteOpen, settingsOpen, exitOpen, drag, facing, sel, selBusy, pen, collapsedNow: collapsed, localDone: false, canPause: false, paused };
+  live.current = { pub, priv, field, view, editable, hasPersonalChoice, placeCtx, watching, watchWho, watchingOther, home, myId, alive, spectator, detail, drawer, bondOpen, emoteOpen, settingsOpen, exitOpen, drag, facing, sel, selBusy, pen, collapsedNow: collapsed, localDone: false, canPause: false, paused, lineupWatch };
 
   // ---- camera: every request goes through setCam, which remembers it for the pen's way back -----------------------
   // the own prep board: the normal board, or — in the prep of a boss round — the player's half of the boss field
@@ -1102,6 +1104,16 @@ function MatchScreen() {
 
   const watchField = useCallback((fid) => { requestWatch(fid); }, []);
 
+  // 战斗中观看他人布阵 (g.watchLineup, owner decision 2026-10-20): the settled board of a teammate, relayed once —
+  // during a battle every prep intent is gated to PHASE.PREP, so the board cannot change under the viewer. The toggle
+  // sends g.watchLineup; the m.public push mirrors it back (the UI never flips optimistically).
+  const watchLineupOf = useCallback((p) => {
+    const L = live.current;
+    if (!p || p.playerId === L.myId) return;
+    requestWatch(`n:${p.playerId}`, p.playerId);
+  }, []);
+  const toggleLineupWatch = useCallback(() => { void actions.watchLineup(!live.current.lineupWatch); }, []);
+
   // an eliminated player or a spectator seat follows a player through every phase reset (community report of
   // 2026-10-06, item 56; the idea of PR #189): the server pushes that player's prep board (Match._followScout) — the one
   // it last watched, else the first player still in — and the screen adopts it like a 前往查看 tap, once per phase and
@@ -1752,12 +1764,18 @@ function MatchScreen() {
       <${TeamPanel} pub=${pub} myId=${myId} watching=${watchingNow} bubbles=${bubbles} onWatch=${watchPlayer} cap=${gd.config?.lpCapPerRound ?? 10} uniteLocal=${uniteLocal}
         spMarks=${sp ? spMarks(sp, { solo }) : null}
         self=${Number.isFinite(priv?.lp) ? { lp: priv.lp, pending: liveLpNow.pending, unite: liveLpNow.unite, left: liveLpNow.left } : null}
+        lineupWatch=${lineupWatch} onToggleLineup=${toggleLineupWatch} onWatchLineup=${watchLineupOf}
         observe=${cc ? { canObserve: (p) => observeTarget(p, pub, myId, { observing: watchingOther, ownDone: localDone }), observing: watchingOther, onBack: backHome } : null} />
 
       <div class="gm__effects"><${EffectsList} effects=${watchingOther && field ? (field.effects ?? null) : priv?.effects} /></div>
 
       ${watchingOther && !combat ? html`<div class="gm__watching" role="status">
         <${GIcon} name="eye" /><span>${tParts('正在查看 {name} 的阵地（只读）', { name: html`<b>${watchedName}</b>` })}</span>
+        ${spectator ? null : html`<${Button} size="sm" variant="primary" icon="back" onClick=${() => watchPlayer({ playerId: myId })}>${t('返回自己')}<//>`}
+      </div>` : null}
+
+      ${watchingOther && combat && String(watching).startsWith('n:') ? html`<div class="gm__watching" role="status">
+        <${GIcon} name="eye" /><span>${tParts('正在查看 {name} 的布阵（只读，本回合定稿）', { name: html`<b>${watchedName}</b>` })}</span>
         ${spectator ? null : html`<${Button} size="sm" variant="primary" icon="back" onClick=${() => watchPlayer({ playerId: myId })}>${t('返回自己')}<//>`}
       </div>` : null}
 

@@ -51,6 +51,28 @@ export class MatchWatch {
    */
   watch(ps, fieldId, playerId = null) {
     if (typeof fieldId !== 'string') return fail(ERR.BAD_TARGET);
+    // 'n:<pid>' is BOTH a live client-side combat field's id (combat.js _ccField) and a prep board's scout id.
+    // Which one wins depends on the viewer's OWN switch: a viewer with g.watchLineup on asks for the teammate's settled
+    // board (real-machine finding 2026-10-21: every normal COMBAT field is named 'n:<pid>' too, so a fieldId-only rule
+    // made the battle-time board unreachable); everyone else keeps the classic semantics — the live field (its spec,
+    // its snapshots, the boss-group rule). A prep phase has no live field, so the board branch is unchanged there.
+    if (fieldId.startsWith('n:')) {
+      const liveField = this.fields.some((x) => x.fieldId === fieldId);
+      if (ps.watchLineup || !liveField) return this._watchPrepBoard(ps, fieldId);
+      if (this.clientCombat && this.fields.length && this.fields.some((x) => x.cc)) return this._watchClient(ps, fieldId, playerId);
+      const f = this.fields.find((x) => x.fieldId === fieldId);
+      if (f) {
+        // 最终攻势 / 隐秘核心: "两名参与者会处于同一个战场，但无法查看另一组队友的战场情况" — a fighting player sees its own
+        // boss field only (eliminated / departed players spectate freely)
+        const own = this.fieldOf(ps);
+        if ((f.kind === 'boss' || f.kind === 'hidden') && own && own !== f.fieldId) return fail(ERR.BAD_TARGET, 'other group hidden');
+        this.watchers.set(ps.playerId, fieldId);
+        this._watchPrefSet(ps, f, playerId);
+        this._sendField(ps.playerId, fieldId);
+        return OK;
+      }
+      return fail(ERR.BAD_TARGET);
+    }
     if (this.clientCombat && this.fields.length && this.fields.some((x) => x.cc)) return this._watchClient(ps, fieldId, playerId);
     const f = this.fields.find((x) => x.fieldId === fieldId);
     if (f) {
@@ -63,20 +85,42 @@ export class MatchWatch {
       this._sendField(ps.playerId, fieldId);
       return OK;
     }
-    if (fieldId.startsWith('n:')) {
-      // prep scouting, only while no battle field is up: during 各自行动 / 联防 / 最终攻势 / 隐秘核心 an 'n:<pid>' id
-      // must name a live field (else the boss-group rule above could be bypassed, and the viewer would stop receiving
-      // its own field's snapshots). The scout stays in `watchers` so a later board change pushes prepFieldMeta again
-      // (GitHub #87); combat start clears the map and reassigns live fields, spectators included.
-      if (this.fields.length) return fail(ERR.BAD_TARGET, 'no such field');
-      const target = this.players.get(fieldId.slice(2));
-      if (!target || !target.alive) return fail(ERR.BAD_TARGET);
+    return fail(ERR.BAD_TARGET);
+  }
+
+  /**
+   * g.watch 'n:<pid>' — a teammate's prep board (scouting). While no battle field is up this is the classic prep scout:
+   * the entry stays in `watchers` so a later board change pushes prepFieldMeta again (GitHub #87), and combat start
+   * clears the map and reassigns live fields. While a battle RUNS the board is frozen (every prep intent is gated to
+   * PHASE.PREP — player/prep.js _gate), so this is a one-shot relay of the settled layout, and only for a viewer whose
+   * OWN switch is on (g.watchLineup → PlayerState.watchLineup, owner decision 2026-10-20): the server simulates nothing,
+   * it hands over what the teammate already placed. The boss-group rule of the field branch above applies here too —
+   * during 最终攻势 / 隐秘核心 a fighting player may not read the other group's layout.
+   */
+  _watchPrepBoard(ps, fieldId) {
+    const duringBattle = this.fields.length > 0;
+    if (duringBattle && !ps.watchLineup) return fail(ERR.BAD_TARGET, 'no such field');
+    const target = this.players.get(fieldId.slice(2));
+    if (!target || !target.alive) return fail(ERR.BAD_TARGET);
+    if (duringBattle) {
+      // ⚠ 不要用引用相等（g !== own）比「同不同组」：bossGroupOf 每次调用都新建 { wave, players, side }
+      // 包装对象（infra.js:155-157），两次调用永远 !== ⇒ 同组搭档会被误判 other group hidden
+      // （真机验收 2026-10-21 抓到）。稳定身份是 g.players 那个数组（bossWaves 条目的同一引用）。
+      const g = this.bossGroupOf(target);
+      const own = this.bossGroupOf(ps);
+      const sameGroup = (a, b) => !!a && !!b && Array.isArray(a.players) && Array.isArray(b.players)
+        && a.players.join('|') === b.players.join('|');
+      if (g && own && !sameGroup(g, own)) return fail(ERR.BAD_TARGET, 'other group hidden');
       this.watchers.set(ps.playerId, fieldId);
       if (target !== ps) this.watchPref.set(ps.playerId, target.playerId);
-      this._notifyPrepScouts(target, { to: ps.playerId });
+      // one relay, then done: the layout cannot change mid-battle (no prep intents), so there is nothing to keep fresh
+      try { this.sendTo(ps.playerId, this.prepFieldMeta(target)); } catch (e) { this.reportError('prepFieldMeta', e); }
       return OK;
     }
-    return fail(ERR.BAD_TARGET);
+    this.watchers.set(ps.playerId, fieldId);
+    if (target !== ps) this.watchPref.set(ps.playerId, target.playerId);
+    this._notifyPrepScouts(target, { to: ps.playerId });
+    return OK;
   }
 
   /**
