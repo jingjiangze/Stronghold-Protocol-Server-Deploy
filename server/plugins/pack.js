@@ -258,7 +258,7 @@ export function buildPluginLock(dir, { vanilla } = {}) {
   for (const f of listed) files[f.rel] = { sha256: sha256(fs.readFileSync(abs(dir, f.rel))), bytes: f.bytes };
   /** @type {Record<string, any>} */
   const spine = {};
-  if (manifest.class === 'cosmetic' && manifest.parts.assets) {
+  if (manifest.parts.assets) {
     const ov = readOverlayOf(dir, manifest, { vanilla, has: (rel) => Object.hasOwn(files, rel) });
     if (ov) list.take(ov, { warningsToo: false });
     /** @type {Map<string, Set<string>>} skeleton → the containers of the entries that use it */
