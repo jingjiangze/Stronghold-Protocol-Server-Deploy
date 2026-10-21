@@ -51,10 +51,28 @@ export class MatchWatch {
    */
   watch(ps, fieldId, playerId = null) {
     if (typeof fieldId !== 'string') return fail(ERR.BAD_TARGET);
-    // a live client-side combat field is NAMED 'n:<pid>' too (combat.js _ccField) — it must go through the field branch
-    // below (_watchClient's boss rules / spec resend), never through the prep-board relay
-    const liveField = this.fields.some((x) => x.fieldId === fieldId);
-    if (fieldId.startsWith('n:') && !liveField) return this._watchPrepBoard(ps, fieldId);
+    // 'n:<pid>' is BOTH a live client-side combat field's id (combat.js _ccField) and a prep board's scout id.
+    // Which one wins depends on the viewer's OWN switch: a viewer with g.watchLineup on asks for the teammate's settled
+    // board (real-machine finding 2026-10-21: every normal COMBAT field is named 'n:<pid>' too, so a fieldId-only rule
+    // made the battle-time board unreachable); everyone else keeps the classic semantics — the live field (its spec,
+    // its snapshots, the boss-group rule). A prep phase has no live field, so the board branch is unchanged there.
+    if (fieldId.startsWith('n:')) {
+      const liveField = this.fields.some((x) => x.fieldId === fieldId);
+      if (ps.watchLineup || !liveField) return this._watchPrepBoard(ps, fieldId);
+      if (this.clientCombat && this.fields.length && this.fields.some((x) => x.cc)) return this._watchClient(ps, fieldId, playerId);
+      const f = this.fields.find((x) => x.fieldId === fieldId);
+      if (f) {
+        // 最终攻势 / 隐秘核心: "两名参与者会处于同一个战场，但无法查看另一组队友的战场情况" — a fighting player sees its own
+        // boss field only (eliminated / departed players spectate freely)
+        const own = this.fieldOf(ps);
+        if ((f.kind === 'boss' || f.kind === 'hidden') && own && own !== f.fieldId) return fail(ERR.BAD_TARGET, 'other group hidden');
+        this.watchers.set(ps.playerId, fieldId);
+        this._watchPrefSet(ps, f, playerId);
+        this._sendField(ps.playerId, fieldId);
+        return OK;
+      }
+      return fail(ERR.BAD_TARGET);
+    }
     if (this.clientCombat && this.fields.length && this.fields.some((x) => x.cc)) return this._watchClient(ps, fieldId, playerId);
     const f = this.fields.find((x) => x.fieldId === fieldId);
     if (f) {
