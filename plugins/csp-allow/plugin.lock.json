@@ -1,0 +1,17 @@
+{
+  "lock": 1,
+  "id": "csp-allow",
+  "version": "1.0.0",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "host/noop.js": {
+      "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "bytes": 11
+    },
+    "plugin.json": {
+      "sha256": "5b1f1d3e768a120ee819ebd79c0b222b80c34c30c4b6f94455b7b5a350de51ab",
+      "bytes": 1298
+    }
+  },
+  "spine": {}
+}

@@ -33,6 +33,20 @@ export const ALLOWED_EXT = new Set([
 // 每段必须是 [A-Za-z0-9_[-] 开头、之后允许 . —— 于是 ".."、"尾点段"、控制字符全部被拒。
 const SEGMENT = /^[A-Za-z0-9_[-][A-Za-z0-9_.[\]-]*$/;
 
+/**
+ * 扩展名闸门：白名单之外只放一个例外 —— `/fonts/fonts.css`，官方客户端唯一的字体清单（它属于字体集，
+ * 镜像里就在 fonts/ 下）。`/assets/` 下的 css/js/json 仍然留给游戏本体：那些可能与本地构建产物版本不同。
+ */
+export function allowedExt(pathname) {
+  const ext = extensionOf(pathname);
+  if (ALLOWED_EXT.has(ext)) return true;
+  // `/fonts/fonts.css`（官方客户端唯一的字体清单）与提取出来的**本地美术**（`/assets/local/**` 的
+  // scene.json / scene.bin 与其它 json 清单）在容器里没有本地副本，不存在「与本地构建产物版本不一致」
+  // 的问题 —— 它们是本地美术的一部分，跟着同一张源表走。`/assets` 下其它位置的 css/js/json 仍留给游戏本体。
+  if (ext === 'css' && pathname.startsWith('/fonts/')) return true;
+  return (ext === 'json' || ext === 'bin') && pathname.startsWith('/assets/local/');
+}
+
 export function splittable(pathname) {
   return pathname.startsWith('/assets/') || pathname.startsWith('/fonts/');
 }
@@ -77,15 +91,53 @@ export function parseSources(raw) {
       if (typeof p === 'string' && typeof id === 'string' && byId.has(id)) exceptions.set(p, byId.get(id));
     }
   }
-  return { byId, order: doc.order.filter((id) => byId.has(id)), exceptions };
+  // **前缀级规避**（2026-10-14）：某些源是**整棵目录**供不了的——实测魔搭数据集对
+  // assets/voice/ 是 0/15、assets/char/ 只有 21%、assets/ui/ 只有 20%（详见
+  // _tmp/ms-failover-2026-10-14/MEASURED.md）。缺口是目录级而非随机散点，所以
+  // 「逐条存在性缓存」救不了第一次请求：它会先 302 到缺件源、拿到 404、再重来，
+  // 玩家白跑一趟。前缀规则让第一次请求就直奔正确的源。
+  //
+  // 与 `exceptions` 的区别：exceptions 是「这条路径**必须**用某个源」，prefixRules 是
+  // 「这个前缀**不许**用某些源」——前者点名，后者排除。
+  const prefixRules = [];
+  if (Array.isArray(doc.prefixRules)) {
+    for (const rule of doc.prefixRules) {
+      if (!rule || typeof rule.prefix !== 'string' || !Array.isArray(rule.skip)) continue;
+      // 同样不允许变成任意 URL / 任意 id：只接受已配置的源 id。
+      const skip = new Set(rule.skip.filter((id) => typeof id === 'string' && byId.has(id)));
+      if (!rule.prefix || skip.size === 0) continue;
+      prefixRules.push({ prefix: rule.prefix, skip });
+    }
+  }
+  return { byId, order: doc.order.filter((id) => byId.has(id)), exceptions, prefixRules };
+}
+
+/** 首个命中的前缀规则所屏蔽的源 id；无命中返回 null。有序，与 sources.json 里的书写顺序一致。 */
+export function prefixBlocked(config, pathname) {
+  if (!config.prefixRules || !config.prefixRules.length) return null;
+  for (const rule of config.prefixRules) {
+    if (pathname.startsWith(rule.prefix)) return rule.skip;
+  }
+  return null;
 }
 
 /** First source in config order, or null when the file names none that exist. */
-export function pick(config, id, pathname) {
+export function pick(config, id, pathname, skip = null) {
   if (id) return config.byId.get(id) ?? null;
   const forced = config.exceptions.get(pathname);
-  if (forced) return forced;
+  // 前缀规避：这个前缀在这些源上是**目录级**供不了的（实测依据见 parseSources 注释），
+  // 第一次请求就要避开，别拿玩家的请求去试错。
+  const blocked = prefixBlocked(config, pathname);
+  // `skip` 由调用方给出「已知缺这个文件」的源 id（进程内跳转会按存在性探测填它）；
+  // 例外表也要能被跳过，否则一个缺件的强制源会把 302 变成客户的 404。
+  const unusable = (want) =>
+    (skip && skip.has(want)) || (blocked && blocked.has(want));
+  // 例外表点名的那个源 id（exceptions 存的是 base，反查回 id 才能与 skip/blocked 对齐）。
+  let forcedId = null;
+  if (forced) for (const [k, base] of config.byId) if (base === forced) { forcedId = k; break; }
+  if (forced && !(forcedId && unusable(forcedId))) return forced;
   for (const want of config.order) {
+    if (unusable(want)) continue;
     const base = config.byId.get(want);
     if (base) return base;
   }
@@ -105,7 +157,7 @@ export function stripSourceParam(query) {
  * The whole decision, as a pure function: no sockets, no clock, no globals.
  * @returns {{status:number, location?:string, headers:Record<string,string>, source?:string}}
  */
-export function decide(config, { method = 'GET', pathname = '/', query = '' } = {}) {
+export function decide(config, { method = 'GET', pathname = '/', query = '', skip = null } = {}) {
   const cors = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
@@ -118,12 +170,12 @@ export function decide(config, { method = 'GET', pathname = '/', query = '' } = 
     return { status: 405, headers: { Allow: 'GET, HEAD, OPTIONS' } };
   }
   // nginx 已经按扩展名粗筛过；这里再判一次是防守，不是主逻辑。
-  if (!splittable(pathname) || !validPath(pathname) || !ALLOWED_EXT.has(extensionOf(pathname))) {
+  if (!splittable(pathname) || !validPath(pathname) || !allowedExt(pathname)) {
     return { status: 404, headers: {} };
   }
 
   const forced = query ? new URLSearchParams(query).get('sp_source') : null;
-  const base = pick(config, forced, pathname);
+  const base = pick(config, forced, pathname, skip);
   if (!base) {
     // 配置缺失时明确失败：静默 404 会让「边缘层有没有在工作」变成一个只能靠猜的问题。
     return { status: 503, headers: { 'Content-Type': 'text/plain' } };

@@ -1,0 +1,43 @@
+{
+  "manifest": 2,
+  "id": "csp-allow",
+  "name": {
+    "zh": "跨域资源放行",
+    "en": "CSP allow"
+  },
+  "englishName": "CSP allow",
+  "description": {
+    "zh": "声明本服务器需要的跨域源，服务端把它们合并进站点 CSP（Content-Security-Policy）。只接受明确的 https 源（或 http://localhost），不接受 '*' / 'unsafe-inline' / 'unsafe-eval'。改完要重启服务端才生效。把 \"csp\" 写成 \"off\" 会完全关掉 CSP（需显式，服务端会打警告）。",
+    "en": "Declare cross-origin sources; the server merges them into the site CSP. Only explicit https origins are accepted. Restart required. Setting \"csp\": \"off\" disables CSP entirely (explicit, logged)."
+  },
+  "version": "1.0.0",
+  "app": ">=0.3.0 <0.4.0",
+  "api": 2,
+  "class": "trusted",
+  "scope": [
+    "server"
+  ],
+  "permissions": [
+    "trusted.server"
+  ],
+  "entry": {
+    "server": "host/noop.js"
+  },
+  "csp": {
+    "img": [
+      "https://speedcdn.jiangjiangze.icu",
+      "https://*.music.126.net",
+      "https://*.126.net",
+      "https://*.127.net"
+    ],
+    "media": [
+      "https://*.music.126.net",
+      "https://*.126.net"
+    ],
+    "connect": [
+      "https://api.qijieya.cn",
+      "https://api.injahow.cn",
+      "https://www.ffapi.cn"
+    ]
+  }
+}

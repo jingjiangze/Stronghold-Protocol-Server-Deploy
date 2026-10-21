@@ -1,0 +1,356 @@
+/* 大厅音乐 · 在线平台（mod: hubmusic）
+ * The panel's own styles. Loaded by public/js/ui/lobbyMusic.js with a <link> of its own, so a mod that
+ * replaces lobby.css wholesale (轮播图 / 湮灭模拟) cannot take these rules with it. */
+
+.lobby-music-panel .modal__head { padding: 14px 16px 4px; }
+.lobby-music-panel .modal__title { font-size: 18px; }
+.lobby-music-panel .modal__head > :first-child { font-size: 10px; }
+.lobby-music-panel .modal__body { padding: 12px 16px 16px; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
+.lobby-music-panel .modal__actions { padding: 10px 16px; }
+.lobby-music-panel button { font-size: 13px; min-height: 36px; padding: 8px 12px; }
+
+.lm-tabs { display: flex; border-bottom: 1px solid var(--line, #2f3a35); margin: 2px 0 12px; }
+.lm-tab {
+  flex: 1; background: none; border: 0; border-bottom: 2px solid transparent;
+  color: var(--text-lo, #8a948f); font: inherit; font-size: 13px; cursor: pointer;
+  padding: 8px 4px; min-height: 34px !important;
+}
+.lm-tab.is-on { color: var(--mint-500, #4ed8af); border-bottom-color: var(--mint-500, #4ed8af); }
+
+.lm-current {
+  display: flex; gap: 12px; align-items: center; padding: 12px 14px;
+  border: 1px solid var(--mint, #4ed8af); background: rgba(30, 90, 75, .12); min-width: 0;
+}
+.lm-cover, .lm-art {
+  width: 46px; height: 46px; flex: none; object-fit: cover;
+  background: rgba(0, 0, 0, .25); display: grid; place-items: center;
+  color: var(--mint, #4ed8af); font-style: normal;
+}
+.lm-what { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.lm-name { font-size: 15px; overflow-wrap: anywhere; line-height: 1.3; }
+.lm-state { font-size: 12px; color: var(--mint, #4ed8af); overflow-wrap: anywhere; }
+.lm-plat {
+  display: inline-block; padding: 0 5px; margin-right: 4px; vertical-align: 1px;
+  border: 1px solid var(--pc, #4ed8af); color: var(--pc, #4ed8af); font-size: 10px; line-height: 16px;
+}
+
+.lm-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.lm-chip {
+  background: none; border: 1px solid var(--line, #2f3a35); color: var(--text-lo, #8a948f);
+  font: inherit; font-size: 12px; min-height: 30px !important; padding: 3px 10px !important; cursor: pointer;
+}
+.lm-chip.is-on { border-color: var(--mint-500, #4ed8af); color: var(--mint-500, #4ed8af); background: rgba(78, 216, 175, .08); }
+
+.lm-search { display: flex; gap: 8px; margin-bottom: 8px; }
+.lm-input {
+  flex: 1; min-width: 0; background: rgba(0, 0, 0, .22); border: 1px solid var(--line, #2f3a35);
+  color: var(--text-hi, #f2f2f2); font: inherit; font-size: 13px; padding: 7px 10px; outline: none;
+}
+.lm-input:focus { border-color: var(--mint-500, #4ed8af); }
+
+.lm-tools { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+.lm-check { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-lo, #8a948f); cursor: pointer; }
+.lm-check input { accent-color: var(--mint-500, #4ed8af); margin: 0; }
+.lm-count { font-size: 11px; color: var(--text-dim, #5d6863); }
+
+.lm-list {
+  display: grid; gap: 1px; flex: 1 1 auto; min-height: 120px; max-height: 300px; overflow-y: auto; overscroll-behavior: contain;
+  border: 1px solid var(--line, #2f3a35); background: rgba(0, 0, 0, .16); padding: 4px;
+}
+.lm-row {
+  display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+  width: 100%; text-align: left; background: none; border: 0; color: inherit; font: inherit;
+  cursor: pointer; padding: 3px 7px; min-height: 44px !important;
+}
+.lm-row:hover, .lm-row:focus-visible { background: rgba(78, 216, 175, .10); }
+.lm-row:disabled { opacity: .55; cursor: progress; }
+.lm-row.is-playing { background: rgba(78, 216, 175, .10); box-shadow: inset 2px 0 0 var(--mint-500, #4ed8af); }
+.lm-row .lm-art { width: 34px; height: 34px; font-size: 16px; }
+.lm-list { scrollbar-width: thin; scrollbar-color: var(--mint-700, #2a9e7f) transparent; }
+.lm-list::-webkit-scrollbar { width: 6px; }
+.lm-list::-webkit-scrollbar-thumb { background: var(--mint-700, #2a9e7f); }
+.lm-meta { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.lm-title {
+  display: flex; align-items: center; gap: 2px; font-size: 13px; color: var(--text-hi, #f2f2f2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lm-sub { font-size: 11px; color: var(--text-lo, #8a948f); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lm-badge {
+  flex: none; font-style: normal; font-size: 10px; color: #ffb4a8;
+  border: 1px solid rgba(255, 120, 100, .45); padding: 0 4px; margin-left: 6px;
+}
+.lm-time { font-size: 11px; color: var(--text-dim, #5d6863); font-variant-numeric: tabular-nums; }
+.lm-rowline { display: flex; align-items: stretch; gap: 4px; }
+.lm-rowline .lm-row { flex: 1 1 auto; min-width: 0; width: auto; }
+.lm-add {
+  flex: none; width: 30px; min-height: 44px; padding: 0; cursor: pointer;
+  background: none; border: 1px solid transparent; color: var(--text-dim, #5d6863);
+  font: inherit; font-size: 18px; line-height: 1;
+}
+.lm-add:hover, .lm-add:focus-visible { color: var(--mint-500, #4ed8af); border-color: var(--line, #2f3a35); background: rgba(78, 216, 175, .08); }
+
+.lm-note { margin: 8px 0 0; font-size: 11px; color: var(--text-dim, #5d6863); line-height: 1.6; }
+.lm-error { margin: 8px 0 0; font-size: 12px; color: #ff9393; overflow-wrap: anywhere; }
+.lm-ok { margin: 8px 0 0; font-size: 12px; color: var(--mint-500, #4ed8af); overflow-wrap: anywhere; }
+.lm-warn { margin: 8px 0 0; font-size: 12px; color: #ffcf8b; overflow-wrap: anywhere; }
+
+@media (max-height: 680px) {
+  .lm-intro, .lm-foot { display: none; }
+  .lm-list { min-height: 90px; }
+}
+
+@media (max-width: 440px) {
+  .lm-list { max-height: 210px; }
+  .lm-title { font-size: 12px; }
+  .lm-cover { display: none; }
+}
+
+/* ---- floating player + lyrics (ui/lobbyPlayer.js) ------------------------------------------------ */
+.hm-layer { position: fixed; inset: 0; pointer-events: none; z-index: 70; }
+.hm-player, .hm-lyrics, .hm-queue {
+  position: fixed; pointer-events: auto; color: var(--text-md, #c3cbc7);
+  background: linear-gradient(180deg, #1b221f, #101412);
+  border: 1px solid var(--line-2, #3e4b45);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, .58), 0 0 0 1px rgba(78, 216, 175, .06);
+  user-select: none;
+}
+.hm-player { width: min(374px, calc(100vw - 24px)); padding: 10px 12px 12px; }
+.hm-grab { display: flex; align-items: center; gap: 10px; cursor: grab; touch-action: none; }
+.hm-player.is-drag .hm-grab, .hm-lyrics.is-drag .hm-lyrics__bar { cursor: grabbing; }
+.hm-cover {
+  width: 52px; height: 52px; flex: none; overflow: hidden; display: grid; place-items: center;
+  background: rgba(0, 0, 0, .32); color: var(--mint-500, #4ed8af); font-size: 20px;
+  border: 1px solid var(--line, #2f3a35);
+}
+.hm-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hm-meta { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.hm-title { font-size: 13px; color: var(--text-hi, #f2f2f2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-sub { font-size: 11px; color: var(--text-lo, #8a948f); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-plat {
+  display: inline-block; padding: 0 4px; border: 1px solid var(--pc, var(--mint-700, #2a9e7f));
+  color: var(--pc, var(--mint-700, #2a9e7f)); font-style: normal; font-size: 10px; line-height: 15px;
+}
+.hm-x {
+  margin-left: auto; flex: none; background: none; border: 0; color: var(--text-lo, #8a948f);
+  font: inherit; font-size: 16px; line-height: 1; padding: 5px 6px; cursor: pointer;
+}
+.hm-x:hover { color: var(--text-hi, #f2f2f2); }
+.hm-progress { display: flex; align-items: center; gap: 7px; margin: 10px 0 0; }
+.hm-time { font-size: 10px; color: var(--text-dim, #5d6863); font-variant-numeric: tabular-nums; min-width: 32px; text-align: center; }
+.hm-range { flex: 1; min-width: 0; }
+.hm-controls { display: flex; align-items: center; gap: 4px; margin-top: 7px; flex-wrap: wrap; }
+.hm-btn {
+  min-width: 28px; height: 28px; padding: 0 6px; cursor: pointer; font: inherit; font-size: 12px;
+  background: rgba(255, 255, 255, .04); border: 1px solid var(--line, #2f3a35); color: var(--text-md, #c3cbc7);
+  line-height: 1; display: inline-flex; align-items: center; justify-content: center;
+}
+.hm-btn:hover:not(:disabled) { border-color: var(--mint-700, #2a9e7f); color: var(--mint-500, #4ed8af); }
+.hm-btn:disabled { opacity: .35; cursor: default; }
+.hm-btn.is-on { border-color: var(--mint-500, #4ed8af); color: var(--mint-500, #4ed8af); background: rgba(78, 216, 175, .10); }
+.hm-play { min-width: 34px; background: var(--mint-500, #4ed8af); border-color: var(--mint-500, #4ed8af); color: #06110d; font-size: 14px; }
+.hm-play:hover:not(:disabled) { color: #06110d; background: var(--mint-400, #59f4ca); }
+.hm-vol { width: 66px; }
+.hm-error { margin-top: 7px; font-size: 11px; color: #ff9393; overflow-wrap: anywhere; }
+
+.hm-range, .hm-vol {
+  -webkit-appearance: none; appearance: none; height: 16px; background: transparent; cursor: pointer; padding: 0;
+}
+.hm-range::-webkit-slider-runnable-track, .hm-vol::-webkit-slider-runnable-track {
+  height: 3px; background: var(--line-2, #3e4b45);
+}
+.hm-range::-webkit-slider-thumb, .hm-vol::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 11px; height: 11px; margin-top: -4px; border-radius: 50%;
+  background: var(--mint-500, #4ed8af); border: 0;
+}
+.hm-vol::-webkit-slider-thumb { width: 9px; height: 9px; margin-top: -3px; }
+.hm-range::-moz-range-track, .hm-vol::-moz-range-track { height: 3px; background: var(--line-2, #3e4b45); }
+.hm-range::-moz-range-thumb, .hm-vol::-moz-range-thumb { width: 11px; height: 11px; border: 0; border-radius: 50%; background: var(--mint-500, #4ed8af); }
+
+.hm-lyrics {
+  width: min(330px, calc(100vw - 24px)); max-height: min(56vh, 460px);
+  display: flex; flex-direction: column;
+}
+.hm-lyrics__bar {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px; flex: none;
+  border-bottom: 1px solid var(--line, #2f3a35); cursor: grab; touch-action: none;
+}
+.hm-lyrics__bar b { font-size: 12px; color: var(--mint-500, #4ed8af); letter-spacing: .08em; flex: none; }
+.hm-lyrics__title { font-size: 11px; color: var(--text-lo, #8a948f); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-lyrics__body { position: relative; overflow-y: auto; padding: 10px 14px 14px; scrollbar-width: thin; }
+.hm-lyric {
+  margin: 0; padding: 5px 0; font-size: 13px; line-height: 1.5; color: var(--text-dim, #5d6863);
+  cursor: pointer; transition: color .15s ease, font-size .15s ease;
+}
+.hm-lyric:hover { color: var(--text-md, #c3cbc7); }
+.hm-lyric.is-on { color: var(--mint-500, #4ed8af); font-size: 15px; font-weight: 600; }
+.hm-empty { margin: 10px 0; font-size: 12px; color: var(--text-dim, #5d6863); line-height: 1.6; }
+
+.lm-viewers { display: flex; gap: 8px; margin-top: -4px; }
+.lm-viewer {
+  background: none; border: 1px solid var(--line, #2f3a35); color: var(--text-lo, #8a948f);
+  font: inherit; font-size: 11px; padding: 2px 8px; min-height: 26px !important; cursor: pointer;
+}
+.lm-viewer:hover { border-color: var(--mint-700, #2a9e7f); color: var(--mint-500, #4ed8af); }
+
+@media (max-width: 520px) {
+  .hm-player { width: calc(100vw - 24px); }
+  .hm-lyrics { width: calc(100vw - 24px); }
+  .hm-vol { width: 48px; }
+}
+
+/* ---- playlist import (导入歌单) ------------------------------------------------------------------- */
+.lm-import { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: -2px 0 2px; }
+.lm-import__toggle {
+  background: none; border: 1px dashed var(--line-2, #3e4b45); color: var(--text-lo, #8a948f);
+  font: inherit; font-size: 11px; padding: 2px 8px; min-height: 26px !important; cursor: pointer;
+}
+.lm-import__toggle:hover, .lm-import__toggle.is-on { border-color: var(--mint-500, #4ed8af); color: var(--mint-500, #4ed8af); }
+.lm-import__box { display: grid; gap: 4px; width: 100%; }
+.lm-import__form { display: flex; gap: 8px; width: 100%; }
+.lm-import__hint { font-size: 10px; color: var(--text-dim, #5d6863); }
+.lm-playlist {
+  display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; padding: 3px 6px;
+  background: rgba(0, 0, 0, .18); border: 1px solid var(--line, #2f3a35);
+}
+.lm-playlist img { width: 26px; height: 26px; object-fit: cover; flex: none; display: block; }
+.lm-playlist__meta { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.lm-playlist__meta b { font-size: 11px; color: var(--text-md, #c3cbc7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lm-playlist__meta small { font-size: 10px; color: var(--text-dim, #5d6863); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lm-playlist .lm-x { margin-left: 0; font-size: 12px; padding: 2px 4px; }
+.lm-local { flex: none; max-height: 220px; }
+
+/* ---- playback queue (播放列表) ------------------------------------------------------------------- */
+.hm-queue {
+  width: min(340px, calc(100vw - 24px)); max-height: min(52vh, 420px);
+  display: flex; flex-direction: column; padding: 0;
+}
+.hm-queue__list { position: relative; flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px; scrollbar-width: thin; }
+.hm-qrow {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px;
+  padding: 3px 6px; border-left: 2px solid transparent;
+}
+.hm-qrow.is-on { background: rgba(78, 216, 175, .10); border-left-color: var(--mint-500, #4ed8af); }
+.hm-qplay {
+  min-width: 0; text-align: left; background: none; border: 0; color: inherit; font: inherit;
+  cursor: pointer; padding: 3px 0;
+}
+.hm-qtitle { display: block; font-size: 12px; color: var(--text-hi, #f2f2f2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-qrow.is-on .hm-qtitle { color: var(--mint-500, #4ed8af); }
+.hm-qsub { display: block; margin-top: 2px; font-size: 10px; color: var(--text-lo, #8a948f); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-qacts { display: flex; gap: 2px; }
+.hm-qacts button {
+  width: 22px; height: 22px; padding: 0; line-height: 1; cursor: pointer;
+  background: none; border: 1px solid var(--line, #2f3a35); color: var(--text-lo, #8a948f); font: inherit; font-size: 11px;
+}
+.hm-qacts button:hover:not(:disabled) { border-color: var(--mint-700, #2a9e7f); color: var(--mint-500, #4ed8af); }
+.hm-qacts button:disabled { opacity: .25; cursor: default; }
+.hm-queue__foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; flex: none;
+  padding: 6px 10px; border-top: 1px solid var(--line, #2f3a35); font-size: 10px; color: var(--text-dim, #5d6863);
+}
+.hm-queue__foot .hm-btn { min-width: 48px; height: 24px; font-size: 11px; }
+
+/* QQ Music-style two-line lyrics: no card, no header, only the words over the lobby. */
+.hm-lyrics {
+  background: none; border: 0; box-shadow: none; width: min(640px, calc(100vw - 24px));
+  max-height: none; display: block; padding: 0; color: #fff; text-align: center;
+}
+.hm-lrc-grip {
+  height: 18px; margin-top: -6px; width: 100%; cursor: grab; touch-action: none;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255, 255, 255, .5); font-size: 10px; opacity: 0; transition: opacity .15s ease;
+}
+.hm-lyrics:hover .hm-lrc-grip, .hm-lyrics.is-drag .hm-lrc-grip { opacity: .5; }
+.hm-lrc { display: grid; gap: 2px; padding: 0 18px 8px; }
+.hm-lrc-on {
+  margin: 0; font-size: 26px; line-height: 1.4; font-weight: 600; color: #ffd76a; cursor: pointer;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .92), 0 0 2px rgba(0, 0, 0, .95);
+}
+.hm-lrc-on.is-idle { color: rgba(255, 255, 255, .78); font-size: 20px; font-weight: 400; }
+.hm-lrc-next {
+  margin: 0; font-size: 18px; line-height: 1.5; color: #9fd0ff; cursor: pointer;
+  text-shadow: 0 2px 9px rgba(0, 0, 0, .92), 0 0 2px rgba(0, 0, 0, .95);
+}
+.hm-lrc-next:hover, .hm-lrc-on:hover { filter: brightness(1.12); }
+.hm-lrc-empty {
+  margin: 0; padding: 4px 16px 10px; font-size: 15px; color: rgba(255, 255, 255, .72);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, .9);
+}
+.hm-lrc-x {
+  position: absolute; top: -4px; right: 2px; background: none; border: 0;
+  color: rgba(255, 255, 255, .28); font: inherit; font-size: 16px; padding: 4px 5px; cursor: pointer;
+}
+.hm-lrc-x:hover { color: #fff; }
+.hm-modal-open .hm-lyrics { opacity: 0; pointer-events: none; }
+@media (max-width: 520px) {
+  .hm-lrc-on { font-size: 20px; }
+  .hm-lrc-next { font-size: 15px; }
+  .hm-lyrics { width: calc(100vw - 16px); }
+}
+
+.hm-lrc-tr {
+  margin: 0; font-size: 16px; line-height: 1.5; color: rgba(255, 255, 255, .88); cursor: pointer;
+  text-shadow: 0 2px 9px rgba(0, 0, 0, .92), 0 0 2px rgba(0, 0, 0, .95);
+}
+.hm-lrc-nexttr {
+  margin: 0; font-size: 13px; line-height: 1.5; color: rgba(159, 208, 255, .62); cursor: pointer;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, .9);
+}
+.hm-lrc-tr:hover, .hm-lrc-nexttr:hover { filter: brightness(1.12); }
+.hm-lrc-tr-btn {
+  position: absolute; top: -4px; right: 26px; background: none; border: 0;
+  color: rgba(255, 255, 255, .28); font: inherit; font-size: 12px; padding: 4px 5px; cursor: pointer;
+}
+.hm-lrc-tr-btn.is-on { color: rgba(255, 215, 106, .78); }
+.hm-lrc-tr-btn:hover { color: #fff; }
+@media (max-width: 520px) {
+  .hm-lrc-tr { font-size: 14px; }
+  .hm-lrc-nexttr { font-size: 12px; }
+}
+
+/* Lyrics window: transparent by default, darkens on hover; toolbar, settings, resize, lock. */
+.hm-lyrics {
+  padding: 8px 10px; border: 1px solid transparent;
+  transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.hm-lyrics:hover, .hm-lyrics.is-open {
+  background: rgba(4, 9, 7, .58); border-color: rgba(120, 160, 145, .18);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .35); backdrop-filter: blur(2px);
+}
+.hm-lrc-tools {
+  position: absolute; top: 0; right: 0; display: flex; gap: 1px;
+  opacity: .45; transition: opacity .15s ease; z-index: 3;
+}
+.hm-lyrics:hover .hm-lrc-tools, .hm-lyrics.is-open .hm-lrc-tools { opacity: 1; }
+.hm-lrc-tool {
+  background: none; border: 0; color: rgba(255, 255, 255, .55); font: inherit;
+  font-size: 12px; line-height: 1; padding: 4px 5px; cursor: pointer;
+}
+.hm-lrc-tool:hover { color: #fff; }
+.hm-lrc-tool.is-on { color: #ffd76a; }
+.hm-lrc-settings {
+  position: absolute; top: 24px; right: 0; z-index: 4;
+  width: 300px; max-width: calc(100vw - 24px); max-height: min(60vh, 380px); overflow: auto;
+  display: grid; gap: 7px; padding: 10px; text-align: left;
+  background: rgba(5, 11, 9, .97); border: 1px solid var(--line, #2f3a35);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, .55);
+}
+.hm-lrc-settings strong { font-size: 11px; letter-spacing: .12em; color: var(--mint-500, #4ed8af); text-transform: uppercase; }
+.hm-lrc-field { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--text-lo, #8a948f); }
+.hm-lrc-field input[type=color] { width: 32px; height: 20px; padding: 0; border: 1px solid var(--line, #2f3a35); background: none; cursor: pointer; }
+.hm-lrc-field select {
+  min-width: 110px; padding: 2px 4px; font: inherit; font-size: 11px;
+  background: rgba(0, 0, 0, .35); border: 1px solid var(--line, #2f3a35); color: var(--text-hi, #f2f2f2);
+}
+.hm-lrc-range input[type=range] { flex: 1; min-width: 80px; accent-color: var(--mint-500, #4ed8af); }
+.hm-lrc-range em { width: 42px; font-style: normal; font-size: 10px; color: var(--text-dim, #5d6863); text-align: right; }
+.hm-lrc-settings .hm-btn { justify-self: end; min-width: 72px; height: 24px; font-size: 11px; }
+.hm-lrc-resize {
+  position: absolute; z-index: 5; right: -2px; bottom: -2px; width: 16px; height: 16px;
+  cursor: nwse-resize; opacity: 0; transition: opacity .15s ease;
+}
+.hm-lyrics:hover .hm-lrc-resize, .hm-lyrics.is-open .hm-lrc-resize { opacity: .7; }
+.hm-lrc-resize::before {
+  content: ''; position: absolute; right: 3px; bottom: 3px; width: 8px; height: 8px;
+  border-right: 1px solid rgba(255, 255, 255, .65); border-bottom: 1px solid rgba(255, 255, 255, .65);
+}

@@ -1,19 +1,30 @@
 {
-  "_comment": "边缘层的分流表。容器的 /assets/** 与 /fonts/** 按这里的顺序 302 出去，字节从不落在容器上。",
+  "_comment": "边缘层的分流表。容器的 /assets/** 与 /fonts/** 按这里的顺序 302 出去，字节从不落在容器上。源对应：cdn = 自动测速 CDN（speedcdn，自带 /cdn/v1/rank.json）；r2 = R2 私有桶的规范门牌（weishucdn）；openi = 第二镜像（OpenI，浏览器 CORS 不可用，仅 ?sp_source=openi 点名可达）；modelscope = 第三镜像（ModelScope 创空间）的 HTTP 运行时形态——创空间 cdn 分支本身无文件直链、只作 git 镜像，其同族数据集即本条目。",
   "_order_note": "这是静态顺序，不是实时测速：容器在 ModelScope 机房，玩家在全国各地，容器量出来的链路速度不代表玩家的。真正按玩家网络选最快是客户端 pick.js 的事，两者分工。客户端可用 ?sp_source=<id> 覆盖这里的顺序。",
-  "_order_basis": "顺序按直连实测（本机 --noproxy，非代理）：小文件 TTFB modelscope 0.21s / r2 0.66s；855 KB 大文件 modelscope 0.26s(3.3 MB/s) / r2 1.9s(0.4 MB/s)。",
+  "_order_basis": "静态顺序按直连实测（本机 --noproxy，非代理）：小文件 TTFB modelscope 0.21s / r2 0.66s；855 KB 大文件 modelscope 0.26s(3.3 MB/s) / r2 1.9s(0.4 MB/s)。2026-10-15 复核：modelscope 同图 0.17s 即到 302；cdn 与 r2 的 56 KB png TTFB 都是 1.0–1.1s（缓存 MISS，本机视角）。内地三运营商实测以 cdn 自己的 rank.json 为准（见下条），本机量出来的不作数。",
+  "_cdn_source_note": "`cdn` 这条**不是** r2 的别名：它是自动测速层，自己发布 `/cdn/v1/rank.json`（实测 2026-10-15T06:33:50Z 那份：ms-dataset 1、ms-edge 2、r2-alt 3、r2 4、**speedcdn 5**、gitcdn-own 6；speedcdn 内地 TTFB 电信 261 / 联通 283 / 移动 152 ms，coverage full、usable true）。⚠️ 那份 rank 台账把 speedcdn 记成 `kind: \"r2\"` —— 那是 CDN 仓的口径；本表按**用途**分列，`cdn` 与 `r2` 各一条，别合并。",
+  "_order_reason": "2026-10-15 用户指令：**默认 CDN 地址 = speedcdn**，所以 `order` 以 `cdn` 开头，`modelscope` 数据集与 `r2` 依次作后备。⚠️ 与 2026-10-14 那条「R2 只作最后备选源、modelscope 当首跳」相反，且那次账单教训是实测的：R2 Class B 31,093,153 次/30d（免费额度 10M，超限 21.1M 次 ⇒ $7.59/月），把 modelscope 放首跳后 → $0。**首跳换成 cdn 之后，R2 的直接 Class B 取决于 cdn 的回源命中，本表不保证仍是 $0** —— 要复核就查 R2 台账的 Class B 次数，别看域名。rank 只能在**已配置的源**里重排，不会把列表外的源拉进来。",
   "schemaVersion": 1,
-  "order": ["modelscope", "r2"],
+  "order": [
+    "cdn",
+    "modelscope",
+    "r2"
+  ],
   "sources": [
+    {
+      "id": "cdn",
+      "base": "https://speedcdn.jiangjiangze.icu",
+      "note": "**默认 CDN 源**（2026-10-15 用户指令）。自动测速层：带 `Range` 206、`ACAO *`、`Cache-Control: immutable`，并自带 `/cdn/v1/rank.json` 供客户端按运营商择优。⚠️ 比 r2 少一个 `Access-Control-Expose-Headers: Content-Length, Content-Range, ETag` ⇒ 客户端 JS 若要跨域读 206 的 `Content-Range`，点名 `?sp_source=r2`。"
+    },
     {
       "id": "modelscope",
       "base": "https://modelscope.cn/datasets/jingjiangze/Stronghold-Protocol-Assets/resolve/master/releases/v1-trial",
-      "note": "自建数据集镜像（公开）。15,979 assets + 7 fonts，逐字节校验过，Range 返 206，ACAO 可用。用 master 而不是钉 40-hex：镜像还在追加文件，钉版会让新素材在换版前不可见。"
+      "note": "自建数据集镜像（公开；= 第三镜像 ModelScope 创空间 的运行时入口，见本文件 _comment）。15,979 assets + 7 fonts，逐字节校验过，Range 返 206，ACAO 可用。**不钉 40hex**（2026-10-11 决定）：镜像还在追加文件，钉死后新素材要等换版才可见；路径本身不变，可变 master 不会让同一路径指向不同内容。2026-10-15 的 rank.json 里它是内地实测第 1（电信 85 / 联通 73 / 移动 74 ms）。"
     },
     {
       "id": "r2",
       "base": "https://weishucdn.jiangjiangze.icu",
-      "note": "现有主源（R2 私有桶 + 自有域）。作为兜底，并且是下面 exceptions 的目标。"
+      "note": "**R2 私有桶的规范门牌**（2026-10-14 用户指令定名；2026-10-15 起默认 CDN 那条交给 cdn，本条保留规范名 + exceptions 目标）。不做删除是因为 APK 端 site/manifest.json 的 art.packs 仍指向它（2026-10-14 实测 25 条全指向 weishucdn 域），CDN 那份绝对清单 11,637 条 URL 也仍写这个域。它是三条里唯一带 `Access-Control-Expose-Headers` 的。"
     },
     {
       "id": "openi",
@@ -24,5 +35,16 @@
   "_exceptions_note": "数据集不是逐字节完整的：ModelScope 的内容审核会拒收个别文件（实测拒了 char_340_shwaz_snow_1/illustration.png，提交被平台 reverted）。这些路径必须落到别的源，否则玩家拿到 404。Stardust 的 material-lb 有同一张表（MATERIAL-SOURCES.md 里是同一个文件的同一条例外），说明这是会复发的类型，不是一次性事故。",
   "exceptions": {
     "/assets/skins/char_340_shwaz_snow_1/illustration.png": "r2"
-  }
+  },
+  "_prefix_rules_note": "**前缀级规避**（2026-10-14 实测）。魔搭数据集不是缺个别文件，是**整棵目录**供不了——150 条大样本实测：voice 0/15、char 21%、ui 20%、spine 45%、local 36%、band/prof 0/1；而 skins 100%、audio 97%、enemy 67%。缺口是目录级的，所以「逐条存在性缓存」救不了第一次请求（它会先 302 到魔搭→404→再重来）。这里让第一次请求就直奔正确的源。语义是「这个前缀**不许**用这些源」，与 exceptions 的「这条路径**必须**用某个源」相反。⚠️ `order` 现在是 cdn 开头，这批规则的实际效果退化成「cdn 挂了也不去试魔搭」；**规则会过期**：魔搭可能补齐素材，须定期用 `_tmp/ms-failover-2026-10-14/dircov.mjs` 复核（走 GitHub Actions，不在本机跑）。",
+  "prefixRules": [
+    { "prefix": "/assets/voice/", "skip": ["modelscope"], "reason": "2026-10-14 实测 0/15，整目录无（魔搭审核拒收语音）" },
+    { "prefix": "/assets/char/", "skip": ["modelscope"], "reason": "2026-10-14 实测覆盖 21%（3/14）" },
+    { "prefix": "/assets/ui/", "skip": ["modelscope"], "reason": "2026-10-14 实测覆盖 20%（1/5）" },
+    { "prefix": "/assets/spine/", "skip": ["modelscope"], "reason": "2026-10-14 实测覆盖 45%（14/31），缺件过半" },
+    { "prefix": "/assets/local/", "skip": ["modelscope"], "reason": "2026-10-14 实测覆盖 36%（8/22）" },
+    { "prefix": "/assets/band/", "skip": ["modelscope"], "reason": "2026-10-14 实测 0/1" },
+    { "prefix": "/assets/prof/", "skip": ["modelscope"], "reason": "2026-10-14 实测 0/1" },
+    { "prefix": "/assets/art-index.json", "skip": ["modelscope"], "reason": "2026-10-14 实测 404，索引文件魔搭不供" }
+  ]
 }
