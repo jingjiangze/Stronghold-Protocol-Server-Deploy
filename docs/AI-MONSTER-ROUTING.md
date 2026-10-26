@@ -1,3 +1,27 @@
+> ⚠ **适用范围（需要 reviewer 确认）**
+>
+> 本仓 `ms` 分支**不含对抗/狩猎子系统**，因此 `_botConfrontPlan` / `botConfront` 的**可运行实现不在本仓**，
+> 随「对抗玩法插件」发布。证据（在本仓执行）：
+>
+> ```
+> $ git ls-tree -r --name-only origin/ms plugins/mota/server/match/match/ | wc -l
+> 23
+> $ git ls-tree -r --name-only origin/ms plugins/mota/server/match/match/ | grep -ci confront
+> 0
+> $ git grep -l "botConfront" origin/ms -- '*.js'
+> （无输出）
+> $ git grep -c "confrontActive\|confrontGroups" origin/ms -- 'plugins/**'
+> （无输出）
+> ```
+>
+> 也就是说：本仓没有 `confront.js`、没有任何 `botConfront` 调用点、没有 `confrontActive/confrontGroups`。
+> 在本仓新增一个「没有人调用」的 `_botConfrontPlan` 只会是死代码，因此本 PR 落的是**可运行的部分**
+> （`wireOptions` 白名单，让 `versusRule / versusAlt / coopScope` 穿得过 worker 宿主）
+> 加上**契约与参考实现**（本文件与 `docs/reference/confront-bot-plan.md`），并附上实现侧的数值证据（见 PR 描述）。
+>
+> **请 reviewer 确认**：接受「引擎面 + 契约 + 参考实现 + 证据」的拆分方式；
+> 或指示把对抗子系统整体迁入本仓（工作量为整套 versus/confront 模块 + 数据表）。
+
 # AI 投放怪物路线（对局内 AI 决策契约）
 
 > 状态：**契约已定，实现随「对抗玩法插件」发布**。
