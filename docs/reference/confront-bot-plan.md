@@ -12,6 +12,7 @@
 //
 // 下面是参考实现的原文（来自 plugins/mota/server/match/match/confront.js）：
 
+```js
   _botConfrontPlan(ps, picks, position = 'mid') {
     void ps; void position;
     const list = Array.isArray(picks) ? picks : [];
@@ -36,3 +37,4 @@
     }
     return out;
   }
+```
