@@ -1,0 +1,25 @@
+{
+  "manifest": 2,
+  "id": "relics-87",
+  "name": "湮灭藏品合集",
+  "englishName": "Annihilation Relics",
+  "description": "87 条藏品数据与图标，配合 mota 的商店「藏品」板块使用。",
+  "version": "3.0.0",
+  "app": ">=0.3.0 <0.4.0",
+  "api": 2,
+  "class": "content",
+  "scope": [
+    "room"
+  ],
+  "permissions": [
+    "data.add"
+  ],
+  "code": {
+    "data": [
+      "data/relics.json"
+    ],
+    "client": [
+      "assets/relics/<id>.png  ×87"
+    ]
+  }
+}
