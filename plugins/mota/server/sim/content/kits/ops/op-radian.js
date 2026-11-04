@@ -59,12 +59,13 @@
 //   its tests.
 
 import { num, talentBb, skillRec, up } from '../shared/tier1.js';
+import { hypot } from '../../../detmath.js';
 import { summonDeck, holdBuff, tokenStat, summonTriggerArea } from '../shared/summoner.js';
 import { acquireTargets } from '../../../ai.js';
 import { aggregateMods } from '../../../buffs.js';
 import { dirVec } from '../../../dir.js';
 import { COLS } from '../../../constants.js';
-import { hypot } from '../../../detmath.js';
+
 
 const S1 = 'skchr_radian_1';
 const S2 = 'skchr_radian_2';

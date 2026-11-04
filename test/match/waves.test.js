@@ -138,7 +138,7 @@ test('plain factions array (tools): the round type is drawn from the schedule ma
   for (const id of Object.keys(DATA.waves)) {
     const t = DATA.waves[id];
     if (t.kind !== 'normal') continue;
-    const r = t.usedBy[0]?.round;
+    const r = (t.usedBy || [])[0]?.round;
     if (!r) continue;
     const w = buildNormalWave(gd, createRng(2), ['FLY', 'DOT', 'TIMES'], r);
     assert.ok(!w.spawns.some((s) => s.enemyKey === 'enemy_9012_acloon'));

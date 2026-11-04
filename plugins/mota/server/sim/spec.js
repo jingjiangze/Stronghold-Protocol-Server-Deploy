@@ -1,3 +1,11 @@
+import { webDigest } from '../../shared/arkWebTraits20261101.js';
+import {isArkUrsusStateful,arkUrsusStaticMods,arkUrsusRuntimeMods} from '../../shared/arkUrsusCarry20261101.js';
+import {contractBountyIdentityMods} from '../../shared/contractBountyEconomy.js';
+import {isHuntEntry} from '../../shared/huntProgression.js';
+import {leakCharge,RETURNING_BOSS_KEY} from '../../shared/returningBoss.js';
+import {isInvestigationSpy,carrySpyInvestigation,SPY_RUNTIME_MOD_KEYS} from '../../shared/spyInvestigation.js';
+import {compactPressureMods} from '../../shared/enemyPressure.js';
+import {hasScopedEnemySource} from '../../shared/enemyResultSources.js';
 // server/sim/spec.js — BattleSpec: the JSON description of one battle, built by the server and simulated identically
 // by the server (headless / takeover / verification) and by browsers (the authoritative client and display replicas).
 // DESIGN §14. Pure ESM (served at /sim/spec.js): no Node API.
@@ -40,9 +48,9 @@
 import { Battle } from './Battle.js';
 import { toDataSource, withUnitLoadouts } from './simdata.js';
 import { isPotential, isCultivate } from '../../shared/potential.js';
-import { OPERATOR_SKINS } from '../../shared/skins.js';
 import { isContentHash } from '../../shared/plugins/identity.js';
 import { BOSS_POOL_MIN_HP } from './constants.js';
+import { bossBurstRoster } from '../../shared/bossBurstGuard.js';
 
 export const SPEC_VERSION = 1;
 
@@ -56,6 +64,27 @@ export function jsonClone(v) {
 // caps) instead of null (which the sim would read as 0); NaN becomes null (the sim treats both as "missing").
 const INF = 1e308;
 const specReplacer = (k, v) => (typeof v === 'number' && !Number.isFinite(v) ? (Number.isNaN(v) ? null : v > 0 ? INF : -INF) : v);
+
+/**
+ * 危机合约's room-wide battle options (shared/contractEffects.js): the operator stat multipliers
+ * (`contractOpStatMul { atk, def, hp }` — every factor positive, a missing one would be nonsense), the healing
+ * multiplier (`contractHealMul`) and the bond-layer cap (`contractLayerCap { cap }`). Battle copies them onto its
+ * data view, where players.js / damage.js / economy.js read them. A spec built without them — every battle of a room
+ * without contracts — carries no key, exactly as before.
+ */
+function contractFields(o) {
+  const out = {};
+  const op = o.contractOpStatMul;
+  if (op && typeof op === 'object') {
+    const atk = Number(op.atk), def = Number(op.def), hp = Number(op.hp);
+    if ([atk, def, hp].every((v) => Number.isFinite(v) && v > 0)) out.contractOpStatMul = { atk, def, hp };
+  }
+  const heal = Number(o.contractHealMul);
+  if (o.contractHealMul != null && Number.isFinite(heal) && heal > 0) out.contractHealMul = heal;
+  const cap = Number(o.contractLayerCap && o.contractLayerCap.cap);
+  if (o.contractLayerCap != null && Number.isFinite(cap) && cap > 0) out.contractLayerCap = { cap };
+  return out;
+}
 
 /**
  * Build the JSON BattleSpec of one field (DESIGN §14). Inputs are the Battle options the match computed (DESIGN §5.1)
@@ -81,16 +110,25 @@ export function buildBattleSpec(o = {}) {
     // a spawn at time Infinity never happens and is not counted (Battle._queueSpawn): leave it out
     spawns: (Array.isArray(o.spawns) ? o.spawns : []).filter((x) => !(x && Number(x.time) === Infinity)),
     routes: Array.isArray(o.routes) ? o.routes : [],
-    flags: o.flags ?? {},
+    flags: {...(bossLike?{bossBurstGuard:true}:{}),...(o.flags||{})},
+    // 危机合约 (shared/contractEffects.js): the room-wide modifiers, so the browser simulation — the authority of a
+    // client-side combat field — applies exactly what the server's own simulation applies
+    ...contractFields(o),
     enemyOverrides: o.enemyOverrides ?? {},
     waveId: o.waveId ?? null,
     bossId: o.bossId ?? null,
     content: o.content ?? 'full',
-    boss: bossLike && o.boss ? { poolHp: Number(o.boss.poolHp) || 0, poolMax: Number(o.boss.poolMax) || 1 } : null,
+    boss: bossLike && o.boss ? {
+      poolHp: Number(o.boss.poolHp) || 0, poolMax: Number(o.boss.poolMax) || 1,
+      ...((o.boss.burstGuard || o.sharedBoss?.burstGuard) ? {
+        burstGuard: bossBurstRoster((o.boss.burstGuard || o.sharedBoss.burstGuard).playerIds, (o.boss.burstGuard || o.sharedBoss.burstGuard).hpScale),
+      } : {}),
+    } : null,
     // the content set the battle runs on and the art it was drawn with (header): not read by the sim
     ...(isContentHash(o.cs) ? { cs: o.cs } : {}),
     ...(isContentHash(o.vs) ? { vs: o.vs } : {}),
     // morphPairing plus only. An official spec grows no key (identity and extra-field tests).
+    ...(o.incomingPreviewDone===true?{incomingPreviewDone:true}:{}),
     ...(o.morphPairing === 'plus' ? { morphPairing: 'plus' } : {}),
   };
   const out = JSON.parse(JSON.stringify(spec, specReplacer));
@@ -123,18 +161,7 @@ function cleanDiyPick(d) {
  * exactly `true` (补位), `diy` only as a well-formed pick (自选), `potential` (1–6) / `cultivate` (0–3) only when
  * well-formed and not on a stand-in. Mutates `u`.
  */
-const SKIN_IDS = new Set(OPERATOR_SKINS.map((s) => s.id));
-
-/**
- * 干员外观 (docs/OPERATOR-SKINS.md): a unit's `skinId` must name an admitted catalogue entry — a spec is client-supplied,
- * so an unknown id is dropped here rather than reaching a renderer. Tokens have no appearance at all.
- */
-function sanitizeUnitSkin(u) {
-  if ('skinId' in u && (u.kind === 'token' || !SKIN_IDS.has(u.skinId))) delete u.skinId;
-}
-
 export function sanitizeUnitLoadout(u) {
-  sanitizeUnitSkin(u);
   if ('skillIndex' in u && !(Number.isInteger(u.skillIndex) && u.skillIndex >= 0 && u.skillIndex <= 9)) delete u.skillIndex;
   if ('moduleId' in u && !(typeof u.moduleId === 'string' && LOADOUT_ID.test(u.moduleId))) delete u.moduleId;
   if ('standIn' in u && u.standIn !== true) delete u.standIn;
@@ -163,9 +190,10 @@ export function createBattleFromSpec(spec, dataSource, opts = {}) {
   const s = jsonClone(spec);
   const bossLike = s.kind === 'boss' || s.kind === 'hidden';
   let sharedBoss = opts.sharedBoss ?? null;
-  if (!sharedBoss && bossLike && s.boss) sharedBoss = new LocalBossPool(s.boss.poolMax, s.boss.poolHp);
+  if (!sharedBoss && bossLike && s.boss) sharedBoss = new LocalBossPool(s.boss.poolMax, s.boss.poolHp, s.boss.burstGuard);
   const BattleClass = typeof opts.BattleClass === 'function' ? opts.BattleClass : Battle;
   const battleOpts = {
+    ...(s.incomingPreviewDone===true?{incomingPreviewDone:true}:{}),
     seed: s.seed,
     kind: s.kind,
     modeId: s.modeId,
@@ -178,6 +206,9 @@ export function createBattleFromSpec(spec, dataSource, opts = {}) {
     routes: s.routes ?? [],
     sharedBoss,
     flags: s.flags ?? {},
+    // 危机合约 (shared/contractEffects.js): back onto the Battle's data view (Battle.js) — the server's own
+    // simulation of a client field (takeover / verification) applies the same modifiers the client did
+    ...contractFields(s),
     fieldId: s.fieldId,
     enemyOverrides: s.enemyOverrides ?? {},
     waveId: s.waveId ?? null,
@@ -207,8 +238,9 @@ export function createBattleFromSpec(spec, dataSource, opts = {}) {
  * changes nothing — so the leader stood at "0 HP" and the field never ended.
  */
 export class LocalBossPool {
-  constructor(maxHp, hp = maxHp) {
+  constructor(maxHp, hp = maxHp, burstGuard = null) {
     this.maxHp = Math.max(1, Number(maxHp) || 1);
+    this.burstGuard = bossBurstRoster(burstGuard?.playerIds, burstGuard?.hpScale);
     const h = Number(hp);
     this.serverHp = Number.isFinite(h) ? Math.max(0, Math.min(this.maxHp, h)) : this.maxHp;
     this.cum = 0;
@@ -244,6 +276,8 @@ export class LocalBossPool {
     const a = Number(ackedCum);
     if (Number.isFinite(a) && a >= 0) this.acked = a;
   }
+  /** Offline/debug use; live Patriot fields run on the authoritative server pool. */
+  heal(amount,ceiling=this.maxHp){const n=Number(amount);if(!Number.isFinite(n)||n<=0||this.hp<=0)return 0;const before=this.hp;this.hp=Math.max(before,Math.min(this.maxHp,ceiling,before+n));return this.hp-before;}
 }
 
 /**
@@ -258,7 +292,7 @@ export function attachLpMeter(battle) {
   const h1 = battle.on('enemyLeak', (ctx) => {
     const e = ctx && ctx.enemy;
     if (!e) return;
-    const lpr = Number.isFinite(e.lpr) && e.lpr >= 0 ? e.lpr : 1;
+    const lpr = Number.isFinite(e.lastLeakLpr)?e.lastLeakLpr:Number.isFinite(e.lpr) && e.lpr >= 0 ? e.lpr : 1;
     meter.lp += lpr;
   }, { priority: -1000, owner: 'lpMeter' });
   const h2 = battle.on('lpLoss', (ctx) => {
@@ -283,18 +317,18 @@ export function attachLpMeter(battle) {
 export function uniteLeft(battle) {
   if (!battle) return null;
   const out = {};
-  const add = (pid) => { if (typeof pid === 'string' && pid) out[pid] = (out[pid] || 0) + 1; };
+  const add = (pid,n=1) => { if (typeof pid === 'string' && pid) out[pid] = (out[pid] || 0) + n; };
   if (battle.finished && typeof battle.result === 'function') {
     const r = battle.result();
     if (!r || !r.perPlayer) return null;
-    for (const pp of Object.values(r.perPlayer)) for (const l of (pp && pp.leaked) || []) if (l && l.counted !== false && !l.uniteRuntime) add(l.sourcePlayerId);
-    for (const u of r.unspawned || []) if (u) add(u.sourcePlayerId);
+    for (const pp of Object.values(r.perPlayer)) for (const l of (pp && pp.leaked) || []) if (l && l.counted !== false && !l.uniteRuntime) add(l.sourcePlayerId,leakCharge(l));
+    for (const u of r.unspawned || []) if (u) add(u.sourcePlayerId,leakCharge(u));
     return out;
   }
   if (!battle._perPlayer || !Array.isArray(battle._pending) || !Array.isArray(battle.enemies)) return null;
-  for (const p of battle._pending) if (p) add(p.sourcePlayerId);
-  for (const e of battle.enemies) if (e && e.alive && e.counted && !e.uniteRuntime) add(e.sourcePlayerId ?? e.ownerId);
-  for (const pp of Object.values(battle._perPlayer)) for (const l of (pp && pp.leaked) || []) if (l && l.counted !== false && !l.uniteRuntime) add(l.sourcePlayerId);
+  for (const p of battle._pending) if (p) add(p.sourcePlayerId,leakCharge(p));
+  for (const e of battle.enemies) if (e && e.alive && e.counted && !e.uniteRuntime) add(e.sourcePlayerId ?? e.ownerId,isHuntEntry(e)?0:e.defId===RETURNING_BOSS_KEY?Math.max(0,Math.min(10,e.lpr)):1);
+  for (const pp of Object.values(battle._perPlayer)) for (const l of (pp && pp.leaked) || []) if (l && l.counted !== false && !l.uniteRuntime) add(l.sourcePlayerId,leakCharge(l));
   return out;
 }
 
@@ -376,6 +410,7 @@ export function resultDigest(result) {
       // whether the 联防 bills the leak, so a client must not be able to report it differently from the re-simulation
       (Array.isArray(p.leaked) ? p.leaked : []).map((l) => `${l && l.enemyKey}|${l && l.counted === false ? 0 : 1}|${l && l.uniteRuntime ? 'x' : ''}|${(l && l.sourcePlayerId) || ''}|${modsKey(l && l.mods)}`).sort(),
       Math.round(Number(p.damageDealt) || 0), Math.round(Number(p.bossDamage) || 0),
+      ...(p.webTraits ? [webDigest(p.webTraits)] : []),
       (Array.isArray(p.unitsEnd) ? p.unitsEnd : []).map((u) => [u && u.uid, r4(u && u.hpPct), r4(u && u.sp), !!(u && u.alive)]),
     ];
   });
@@ -395,16 +430,24 @@ const leakEntries = (p) => cap(p && p.leaked, 400).filter((l) => l && isKey(l.en
 /** What one leak entry costs the team on the wire: its `lpr` (0 … 1000), 1 when absent. */
 const leakLpr = (l) => Math.max(0, Math.min(1000, fnum(l && l.lpr, 1)));
 
-function compactMods(m) {
+function compactMods(m,limit=16) {
   if (!m || typeof m !== 'object') return null;
   const out = {};
   let n = 0;
   for (const k of Object.keys(m)) {
-    if (n >= 16 || k.length > 32) break;
+    if (n >= limit || k.length > 32) break;
     const v = m[k];
     if ((typeof v === 'number' && Number.isFinite(v)) || typeof v === 'boolean' || (typeof v === 'string' && v.length <= 64) || v === null) { out[k] = v; n++; }
   }
   return out;
+}
+
+function compactEnemyMods(key,mods){
+ mods=contractBountyIdentityMods(mods);
+ if(isArkUrsusStateful(key)){const state=arkUrsusRuntimeMods(key,mods);return {...compactMods(arkUrsusStaticMods(key,mods),16-Object.keys(state).length),...state};}
+ if(!hasScopedEnemySource(key))return compactMods(mods);
+ const spy=isInvestigationSpy(key),state=spy?carrySpyInvestigation(key,{},mods):{},ordinary=spy?Object.fromEntries(Object.entries(mods||{}).filter(([field])=>!SPY_RUNTIME_MOD_KEYS.includes(field))):mods;
+ return {...compactPressureMods(ordinary,16-Object.keys(state).length),...state};
 }
 
 /**
@@ -417,7 +460,7 @@ export function compactResult(res) {
   for (const pid of Object.keys(r.perPlayer || {}).slice(0, 4)) {
     const p = r.perPlayer[pid] || {};
     const layerGains = {};
-    for (const [k, v] of Object.entries(p.layerGains || {}).slice(0, 40)) if (isKey(k) && fnum(v) > 0) layerGains[k] = Math.min(1e4, fnum(v));
+    for (const [k, v] of Object.entries(p.layerGains || {}).slice(0, 40)) if (isKey(k) && fnum(v) !== 0) layerGains[k] = Math.max(-1e4, Math.min(1e4, fnum(v)));
     const total = Math.max(0, Math.trunc(fnum(p.total)));
     perPlayer[pid] = {
       // `killed` keeps the sim's reading (every counted knock-out, runtime splits / summons included) and is deliberately
@@ -426,7 +469,7 @@ export function compactResult(res) {
       creditedKills: creditedKillsOf(p),
       total,
       leaked: leakEntries(p).map((l) => {
-        const o = { enemyKey: l.enemyKey, mods: compactMods(l.mods), lpr: leakLpr(l), sourcePlayerId: keyOr(l.sourcePlayerId), tag: typeof l.tag === 'string' && l.tag.length <= 16 ? l.tag : null, counted: l.counted !== false };
+        const o = { enemyKey: l.enemyKey, mods: compactEnemyMods(l.enemyKey,l.mods), lpr: leakLpr(l), sourcePlayerId: keyOr(l.sourcePlayerId), tag: typeof l.tag === 'string' && l.tag.length <= 16 ? l.tag : null, counted: l.counted !== false };
         if (l.uniteRuntime) o.uniteRuntime = true; // born on a 联防 field: the server must not bill it (unite.js uniteSurvivors)
         if (l.boss) o.boss = true;
         if (l.spawned) o.spawned = true;
@@ -449,6 +492,7 @@ export function compactResult(res) {
         taken: Math.max(0, Math.round(fnum(u.taken))), attacks: Math.max(0, Math.trunc(fnum(u.attacks))),
       })),
     };
+    if (p.webTraits) perPlayer[pid].webTraits = JSON.parse(JSON.stringify(p.webTraits));
     // the HUD capsule's numerator (or absent for a result that has none: the teammate UI falls back to `killed`)
     const resolved = Number.isFinite(p.resolved) ? Math.max(0, Math.min(total, Math.trunc(p.resolved))) : null;
     if (resolved != null) perPlayer[pid].resolved = resolved;
@@ -466,6 +510,8 @@ export function compactResult(res) {
     out.unspawned = cap(r.unspawned, 400).filter((u) => u && isKey(u.enemyKey)).map((u) => ({
       enemyKey: u.enemyKey, sourcePlayerId: keyOr(u.sourcePlayerId), tag: typeof u.tag === 'string' && u.tag.length <= 16 ? u.tag : null,
       time: Math.max(0, Math.min(1e6, fnum(u.time))),
+      ...(isHuntEntry(u)?{mods:compactMods(u.mods),lpr:0}:{}),
+      ...(hasScopedEnemySource(u.enemyKey)?{mods:compactEnemyMods(u.enemyKey,u.mods)}:{}),
     }));
   }
   return out;
@@ -488,7 +534,7 @@ export function fitResult(result, { bossLike = false, budget = RESULT_FRAME_BUDG
   const r = { ...result, perPlayer: {} };
   for (const [pid, p] of Object.entries(result.perPlayer || {})) r.perPlayer[pid] = { ...p, unitStats: [] };
   if (size(r) <= budget) return r;
-  for (const p of Object.values(r.perPlayer)) p.leaked = (p.leaked || []).map((l) => ({ ...l, mods: null }));
+  for (const p of Object.values(r.perPlayer)) p.leaked = (p.leaked || []).map((l) => ({ ...l, mods: isArkUrsusStateful(l.enemyKey)?arkUrsusRuntimeMods(l.enemyKey,l.mods):null }));
   if (size(r) <= budget || !bossLike) return r;
   for (const p of Object.values(r.perPlayer)) p.leaked = [];
   if (Array.isArray(r.unspawned)) r.unspawned = [];

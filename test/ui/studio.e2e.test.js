@@ -33,7 +33,7 @@ describe('the plugin studio in the browser', { skip: !ENABLED && 'set SP_E2E=1 (
     const plugins = path.join(tmp, 'plugins');
     const downloads = path.join(tmp, 'downloads');
     fs.mkdirSync(downloads);
-    const { startServer } = await import('../../server/index.js');
+    const { startServer } = await import('../../server/boot-main.js');
     const srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true, pluginsDir: plugins, assetIndex: false });
     const P = (await import('puppeteer-core')).default;
     const browser = await P.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox', '--no-first-run', '--force-device-scale-factor=1', '--mute-audio'] });
@@ -146,7 +146,7 @@ describe('the plugin studio in the browser', { skip: !ENABLED && 'set SP_E2E=1 (
     skin('green-skin', '绿色皮肤');
     skin('room-skin', '房间皮肤');
     skin('keep-skin', '留下的皮肤');
-    const { startServer } = await import('../../server/index.js');
+    const { startServer } = await import('../../server/boot-main.js');
     const { StubMatch } = await import('../../server/match/StubMatch.js');
     const { TestClient } = await import('../helpers/wsClient.js');
     const srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true, pluginsDir: plugins, assetIndex: false, MatchClass: StubMatch });

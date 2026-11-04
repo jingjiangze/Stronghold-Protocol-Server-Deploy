@@ -139,7 +139,8 @@ export class MatchWatch {
     const own = this.fields.find((x) => x.players.includes(ps.playerId)) || null;
     if (ps.alive) {
       if ((f.kind === 'boss' || f.kind === 'hidden') && own && own !== f) return fail(ERR.BAD_TARGET, 'other group hidden');
-      if (f.kind === 'normal' && own && own !== f && own.live) return fail(ERR.WRONG_PHASE, 'own battle running');
+      // 实时观战（2026-10-25 业主）：普通战斗进行中允许切去队友的普通战场（本地 replica，自己的战斗继续）。
+      // boss/hidden 的异组隐藏仍然拒绝（上一行）。
     }
     this.watchers.set(ps.playerId, f.fieldId);
     this._watchPrefSet(ps, f, playerId);
@@ -154,10 +155,13 @@ export class MatchWatch {
    */
   _resendBattle(ps) {
     if (!this.fields.some((f) => f.cc)) { this._followScout(ps, { keep: true }); return; }
+    // 业主 2026-10-30：**活着的人优先恢复自己那块**。放开「战斗中看队友」之后 `watchers` 可能指向队友，
+    // 若仍按 watchers 优先，刷新/重连就只回放队友那块，自己那块本地 sim 直接丢失（只能等服务端超时接管）。
+    const ownField = ps.alive ? this.fields.find((f) => f.players.includes(ps.playerId)) || null : null;
     const fid = this.watchers.get(ps.playerId);
-    let f = fid ? this.fields.find((x) => x.fieldId === fid) : null;
+    let f = ownField || (fid ? this.fields.find((x) => x.fieldId === fid) : null);
     if (!f) f = this.fields.find((x) => x.players.includes(ps.playerId)) || (this.phase === PHASE.UNITE ? this.fields[0] : null);
-    if (!f && !ps.alive) f = this._watchTargetField(ps, this.fields) || this.fields[0] || null;
+    if (!f) f = this._watchTargetField(ps, this.fields) || this.fields[0] || null;
     if (!f) return;
     this.watchers.set(ps.playerId, f.fieldId);
     this.sendTo(ps.playerId, this._startMsg(f, ps.playerId, { watch: !f.players.includes(ps.playerId) }));

@@ -1,0 +1,357 @@
+{
+  "lock": 1,
+  "id": "room-chat",
+  "version": "0.1.0",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "client/community-emotes/011b78a293456c47b7c0.preview.webp": {
+      "sha256": "011b78a293456c47b7c0b26c8984c8e0bb6911b033abadd216727a10ddcf4fd0",
+      "bytes": 2098
+    },
+    "client/community-emotes/04ff83d4595672ff6cb1.preview.webp": {
+      "sha256": "04ff83d4595672ff6cb1b8829f46d952ee574e8a805cb27bf3f22116401e3d5b",
+      "bytes": 2206
+    },
+    "client/community-emotes/0dcc26cd5630ec8f8aa9.preview.webp": {
+      "sha256": "0dcc26cd5630ec8f8aa994e0757122150042f91d599aba1f93eb65baf792949d",
+      "bytes": 1802
+    },
+    "client/community-emotes/0e36e2e7b84e1ade42c2.preview.webp": {
+      "sha256": "0e36e2e7b84e1ade42c2c7d4911f150e719b2b62016517a0c698a15bb65af7bc",
+      "bytes": 2660
+    },
+    "client/community-emotes/0e432091fa056e2f24d0.preview.webp": {
+      "sha256": "0e432091fa056e2f24d048abb44dac20afa7a3259a8b9d659b08dd34a3882711",
+      "bytes": 2176
+    },
+    "client/community-emotes/1273c497b6b22499b7b7.preview.webp": {
+      "sha256": "1273c497b6b22499b7b7b1d2d2f84f2ca6b44c20883ff195f3c4064cdc3f3534",
+      "bytes": 1952
+    },
+    "client/community-emotes/160024c01860cc974030.preview.webp": {
+      "sha256": "160024c01860cc974030ce4e92e836a73f2d92d1e21b3c1ecacce33c6b6f82e5",
+      "bytes": 2058
+    },
+    "client/community-emotes/18d6ee1ce3054fa36832.preview.webp": {
+      "sha256": "18d6ee1ce3054fa36832f23d3f70c65f1266a8ef9e6108d735638d4684062a0e",
+      "bytes": 1644
+    },
+    "client/community-emotes/1aae43d2377d84abdd89.preview.webp": {
+      "sha256": "1aae43d2377d84abdd89f3bcdb2fffaca5825160e842df15ec930c0b806ff2a4",
+      "bytes": 2010
+    },
+    "client/community-emotes/1cc8e623bd85cd1be238.preview.webp": {
+      "sha256": "1cc8e623bd85cd1be238394c7bfca16163c998c9b96aea764041103ec02a7d23",
+      "bytes": 1862
+    },
+    "client/community-emotes/20c5e2b578d4748f6b3c.preview.webp": {
+      "sha256": "20c5e2b578d4748f6b3cbd50399d0f0ffa2354558b3ea28b9ef50bbe39c34f50",
+      "bytes": 3486
+    },
+    "client/community-emotes/2e51fe46c043295502c2.preview.webp": {
+      "sha256": "2e51fe46c043295502c23058dad82172bd6141a8e808d654e3b701b0e53407ad",
+      "bytes": 2248
+    },
+    "client/community-emotes/3302717d5947a27f392b.preview.webp": {
+      "sha256": "3302717d5947a27f392bf2497b69f159263cbd3166f9f89a9ebc7505cbd59712",
+      "bytes": 886
+    },
+    "client/community-emotes/36c30744a526ad7ad6f0.preview.webp": {
+      "sha256": "36c30744a526ad7ad6f06589ae15997e32d979de0a3cbaec41bbbe692e57cfa8",
+      "bytes": 1898
+    },
+    "client/community-emotes/373418a76c574bb49dd6.preview.webp": {
+      "sha256": "373418a76c574bb49dd69b111316ffb7b5e31797d772373f66d404601b8f6a0a",
+      "bytes": 1394
+    },
+    "client/community-emotes/37d9b1777776ac9a4e57.preview.webp": {
+      "sha256": "37d9b1777776ac9a4e57d4f3bcabc06e1ce543c7046e0c9dcd2501cd42781b47",
+      "bytes": 1446
+    },
+    "client/community-emotes/38672de83effec16688b.preview.webp": {
+      "sha256": "38672de83effec16688bc71e1cab07b430db5833aa677b7c3f64a699a6a0d8a0",
+      "bytes": 1596
+    },
+    "client/community-emotes/3968ff2c67961837e124.preview.webp": {
+      "sha256": "3968ff2c67961837e124fdeeef3c05a0814698c8515b947fa5aaabdbe8e75ca9",
+      "bytes": 2620
+    },
+    "client/community-emotes/3d16c9ba8acd0ec577bc.preview.webp": {
+      "sha256": "3d16c9ba8acd0ec577bc9f1f0cb4b47874c61d1b576e2091e209807164efc3b4",
+      "bytes": 1716
+    },
+    "client/community-emotes/3e7743455b52242ff04d.preview.webp": {
+      "sha256": "3e7743455b52242ff04d69439d7cc1e04e4562f63045df350f20d6f305715134",
+      "bytes": 2050
+    },
+    "client/community-emotes/4011929c6e06f50c158d.preview.webp": {
+      "sha256": "4011929c6e06f50c158dfd639144b2cc81f2a11e73f3db8ade772878a789b113",
+      "bytes": 1408
+    },
+    "client/community-emotes/47233be735332036061d.preview.webp": {
+      "sha256": "47233be735332036061da5bb9a504c5c34a0cb1a15015aa5918687b830b8e0fd",
+      "bytes": 1864
+    },
+    "client/community-emotes/491977db81e5959f475c.preview.webp": {
+      "sha256": "491977db81e5959f475c7ece37d3ef6cc97679b875f419794fc525f4550757a5",
+      "bytes": 3794
+    },
+    "client/community-emotes/4bb6ff52cb7d8fbf81c8.preview.webp": {
+      "sha256": "4bb6ff52cb7d8fbf81c8f34b26825d61332896281df1de6c10ebf70b62602be7",
+      "bytes": 2968
+    },
+    "client/community-emotes/4e179bd82de17fd4a903.preview.webp": {
+      "sha256": "4e179bd82de17fd4a9037939dc72dae602990d1a71a38001f894b3d0dfc177a1",
+      "bytes": 1076
+    },
+    "client/community-emotes/4e1db87249e9e1789864.preview.webp": {
+      "sha256": "4e1db87249e9e178986407f7336ab1bf1d535ec08938b3d789c37c54ead62ff7",
+      "bytes": 2698
+    },
+    "client/community-emotes/4ee5c012eedbeb5f5226.preview.webp": {
+      "sha256": "4ee5c012eedbeb5f5226d7bf93835ae991b81f84c2721fedf97480a7d56594b1",
+      "bytes": 2932
+    },
+    "client/community-emotes/526b7a1134f55d5eee70.preview.webp": {
+      "sha256": "526b7a1134f55d5eee709959894cd2be13d1d8bb6105bb0bc64366c2c9e3db43",
+      "bytes": 3056
+    },
+    "client/community-emotes/533b364fb30c6afbffab.preview.webp": {
+      "sha256": "533b364fb30c6afbffab50b57c4d80d6f4418d6407d807bceacca16375b9390f",
+      "bytes": 2192
+    },
+    "client/community-emotes/55acd08e7ae58d58f568.preview.webp": {
+      "sha256": "55acd08e7ae58d58f5689edb6850e2eef86eef4d22bfed75c8590c0064115255",
+      "bytes": 1686
+    },
+    "client/community-emotes/5a474e2803638615498d.preview.webp": {
+      "sha256": "5a474e2803638615498d3066810dc7fe46404324028539e846161ba3afe068f1",
+      "bytes": 2120
+    },
+    "client/community-emotes/5ae49007572fab99b3de.preview.webp": {
+      "sha256": "5ae49007572fab99b3dee00b575613e4b7c7751ca963abc3af31eed1f6555164",
+      "bytes": 3012
+    },
+    "client/community-emotes/5ee8108cfce88daa6a37.preview.webp": {
+      "sha256": "5ee8108cfce88daa6a3763f84693875d62c85fb8d53af5ad6563d4999b41b77b",
+      "bytes": 1788
+    },
+    "client/community-emotes/623f2dd4d4a9ca086308.preview.webp": {
+      "sha256": "623f2dd4d4a9ca08630876fd5ad560792ae48e941b4e284d604255ac43dccf8a",
+      "bytes": 4592
+    },
+    "client/community-emotes/68bb7ce12104deca96db.preview.webp": {
+      "sha256": "68bb7ce12104deca96db4fe8ea8880f0f4f5a681351051409664e61d529f0a08",
+      "bytes": 2480
+    },
+    "client/community-emotes/6a985871cc9d84baf9d9.preview.webp": {
+      "sha256": "6a985871cc9d84baf9d998412ca422712c041ae1643b60ffd117f49757bd3749",
+      "bytes": 2620
+    },
+    "client/community-emotes/6b6c263d3561732fb006.preview.webp": {
+      "sha256": "6b6c263d3561732fb00633c6c1007b873f39f7c3998453e377f4d8145619abf8",
+      "bytes": 2150
+    },
+    "client/community-emotes/6d94f88cc6c0a1e7fc56.preview.webp": {
+      "sha256": "6d94f88cc6c0a1e7fc56ddd4a055880d997dddc2b6a92b1dccf9fbddc9b63c70",
+      "bytes": 456
+    },
+    "client/community-emotes/6f9eb86ccbba18bfe33b.preview.webp": {
+      "sha256": "6f9eb86ccbba18bfe33b133b73e12ecbd0e61a5d538c300ea9d4422f441fd540",
+      "bytes": 388
+    },
+    "client/community-emotes/701bf4285a30e6a70a71.preview.webp": {
+      "sha256": "701bf4285a30e6a70a71ad062a8fb5d02db610572ec81418b896dcf87a438f1d",
+      "bytes": 3574
+    },
+    "client/community-emotes/70667e214507611bb202.preview.webp": {
+      "sha256": "70667e214507611bb202678ac97d13d02e1b6c2a0050dfcda68725060993b0c3",
+      "bytes": 3064
+    },
+    "client/community-emotes/778fb03519180aa576bc.preview.webp": {
+      "sha256": "778fb03519180aa576bc99339a74ff29b9cb250e60a3a68bcff108268907eaa3",
+      "bytes": 1740
+    },
+    "client/community-emotes/78dbea0468a7944b9122.preview.webp": {
+      "sha256": "78dbea0468a7944b91220750547ff39b490743c2711781a9c9229f71405666ad",
+      "bytes": 1782
+    },
+    "client/community-emotes/791672b4a2ccb8423490.preview.webp": {
+      "sha256": "791672b4a2ccb84234908f305d638588cffb384ecb017cd1f920bc3d3b13dbfd",
+      "bytes": 2322
+    },
+    "client/community-emotes/7e47a3877db181d77679.preview.webp": {
+      "sha256": "7e47a3877db181d77679f933df7931ae82d35d925d4d5ff2bc627b3c698fa380",
+      "bytes": 1640
+    },
+    "client/community-emotes/811147d26eff1288af89.preview.webp": {
+      "sha256": "811147d26eff1288af895b4fbdbfb07c6e4a8a115c7d58c6136a0dce3498d897",
+      "bytes": 3106
+    },
+    "client/community-emotes/86f78d3d0da1e651f525.preview.webp": {
+      "sha256": "86f78d3d0da1e651f5250c5aa5ce473088623e92eb5753e461fde3a8777652f9",
+      "bytes": 2762
+    },
+    "client/community-emotes/86fff6f7123568600580.preview.webp": {
+      "sha256": "86fff6f7123568600580e14223d55203285332f22b345059f45c403cbf5a4bfb",
+      "bytes": 2632
+    },
+    "client/community-emotes/8a3be43fb874d4b32384.preview.webp": {
+      "sha256": "8a3be43fb874d4b32384536a068c7fe4357692cd080f569816ff1af743832c0c",
+      "bytes": 1626
+    },
+    "client/community-emotes/8ad32b5bf1801ee5f3d0.preview.webp": {
+      "sha256": "8ad32b5bf1801ee5f3d0599f77942a95161bf3cf9e40ea44af3851b03136e1c9",
+      "bytes": 2092
+    },
+    "client/community-emotes/922c3319362a7dfac552.preview.webp": {
+      "sha256": "922c3319362a7dfac552f0181d9dd298c309b5006d15694b0ab3f49c2b658d53",
+      "bytes": 1202
+    },
+    "client/community-emotes/9385384c3869e743837b.preview.webp": {
+      "sha256": "9385384c3869e743837bc9b8352b504bd09da78e9df4a837ba49748db9c3da00",
+      "bytes": 2454
+    },
+    "client/community-emotes/946dfdf7b106842e79ce.preview.webp": {
+      "sha256": "946dfdf7b106842e79ce913b1aa88aec899e3be47e10958db4244dfbf6aca820",
+      "bytes": 1158
+    },
+    "client/community-emotes/9a175cac679d01475a84.preview.webp": {
+      "sha256": "9a175cac679d01475a84d043c09f3da28e620a09300150b9ff49b6f9cc2571a2",
+      "bytes": 3442
+    },
+    "client/community-emotes/9bf8387206057b7fbf0f.preview.webp": {
+      "sha256": "9bf8387206057b7fbf0f2177424fa1c03a5094b8e32aabd6f3bb9cdb46163da7",
+      "bytes": 1382
+    },
+    "client/community-emotes/a2740c609a5bb0720995.preview.webp": {
+      "sha256": "a2740c609a5bb072099531c8d2f813eff124ce7c8d8c5a0ed85d8eaf186f5e7e",
+      "bytes": 2760
+    },
+    "client/community-emotes/a496ba96905df17d5b2f.preview.webp": {
+      "sha256": "a496ba96905df17d5b2f65bdbcc13ede296b1203ee4f0ee11cbc544755a3bf02",
+      "bytes": 1530
+    },
+    "client/community-emotes/badc7bde5e163b5fc169.preview.webp": {
+      "sha256": "badc7bde5e163b5fc169dc1736ccebd3f3151794ab34a894287554a9538e6af0",
+      "bytes": 2242
+    },
+    "client/community-emotes/c6bf226ddaee8d56d72f.preview.webp": {
+      "sha256": "c6bf226ddaee8d56d72f11a2b6c17cac2827fedd34cbbd7b4d94410fea8fab55",
+      "bytes": 1994
+    },
+    "client/community-emotes/cce8153ccd40eaeb3b72.preview.webp": {
+      "sha256": "cce8153ccd40eaeb3b72ff100898bd813bb384047f09dbe968c458fc2e88f06c",
+      "bytes": 2890
+    },
+    "client/community-emotes/cf0435447c93f883be37.preview.webp": {
+      "sha256": "cf0435447c93f883be37ff6ae0ebdb52aa9c4ab8a1de70d0ac0f539be1737a12",
+      "bytes": 1928
+    },
+    "client/community-emotes/cfe9f9135400612137a6.preview.webp": {
+      "sha256": "cfe9f9135400612137a6a712c0f2c4cba17309a5facc6052ae091bdf85a6879e",
+      "bytes": 2172
+    },
+    "client/community-emotes/d46286923ad1377060fe.preview.webp": {
+      "sha256": "d46286923ad1377060fe98b25b14eef287a6045f836f1881c7ba61915a4fdaa6",
+      "bytes": 3364
+    },
+    "client/community-emotes/daaeacf2ca927e535571.preview.webp": {
+      "sha256": "daaeacf2ca927e535571ad940dcc951690e53c241f5dac26e4320f75d2fe630d",
+      "bytes": 2322
+    },
+    "client/community-emotes/db3746f5290f6f276e50.preview.webp": {
+      "sha256": "db3746f5290f6f276e50da356c59cf3c294299d74dd55ecb315b316675a7bc09",
+      "bytes": 3210
+    },
+    "client/community-emotes/de0e0fc533b02932e8b0.preview.webp": {
+      "sha256": "de0e0fc533b02932e8b0e3ffac01eb5f272c0cc1eaf18290405a73d07961a1f4",
+      "bytes": 2386
+    },
+    "client/community-emotes/dfef0b682274b9bbe692.preview.webp": {
+      "sha256": "dfef0b682274b9bbe692acf4b8e4513643f3b5ef90bd8ba3fc066e33e1257e29",
+      "bytes": 2926
+    },
+    "client/community-emotes/e1e498fbd2a88b86ad2c.preview.webp": {
+      "sha256": "e1e498fbd2a88b86ad2c5bf2196f227952b0ec28d67b78d64a677d6107478aba",
+      "bytes": 1350
+    },
+    "client/community-emotes/e32acecd795161750a6a.preview.webp": {
+      "sha256": "e32acecd795161750a6a51aac9ed0d9587df77ab5510c5bd980ccb1abe3f8af3",
+      "bytes": 2652
+    },
+    "client/community-emotes/ea65518afa74cce61d31.preview.webp": {
+      "sha256": "ea65518afa74cce61d312ad790e7f9485a261afa06a3e031881314ae072cb22a",
+      "bytes": 938
+    },
+    "client/community-emotes/ea7ecdec5c0bdfbdbe2c.preview.webp": {
+      "sha256": "ea7ecdec5c0bdfbdbe2cda84ba88ded5c93ef663103c164f713bd06d7128f470",
+      "bytes": 2806
+    },
+    "client/community-emotes/f0466ff8b63b7704d12b.preview.webp": {
+      "sha256": "f0466ff8b63b7704d12bc6ce30595639bbec2c9a6383513e9430e8361ef48762",
+      "bytes": 1910
+    },
+    "client/community-emotes/f0c8a8b7d471090f1872.preview.webp": {
+      "sha256": "f0c8a8b7d471090f1872ed72d607645930886f36f1654c0b8bd09b3aaec9052c",
+      "bytes": 940
+    },
+    "client/community-emotes/f1a3904b902bf7bf9ff5.preview.webp": {
+      "sha256": "f1a3904b902bf7bf9ff5e60237c2cb0eb6ca42d4862af54eccebe36b28f61689",
+      "bytes": 3878
+    },
+    "client/community-emotes/f2b81a5bbe8d8cb8e30b.preview.webp": {
+      "sha256": "f2b81a5bbe8d8cb8e30b64e6530a23232682f2be30ec7094f057901c0dbbc0e8",
+      "bytes": 1970
+    },
+    "client/community-emotes/f4e8ed0a2cfe500a71db.preview.webp": {
+      "sha256": "f4e8ed0a2cfe500a71dba5bad0c473d670259452e22d0855b203bd584de7dd2c",
+      "bytes": 2008
+    },
+    "client/community-emotes/manifest.json": {
+      "sha256": "855d3643757b34bde70f5a097f71a395cf427796c545918b0c0575d91bc35636",
+      "bytes": 23167
+    },
+    "client/css/room-chat.css": {
+      "sha256": "900f1e45e1bcd37ecd7042449e5d6b2ae3793219642ef310707a3183f78852bc",
+      "bytes": 5668
+    },
+    "client/js/ui/chatScroll.js": {
+      "sha256": "c1c2f228d8f4046160241ea495eb359047db7c4ff1660becb8c92ffba96b73f9",
+      "bytes": 5668
+    },
+    "client/js/ui/communityChat.js": {
+      "sha256": "37c72e5dedc9a96d1ca677179b6b9ec7e907438036ab1378af9396c7f3269a2c",
+      "bytes": 7192
+    },
+    "client/js/ui/emotes.js": {
+      "sha256": "a8b488aac84626a58f8ef7d6ac665761f39afa9a8d4438f0aea10fe961b83480",
+      "bytes": 17480
+    },
+    "client/js/ui/roomChat.js": {
+      "sha256": "dcc9037ab4a232346b92d98f89ea27dba392b19400c9a9da93063e7023475a51",
+      "bytes": 16931
+    },
+    "client/js/ui/roomDanmaku.js": {
+      "sha256": "6f6c2987b7fa67e8112cdb5a454d2f01118713fe8d4765e1067aa96a4d0565eb",
+      "bytes": 3206
+    },
+    "client/js/ui/voiceIcons.js": {
+      "sha256": "72c39b8a000dc5a862a9bff514f918d77fcc845ae2a69f9073c4abdba5b83a4a",
+      "bytes": 897
+    },
+    "host/noop.js": {
+      "sha256": "210ffa8883fb46735721dbc89e8bd9006d84a1d000632855c2c63e0a9109a19c",
+      "bytes": 175
+    },
+    "plugin.json": {
+      "sha256": "75391bb49ffb4e08e9a0431d284718679caf1753b5e6c6354688bcc2934366b9",
+      "bytes": 5738
+    },
+    "server/lobby.js": {
+      "sha256": "27abc5e7ee06872923c1c26c4823d612b2b1130a8120d2cc4fac57166b89406f",
+      "bytes": 5698
+    }
+  },
+  "spine": {}
+}

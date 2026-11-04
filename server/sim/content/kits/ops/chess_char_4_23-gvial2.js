@@ -1,9 +1,7 @@
 // server/sim/content/kits/ops/chess_char_4_23-gvial2.js — 百炼嘉维尔 (char_1026_gvial2) kit, tier 4.
 // Conventions of the tier-4 kits: ../shared/tier4.js; kit contract and rules: ../README.md.
 
-import {
-  num, tbb, grid, whileDeployed, toggleBuff, skillActive, isSel, alt, pullToFront, withDefaults,
-} from '../shared/tier4.js';
+import { num, tbb, grid, whileDeployed, toggleBuff, skillActive, isSel, alt, pullToFront, withDefaults } from '../shared/tier4.js';
 
 export default withDefaults({
   // ===== 百炼嘉维尔 (centurion) S3 丛林之魂 — ATK/ASPD/block up, takes 50 % now, the rest as 20 s HP loss; talents; module

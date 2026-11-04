@@ -15,6 +15,29 @@ import { morphSlotPolicy } from '../../../../shared/plugins/rules.js';
 // ---- placement (canPlace mirror) ------------------------------------------------------------------------
 
 /**
+ * The board region a stage is deployed on — mirror of server/match/board.js `fieldRectOf`: a rogue stage's official map
+ * fills its `rogueFrame` (`{ row, col, h, w }`, clamped to the board), every other stage the classic window GEO.FIELD
+ * (rows 9–12, cols 2–10). A rogue stage's `deployTiles.normal` is written over the frame, so its tiles lie outside the
+ * window and a FIELD bound would drop them.
+ * @param {any} stage stages.json record
+ * @returns {{ r0: number, r1: number, c0: number, c1: number }}
+ */
+export function fieldRectOf(stage) {
+  const frame = stage?.rogueFrame;
+  if (!isObj(frame)) return GEO.FIELD;
+  const int = (v) => (Number.isFinite(Number(v)) ? Math.trunc(Number(v)) : null);
+  const row = int(frame.row);
+  const col = int(frame.col);
+  if (row == null || col == null) return GEO.FIELD;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const r0 = clamp(row, 0, GEO.ROWS - 1);
+  const c0 = clamp(col, 0, GEO.COLS - 1);
+  const h = Math.max(1, int(frame.h) ?? 1);
+  const w = Math.max(1, int(frame.w) ?? 1);
+  return { r0, r1: clamp(r0 + h - 1, r0, GEO.ROWS - 1), c0, c1: clamp(c0 + w - 1, c0, GEO.COLS - 1) };
+}
+
+/**
  * Deployable tiles of the own board for a stage record, in board coordinates: the normal field (default), or — `field`
  * 'bossL' / 'bossR' — the player's half of the boss field (always derived from the legend + active devices, like the
  * server's deploy map on that field).
@@ -31,7 +54,8 @@ export function deploySets(stage, field = 'normal', overrides = {}) {
     for (const [k, cls] of deployMap(stage, { ...(isObj(overrides) ? overrides : {}), field })) { ranged.add(k); if (cls === 'melee') melee.add(k); }
     return { melee, ranged };
   }
-  const inField = (r, c) => r >= GEO.FIELD.r0 && r <= GEO.FIELD.r1 && c >= GEO.FIELD.c0 && c <= GEO.FIELD.c1;
+  const rect = fieldRectOf(stage);
+  const inField = (r, c) => r >= rect.r0 && r <= rect.r1 && c >= rect.c0 && c <= rect.c1;
   const dt = stage?.deployTiles?.normal;
   if (isObj(dt) && Array.isArray(dt.melee)) {
     for (const t of dt.melee) if (Array.isArray(t) && inField(t[0], t[1])) { melee.add(tileKey(t[0], t[1])); ranged.add(tileKey(t[0], t[1])); }
@@ -41,9 +65,9 @@ export function deploySets(stage, field = 'normal', overrides = {}) {
   // derive from the tile legend
   const rows = Array.isArray(stage?.rows) ? stage.rows : [];
   const tiles = isObj(stage?.tiles) ? stage.tiles : {};
-  for (let r = GEO.FIELD.r0; r <= GEO.FIELD.r1; r++) {
+  for (let r = rect.r0; r <= rect.r1; r++) {
     const line = typeof rows[r] === 'string' ? rows[r] : '';
-    for (let c = GEO.FIELD.c0; c <= GEO.FIELD.c1; c++) {
+    for (let c = rect.c0; c <= rect.c1; c++) {
       const t = tiles[line[c]];
       if (!isObj(t)) continue;
       const k = tileKey(r, c);
@@ -96,13 +120,14 @@ export function stageOverrides(priv, getEffect = () => null) {
 
 /**
  * Deploy classes of the own board — mirror of server/match/board.js buildDeployMap (legend + active devices +
- * overrides, on deploy field `field`): 'melee' (melee and ranged) or 'ranged' (ranged only) per board 'r,c'.
+ * overrides, on deploy field `field`): 'melee' (melee and ranged) or 'ranged' (ranged only) per board 'r,c'. The
+ * scanned region is `fieldRectOf(stage)` on the normal field (a rogue stage's own frame) and GEO.FIELD on a boss half.
  * @param {any} stage
  * @param {{ deviceOverrides?: Record<string, boolean>, tileOverrides?: Record<string, string>, field?: 'normal'|'bossL'|'bossR' }} [o]
  * @returns {Map<string, 'melee'|'ranged'>}
  */
 export function deployMap(stage, { deviceOverrides = {}, tileOverrides = {}, field = 'normal' } = {}) {
-  const F = GEO.FIELD;
+  const F = (field === 'bossL' || field === 'bossR') ? GEO.FIELD : fieldRectOf(stage);
   const inField = (r, c) => Number.isInteger(r) && Number.isInteger(c) && r >= F.r0 && r <= F.r1 && c >= F.c0 && c <= F.c1;
   const map = new Map();
   const rows = Array.isArray(stage?.rows) ? stage.rows : null;
@@ -213,7 +238,10 @@ export function placementContext({ priv, stage, editable, field = 'normal', getC
   const deploy = field === 'bossL' || field === 'bossR'
     ? deploySets(stage, field, ov)
     : deploySets(effectiveStage(stage, ov));
-  return { priv, pieces, boardAt, handAt, deploy, cap, count, field, editable: !!editable, getChess, getToken, getItem, backups, morphMode: morphMode === 'plus' ? 'plus' : 'official' };
+  // the board region those tiles lie on (server/match/board.js fieldRectOf ⇒ DeployMap.rect): a rogue stage's own frame,
+  // the classic window on the boss field
+  const rect = field === 'bossL' || field === 'bossR' ? GEO.FIELD : fieldRectOf(stage);
+  return { priv, pieces, boardAt, handAt, deploy, cap, count, field, rect, editable: !!editable, getChess, getToken, getItem, backups, morphMode: morphMode === 'plus' ? 'plus' : 'official' };
 }
 
 /**
@@ -355,7 +383,8 @@ export function canPlace(ctx, uid, target) {
   if (target.area === 'board') {
     const { row, col } = target;
     if (!Number.isInteger(row) || !Number.isInteger(col)) return no('BAD_TILE', t('无法部署在该位置'));
-    const inField = row >= GEO.FIELD.r0 && row <= GEO.FIELD.r1 && col >= GEO.FIELD.c0 && col <= GEO.FIELD.c1;
+    const rect = ctx.rect || GEO.FIELD;
+    const inField = row >= rect.r0 && row <= rect.r1 && col >= rect.c0 && col <= rect.c1;
     if (!inField) return no('BAD_TILE', t('无法部署在该位置'));
     const occ = ctx.boardAt.get(tileKey(row, col));
     if (piece.kind === 'item') {
@@ -468,8 +497,9 @@ export function boardTargets(ctx, uid) {
   const legal = [];
   const illegal = [];
   if (!ctx?.pieces?.get(uid)) return { legal, illegal };
-  for (let r = GEO.FIELD.r0; r <= GEO.FIELD.r1; r++) {
-    for (let c = GEO.FIELD.c0; c <= GEO.FIELD.c1; c++) {
+  const rect = ctx.rect || GEO.FIELD;
+  for (let r = rect.r0; r <= rect.r1; r++) {
+    for (let c = rect.c0; c <= rect.c1; c++) {
       const k = tileKey(r, c);
       if (!ctx.deploy.ranged.has(k) && !ctx.boardAt.has(k)) continue; // never-deployable scenery
       (canPlace(ctx, uid, { area: 'board', row: r, col: c }).ok ? legal : illegal).push([r, c]);
@@ -513,7 +543,7 @@ export function dropFailureReason(ctx, uid, tile) {
   if (tile.area === 'board') target = { area: 'board', row: tile.row, col: tile.col };
   else if (tile.area === 'hand') target = { area: 'hand', idx: Number.isInteger(tile.idx) ? tile.idx : tile.col };
   else if (tile.area === 'temp') return ctx.pieces.get(uid).area === 'temp' ? null : t('临时整备区无法放入单位');
-  else if (Number.isInteger(tile.row) && tile.row >= GEO.FIELD.r0 && tile.row <= GEO.FIELD.r1) return t('无法部署在该位置');
+  else if (Number.isInteger(tile.row) && tile.row >= (ctx.rect || GEO.FIELD).r0 && tile.row <= (ctx.rect || GEO.FIELD).r1) return t('无法部署在该位置');
   else return null;
   const res = canPlace(ctx, uid, target);
   if (res.ok || res.code === 'ALREADY') return null;

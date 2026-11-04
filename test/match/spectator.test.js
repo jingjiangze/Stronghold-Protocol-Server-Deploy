@@ -96,8 +96,11 @@ test('during a battle a spectator may watch any field at once; one added mid-bat
   h.sched.advance(500);
   const first = h.lastTo(S, 'b.start');
   assert.deepEqual([first.fieldId, first.watch, first.authoritative], ['n:p_0', true, false], 'auto-observes the first field');
-  // a fighting player may not look elsewhere — a spectator (like an eliminated player) may
-  assert.equal(m.handle('p_0', { t: 'g.watch', fieldId: 'n:p_1' }).error, ERR.WRONG_PHASE);
+  // 业主 2026-10-30 改口径：**战斗中也可以切去看队友的普通战场**（自己的本地那块继续跑，返回时按当前
+  // fieldMeta 重新入场）。原来这里要求 `ERR.WRONG_PHASE`；同批提交 `85f2ceb63e` 改了实现并同步更新了
+  // `watch-bonds.test.js`，唯独漏了本文件这一行 ⇒ shard 1 自那天起一直红。
+  assert.deepEqual(m.handle('p_0', { t: 'g.watch', fieldId: 'n:p_1' }), { ok: true },
+    '战斗中切去看队友的普通战场现在是被允许的');
   assert.deepEqual(m.handle(S, { t: 'g.watch', fieldId: 'n:p_1' }), { ok: true });
   const st = h.lastTo(S, 'b.start');
   assert.deepEqual([st.fieldId, st.watch, st.authoritative], ['n:p_1', true, false]);

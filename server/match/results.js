@@ -11,7 +11,15 @@
 // ranked low → high (the eliminated lost everything). Candidates are ranked by the player's rank for that stat
 // (0 = best), then by closeness to the best value, then title order, then seat; greedy assignment gives each player
 // ≤ 1 title and uses each title ≤ once (config.titleRule [ASSUMED]).
+//
+// 训练局 (入门协议 `mode_training_1`, type LOCAL / difficulty TRAINING) settles a normal row but awards nothing: no
+// titles, no trophies, reward 0 (data/config.json: 「无奖励」). The branch is keyed on gd (`training`), so a normal
+// match's numbers are untouched.
 
+import { TRAINING_DIFFICULTY } from '../../shared/constants.js';
+import { contractPoints, crisisActive } from '../../shared/contracts.js';
+import { crisisScore } from '../../shared/crisisScore.js';
+import { crisisSeason } from '../../shared/crisisSeasons.js';
 import { bondList } from './bondsMeta.js';
 import { boardOrder } from './board.js';
 
@@ -91,7 +99,11 @@ export function buildResult(m, outcome) {
   const gd = m.gd;
   const { victory, hiddenReached, hiddenCleared } = outcome;
   const players = [...m.players.values()].sort((a, b) => a.seat - b.seat);
-  const titles = assignTitles(gd, players, victory);
+  // 训练局（入门协议 mode_training_1: type LOCAL, difficulty TRAINING）：无奖励、无奖杯、无称号 —— 数据里也写着
+  // 「无奖励」。它不能靠 difficultyFactor 缺键 + `|| 1` 自然地清零（那会让它照发普通档的奖励），所以在结算处明确判。
+  // 判定取 difficulty 或 mode.type 任一条：LOCAL 是这条 mode 的类型，TRAINING 是它的难度名。
+  const training = gd.difficulty === TRAINING_DIFFICULTY || gd.mode?.type === 'LOCAL';
+  const titles = training ? new Map() : assignTitles(gd, players.filter(ps => !Number.isInteger(ps.aiTakeoverRound)), victory);
   const teamRounds = victory ? gd.bossRound + (hiddenCleared ? 1 : 0) : Math.max(0, Math.min(m.round, gd.bossRound) - 1);
   const rows = players.map((ps) => {
     const roundsPassed = !ps.alive && ps.eliminatedRound != null ? Math.max(0, ps.eliminatedRound - 1) : teamRounds;
@@ -113,6 +125,10 @@ export function buildResult(m, outcome) {
       seat: ps.seat,
       name: ps.name,
       isBot: ps.isBot,
+      ...(Number.isInteger(ps.aiTakeoverRound) ? { aiTakeoverRound: ps.aiTakeoverRound } : {}),
+      // 观战接管 AI (server/aiTakeover.js, 2026-11-01)：seat 保留 bot 的 playerId，`ownerId` 才是接管它的真人
+      // （与 plugins/mota 的 results.js 对齐 —— core 以前缺这一键，core 路径接管者的战绩会记到 ai_* 席位）
+      ...(typeof ps.aiTakeoverFrom === 'string' ? { ownerId: ps.aiTakeoverFrom } : {}),
       left: ps.left,
       alive: ps.alive,
       victory: cleared,
@@ -129,11 +145,36 @@ export function buildResult(m, outcome) {
         bossDamage: Math.round(ps.stats.bossDamage), activatedLayers: ps.activatedLayers(), lpLost: ps.stats.lpLost,
         perfectRounds: ps.stats.perfectRounds,
       },
-      title: m.test === true ? null : titles.get(ps.playerId) ?? null,
-      trophies: m.test === true ? 0 : trophiesFor(gd, roundsPassed, cleared && hiddenCleared),
-      reward: m.test === true ? 0 : rewardFor(gd, roundsPassed),
+      title: m.test === true || training || Number.isInteger(ps.aiTakeoverRound) ? null : titles.get(ps.playerId) ?? null,
+      trophies: m.test === true || training || Number.isInteger(ps.aiTakeoverRound) ? 0 : trophiesFor(gd, roundsPassed, cleared && hiddenCleared),
+      reward: m.test === true || training || Number.isInteger(ps.aiTakeoverRound) ? 0 : rewardFor(gd, roundsPassed),
     };
   });
+  /*
+   * 危机合约 (shared/contracts.js + shared/crisisScore.js): the selection this match was played with and the score it
+   * counts for. `contractPoints` is the number the 危机合约 screen showed (the difficulty's own base points included).
+   * `crisis` is the settlement score of `crisisScore(row)` — 完成 = 基础分 + 合约分 + 存活胜利分, 坚持(撑过第 8 回合) = 只有
+   * 基础分, 失守(第 8 回合前倒下) = 0 — plus the season those numbers count toward (`crisisSeason`, shared/crisisSeasons.js).
+   *
+   * It is the TEAM's run (won = the team won, rounds = the team's round): this one object settles the whole match, and a
+   * player's own row is scored where that row is recorded (ui/profile.js history carries its own won / rounds). A 训练局
+   * reports the selection like any other match; what it awards stays 0 (the training branch above is untouched).
+   *
+   * Emitted only for a real 危机合约 run: `crisisActive` = contracts present AND the difficulty allows contracts (the same
+   * predicate the board's red fog uses). A no-contract match therefore gets no `crisis`, not even ABYSS's difficulty base
+   * alone — that would invent 危机 points for an ordinary match. Both blocks are omitted while the room had no contracts,
+   * so an ordinary result keeps its keys.
+   */
+  const contractPts = m.contracts?.length ? contractPoints(m.contracts, m.difficulty, players.length) : null;
+  const crisis = crisisActive(m.contracts, m.difficulty)
+    ? {
+        ...crisisScore({
+          won: victory, rounds: teamRounds, teamRounds, contracts: m.contracts, difficulty: m.difficulty,
+          contractPoints: contractPts, contractPlayers: players.length,
+        }),
+        season: crisisSeason(null),
+      }
+    : null;
   const out = {
     t: 'm.result',
     victory,
@@ -145,7 +186,18 @@ export function buildResult(m, outcome) {
     teamLp: m.teamLp != null ? Math.max(0, Math.round(m.teamLp)) : null,
     modeId: m.modeId,
     difficulty: m.difficulty,
+    // 危机合约 (shared/contracts.js): the selection this match was played with and its score — the difficulty's own
+    // base points included (contractPoints: the number the 危机合约 screen showed). A 训练局 reports them like any
+    // other match; what it awards stays 0 (the training branch above is untouched). Omitted while the room had no
+    // contracts, so an ordinary result keeps its keys. `crisis` rides along only for a real 危机合约 run (see above).
+    ...(contractPts != null
+      ? { contracts: [...m.contracts], contractPoints: contractPts, ...(crisis ? { crisis } : {}) }
+      : {}),
     stageId: m.stageId,
+    // a non-default official version's match (DESIGN §35.23): its registry id — the page records and draws the settlement
+    // with that version even when it never saw the room (the lobby's replay after a kick / grace timeout); absent for
+    // the default, so its result stays byte-identical
+    ...(m.version ? { version: m.version } : {}),
     bossId: m.bossId,
     hiddenBossId: m.hiddenBossId,
     seed: m.seed,

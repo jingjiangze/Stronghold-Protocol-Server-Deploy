@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { startServer } from '../../server/index.js';
+import { startServer } from '../../server/boot-main.js';
 import { REMOVE_MAX } from '../../server/studio/index.js';
 import { PLUGIN_ERRORS } from '../../shared/plugins/errors.js';
 import { StubMatch } from '../../server/match/StubMatch.js';

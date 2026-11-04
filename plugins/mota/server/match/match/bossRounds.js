@@ -59,6 +59,8 @@ export class MatchBoss {
         BOSS_HIT_STEPS.forEach((s, i) => { if (share >= s) reached = Math.max(reached, i + 1); });
         if (reached > done) {
           hitSteps.set(pid, reached);
+          // 抢播报 (2026-10-31): 一阈值一条，计数器跟着播报走，结算时随 stats 下发。
+          ps.stats.bossBroadcasts++;
           this.tickerFor('BOSS_HIT', [ps.name], { playerId: pid, param: String(BOSS_HIT_STEPS[reached - 1]) });
         }
       },
@@ -69,7 +71,7 @@ export class MatchBoss {
     const reuse = this.bossWaves && this.bossWaves.length === groups.length && this.bossWaves.every((w, i) => w.players.join() === groups[i].map((p) => p.playerId).join());
     this.fields = groups.map((g, i) => {
       const solo = this.isSolo || g.length === 1;
-      const wave = reuse ? this.bossWaves[i].wave : buildBossWave(this.gd, this.rngWaves, this.factions, this.round, { bossId, solo });
+      const wave = reuse ? this.bossWaves[i].wave : buildBossWave(this.gd, this.rngWaves, this.factions, this.round, { bossId, solo }, this.stageId);
       // one spawn list per field, shared by the field's players' onBattleStart handlers (edit it in place)
       const spawns = wave.spawns.map((s) => ({ ...s, mods: s.mods ? { ...s.mods } : undefined }));
       // bounties with battles left (a multi-round card lasts MULTI_ROUND_BOUNTY_BATTLES) follow their player into the
@@ -91,19 +93,27 @@ export class MatchBoss {
         kind: hidden ? 'hidden' : 'boss',
         modeId: this.modeId,
         round: this.round,
-        stageId: this.stageId,
-        rect: { ...GEO.BOSS_RECT },
+        stageId: wave.stageId || this.stageId,
+        // 模板自带战场（如 sim 的 sui_raid）：有就用它；肉鸽（mode_rogue_*）的 BOSS 回合按普通场打：官方地图嵌在普通窗口，
+        // 上方 boss 半场是禁区
+        rect: { ...(wave.battleRect || (String(this.gd.modeId).startsWith('mode_rogue_') ? GEO.NORMAL_RECT : GEO.BOSS_RECT)) },
         timeLimit: Infinity,
         players: inputs,
         spawns: this._sanitizeSpawns(spawns),
         routes: wave.routes,
         sharedBoss: this.bossPool,
         // the round's enemy effects for the leaders' mid-fight summons (server/sim/content/bosses.js summonMods)
-        flags: { layerGainsEnabled: false, ...this.gd.dp, enemyScale: this.gd.enemyScale(this.round) },
+        flags: { layerGainsEnabled: false, ...this.dpFlags(), enemyScale: this.gd.enemyScale(this.round) },
         fieldId,
         enemyOverrides: wave.overrides,
         waveId: wave.templateId,
         bossId,
+        // 危机合约 (shared/contractEffects.js): the room-wide battle modifiers, exactly as a normal field's
+        // (_normalOpts). Beyond newBattle — which already merges them — these options ARE the client-side field's
+        // BattleSpec (clientCombat._ccField → sim/spec.js), so without them a browser-simulated Final Assault / Hidden
+        // Core ran without the contract's operator stats / healing / bond-layer cap while its normal rounds had them.
+        // Last, so no key above can shadow it (nothing here names those three).
+        ...this._contractOpts(),
       };
       if (this.clientCombat) return { fieldId, kind: hidden ? 'hidden' : 'boss', players: g.map((p) => p.playerId), opts: bopts, battle: null, live: true };
       const battle = this.newBattle(bopts);

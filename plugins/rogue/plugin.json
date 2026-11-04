@@ -1,0 +1,27 @@
+{
+  "manifest": 2,
+  "id": "rogue",
+  "name": "肉鸽模式",
+  "englishName": "Roguelike",
+  "description": "把肉鸽玩法做成独立插件：不期而遇、每回合词缀、紧急作战与每回合换图由本插件提供（对局类叠加在 mota 的引擎上，不替换引擎）。藏品数据仍来自 relics-87。",
+  "version": "0.1.0",
+  "app": ">=0.3.0 <0.5.0",
+  "api": 2,
+  "class": "trusted",
+  "scope": [
+    "room"
+  ],
+  "permissions": [
+    "trusted.server"
+  ],
+  "entry": {
+    "server": "host/noop.js"
+  },
+  "code": {
+    "matchMixin": "server/match/RogueMixin.js"
+  },
+  "needs": [
+    "code.matchMixin",
+    "trusted.server"
+  ]
+}

@@ -139,7 +139,8 @@ export class MatchWatch {
     const own = this.fields.find((x) => x.players.includes(ps.playerId)) || null;
     if (ps.alive) {
       if ((f.kind === 'boss' || f.kind === 'hidden') && own && own !== f) return fail(ERR.BAD_TARGET, 'other group hidden');
-      if (f.kind === 'normal' && own && own !== f && own.live) return fail(ERR.WRONG_PHASE, 'own battle running');
+      // 业主 2026-10-30：自己的普通战斗进行中也允许切去看队友的普通战场（与插件 Match 2026-10-25 的口径一致；
+      // 本地那块继续跑，返回时按当前 fieldMeta 重新入场）。原来这里 return fail(ERR.WRONG_PHASE, 'own battle running')。
     }
     this.watchers.set(ps.playerId, f.fieldId);
     this._watchPrefSet(ps, f, playerId);

@@ -2,10 +2,11 @@
 // Conventions of the tier-6 kits: ../shared/tier6.js; kit contract and rules: ../README.md.
 
 import { absoluteRangeKeys, canTargetEnemy } from '../../../targeting.js';
+import { powi } from '../../../detmath.js';
 import { CHAIN_RADIUS } from '../../../constants.js';
 import { bodyDist, bodyInRange } from '../../../body.js';
 import { num, bv, tbb, live, ANY, enemiesIn, batOf, N4, aura } from '../shared/tier6.js';
-import { powi } from '../../../detmath.js';
+
 
 // ------------------------------------------------------------------------------------------------------------------
 // 异客 chess_char_6_05 (链术师) — S3 辉煌裂片; 机理分析; 孤卒

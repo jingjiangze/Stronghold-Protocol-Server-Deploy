@@ -1,9 +1,7 @@
 // server/sim/content/kits/ops/chess_char_5_01-excu2.js — 圣约送葬人 (char_1032_excu2) kit, tier 5.
 // Conventions of the tier-5 kits: ../shared/tier5.js; kit contract and rules: ../README.md.
 
-import {
-  num, on, talent, batPct, mods, inFaction, isOp, selectedId, lazySkills, skillRange,
-} from '../shared/tier5.js';
+import { num, on, talent, batPct, mods, inFaction, isOp, selectedId, lazySkills, skillRange } from '../shared/tier5.js';
 
 const isLaterano = (u) => inFaction(u, 'lateranoShip', ['laterano']);
 

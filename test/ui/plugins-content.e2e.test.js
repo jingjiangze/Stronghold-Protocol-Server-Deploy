@@ -28,7 +28,7 @@ describe('a room\'s content set in the browser (P1c)', { skip: !ENABLED && 'set 
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-plugins-content-e2e-'));
     writePlugin(path.join(tmp, 'bond-def'), { manifest: 2, name: { zh: '盟约数值', en: 'Bond numbers' }, version: '1.0.0', app: '*', api: 1, class: 'content', scope: ['room'],
       authors: ['e2e'], permissions: ['data.patch'], data: ['p.json'] }, { 'p.json': bondPatch(0.3) });
-    const { startServer } = await import('../../server/index.js');
+    const { startServer } = await import('../../server/boot-main.js');
     const srv = await startServer({ port: 0, host: '127.0.0.1', quiet: process.env.SP_E2E_VERBOSE !== '1', pluginsDir: tmp,
       matchHost: { matchOptions: { timerScale: 0.1, combatSpeed: 16, botRehearsal: 0 } } });
     for (const t0 = Date.now(); Date.now() - t0 < 20000;) {
@@ -42,12 +42,10 @@ describe('a room\'s content set in the browser (P1c)', { skip: !ENABLED && 'set 
     try {
       await host.open();
       await host.enter('凯尔希');
-      await host.click('.mode-card', '同盟模拟');
-      await host.click('.diff-card', '标准模拟');
-      await host.click('.create-box button', '创建同盟');
-      const code = (await host.waitFor((s) => !!s.room?.code, 'room created')).room.code;
+      const { code } = await host.createCoop();
       await guest.open();
       await guest.enter('阿米娅');
+      await guest.click('.mode-card', '同盟模拟');
       await guest.click('.join-row input');
       await guest.page.keyboard.type(code);
       await guest.click('.join-row button', '加入同盟');

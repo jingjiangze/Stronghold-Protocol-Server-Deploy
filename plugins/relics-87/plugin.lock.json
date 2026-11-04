@@ -1,0 +1,365 @@
+{
+  "lock": 1,
+  "id": "relics-87",
+  "version": "3.0.0",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "client/assets/relics/n01.png": {
+      "sha256": "bbbe9fb60281d4f0a9fa443098f86d7a1167b82b412abb526eb8593e096f2783",
+      "bytes": 15280
+    },
+    "client/assets/relics/n02.png": {
+      "sha256": "37839725752a6d11bb60ec2600cf7133e2fdecf26a65c4e63f371edf5b582520",
+      "bytes": 20501
+    },
+    "client/assets/relics/n03.png": {
+      "sha256": "f41860169c50037d15dd5de3829902d74ee7c007d9aeb9462b81d402d03a9ca5",
+      "bytes": 14122
+    },
+    "client/assets/relics/n04.png": {
+      "sha256": "515722f88ac29117f8b435523e7f0b64b7c25fe9a9d1be56d0206ecc9381edd0",
+      "bytes": 56724
+    },
+    "client/assets/relics/n05.png": {
+      "sha256": "75be8b64608743e42a6914543cdac42315bc069976d97b892c2a61d7b6a2e275",
+      "bytes": 67736
+    },
+    "client/assets/relics/n06.png": {
+      "sha256": "47c4a5644767a59832381ecf262d4f31762775952061822eff4cfd15085734e8",
+      "bytes": 56708
+    },
+    "client/assets/relics/n07.png": {
+      "sha256": "9aae2b5b2ae56b58e1008baed57276408adf46738db2de527dd6eb77905c54e6",
+      "bytes": 62326
+    },
+    "client/assets/relics/n08.png": {
+      "sha256": "3faea64a7dc37b9df02ed73b53697dbaa4d2521ad618041334b0c50de79ebbbd",
+      "bytes": 71411
+    },
+    "client/assets/relics/n09.png": {
+      "sha256": "a127a9f262ca9f29f3d3888400d26799badae05af9e10b5303270c9639f7fe74",
+      "bytes": 63135
+    },
+    "client/assets/relics/n10.png": {
+      "sha256": "f47091f9394a49f580a9b68a5b5299e62ecbb310397a89ea62027fead9f2a185",
+      "bytes": 35092
+    },
+    "client/assets/relics/n11.png": {
+      "sha256": "dc897e0e651353e830ba5418eda70c56d23461e3aaf340f6fd03414d256eb810",
+      "bytes": 35274
+    },
+    "client/assets/relics/n12.png": {
+      "sha256": "f11f0b1383d62a3a37d998e52620a10814a39574c5df3948cc09b9d1556ea2b5",
+      "bytes": 47668
+    },
+    "client/assets/relics/n13.png": {
+      "sha256": "803387ecc0636e3920d05b22ecd42d6147fa2eb4899acea8f31bffd323b158da",
+      "bytes": 31098
+    },
+    "client/assets/relics/n14.png": {
+      "sha256": "3f38a4cdf9635a55d05c69f17a1a0144d640df2c24a9c5bad63639f62518dfde",
+      "bytes": 39047
+    },
+    "client/assets/relics/n15.png": {
+      "sha256": "ecba64474fd7927ee9934838264b211c2ee423c8cd73134a1a04763ffb2d4fcd",
+      "bytes": 56072
+    },
+    "client/assets/relics/n16.png": {
+      "sha256": "d98188452aa25749c85ef3ef0448b50928ed9557594371017c54f9d91b8ff94a",
+      "bytes": 53270
+    },
+    "client/assets/relics/n17.png": {
+      "sha256": "77544855e56b6ac521502413c7b8c377cfa4b24e4d1c3311e1aa63a9e3d7d08f",
+      "bytes": 33022
+    },
+    "client/assets/relics/n18.png": {
+      "sha256": "7a16fb6321b00aed1ce7f5ac26682e91f62f519c148f25c53e5a407ebf9f5d9e",
+      "bytes": 54930
+    },
+    "client/assets/relics/n19.png": {
+      "sha256": "bc2574acb149a249dba68801b5560264a5f1c538b19234c6709b87b629aaf9ce",
+      "bytes": 28817
+    },
+    "client/assets/relics/n20.png": {
+      "sha256": "c67f7dd81c113e5e77161c0881a79e566017c8c099ec0f1df219109927ad9630",
+      "bytes": 32684
+    },
+    "client/assets/relics/n21.png": {
+      "sha256": "50b8b8f52d5d6c68793395f8236b3ed29dc07c5d7d4219b4185d20c8c9de6618",
+      "bytes": 39822
+    },
+    "client/assets/relics/n22.png": {
+      "sha256": "e001bba2589812cb9268384f59b77c0bef58fa0eead377e48e98f75423a3413e",
+      "bytes": 34583
+    },
+    "client/assets/relics/n23.png": {
+      "sha256": "9e5a506dfd319c64a6242ab81d9d96c96a17f215c30d76d0ae06568fff63f585",
+      "bytes": 31207
+    },
+    "client/assets/relics/n24.png": {
+      "sha256": "6cbc6f218909f859a5ce2480b2f7204d1eac5fdfcdeb2927fbb9e26e7e9c11f0",
+      "bytes": 55089
+    },
+    "client/assets/relics/n25.png": {
+      "sha256": "028a6930f26c5f43e5600e574ce697f720124f7bbd8763f1ff0bb814af9cbf04",
+      "bytes": 52552
+    },
+    "client/assets/relics/n26.png": {
+      "sha256": "b4dad3d1c63713a7087cd3f0971db1b94734a15f1228506f89a461c770a18443",
+      "bytes": 43902
+    },
+    "client/assets/relics/n27.png": {
+      "sha256": "895bb0a240d32d1b0e951949d658ece51228f047f33c7ba0ee180615be2710f7",
+      "bytes": 45579
+    },
+    "client/assets/relics/n28.png": {
+      "sha256": "bf8b7c36a9ce3275b20b8c93be2738afdf48564082913c6274d0b88824e6c08a",
+      "bytes": 40540
+    },
+    "client/assets/relics/n29.png": {
+      "sha256": "da5d0587426c86e9b28de6d45b39989e5a2596bd492494dd5f467e4b0d96124c",
+      "bytes": 44915
+    },
+    "client/assets/relics/n30.png": {
+      "sha256": "7c8e13c855a7e5773eccd0f0d8801c5b5d46cf3b2fea9fa73606c917be9c5e45",
+      "bytes": 40542
+    },
+    "client/assets/relics/n31.png": {
+      "sha256": "242ba5f6524910828882308c9f8a931cf4fd5981b71102cdd30b1c9b2e5642fc",
+      "bytes": 60235
+    },
+    "client/assets/relics/n32.png": {
+      "sha256": "03fc59d84f17553eae49c9aa5367ba8a4da41ca2f7c9d6dd6e98b67394ec4cdb",
+      "bytes": 45540
+    },
+    "client/assets/relics/n33.png": {
+      "sha256": "ecaf87a4013fff91d5fdeb16ad873607170c10a3b2a7a07ae139798e1ee08050",
+      "bytes": 40056
+    },
+    "client/assets/relics/n34.png": {
+      "sha256": "d2b07fc6dbbb6ef7c86b9badd8b2971724d41ce4cb4eda56cbd46f43fd1c6c86",
+      "bytes": 42062
+    },
+    "client/assets/relics/n35.png": {
+      "sha256": "602bde00d914a1610bf2a882b65a3b2224cf9519ed1bc2d1b53981567610736f",
+      "bytes": 29091
+    },
+    "client/assets/relics/n36.png": {
+      "sha256": "3474033501756e9fe607dfa20b4eb383237b76983eb5f8a3e170a37bb2ed60bf",
+      "bytes": 29205
+    },
+    "client/assets/relics/n37.png": {
+      "sha256": "467e33ca47b24c2cfd76e5e95bbaffe3549960118411bb51aaaf93ba917110c3",
+      "bytes": 35404
+    },
+    "client/assets/relics/n38.png": {
+      "sha256": "fb8fd5e9f0e106d041fe0c6cda1ea9a72d979fb4303c3d6ed1fc215dbfa29a32",
+      "bytes": 40433
+    },
+    "client/assets/relics/n39.png": {
+      "sha256": "67212e66ec56446189df9b91b5207cac180acd5e7025f11eb56422366c97f847",
+      "bytes": 30837
+    },
+    "client/assets/relics/n40.png": {
+      "sha256": "73867e3b67317357e5f1455d7dce4649b5eb4f9eb72fcfe91b4164da7fe1a3d5",
+      "bytes": 35583
+    },
+    "client/assets/relics/n41.png": {
+      "sha256": "b91ba2915494b6138fce3b583e4dd597198bfcd9badc6030785b8b4c4d77de9d",
+      "bytes": 60726
+    },
+    "client/assets/relics/n42.png": {
+      "sha256": "305164286b979e58ab238a5073f0060a16719c61320ac09b9f0f86c071e4ff61",
+      "bytes": 40486
+    },
+    "client/assets/relics/p01.png": {
+      "sha256": "3c7042fd957e42d93b5fa72d438fc06bc0a5fe1a504977eae924f37de051bfde",
+      "bytes": 18619
+    },
+    "client/assets/relics/p02.png": {
+      "sha256": "2400310bf53c0b300ee178fff3af89e64d4298d3acb7bc8968969282e3e3de4a",
+      "bytes": 19897
+    },
+    "client/assets/relics/p03.png": {
+      "sha256": "2110f470775fb02cba1b781431f0414f3d2fca4a096da1b204410b1f0a1ffec5",
+      "bytes": 23633
+    },
+    "client/assets/relics/p04.png": {
+      "sha256": "912232990b8e1dd90410d3552e200f1eed4ab4c964196f008b1c044ec65fda67",
+      "bytes": 21667
+    },
+    "client/assets/relics/p05.png": {
+      "sha256": "5915851d155858cf617be2a7ea774013a9a3ed958e6e23e99a9e9c539033e0ff",
+      "bytes": 32724
+    },
+    "client/assets/relics/p06.png": {
+      "sha256": "1849da13bddb8fcaf3e0b8c34020bb98d8ee6dbf9320654409a1118297509438",
+      "bytes": 48705
+    },
+    "client/assets/relics/p07.png": {
+      "sha256": "f870d34267b575f4ba124e5ba8db179a6d72fe032246cbebc8075f0de89038de",
+      "bytes": 28623
+    },
+    "client/assets/relics/p08.png": {
+      "sha256": "82cc4b68b0a6f66500e4e2fbb3907f18da5a69dcacdb211754f206ae020d9f41",
+      "bytes": 41763
+    },
+    "client/assets/relics/p09.png": {
+      "sha256": "807445d0dd3f71feca349e8c138eb5c3665f921d31c9c9135368c35f72625d30",
+      "bytes": 33770
+    },
+    "client/assets/relics/p10.png": {
+      "sha256": "57d688755eb3f825ab94594cd4dbeb33f3907a177b09cc778dc984db32602516",
+      "bytes": 31112
+    },
+    "client/assets/relics/p11.png": {
+      "sha256": "743f9e344cb6f219559ebf3e118a6ff37eccd9e5e3509b8d5446a72ce2e65e82",
+      "bytes": 42651
+    },
+    "client/assets/relics/p12.png": {
+      "sha256": "0d8f25fc65ad9289adf6c4ff2ef0fb5720b262516210f3c7783abf1e2b11f41b",
+      "bytes": 34227
+    },
+    "client/assets/relics/p13.png": {
+      "sha256": "e396a8ee23c70f457320359849f3aa0447679cc2bbd1ea2d582e46913871aab8",
+      "bytes": 46929
+    },
+    "client/assets/relics/p14.png": {
+      "sha256": "bc8af7c169e245bbf38ac195a0742b31a2591d47c081145ad222b3ef2f38851e",
+      "bytes": 31905
+    },
+    "client/assets/relics/p15.png": {
+      "sha256": "764288955e62766257dbbe06e8abe48edf0b1a8050c82dc91ad577dc23cced95",
+      "bytes": 41419
+    },
+    "client/assets/relics/p16.png": {
+      "sha256": "562b39dc478ae87b751945450ca4e7cb7d414294714bca1a090143e101892e9c",
+      "bytes": 51820
+    },
+    "client/assets/relics/p17.png": {
+      "sha256": "8557e9c6b2506039849dadfe2c219a32d80130676a25f73db58d3223e3293047",
+      "bytes": 40720
+    },
+    "client/assets/relics/p18.png": {
+      "sha256": "104f627492c4d35d30b419cfe38ae11354f8c8245c3b18881340a633338bdcda",
+      "bytes": 23718
+    },
+    "client/assets/relics/p19.png": {
+      "sha256": "7281f00716a554d5018b6ccbbfe289beab8d4067d845c783881bf7030dfc10f8",
+      "bytes": 35285
+    },
+    "client/assets/relics/p20.png": {
+      "sha256": "3cc91d6a804e59e1a4e6529a1d3906b7d33a3c1b49ace95d843524165fccb872",
+      "bytes": 50987
+    },
+    "client/assets/relics/p21.png": {
+      "sha256": "56f1ffc5272831f4d939dded538e8e1d76e74b71c2ac8ee09ba223adf1dade70",
+      "bytes": 31080
+    },
+    "client/assets/relics/p22.png": {
+      "sha256": "9a5c83ccc1df20ea043d01d0fb72a38a951205e4d5fda44dbf2df5372413a9f2",
+      "bytes": 30720
+    },
+    "client/assets/relics/p23.png": {
+      "sha256": "0fb314efcccca44b5483ddbd93b86b91d9d112f9f4916f4b0fcf1e33ac625478",
+      "bytes": 40147
+    },
+    "client/assets/relics/p24.png": {
+      "sha256": "3f1b2b5318ca74b34a9b9618c734a13e6f855a53a7094246ab147c6c67ce9305",
+      "bytes": 32373
+    },
+    "client/assets/relics/p25.png": {
+      "sha256": "b3cc378b767014b5e89ce15c98dfc808395af0e07c26574d1c6cf1c1bc19f5b5",
+      "bytes": 45037
+    },
+    "client/assets/relics/p26.png": {
+      "sha256": "c60085d4395c0f8acfd4a663f765f9608fa6096286ff04fcf38b48b92e7eb032",
+      "bytes": 44838
+    },
+    "client/assets/relics/p27.png": {
+      "sha256": "bb249e24e5279a96a52770f6a9989dee42260ee4c381f6e42fb8b9ad46efa07f",
+      "bytes": 45524
+    },
+    "client/assets/relics/p28.png": {
+      "sha256": "1068043f486de7082661b74129592758a6b029c20678ee495fe5f71c723a9174",
+      "bytes": 32091
+    },
+    "client/assets/relics/p29.png": {
+      "sha256": "514215845a99c2f8d45eb4d9097ea2c753cea6e96b6f9a40a7441f37fe9bc5e4",
+      "bytes": 39151
+    },
+    "client/assets/relics/p30.png": {
+      "sha256": "e62527c16fd421ebf65d575588104449cdd502845f237c79695ccef77291866b",
+      "bytes": 32538
+    },
+    "client/assets/relics/p31.png": {
+      "sha256": "c2c15edc45ee530028d5491a1e0e73e68b765416a06f1278de48150b30f8f03e",
+      "bytes": 40860
+    },
+    "client/assets/relics/p32.png": {
+      "sha256": "ef85211e09b759c0cee6fb21e5e83b1cfde1783e5e6441f7da145faf8f621926",
+      "bytes": 41154
+    },
+    "client/assets/relics/p33.png": {
+      "sha256": "83b2aaa0b3d4d5c0a680ba9810519398f88d9ca9694da46a6df0c5a83a730681",
+      "bytes": 34124
+    },
+    "client/assets/relics/p34.png": {
+      "sha256": "a1ea775e16d8986849e5dc34326d293010aa77176aeb03163500d1408acc8f81",
+      "bytes": 36775
+    },
+    "client/assets/relics/p35.png": {
+      "sha256": "4648d6e925192fb6897663b37ce36de3fbc06a1d6c8b7e7d71e9698e394fdf6b",
+      "bytes": 53666
+    },
+    "client/assets/relics/p36.png": {
+      "sha256": "1c8212e73ceacf0cdc69b110d845477e2a0a3ad4f6b0430d3ea98ccec8a87c84",
+      "bytes": 34918
+    },
+    "client/assets/relics/p37.png": {
+      "sha256": "d5e6e8f0d82dafd4eda4d3c6e8e52436dfe542e44d9a1a5ee37865ad7cd74b78",
+      "bytes": 20432
+    },
+    "client/assets/relics/p38.png": {
+      "sha256": "d2a9c7fde0d931cbd826aa5be2987ade73eefce7acf49726101860874eb33bb0",
+      "bytes": 38665
+    },
+    "client/assets/relics/p39.png": {
+      "sha256": "f49c14e34f9dbcfd1978dd35aef88a2d5fc8af7ae56c392d1bb5dc2d93d0318e",
+      "bytes": 41246
+    },
+    "client/assets/relics/p40.png": {
+      "sha256": "9ca6b30073b06d8982b369a466dba4a95e21cce496c13ba231cc9e7b9bd8a6ce",
+      "bytes": 31983
+    },
+    "client/assets/relics/p41.png": {
+      "sha256": "b4ea284ed5ac0764ba001b384c1c5c4e3acc9c5f28eef5e94f80c0ccbaf94ef7",
+      "bytes": 36103
+    },
+    "client/assets/relics/p42.png": {
+      "sha256": "d0fc13203562413ce30ac2dd4160a43d0e4be7eebedb336542ad3bc6a7e67148",
+      "bytes": 33598
+    },
+    "client/assets/relics/p43.png": {
+      "sha256": "cea6136f9560c4ff868215f87186ee7dbf7e5c52775fd7427021125c98c36c25",
+      "bytes": 41891
+    },
+    "client/assets/relics/p44.png": {
+      "sha256": "21f2bd8951531208b39d8809899ff295347a5ce4661aea57c8311b72df39327d",
+      "bytes": 38284
+    },
+    "client/assets/relics/p45.png": {
+      "sha256": "d37c788b6098143540802a2f28fa686631f50399300d21ba2513245134f3e424",
+      "bytes": 22595
+    },
+    "data/relics.json": {
+      "sha256": "7973520185e5904988373f87825d93f059c97d1b844fee5047d7bd0fc20167ac",
+      "bytes": 42513
+    },
+    "plugin.json": {
+      "sha256": "037205855c0eb8b61442c465dcab71c3f4a601f42487d6e12ef49fb8815d4852",
+      "bytes": 3144
+    }
+  },
+  "spine": {}
+}

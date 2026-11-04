@@ -4,7 +4,7 @@ import http from 'node:http';
 import { scriptFixture } from '../helpers/scriptFixtures.js';
 import { createTrustedRuntime } from '../../server/plugins/trustedRuntime.js';
 import { createRequestHandler } from '../../server/http/routes.js';
-import { startServer } from '../../server/index.js';
+import { startServer } from '../../server/boot-main.js';
 
 const quiet = {info(){},warn(){},error(){}};
 const invalid = ['/healthz','/','/x/service2/ok','/x/service/../healthz','/x/service/%2e%2e/healthz',

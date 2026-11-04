@@ -6,10 +6,7 @@
 // plugin cannot re-enter on its own output (SIM.md §5).
 
 import { TICK } from '../../constants.js';
-import {
-  num, talentBb, traitBb, batMod, enemiesInGrid, byEnemyAttack, giveSp, freeTileAround,
-  summonTileFree, cheb,
-} from '../kits/shared/tier1.js';
+import { num, talentBb, traitBb, batMod, enemiesInGrid, byEnemyAttack, giveSp, freeTileAround, summonTileFree, cheb } from '../kits/shared/tier1.js';
 import { enemyStealthed } from '../../targeting.js';
 import { charge, trackTimer, DEFAULT_BUDGET } from './budget.js';
 import { clampDsl } from './bounds.js';

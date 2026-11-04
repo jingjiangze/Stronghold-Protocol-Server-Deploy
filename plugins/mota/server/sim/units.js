@@ -1,7 +1,8 @@
+import { relicHitCount } from './hitCountDurability.js';
 // server/sim/units.js — Unit model (operators, tokens, enemies, devices) and stat aggregation (DESIGN §5.2).
 //
 // Aggregation (recomputed lazily whenever buffs change — `unit.markDirty()`):
-//   ATK/DEF/maxHp = (base + Σflat) × (1 + Σpct) × Πmul        (Πmul includes the unit's 练度 `cultMul`, 0.2.2)
+//   ATK/DEF/maxHp = (base + Σflat) × (1 + Σpct) × Πmul
 //   res           = clamp((base + Σflat) × Πmul, 0, 100)
 //   aspd          = clamp(base + Σaspd, 20, 600)          (base is 100 for almost everyone; floor 20 = PRTS 数值范围)
 //   interval      = bat × (1 + ΣbatPct) × 100 / aspd      (ΣbatPct floored at −0.9)
@@ -16,10 +17,10 @@ import { DIR_VEC, normDir } from './dir.js';
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const EMPTY = Object.freeze({});
-/** No 练度 multiplier (a unit without one: enemies, summons, stand-ins, a raw spec unit). */
-const NO_MUL = Object.freeze({ atk: 1, def: 1, hp: 1 });
 /** Aggregates can overflow (huge stacked *Mul mods → Infinity) — fall back to `d` so no stat is ever non-finite. */
 const fin = (v, d) => (Number.isFinite(v) ? v : d);
+/** 没有练度设置时的乘子(×1):敌人、召唤物与旧存档都走它,于是行为完全不变。 */
+const NO_MUL = Object.freeze({ atk: 1, def: 1, hp: 1 });
 
 export class Unit {
   /**
@@ -86,16 +87,13 @@ export class Unit {
     this.deploySeq = 0;         // deployment counter; also the identity of one deployment (content: `seq === u.deploySeq`)
     this.aggroSeq = 0;          // 仇恨 order: usually deploySeq; initial summons and prepared map characters are exceptions
     this.spawnSeq = 0;
-    this.elem = { burn: 0, neural: 0, necrosis: 0, apoptosis: 0, erosion: 0 };
+    this.elem = { burn: 0, neural: 0, necrosis: 0, apoptosis: 0, erosion: 0, frenzy:0 };
     this.burstPending = null;   // { [element]: true } while that element's burst resolves (damage.js burstLocked)
     this.tags = new Set(init.tags || []);
     this.mem = {};              // free scratch space for content (per unit)
     // a countdown summon's life on the field ({ from, until } battle times; content/tokens.js startCountdown, cleared by
     // every deployment): its bar shows the time left (snapshot.js unitTuple), its HP never moves (无敌 + 禁疗)
     this.countdown = null;
-    // a unit with a negative-HP pool (斩业星熊's 我执, kits/ops/op-hsgma2.js) sets this to a function returning the share of the
-    // pool's cap it holds (0–1): b.snap's `neg` list (snapshot.js negView) draws it as the red bar; display only
-    this.negFill = null;
     // knocked out, the unit lies — and redeploys — on its home tile instead of where it fell (Battle._layBody) while content
     // holds this: 乌尔比安 moved by his S3 (the owner's decision of 2026-10-07, a deviation from PRTS's "where it fell");
     // every deployment clears it (battle/deploy.js _deploy)
@@ -108,12 +106,20 @@ export class Unit {
     this.anim = 0;
     this.persist = { redeployMul: 1, freeRedeploys: 0 };
     this.isBoss = false;
-    // the HUD capsule's own flag (battle/spawns.js: set on the enemies the field itself scheduled, DESIGN §14); declared
-    // here so every unit keeps the same object shape (the hot loops' property reads)
+    /*
+     * HUD 进度胶囊自己的标记(battle/spawns.js 在"本关自己排的"敌人上置 true)。
+     * 与 `counted`(LP、破坏完美作战、击杀数用的官方口径)分开:运行中分裂的孩子 / 召唤物 / 部位 /
+     * 变身副本进 `counted` 但不进 `inTotal`,所以它们不会动胶囊的分子。
+     * 放在构造函数里是为了让每个单位形状一致(热循环会读这个属性)。
+     * ⚠ 上游 0.2.4 就有、fork 移植时漏了;官方测试基架的 checkInvariants 会校验。
+     */
     this.inTotal = false;
     this.bossPool = null;
-    // 练度 (自持有, 0.2.2; battle/players.js): the owned operator's tier (0–3, effects.json aceffect_char_1…4) and its
-    // char_attribute_mul — ATK / DEF / max HP, a multiplier of its own (never summed with the 直接乘算 percentages)
+    /*
+     * 练度 (自持有, 0.2.2; battle/players.js 装上): the owned operator's tier (0–3, effects.json aceffect_char_1…4) and
+     * its char_attribute_mul — ATK / DEF / max HP, a multiplier of its own (never summed with the 直接乘算 percentages).
+     * 精英1 = ×1.05 攻防,精英2 = ×1.1 攻 / ×1.05 防血,精英0 = ×1。`null` = 没有练度设置(敌人、召唤物、旧存档)。
+     */
     this.cultivate = null;
     this.cultMul = null;
   }
@@ -142,15 +148,17 @@ export class Unit {
     const a = (k) => add[k] ?? 0;
     const m = (k) => mul[k] ?? 1;
     const b = this.base;
+    // 练度(自持有,0.2.2):Πmul 里独立的一项,不与 直接乘算 的百分比相加
     const cm = this.cultMul || NO_MUL;
+    const debt = this.debtPenalty || 1;
     const bHp = fin(b.maxHp, 1) > 0 ? fin(b.maxHp, 1) : 1;
-    const maxHp = Math.max(1, fin((bHp + a('hpFlat')) * Math.max(0, 1 + a('hpPct')) * m('hpMul') * cm.hp, bHp));
+    const maxHp = relicHitCount(this.mem.fixedHitCount>0?this.mem.fixedHitCount:Math.max(1, fin((bHp + a('hpFlat')) * Math.max(0, 1 + a('hpPct')) * m('hpMul') * cm.hp * debt, bHp)), this.mem.hitCountBase);
     // PRTS 游戏数据基础 属性基本公式 A_f = F_t[(A + D_p)(1 + D_t) + F_p]: `atkFinal` is the 最终加算 (FINAL_ADDITION) —
     // added after the percentages, inside the Πmul (阿戈尔's devoured base ATK, DESIGN §24.7)
-    const atk = Math.max(0, fin(((b.atk + a('atkFlat')) * Math.max(0, 1 + a('atkPct')) + a('atkFinal')) * m('atkMul') * cm.atk, fin(b.atk, 0)));
-    const def = Math.max(0, fin((b.def + a('defFlat')) * Math.max(0, 1 + a('defPct')) * m('defMul') * cm.def, fin(b.def, 0)));
-    const res = clamp(fin((b.res + a('resFlat')) * m('resMul'), fin(b.res, 0)), 0, 100);
-    const aspd = clamp(fin(b.aspd + a('aspd'), 100), ASPD_MIN, ASPD_MAX);
+    const atk = Math.max(0, fin(((b.atk + a('atkFlat')) * Math.max(0, 1 + a('atkPct')) + a('atkFinal')) * m('atkMul') * cm.atk * debt, fin(b.atk, 0)));
+    const def = Math.max(0, fin((b.def + a('defFlat')) * Math.max(0, 1 + a('defPct')) * m('defMul') * cm.def * debt, fin(b.def, 0)));
+    const res = clamp(fin((b.res + a('resFlat')) * m('resMul') * debt, fin(b.res, 0)), 0, 100);
+    const aspd = clamp(fin((b.aspd + a('aspd')) * debt, 100), ASPD_MIN, ASPD_MAX);
     const bBat = fin(b.bat, 1) > 0 ? fin(b.bat, 1) : 1;
     const bat = fin(bBat * Math.max(0.1, 1 + a('batPct')), bBat);
     const s = {
@@ -186,8 +194,8 @@ export class Unit {
       atkScaleMul: m('atkScaleMul'),
       spRecovery: Math.max(0, fin((b.spRecovery + a('spRecoveryFlat')) * m('spRecoveryMul'), 0)),
       spCostFlat: a('spCostFlat'),
-      redeployMul: m('redeployMul'),
-      hpRegen: fin(b.hpRecoveryPerSec + a('hpRegen') + a('hpRegenRatio') * maxHp, 0),
+      redeployMul: m('redeployMul') * (this.contractRedeployMul||1),
+      hpRegen: this.side==='enemy'&&(this.mem.fixedHitCount>0||flags.hitCount||flags.hitCountArts)?Math.min(0,fin(b.hpRecoveryPerSec + a('hpRegen') + a('hpRegenRatio') * maxHp,0)):fin(b.hpRecoveryPerSec + a('hpRegen') + a('hpRegenRatio') * maxHp, 0),
       shield,
       flags: flags || EMPTY,
     };

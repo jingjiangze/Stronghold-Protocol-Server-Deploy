@@ -1,10 +1,7 @@
 // server/sim/content/kits/ops/chess_char_3_18-vulpis.js — 忍冬 (char_4026_vulpis) kit, tier 3.
 // Conventions of the tier-3 kits: ../shared/tier3.js; kit contract and rules: ../README.md.
 
-import {
-  num, defOf, talentBb, traitBb, altSkills, instantKindOf, alive, gridKeys, fx, copyGrid, enemiesOn, whileTrue,
-  isLeader,
-} from '../shared/tier3.js';
+import { num, defOf, talentBb, traitBb, altSkills, instantKindOf, alive, gridKeys, fx, copyGrid, enemiesOn, whileTrue, isLeader } from '../shared/tier3.js';
 
 /** 忍冬 S3's 迷彩 (until her next cast): its own buff key, never merged with another unit status. */
 const CAMOU_KEY = 'vulpis:camou';

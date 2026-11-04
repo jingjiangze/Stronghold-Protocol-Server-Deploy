@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { startServer } from '../server/index.js';
+import { startServer } from '../server/boot-main.js';
 import { createTrafficCounter } from '../server/http/traffic.js';
 import { TestClient } from './helpers/wsClient.js';
 

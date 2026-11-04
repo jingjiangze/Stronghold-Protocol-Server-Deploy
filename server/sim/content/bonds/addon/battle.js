@@ -77,10 +77,7 @@ import { bodyKeys, bodyInRange } from '../../../body.js';
 import { applyRedirectCut, isHpLoss, redirectShare } from '../../../damage.js';
 import { BOSS_ROW_OFFSET } from '../../../constants.js';
 import { GEO } from '../../../../../shared/constants.js';
-import {
-  num, bondRecord, buffParams, bondTier, bondLayers, isMember, isElite, isGroundOp, onField, playerOps, passiveBuff,
-  fxOn, N4, N8, directMods, COLS,
-} from '../../support/index.js';
+import { num, bondRecord, buffParams, bondTier, bondLayers, isMember, isElite, isGroundOp, onField, playerOps, passiveBuff, fxOn, N4, N8, directMods, COLS } from '../../support/index.js';
 
 export const ID = Object.freeze({
   preci: 'preciShip', swift: 'swiftShip', skillful: 'skillfulShip', arcane: 'arcaneShip', stead: 'steadShip',
@@ -490,7 +487,7 @@ export function install(battle) {
 
   // live layers
   if (states.some((st) => Object.keys(st.tiers).some((id) => LAYERED.has(id)))) {
-    battle.on('layerGain', (c) => {
+    const queueRecompute = (c) => {
       const st = byPid[c.playerId];
       if (!st || !st.tiers[c.bondId] || !LAYERED.has(c.bondId) || st.pending) return;
       st.pending = true;
@@ -499,7 +496,9 @@ export function install(battle) {
         applyPassives(battle, st);
         if (st.tiers[ID.skillful]) updateAura(battle, st);
       });
-    });
+    };
+    battle.on('layerGain', queueRecompute);
+    battle.on('layerLoss', queueRecompute);
   }
 
   // 灵巧 aura (deploy / death immediately, relocations through a cheap poll)

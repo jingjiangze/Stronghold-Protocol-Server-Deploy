@@ -58,6 +58,46 @@ export function mergeLoadoutEntries(current, incoming) {
 }
 
 export class MatchPlatform {
+  /**
+   * 观战接管 AI (server/aiTakeover.js) — worker 侧对端，读一半：一个插件对局跑在 match host 里时，lobby 手里只有
+   * MatchProxy（没有 players/phase/round），投票流程要的状态只能从这里问。JSON 安全，随 `call` 的 reply 回去。
+   */
+  takeoverSeatState() {
+    return {
+      phase: this.phase,
+      round: this.round,
+      ended: !!this.ended,
+      disposed: !!this.disposed,
+      bots: this.order.filter((ps) => ps.isBot && !ps.left && ps.alive)
+        .map((ps) => ({ playerId: ps.playerId, name: ps.name, seat: ps.seat })),
+    };
+  }
+
+  /**
+   * 观战接管 AI — worker 侧对端，写一半：把一个 bot 席位交给一名真人。只动 Match（session/registry 的改绑在
+   * lobby 侧做，server/aiTakeover.js transferAiSeat）。
+   * @param {string} botId @param {string} applicantId @param {string} name
+   * @returns {{ ok: true } | { error: string }}
+   */
+  takeoverSeat(botId, applicantId, name) {
+    if (this.ended || this.disposed) return { error: 'ended' };
+    if (this.phase !== PHASE.PREP) return { error: 'phase' };
+    const ps = this.players.get(botId);
+    if (!ps || !ps.isBot || ps.left || !ps.alive) return { error: 'unavailable' };
+    this.cancelSeatRehearsal(botId);
+    ps._botPrepToken = (ps._botPrepToken || 0) + 1;
+    Object.assign(ps, {
+      isBot: false, autoplay: false, connected: true, ready: false,
+      name: typeof name === 'string' && name ? name : ps.name,
+    });
+    this.loneHuman = this.order.filter((p) => !p.isBot && !p.left).length === 1;
+    ps.aiTakeoverRound = this.round;
+    ps.aiTakeoverFrom = applicantId;
+    this.markPublic();
+    ps.dirty();
+    return { ok: true };
+  }
+
   start() {
     if (this.disposed || this.ended || this.phase !== PHASE.LOBBY) return;
     this.guard(() => {
@@ -184,6 +224,10 @@ export class MatchPlatform {
     if (!ps || ps.isBot || this.disposed) return;
     this.guard(() => {
       ps.connected = false;
+      // 业主 2026-10-30「掉线后托管」：临时断线的人由 AI 接管这一席，别让整桌等他到超时。
+      // 必须同时 kickBot —— 只置标志不会驱动任何行为（bot 的入口是 botControlled，见 player/basics.js）。
+      // onReconnect 里成对地清掉（否则玩家回来仍被 AI 接管、和手动操作互相打架）。
+      if (ps.alive && !ps.left) { ps.autoplay = true; this.kickBot(ps); }
       // A disconnected human's silence is never consent to a new setup.
       this.cancelSetupVote();
       // a paused solo battle resumes (the server takes the field over; nobody is left to resume it)
@@ -201,8 +245,10 @@ export class MatchPlatform {
     this.guard(() => {
       const was = ps.connected;
       ps.connected = true;
+      // 掉线托管是临时的：人回来了就交还控制权（与 onDisconnect 的置位成对，缺这一半会「回来还被 AI 接管」）
+      if (ps.autoplay) { ps.autoplay = false; this.markPublic(); }
       this._resync(ps);
-      if (!was) this.markPublic();
+      if (!was) { this.markPublic(); this.markMembershipChanged(); }
     });
   }
 
@@ -224,35 +270,6 @@ export class MatchPlatform {
       this.markPrivate(ps);
     });
     return res;
-  }
-
-  onDisconnect(playerId) {
-    const ps = this.players.get(playerId);
-    if (!ps || ps.isBot || this.disposed) return;
-    this.guard(() => {
-      ps.connected = false;
-      // A disconnected human's silence is never consent to a new setup.
-      this.cancelSetupVote();
-      // a paused solo battle resumes (the server takes the field over; nobody is left to resume it)
-      this._resume();
-      if (this.clientCombat) this._authorityLost(ps, 'disconnect');
-// a rehearsal this host was running falls back to the server (DESIGN §14; a no-op without tasks)
-      this._rehearsalHostChanged();
-      this.markPublic();
-    });
-  }
-
-  onReconnect(playerId) {
-    const ps = this.players.get(playerId);
-    if (!ps || ps.isBot || ps.left || this.disposed) return;
-    this.guard(() => {
-      const was = ps.connected;
-      ps.connected = true;
-      this._resync(ps);
-      // a returning member's own state is freshly full, but the ROOM's baseline has to stay one every client shares:
-      // the next frame is full for everybody, which costs one frame per reconnect and no per-client bookkeeping
-      if (!was) this.markMembershipChanged();
-    });
   }
 
   /**

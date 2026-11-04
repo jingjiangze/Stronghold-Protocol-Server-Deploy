@@ -548,12 +548,6 @@ function crossTiles(a, b, fn) {
   return true;
 }
 
-/** Tiles [[r,c]…] whose interior the segment between the centres of tiles a = [r,c] and b crosses (crossTiles). */
-export function segmentTiles(a, b) {
-  const out = [];
-  crossTiles(a[0] * COLS + a[1], b[0] * COLS + b[1], (r, c) => { out.push([r, c]); });
-  return out;
-}
 
 /**
  * Whether a straight move from (x, y) to the centre of tile p = {x: col, y: row} only crosses ground-walkable,
@@ -577,4 +571,10 @@ export function straightClear(g, x, y, p) {
     if (!clear(r, c)) return false;
   }
   return true;
+}
+
+export function segmentTiles(a, b) {
+  const out = [];
+  crossTiles(a[0] * COLS + a[1], b[0] * COLS + b[1], (r, c) => { out.push([r, c]); });
+  return out;
 }

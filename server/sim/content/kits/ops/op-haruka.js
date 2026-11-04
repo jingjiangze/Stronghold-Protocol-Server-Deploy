@@ -48,9 +48,10 @@
 //   first after 0.5 s, then every `interval` s; 持续伤害, not dodgeable; 无来源 at her last ATK once she left).
 
 import { num, up, traitBb, talentBb, skillRec, batMod, giveSp, protectMods } from '../shared/tier1.js';
+import { hypot } from '../../../detmath.js';
 import { absoluteRangeKeys } from '../../../targeting.js';
 import { COLS } from '../../../constants.js';
-import { hypot } from '../../../detmath.js';
+
 
 const S1 = 'skchr_haruka_1';
 const S2 = 'skchr_haruka_2';

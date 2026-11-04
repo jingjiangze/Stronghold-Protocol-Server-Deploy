@@ -48,13 +48,14 @@ function assertStatsFinite(stats, label, keys) {
   for (const k of keys) assert.ok(isFiniteNum(stats[k]), `${label}: stats.${k} = ${stats[k]}`);
 }
 
-test('all data files load and are non-empty; total size < 6 MB', () => {
+test('all data files load and are non-empty; total size < 8 MB', () => {
   let total = 0;
   for (const f of FILES) {
     total += statSync(join(DATA, `${f}.json`)).size;
     assert.ok(Object.keys(D[f]).length > 0, `${f} is empty`);
   }
-  assert.ok(total < 6 * 1024 * 1024, `total ${total} bytes`);
+  // 2026-11-03：肉鸽 78 张官方地图（stages + waves）让总量从 ~5.4MB 涨到 ~6.35MB，预算提到 8MB
+  assert.ok(total < 8 * 1024 * 1024, `total ${total} bytes`);
 });
 
 test('numbers: every stats/bb/enemyScale object holds only finite numbers (no null/NaN leaks)', () => {
@@ -207,7 +208,8 @@ test('enemies: stats are finite and motion/dmgType valid', () => {
 });
 
 test('waves: every template resolves spawns, routes and enemies', () => {
-  assert.equal(Object.keys(waves).length, 38);
+  // 38 条官方 autochess 模板 + 每张肉鸽地图一条 `rogue_<stageId>`（2026-11-03）
+  assert.ok(Object.keys(waves).length >= 38, `waves ${Object.keys(waves).length}`);
   for (const w of Object.values(waves)) {
     assert.ok(w.routes.length > 0, `${w.id}: routes`);
     for (const r of [...w.routes, ...w.extraRoutes]) {
@@ -283,6 +285,14 @@ test('config: modes, rounds and templates', () => {
 test('stages: 19 rows × 21 cols with known glyphs; paths are contiguous', () => {
   const glyphs = new Set('#XrRfphbaASEIOmgdi'.split(''));
   for (const s of Object.values(stages)) {
+    if (String(s.id).startsWith('rogue_')) {
+      // 2026-11-03：肉鸽官方地图是 5×12 / 7×9 这类小图 —— 行数/列数按它自己的 size 校
+      assert.deepEqual([s.rows.length, s.rows[0].length], s.size, `${s.id}: size`);
+      // 肉鸽地形字符是转换器按 tileKey 现编的（a..z/A..Z/0..9），只要求「每个字符都在自己的 legend 里」
+      for (const row of s.rows) for (const ch of row) assert.ok(s.tiles[ch], `${s.id}: glyph ${ch} 不在 legend`);
+      assert.ok(s.deployTiles.normal.melee.length + s.deployTiles.normal.rangedOnly.length > 0, `${s.id}: deploy tiles`);
+      continue;
+    }
     assert.equal(s.rows.length, 19, `${s.id}: rows`);
     for (const row of s.rows) {
       assert.equal(row.length, 21, `${s.id}: cols`);
@@ -302,7 +312,9 @@ test('stages: 19 rows × 21 cols with known glyphs; paths are contiguous', () =>
     }
     assert.ok(s.groundPaths['9,10->9,2'], `${s.id}: lower gate path`);
   }
-  assert.equal(Object.values(stages).filter((s) => s.active).length, 8);
+  // autochess 的正式战场仍是 8 张；肉鸽地图单独计数（2026-11-03 接入）
+  assert.equal(Object.values(stages).filter((s) => s.active && !String(s.id).startsWith('rogue_')).length, 8);
+  assert.ok(Object.values(stages).filter((s) => s.active && String(s.id).startsWith('rogue_')).length >= 70, '肉鸽地图应有成批接入');
 });
 
 test('bosses, factions, tokens and choices resolve', () => {
@@ -669,7 +681,9 @@ test('stages: player-facing names are clean Chinese "战场#NN…" labels (no re
   // Regression: research 05 named act1 m01 '战场#01 (upper half #01)'; the English note reached the
   // briefing BATTLEFIELD row. Names come from research only, so the build must strip such notes.
   for (const s of Object.values(stages)) {
-    if (s.kind === 'unite') continue; // the escaped levels' two maps: the remake's own label, checked in the test below
+    if (s.kind === 'unite') continue;
+    // 肉鸽地图的名字来自官方 topic 表（如「与虫为伴」），不是「战场#NN」
+    if (String(s.id).startsWith('rogue_')) { assert.ok(/\S/.test(s.name), `${s.id}: name`); continue; } // the escaped levels' two maps: the remake's own label, checked in the test below
     assert.match(s.name, /^战场#\d{2}(?:\((?:上半|下半)\))?(?: \S.*)?$/, `${s.id}: name ${JSON.stringify(s.name)}`);
     assert.doesNotMatch(s.name, /[A-Za-z]/, `${s.id}: Latin text in name ${JSON.stringify(s.name)}`);
     assert.equal(s.name, s.name.trim().replace(/\s+/g, ' '), `${s.id}: stray whitespace in name`);
@@ -723,8 +737,10 @@ test('official spot checks (hard-coded values from the zh_CN client data)', () =
   assert.deepEqual(es('enemy_1422_lrsldr'), [4700, 300, 100, 40]);           // 萨卡兹枯朽前锋 (template N)
   assert.deepEqual(es('enemy_1427_lrnazg'), [15000, 900, 500, 50]);          // “灵幛” (template E)
   assert.deepEqual(es('enemy_1045_hammer'), [10000, 1000, 1000, 0]);         // 粉碎攻坚手
-  assert.deepEqual(bosses.boss_1.bloodPoint, { FUNNY: 247500, NORMAL: 675000, HARD: 1800000, ABYSS: 3600000 });
-  assert.deepEqual(bosses.boss_10.bloodPoint, { FUNNY: 825000, NORMAL: 1012500, HARD: 3800000, ABYSS: 7600000 });
+  // 2026-11-02：bloodPoint 现在还有 N1–N20 的插值档（tools/build-nmodes.mjs），这里只校验官方 4 档
+  const pick4 = (bp) => ({ FUNNY: bp.FUNNY, NORMAL: bp.NORMAL, HARD: bp.HARD, ABYSS: bp.ABYSS });
+  assert.deepEqual(pick4(bosses.boss_1.bloodPoint), { FUNNY: 247500, NORMAL: 675000, HARD: 1800000, ABYSS: 3600000 });
+  assert.deepEqual(pick4(bosses.boss_10.bloodPoint), { FUNNY: 825000, NORMAL: 1012500, HARD: 3800000, ABYSS: 7600000 });
   assert.deepEqual([items.chess_item_1_01_e_a.name, items.chess_item_1_01_e_a.price, items.chess_item_1_01_e_a.params.atk], ['维式重锤', 1, 0.15]);
   assert.deepEqual([bands.band_sarkazb.totalHp, bands.band_lisa.totalHp], [45, 20]);
   assert.deepEqual(config.modes.mode_multi_abyss.rounds['15'].prepTime, 215);

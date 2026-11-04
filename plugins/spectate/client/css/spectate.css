@@ -1,0 +1,26 @@
+/* plugins/spectate/client/css/spectate.css — 局内实时观战开关（2026-10-23）
+   开关压在头像底边上（宽=头像、不占行高、不遮名字、不挡气泡），字号按 HUD 缩放。 */
+.team__watch {
+  position: absolute; left: 0; bottom: 0; z-index: 3;
+  width: .8rem; height: .23rem; padding: 0;
+  border: 1px solid rgba(52, 211, 153, .55); border-bottom-left-radius: 3px; border-bottom-right-radius: 3px;
+  background: rgba(8, 11, 10, .88); color: #8ff0d2;
+  font: 700 .17rem/1 system-ui, sans-serif; letter-spacing: .02em;
+  text-align: center; cursor: pointer; pointer-events: auto;
+  transition: background .12s, border-color .12s, color .12s;
+  text-shadow: 0 1px 2px #000;
+}
+.team__watch:hover { border-color: #6ee7b7; background: rgba(19, 43, 34, .95); }
+.team__watch.is-on { background: #065f46; border-color: #34d399; color: #ecfdf5; }
+.team__watch:disabled { opacity: .75; cursor: default; }
+.team__watch:focus-visible { outline: 1px solid #6ee7b7; outline-offset: 1px; }
+
+/* 对抗模式（2V2 / 4V4）：两队共享生命值抬头 */
+.team__pools { display: flex; gap: .1rem; padding: .05rem .08rem .07rem; }
+.team__pool {
+  display: inline-flex; align-items: center; gap: .05rem; flex: 1; min-width: 0;
+  padding: .04rem .08rem; border: 1px solid rgba(255, 255, 255, .12); border-radius: 3px;
+  background: rgba(0, 0, 0, .32); color: var(--text-md, #b9c2be); font-size: .17rem;
+}
+.team__pool.is-self { border-color: rgba(110, 231, 183, .6); background: rgba(6, 95, 70, .28); color: #d7fbe9; }
+.team__pool b { margin-left: auto; font-size: .17rem; }

@@ -1,9 +1,7 @@
 // server/sim/content/kits/ops/chess_char_2_04-grabds.js — 小满 (char_4122_grabds) kit, tier 2.
 // Conventions of the tier-2 kits: ../shared/tier2.js; kit contract and rules: ../README.md.
 
-import {
-  num, talentBb, moduleBb, traitBb, enemiesInGrid, enemyInRange, statBuff, spTimeBonus, instantKind,
-} from '../shared/tier1.js';
+import { num, talentBb, moduleBb, traitBb, enemiesInGrid, enemyInRange, statBuff, spTimeBonus, instantKind } from '../shared/tier1.js';
 
 export default {
   // ---------------------------------------------------------------------------------------------------------------

@@ -5,6 +5,7 @@
 // Installed on Match.prototype by server/match/Match.js (a method container: never instantiated; `this` is the match).
 
 import { buildDeployMap } from '../board.js';
+import { teamOfSeat } from '../../../shared/constants.js';
 
 export class MatchInfra {
   /** Run a callback with error isolation, then flush the views. */
@@ -87,6 +88,11 @@ export class MatchInfra {
    * 用 modeId 前缀而不是 mode 字符串，因为 `mode` 只有 solo/coop 两档，区分不了「同盟模拟」和「协同共竞」。
    */
   get isXie() { return String(this.modeId || '').startsWith('mode_xie_'); }
+  /**
+   * 肉鸽模式：两条判据——独立模式 `mode === 'rogue'`（2026-11-01 业主「肉鸽独立模式」），
+   * 或老写法房间 `variant === 'rogue'`（兼容旧客户端与旧房间）。复用 coop 的难度表，但走自己的藏品节奏。
+   */
+  get isRogue() { return this.mode === 'rogue' || this.roomVariant === 'rogue'; }
 
   nextUid() { return ++this.uidSeq; }
 
@@ -110,6 +116,69 @@ export class MatchInfra {
     return !this.gd.modeInactiveBonds.has(bondId) && this.bondInPool(bondId);
   }
   humans() { return this.order.filter((p) => !p.isBot && !p.left); }
+
+  // ===== 对抗模式（2V2 / 4V4）：整队共享 HP =====
+  /** 这局有没有狩猎期：2V2 对抗 或 同盟狩猎（本树 coopHunt 恒 false）。event.js / confront.js 的闸门。 */
+  get huntMode() { return this.isVersus === true || this.coopHuntOn === true; }
+
+  /** 座位所属队伍 id（0/1）；普通模式恒 0。 */
+  teamIdOf(ps) {
+    if (!ps) return 0;
+    if (Number.isInteger(ps.teamId)) return ps.teamId;
+    if (Number.isInteger(ps.team)) return ps.team;          // Forge 的 PlayerState.team 是 0/1
+    if (ps.team === 'blue') return 1; if (ps.team === 'red') return 0;
+    // 本树 PlayerState 不带 team：对抗房按**座位**分边（Room.seats 的 team 是 'red'/'blue' 字符串）
+    if (this.isVersus && Number.isInteger(ps.seat)) return teamOfSeat(ps.seat, { teamSize: this.teamSize || 2 });
+    return 0;
+  }
+  matchTeamIds() { return [...new Set(this.order.map((p) => this.teamIdOf(p)))].sort((a, b) => a - b); }
+  /** 攻防回合：2V2/4V4 从第 1 回合起每回合红蓝互换攻守（首攻红队）。 */
+  isRoleRound(r = this.round) { return this.isVersus === true && typeof this.confrontActiveAt === 'function' && this.confrontActiveAt(r); }
+  /** @returns {{ attack:number, defend:number }|null} 非攻防回合 null */
+  roleTeamsFor(r = this.round) {
+    if (!this.isRoleRound(r)) return null;
+    // 业主 2026-10-26：`versusAlt === false`（纯对抗里关掉交替）时恒为首攻方进攻，不再按回合翻转。
+    const a = this.versusAlt === false ? 0 : (Math.abs((r - 1) % 2) === 0 ? 0 : 1);
+    return { attack: a, defend: 1 - a };
+  }
+  isAttacker(ps) { return this.attackingTeam != null && this.teamIdOf(ps) === this.attackingTeam; }
+  isDefender(ps) { return this.defenderTeam != null && this.teamIdOf(ps) === this.defenderTeam; }
+  attackers() { return this.alivePlayers().filter((ps) => this.isAttacker(ps)); }
+  defenders() { return this.alivePlayers().filter((ps) => this.isDefender(ps)); }
+  /** 建池：每队 HP = 队员开局生命值之和；只在 band draft 结束后调用。 */
+  initTeamHp() {
+    if (!this.isVersus) return;
+    this.teamLps = new Map();
+    for (const t of this.matchTeamIds()) {
+      let hp = 0;
+      for (const ps of this.order) if (this.teamIdOf(ps) === t) hp += Math.max(0, this.gd.startLp(ps.bandId));
+      this.teamLps.set(t, hp);
+    }
+    this.teamLp = [...this.teamLps.values()].reduce((s, v) => s + v, 0);
+    this._syncVersusTeamLp();
+  }
+  teamHpPool(team) { return this.teamLps ? (this.teamLps.get(team) ?? 0) : null; }
+  /** 把池按人数拆分回每个队员的 ps.lp（池是权威，ps.lp 只用于既有 UI / 淘汰判据）。 */
+  _syncVersusTeamLp() {
+    if (!this.isVersus || !this.teamLps) return;
+    for (const t of this.matchTeamIds()) {
+      const pool = this.teamLps.get(t) ?? 0;
+      const members = this.order.filter((p) => this.teamIdOf(p) === t);
+      const n = members.length || 1;
+      const base = Math.floor(pool / n);
+      members.forEach((p, i) => { p.lp = base + (i < pool - base * n ? 1 : 0); });
+    }
+  }
+  /** 从某队共享池扣血（不为负），返回剩余。 */
+  _versusTeamLpLoss(team, loss) {
+    if (!this.isVersus || !this.teamLps) return null;
+    const before = this.teamLps.get(team) ?? 0;
+    const after = Math.max(0, before - Math.max(0, Number(loss) || 0));
+    this.teamLps.set(team, after);
+    this.teamLp = [...this.teamLps.values()].reduce((s, v) => s + v, 0);
+    this._syncVersusTeamLp();
+    return after;
+  }
 
   /** [ASSUMED] Touch's initial, match-long team grant survives its holder's elimination/quit; focus alone grants none. */
   teamMedicGranted() { return this.order.some(p => (this.gd.band(p.bandId)?.effectRef ?? p.bandId) === 'band_amedic'); }

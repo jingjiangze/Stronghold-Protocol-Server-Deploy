@@ -1,3 +1,4 @@
+import {ownerLayerCap} from './ownerLayerCap.js';
 // server/sim/content/support/index.js — shared helpers of content wave B (bonds, garrisons, items, bands, choices).
 //
 // Battle side and prep side read the same frozen game data (server/data.js). Everything here is pure and deterministic;
@@ -58,6 +59,24 @@ export const chessRecord = (id) => own(gameData().chess, id);
 export const itemKeyOf = (id) => String(itemRecord(id)?.effectRef ?? id ?? '').replace(/_[ab]$/, '');
 /** True for golden (进阶) items / elite chess ids. */
 export const isGoldenId = (id) => /_b$/.test(String(id ?? ''));
+
+// --- 0.3.3 兼容 shim：0.4.3 的 support/index.js 没有突变细胞导出，但 0.3.3 的 prep.js 仍导入它。---
+export const MUTATION_CELL_EFFECT = 'eff_acarm072';
+export const MUTATION_CELL_ID = 'chess_item_5_08_e_a';
+export function mutationCellIds(data = gameData()) {
+  const items = data && data.items && typeof data.items === 'object' ? data.items : {};
+  const out = [];
+  for (const [id, rec] of Object.entries(items)) {
+    if (!rec || typeof rec !== 'object' || rec.effectRef != null) continue;
+    if (rec.effectId === MUTATION_CELL_EFFECT) out.push(id);
+  }
+  return out.length ? out : [MUTATION_CELL_ID];
+}
+export function isMutationCell(id, data = gameData()) {
+  if (id === MUTATION_CELL_ID) return true;
+  const rec = own(data && data.items, id);
+  return !!rec && rec.effectRef == null && rec.effectId === MUTATION_CELL_EFFECT;
+}
 
 /**
  * Buffs of a data record (bond / item / band / effect / garrison-like) as `{ key, bbKey, p }` where `key` is the
@@ -167,8 +186,6 @@ export const baseChessId = (u) => u?.def?.baseId ?? String(u?.defId ?? '').repla
 
 /** Equipment ids carried by a unit (golden ids when merged). */
 export const itemsOf = (u) => (u && Array.isArray(u.items) ? u.items : EMPTY);
-export const hasItemKey = (u, key) => itemsOf(u).some((id) => itemKeyOf(id) === key);
-export const goldenItemCount = (u) => itemsOf(u).filter(isGoldenId).length;
 
 const BONDS = new WeakMap();
 /**
@@ -234,8 +251,6 @@ export const N4 = Object.freeze([[1, 0], [-1, 0], [0, 1], [0, -1]]);
 export const N8 = Object.freeze([[1, -1], [1, 0], [1, 1], [0, -1], [0, 1], [-1, -1], [-1, 0], [-1, 1]]);
 /** Tile `k` steps in front of (k < 0: behind) a unit's tile, along its direction. */
 export const frontTile = (u, k = 1) => frontOf(u.tileR, u.tileC, u.dir, k);
-/** The two tiles beside a unit (perpendicular to its direction): [its left-hand tile, its right-hand tile]. */
-export const sideTiles = (u) => [offsetTile(u.tileR, u.tileC, 1, 0, u.dir), offsetTile(u.tileR, u.tileC, -1, 0, u.dir)];
 /** Deployed ally on (r, c) owned by `pid` (any owner when pid is null), else null. */
 export function allyAt(battle, r, c, pid = null) {
   if (!Number.isInteger(r) || !Number.isInteger(c)) return null;
@@ -333,6 +348,7 @@ export function gainLayers(battle, { playerId, bonds, n, requireActive = true, s
   const k0 = Math.floor(num(n, 0));
   if (!(k0 > 0)) return 0;
   const list = Array.isArray(bonds) ? bonds : [bonds];
+  cap=ownerLayerCap(battle,source,cap);
   const caps = capKey != null && Number.isFinite(cap) ? battleStore(battle, 'support:layerCaps', () => new Map()) : null;
   let total = 0;
   for (const b of list) {
@@ -355,7 +371,9 @@ export function gainLayers(battle, { playerId, bonds, n, requireActive = true, s
   return total;
 }
 
-/** Layers already added this battle under (capKey, bond) — for tests / UI. */
+
 export function layersUsed(battle, capKey, bondId) {
   return battleStore(battle, 'support:layerCaps', () => new Map()).get(`${capKey}|${bondId}`) ?? 0;
 }
+
+export const sideTiles = (u) => [offsetTile(u.tileR, u.tileC, 1, 0, u.dir), offsetTile(u.tileR, u.tileC, -1, 0, u.dir)];

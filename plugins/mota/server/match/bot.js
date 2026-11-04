@@ -82,7 +82,7 @@
 
 import { ASPD_MIN } from '../sim/constants.js';
 import { rehearsalCap, RehearsalRun } from '../sim/rehearsal.js';
-import { freeSlot, countFree, legalTiles, canPlace, positionClass, placeClass, basePositionClass, parseKey, tileKey, FIELD, pieceDir, boardTileOf, BOSS_MIRROR_COL } from './board.js';
+import { freeSlot, countFree, legalTiles, canPlace, positionClass, placeClass, basePositionClass, parseKey, tileKey, FIELD, rectOfMap, pieceDir, boardTileOf, BOSS_MIRROR_COL } from './board.js';
 import { rotateOffset, normDir, mirrorDir, oppositeDir } from '../sim/dir.js';
 import { itemKey } from './gamedata.js';
 import { computeBonds } from './bondsMeta.js';
@@ -632,7 +632,9 @@ function buyScore(m, ps, id, ctx) {
 // ---------------------------------------------------------------------------------------------------
 // field model: where the round's enemies walk / fly over the own board, and an exposure model of a layout
 
-const inRect = (r, c) => r >= FIELD.r0 && r <= FIELD.r1 && c >= 0 && c <= FIELD.c1;
+/** A tile of the own board `rect` (the deploy map's region — a rogue stage's own frame; FIELD by default). The left
+ * bound stays 0 (paths may enter from off-board); FIELD keeps the classic window exactly. */
+const inRect = (r, c, rect = FIELD) => r >= rect.r0 && r <= rect.r1 && c >= 0 && c <= rect.c1;
 
 /** Integer tiles along a polyline of [row, col] points (inclusive, consecutive duplicates removed). */
 function traceLine(points) {
@@ -681,13 +683,16 @@ export function fieldModel(m, ps = null) {
   if (m._botPath && m._botPath.key === cacheKey) return m._botPath;
   const gd = ps?.gd || m.gd;
   const st = m.stage;
+  // the own board's region: the deploy map's rect (a rogue stage's own frame), FIELD otherwise (no player ⇒ FIELD,
+  // as before). Enemies walk over the tiles the player may deploy on, not the classic window.
+  const rect = ps ? rectOfMap(ps.deployMap()) : FIELD;
   const gpaths = (st && (st.groundPathsWithDevices || st.groundPaths)) || {};
   const routesOut = [];
   const toBoard = boss
     ? ([r, c]) => boardTileOf(boss.side === 'R' ? 'bossR' : 'bossL', r, c)
     : (p) => p;
   const pushRoute = (tilesRC, n, fly, hp, speed, dwell = 0) => {
-    const own = tilesRC.map(toBoard).filter(([r, c]) => inRect(r, c)).map(([r, c]) => tileKey(r, c));
+    const own = tilesRC.map(toBoard).filter(([r, c]) => inRect(r, c, rect)).map(([r, c]) => tileKey(r, c));
     if (own.length > 1) own.pop(); // the objective / last tile: an enemy there has already leaked
     if (!own.length) return;
     const tileTime = Math.max(0.4, Math.min(6, 1 / Math.max(0.05, speed * 0.5)));
@@ -749,9 +754,9 @@ export function fieldModel(m, ps = null) {
     for (const [k, arr] of Object.entries(gpaths)) {
       if (!Array.isArray(arr) || !arr.length) continue;
       const [sr, sc] = String(k).split('->')[0].split(',').map(Number);
-      if (!(sr >= FIELD.r0 && sr <= FIELD.r1 && sc <= FIELD.c1)) continue;
+      if (!(sr >= rect.r0 && sr <= rect.r1 && sc <= rect.c1)) continue;
       // stage ground paths are in normal-field coordinates: no boss mapping
-      const own = arr.filter(([r, c]) => inRect(r, c)).map(([r, c]) => tileKey(r, c));
+      const own = arr.filter(([r, c]) => inRect(r, c, rect)).map(([r, c]) => tileKey(r, c));
       if (own.length > 1) own.pop();
       if (own.length) routesOut.push({ n: 3, fly: false, tiles: own, tileTime: 2, hp: 3000, dwell: 0 });
     }
@@ -774,7 +779,7 @@ export function fieldModel(m, ps = null) {
   let wsum = 0;
   for (const w of foes.values()) wsum += w;
   const armor = [...foes.entries()].map(([k, w]) => { const [def, res] = k.split('|').map(Number); return { def, res, w: w / wsum }; });
-  m._botPath = { key: cacheKey, routes: routesOut, index, ground, flyTotal, airflow: airflowOf(st, toBoard, boss && boss.side === 'R'), armor, dps: new Map() };
+  m._botPath = { key: cacheKey, routes: routesOut, index, ground, flyTotal, airflow: airflowOf(st, toBoard, boss && boss.side === 'R', rect), armor, dps: new Map() };
   return m._botPath;
 }
 
@@ -784,7 +789,7 @@ export function fieldModel(m, ps = null) {
  * such a tile facing WITH the flow gets ATK × (1 + blower_s_character[equal].atk), against it [opposite], across it
  * [vertical] (DESIGN §3, research 09 §1.1): the planner scales its DPS accordingly when it picks a direction.
  */
-function airflowOf(st, toBoard, mirrored) {
+function airflowOf(st, toBoard, mirrored, rect = FIELD) {
   const out = new Map();
   for (const d of (st && Array.isArray(st.devices) ? st.devices : [])) {
     if (!d || d.role !== 'blower' || d.active === false || d.hidden) continue;
@@ -793,7 +798,7 @@ function airflowOf(st, toBoard, mirrored) {
     for (const p of Array.isArray(d.rangeTiles) ? d.rangeTiles : []) {
       if (!Array.isArray(p)) continue;
       const [r, c] = toBoard(p);
-      if (inRect(r, c)) out.set(tileKey(r, c), { dir, bb });
+      if (inRect(r, c, rect)) out.set(tileKey(r, c), { dir, bb });
     }
   }
   return out;
@@ -1448,6 +1453,10 @@ export function* botPrepBeginSteps(m, ps, { delegate = false } = {}) {
   takeOffers(m, ps);
   levelUp(m, ps, { spare: true });
   maybeFreeze(m, ps);
+  // 协同经济：缺口要在花完钱之后才看得见，这里才开口借（botEconMaybeRequest 自带每回合一次防重；非 teamEcon 模式是 no-op）
+  botEconMaybeRequest(m, ps);
+  // 协同经济：余粮存 1 点进团队储备（既有约束：每人每回合 1 次；非 teamEcon / borrowOnly 是 no-op）
+  botEconMaybeDeposit(m, ps);
   yield;
   // 3. placement, 4. items, placement again (item carriers gain value; rehearsed when the match allows it)
   yield* arrangeSteps(m, ps);
@@ -2027,6 +2036,24 @@ function resolveTemp(m, ps) {
 }
 
 // ===== 协同共竞 bot 经济（从 coop 分支重锚定；调用点在 MatchEconomy mixin）=====
+
+/**
+ * The cheapest thing on this bot's shop board it could still pay for right now (0 when nothing fits). The lending
+ * decision spends it: approving a request that would eat that price means skipping its own buy, so the chance is
+ * scaled down by tightFactorPct. Same affordability rule as botEconMaybeRequest's `affordable` check.
+ * (2026-10-31: botEconRespond used to reference this by name without a definition anywhere — every lending decision
+ * in the modes where botLend is on threw a ReferenceError swallowed by the later() guard, so bots never lent.)
+ */
+function cheapestAffordable(ps) {
+  let best = 0;
+  for (const s of ps.shop.slots) {
+    if (!s || s.sold) continue;
+    const price = ps.priceOf(s);
+    if (price > 0 && price <= ps.funds && (best === 0 || price < best)) best = price;
+  }
+  return best;
+}
+
 export function botEconRespond(m, ps, id = null) {
   if (!m.teamEcon) return false;
   const inbox0 = m.econPrivateFor(ps)?.requestIn;
@@ -2094,4 +2121,14 @@ export function botEconMaybeRequest(m, ps, { retry = false } = {}) {
   const need = gap > 0 ? gap : Math.max(1, 4 - ps.funds);
   const amount = Math.min(m.teamEcon.transfer.maxPerRequest, Math.max(1, need));
   return !!m.econRequest(ps, null, amount)?.ok;
+}
+
+/**
+ * 协同经济 P1（2026-11-01）：有余粮的 bot 主动存 1 点进团队储备。存量上限（每人每回合 1 次）、
+ * 阶段与 ready 门都由 `econDeposit` 自己把关，这里只判「是否真的有余粮」。
+ */
+export function botEconMaybeDeposit(m, ps) {
+  if (!m.teamEcon || m.teamEcon.borrowOnly || !ps.alive || ps.ready) return false;
+  if (Math.floor(Number(ps.funds) || 0) <= fundsReserve(m, ps) + 1) return false; // 留下自己的购物钱
+  return !!m.econDeposit(ps)?.ok;
 }

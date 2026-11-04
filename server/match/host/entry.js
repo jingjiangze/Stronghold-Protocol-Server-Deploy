@@ -22,7 +22,9 @@
 // Messages (from index.js / proxy.js; queued until booted, then handled in order):
 //   { type: 'create', matchId, opts }       new Match({ ...options.matchOptions, ...opts, data, log, now, send, broadcast,
 //                                           onEnd }) and start() — send / broadcast / onEnd post 'send' / 'broadcast' /
-//                                           'end' back; a match that cannot be created posts 'failed'
+//                                           'end' back; a match that cannot be created posts 'failed', and so does one whose
+//                                           opts.version (absent: act2autochess) is not the installed data's version
+//                                           (shared/versions.js versionOfData; DESIGN §35.23 — an official version's host)
 //   { type: 'call', matchId, method, args, id? }   one MATCH INTERFACE call; with `id` its answer is posted as 'reply'
 //   { type: 'dispose', matchId }            the match is disposed and forgotten
 // Logs go to the main process ('log': its logger prefixes them with the set's `[cs:<8 hex>]`).
@@ -32,10 +34,11 @@
 import { parentPort, workerData } from 'node:worker_threads';
 import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
-import path from 'node:path';
 import { getData, setData } from '../../data.js';
 import { installOfficialBounds } from '../../../shared/plugins/officialBounds.js';
 import { contentHashOf } from '../../../shared/plugins/identity.js';
+import { DEFAULT_VERSION, versionOfData } from '../../../shared/versions.js';
+import { applyMatchMixins } from './mixins.js';
 
 /** A worker thread (parentPort), else a child process (its IPC channel). */
 const viaWorker = !!parentPort;
@@ -168,25 +171,25 @@ async function boot() {
   // After setData, before Match: Match reads opts.registry || getDefaultRegistry(), the same singleton.
   dslGrants = await installPrepDsl(data);
   // 无损插件：代码根里的 Match（相对路径按插件目录解析），否则用上游的 Match。
+  // 没有这一段，插件声明的 code.match 只会「采进内容集」，对局永远加载核心 Match。
   const codeRoots = options.code && Array.isArray(options.code.roots) ? options.code.roots
     : (options.code && typeof options.code.root === 'string' ? [options.code] : []);
-  const codeRoot = codeRoots.length ? codeRoots[codeRoots.length - 1].root : null;
   if (codeRoots.length) {
-    // 插件自带的整份数据（魔塔的 config.json 等）在该内容集里原样覆盖上游数据。
+    // 插件自带的整份数据（引擎的 config.json 等）在该内容集里覆盖上游数据；data 已冻结，先浅拷贝。
     const fs = await import('node:fs');
-    // data 已经被内容集冻结：先浅拷贝再覆盖，不能原地写。
+    const pathMod = await import('node:path');
     const merged = { ...data };
     for (const r of codeRoots) for (const rel of (r.data || [])) {
-      const abs = path.join(r.root, ...rel.split('/'));
+      const abs = pathMod.join(r.root, ...rel.split('/'));
       if (!fs.existsSync(abs)) continue;
-      const name = path.basename(rel, '.json');
+      const name = pathMod.basename(rel, '.json');
       merged[name] = JSON.parse(fs.readFileSync(abs, 'utf8'));
     }
     setData(merged);
-    void 0;
   }
   const matchRoot = [...codeRoots].reverse().find((r) => r.match);
-  const matchPath = matchRoot ? pathToFileURL(path.join(matchRoot.root, ...matchRoot.match.split('/'))).href
+  const matchPath = matchRoot
+    ? pathToFileURL((await import('node:path')).join(matchRoot.root, ...matchRoot.match.split('/'))).href
     : (typeof options.matchModule === 'string' && options.matchModule ? pathToFileURL(options.matchModule).href : '../Match.js');
   const mod = await import(matchPath);
   const Inner = mod.Match || mod.default;
@@ -202,6 +205,14 @@ async function boot() {
       grantPrepDsl(this, dslGrants);
     }
   };
+  // 多插件 Match 叠加（2026-11-01，业主「肉鸽做成插件」）：种子 Match 之外的插件用 `code.matchMixin` 各带一个
+  // 导出 `Mixin` 类的模块，其原型方法按插件加载顺序拷到同一个对局类上（重名直接报错，见 host/mixins.js）。
+  // 没有插件声明 matchMixin 时这一段完全不执行，行为与只有 code.match 时逐字节一致。
+  const mixins = options.code && Array.isArray(options.code.matchMixins) ? options.code.matchMixins : [];
+  if (mixins.length) {
+    const applied = await applyMatchMixins(MatchClass, mixins, { log });
+    log.info(`[plugins] match mixins: ${applied.length ? applied.join(', ') : '—'}`);
+  }
   if (options.virtualTime) ({ VirtualScheduler } = await import('../scheduler.js'));
 }
 
@@ -223,6 +234,7 @@ function plain(r) {
 function diag(match) {
   return {
     phase: match.phase ?? null, round: match.round ?? null, ended: !!match.ended, cs: match.cs ?? null, modeId: match.modeId ?? null,
+    version: versionOfData(installed),
     errorCount: match.errorCount ?? 0, errors: (match.errors || []).slice(0, 3).map((e) => String(e?.label || e?.message || e).slice(0, 200)),
     verifyStats: match.verifyStats ? { ...match.verifyStats } : null, simErrors: match.simErrors ?? 0,
     fields: Array.isArray(match.fields) ? match.fields.map((f) => ({ fieldId: f.fieldId, kind: f.kind, players: Array.isArray(f.players) ? [...f.players] : [], mode: f.mode ?? null,
@@ -231,6 +243,13 @@ function diag(match) {
 }
 
 function create(matchId, opts) {
+  // an official version's match runs on that version's data only (DESIGN §35.23): never another version's data set
+  const want = typeof opts.version === 'string' ? opts.version : DEFAULT_VERSION;
+  if (want !== versionOfData(installed)) {
+    log.error(`[host] match ${matchId} asks for version ${want}, this host runs ${versionOfData(installed)}`);
+    post({ type: 'failed', matchId, error: `version ${want} is not this host's (${versionOfData(installed)})` });
+    return;
+  }
   const sched = options.virtualTime && VirtualScheduler ? new VirtualScheduler({ start: Date.now() }) : null;
   let match;
   try {

@@ -1,0 +1,25 @@
+{
+  "lock": 1,
+  "id": "spectate",
+  "version": "0.1.0",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "client/css/spectate.css": {
+      "sha256": "4db265f86b61b5a8ef2ffa75504850d7d0786cf3f848ed2000b8596803de7eb3",
+      "bytes": 1590
+    },
+    "client/js/ui/teamPanel.js": {
+      "sha256": "55d632f0ad2f9d8053a235624ff5eb5b950d1ef38b4a399938e49e3729a0971a",
+      "bytes": 17900
+    },
+    "host/noop.js": {
+      "sha256": "210ffa8883fb46735721dbc89e8bd9006d84a1d000632855c2c63e0a9109a19c",
+      "bytes": 175
+    },
+    "plugin.json": {
+      "sha256": "8d761d68d530a1cd9f12cf7332e7a4ce33173db2605642df6cffd059c476240e",
+      "bytes": 737
+    }
+  },
+  "spine": {}
+}

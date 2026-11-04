@@ -28,7 +28,7 @@ export class PlayerPrep {
     if (!Number.isInteger(idx) || idx < 0 || idx >= offer.slots.length) return fail(ERR.BAD_TARGET);
     const slot = offer.slots[idx];
     if (!slot || slot.sold) return fail(ERR.SOLD_OUT);
-    const handFull = freeSlot(this.hand) < 0;
+    const handFull = this.freeHandSlot() < 0;
     if (slot.kind === 'item') {
       if (!this.gd.item(slot.id)) return fail(ERR.BAD_TARGET);
       // Already displayed equipment rewards survive stock exhaustion (#624, maintainer 2026-10-14).

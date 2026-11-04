@@ -28,6 +28,7 @@ export class BattleTiles {
     this._occ[k] = unit;
     if (unit.obstacle) this.grid.setObstacle(r, c, true, unit.obstacleKind);
     this._refreshRange(unit); // current + base range, CUSTOM_RANGE trigger keys
+    if (this._hooks.relocate) this.emit('relocate', { unit }); // Horn004 occupancy only; grants no deployment SP
     return true;
   }
 
@@ -43,6 +44,7 @@ export class BattleTiles {
    * deploy handlers run ("部署时将清空技力"; 乌尔比安's 【返回】 "将清空技力，但仍可以享受后续由其他效果提供的技力").
    */
   moveRedeploy(unit, r, c, { clearSp = false } = {}) {
+    if (this._sealedDeployTiles?.has(r * COLS + c)) return false;
     if (!this.relocate(unit, r, c)) return false;
     unit.deploySeq = ++this._deploySeq;
     unit.aggroSeq = unit.deploySeq;
@@ -65,6 +67,7 @@ export class BattleTiles {
    */
   isReservedTile(r, c) {
     if (!Number.isInteger(r) || !Number.isInteger(c) || r < 0 || r >= ROWS || c < 0 || c >= COLS) return true;
+    if (this._sealedDeployTiles?.has(r * COLS + c)) return true;
     const u = this._occ[r * COLS + c];
     if (u && u.alive) return true;
     for (const a of this.allyUnits) {

@@ -7,6 +7,7 @@ import { PHASE } from '../../../shared/constants.js';
 import { boardOrder, pieceDir } from '../board.js';
 import { bondList, offBondCounts } from '../bondsMeta.js';
 import { bountyText, bountyCard } from '../choices.js';
+import { relicEffectApplied } from '../match/meltdown.js';
 
 export class PlayerViews {
   pieceView(p, rc = null) {
@@ -112,6 +113,8 @@ export class PlayerViews {
       bonds: bondList(this.gd, this.bondsView(), { full: true, off: offBondCounts(this.gd, this) }),
       effects: this.effectsView(),
       nextEnemies: this.m.nextEnemiesFor(this),
+      // 对抗模式守方：本回合朝我投来的怪物（私有；攻方/普通模式省略）
+      ...(this.m.isVersus && typeof this.m.incomingFor === 'function' ? { incoming: this.m.incomingFor(this) } : {}),
       // 助战 (shared/support.js): what this player brought AND what was actually granted at round 1. They differ when
       // the server's pool changed between the lobby's check and the grant (prepareSupports re-checks), and when a granted
       // piece is sold or merged away — so the client can say which supports it is actually fighting with.
@@ -141,6 +144,33 @@ export class PlayerViews {
         dmgDealt: Math.round(this.stats.dmgDealt), kills: this.stats.kills, leaks: this.stats.leaks, gold: this.stats.gold,
         refreshes: this.stats.refreshes, merges: this.stats.merges,
       },
-    };
+          // ---- 海克斯（TFT 式 augment）+ 熔毁商店（从 hexmod 移植）----
+      hex: this.hex,
+      hexes: Array.isArray(this.hexes) ? this.hexes.slice() : [],
+      hexOfferDraft: this.hexOfferDraft || 0,
+      hexOffer: Array.isArray(this.hexOffer) ? this.hexOffer.slice() : null,
+      hexOfferPicked: this.hexOfferPicked || null,
+      // 藏品三选一（业主 2026-10-27）：只下发自己那份 offer 的 id 列表
+      relicOffer: Array.isArray(this.relicOfferCards) ? this.relicOfferCards.slice() : null,
+      relicOfferRound: this.relicOfferRound || 0,
+      // 肉鸽随机事件（2026-10-27）：{ round, eventId, name, desc, choices:[{id,label}] }
+      rogueOffer: this.rogueOffer || null,
+      relics: Array.isArray(this.relics) ? this.relics.slice() : [],
+      // 已拥有藏品的卡面（名称/品阶/正负），给局内常驻列表用 —— id 列表仍是上面那份 `relics`
+      relicCards: (() => {
+        const list = Array.isArray(this.relics) ? this.relics : [];
+        const raw = (this.m && this.m.gd && this.m.gd.raw && this.m.gd.raw.relics) || null;
+        const defs = raw && Array.isArray(raw.relics) ? raw.relics : [];
+        const idx = new Map(defs.map((d) => [d.id, d]));
+        return list.map((id) => { const d = idx.get(id) || {}; return { id, name: String(d.name || id),
+          tier: String(d.tier || ''), kind: String(d.kind || ''), applied: relicEffectApplied(d.effect),
+          icon: String(d.icon || ''), desc: String(d.desc || '') }; });
+      })(),
+      hexStats: typeof this.m.hexStatsView === 'function' ? this.m.hexStatsView(this) : null,
+      hexGrade: this.hexGrade || null,
+      hexRerolls: Array.isArray(this.hexRerolls) ? this.hexRerolls.slice() : null,
+      hexDeadline: Number.isFinite(this.hexDeadline) && this.hexDeadline > 0 ? this.hexDeadline : 0,
+      meltdown: typeof this.m.meltdownView === 'function' ? this.m.meltdownView(this) : null,
+};
   }
 }

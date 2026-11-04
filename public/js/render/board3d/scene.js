@@ -35,6 +35,48 @@ import {
 import { syncThreeCamera } from '../projection.js';
 import { mergeSceneChunks, sceneMaterialKey, sceneWaterInfo, isSceneWater } from './load.js';
 
+/** 肉鸽小图场景的裁剪外扩量（格）：画框四边各多留这么多，保住画框边缘的平台与第三层装饰。 */
+export const ROGUE_SCENE_CLIP_MARGIN = 3.5;
+
+/** 肉鸽小图场景裁剪的高度上限：三个顶点 z 全部高于它的三角形丢弃（只丢纯顶盖）。 */
+export const ROGUE_SCENE_CLIP_MAX_Z = 6;
+
+/**
+ * 按 `stage.rogueFrame` 裁剪官方场景的一个 chunk（肉鸽小图）：保留画框附近的平台 / 第三层装饰，丢弃外景岩壁与
+ * 背景大面。官方 scene 含整张大地图外景，小图放大到官方 0.9× 后这些几何会穿进视野。
+ * 本地画框是半格偏移的 `x ∈ [-0.5, w-0.5]`、`y ∈ [-0.5, h-0.5]`，四边各外扩 `margin`；z 另按 `ROGUE_SCENE_CLIP_MAX_Z`
+ * 丢掉纯顶盖（三个顶点 z 全超限才丢）。
+ * 三个顶点都在框内的三角形才保留，索引类型与原数组一致。
+ * 全部保留 → 原样返回 `c`（不复制，scene.bin 的视图仍共享）；全部丢弃 → null；否则 `{ ...c, index }`（不改 c.index，
+ * pack 会被缓存）。
+ * @param {{ position: Float32Array, index: Uint16Array|Uint32Array }} c mergeSceneChunks 之前的单个 chunk
+ * @param {number} w 画框宽（格）
+ * @param {number} h 画框高（格）
+ * @param {number} [margin] 外扩（格）
+ */
+export function clipSceneChunkToFrame(c, w, h, margin = ROGUE_SCENE_CLIP_MARGIN) {
+  const pos = c?.position, idx = c?.index;
+  if (!pos || !idx || idx.length < 3) return c;
+  const x0 = -0.5 - margin, x1 = w - 0.5 + margin;
+  const y0 = -0.5 - margin, y1 = h - 0.5 + margin;
+  const inside = (v) => {
+    const x = pos[v], y = pos[v + 1];
+    return x >= x0 && x <= x1 && y >= y0 && y <= y1;
+  };
+  const keep = [];
+  for (let i = 0; i + 2 < idx.length; i += 3) {
+    const a = idx[i] * 3, b = idx[i + 1] * 3, d = idx[i + 2] * 3;
+    if (inside(a) && inside(b) && inside(d)) {
+      // 顶棚/树海顶盖（如 ro5 z≈6.3、ro6 z≈12.3）整块在画框内，x/y 裁不掉；高度阈值只丢纯顶盖，保留瓦檐/树冠/地形
+      if (pos[a + 2] > ROGUE_SCENE_CLIP_MAX_Z && pos[b + 2] > ROGUE_SCENE_CLIP_MAX_Z && pos[d + 2] > ROGUE_SCENE_CLIP_MAX_Z) continue;
+      keep.push(idx[i], idx[i + 1], idx[i + 2]);
+    }
+  }
+  if (keep.length === idx.length) return c;
+  if (keep.length === 0) return null;
+  return { ...c, index: idx instanceof Uint32Array ? new Uint32Array(keep) : new Uint16Array(keep) };
+}
+
 /** Lighting rig (tuned against the official screenshots: bright even tops, darker sides, soft shadows). */
 export const LIGHTING = Object.freeze({
   key: { color: 0xfff1df, intensity: 2.6, dir: [-5.2, -3.4, 10] },
@@ -431,8 +473,21 @@ export class BoardScene {
     const res = this._sceneResources(pack);
     const infos = pack.doc?.materials || {};
     this.sceneWater = [];
+    // 肉鸽官方小图（stage.rogueFrame）嵌在 19×21 画框里：场景几何以官方小图 (0,0) 为原点，
+    // 整组平移到画框左上角；设备 / 门 / 场界 / 地形已是 stage 坐标，不参与这次平移。
+    const f = this.stage?.rogueFrame;
+    // 画框尺寸（格）：有的话按它裁掉画框外的外景岩壁 / 背景大面（见 clipSceneChunkToFrame）
+    const fw = f ? Number(f.w) || 0 : 0;
+    const fh = f ? Number(f.h) || 0 : 0;
+    const sceneRoot = f ? new T.Group() : this.root;
+    if (f) {
+      sceneRoot.position.set(Number(f.col) || 0, Number(f.row) || 0, 0);
+      this.root.add(sceneRoot);
+    }
     const buckets = new Map();
-    for (const c of pack.chunks || []) {
+    for (const c0 of pack.chunks || []) {
+      const c = f && fw > 0 && fh > 0 ? clipSceneChunkToFrame(c0, fw, fh) : c0;
+      if (!c) continue;
       if (c.group && !sceneGroupVisible(pack.groups?.[c.group], this.area)) continue;
       const info = infos[c.material] || null;
       const mk = sceneMaterialKey(c, info);
@@ -474,7 +529,7 @@ export class BoardScene {
       mesh.castShadow = false; mesh.receiveShadow = false;
       mesh.renderOrder = water ? 1 : mat.userData.blend === 'blend' ? 2 : mat.userData.blend === 'cutout' ? -3 : -4;
       mesh.matrixAutoUpdate = false; mesh.updateMatrix();
-      this.root.add(mesh);
+      sceneRoot.add(mesh);
       this.meshes[`scene${n++}`] = mesh;
     }
     return n > 0;

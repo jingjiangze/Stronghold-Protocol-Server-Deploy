@@ -2,12 +2,13 @@
 // Conventions of the tier-6 kits: ../shared/tier6.js; kit contract and rules: ../README.md.
 
 import { sortEnemyTargets, canTargetEnemy } from '../../../targeting.js';
+import { hypot, sin, cos, atan2 } from '../../../detmath.js';
 import { rotateOffset } from '../../../dir.js';
 import { bodyDist } from '../../../body.js';
 import { num, tbb, hasBond, ANY, selectedSkill, skillGridOf, WHOLE_FIELD, bstate, aura } from '../shared/tier6.js';
 import { boundedCount } from '../../../../../shared/plugins/limits.js';
 import { bbCap } from '../../../../../shared/plugins/officialBounds.js';
-import { hypot, sin, cos, atan2 } from '../../../detmath.js';
+
 
 // ------------------------------------------------------------------------------------------------------------------
 // 荒芜拉普兰德 chess_char_6_18 (驭械术师) — S3 终幕·浩劫; 头狼; 叙拉古的荣幸
@@ -132,8 +133,6 @@ function whitw2(bb, chess, def) {
     // (showOwnRange)
     skchr_whitw2_1: {
       kind: 'toggle',
-      // [ASSUMED] her drones lock enemies only (install): 白铁's 铁钳号 alone does not open S1 / S2 (skills.js allyTargetsOk)
-      allyTargets: false,
       mods: { atkPct: num(bb.atk) },
       targeting: { rangeGrid: WHOLE_FIELD, showOwnRange: true },
       onStart({ unit }) { unit.mem.lazyLock = null; },
@@ -142,7 +141,6 @@ function whitw2(bb, chess, def) {
     // (install); each drone hit ramps on its own target (trait init → max) and fears it attack@fear s with attack@prob
     skchr_whitw2_2: {
       kind: 'duration',
-      allyTargets: false,
       mods: { atkPct: num(bb.atk) },
       ...(skillGridW ? { targeting: { rangeGrid: skillGridW } } : {}),
       attack: {

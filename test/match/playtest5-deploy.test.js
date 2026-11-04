@@ -264,6 +264,7 @@ describe('#7 audit: every stage × deploy field (server = official level data = 
   test('carry-over: a tile legal on the normal board is legal (same class) on both boss halves of every active stage', () => {
     for (const [id, st] of Object.entries(DATA.stages)) {
       if (st.kind === 'unite') continue; // the escaped levels' maps have no boss field
+      if (String(id).startsWith('rogue_')) continue; // 2026-11-03：肉鸽官方地图没有本作的 boss 半场（Boss 回合沿用本图）
       const n = buildDeployMap(st);
       for (const field of ['bossL', 'bossR']) {
         const b = buildDeployMap(st, { field });

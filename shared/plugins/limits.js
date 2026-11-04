@@ -1,8 +1,11 @@
 // Shared numeric bounds for data plugins (DESIGN §32.5). The battle imports these same numbers so a later
 // writer cannot bypass validateData. [ASSUMED] each cap is above every official table and far below ±1e9.
 
-/** Spawn rows in one wave, or in one branch phase. Official waves stay at or below 28. */
-export const PLUGIN_SPAWN_ENTRIES = 64;
+/**
+ * Spawn rows in one wave, or in one branch phase. The official ro4 wave set peaks at 132 rows (rogue_ro4_d-2);
+ * the cap keeps margin to 192, still far below ±1e9.
+ */
+export const PLUGIN_SPAWN_ENTRIES = 192;
 /**
  * Living enemies one wave or branch phase may ask for, and the per-row count. Must equal
  * server/sim/constants.js MAX_ALIVE_ENEMIES. Shared code does not import the server; the regression test locks the two.

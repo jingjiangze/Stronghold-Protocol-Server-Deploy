@@ -1,0 +1,278 @@
+// 素材跳转 sidecar：只回答「这个请求该 302 到哪个源」，不代理一个字节。
+//
+// 为什么是独立进程而不是 nginx 里的 Lua（Stardust 的 openi-resolver 也是这个形状）：
+//   * nginx 的 Lua 是动态模块，配置里少一行 include 就会让所有 lua_* 变成未知指令、nginx
+//     直接起不来；换成普通 nginx 就把这个失败模式整个删掉。
+//   * 这一段是纯函数式决策，node --test 直接就能测，不需要为了测 Lua 去装一个 Lua VM。
+//
+// 不猜「哪个源对当前玩家最快」：容器在 ModelScope 机房，玩家在全国各地，容器量出来的链路
+// 速度不代表玩家的。这里是静态顺序（可被客户端用 ?sp_source=<id> 覆盖），按玩家网络选最快
+// 是客户端 pick.js 的事——两者分工，而不是让服务端假装自己知道。
+import fs from 'node:fs';
+import http from 'node:http';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+
+export const DEFAULT_CONFIG_PATH = path.join(HERE, 'sources.json');
+export const DEFAULT_PORT = 3130;
+export const CACHE_SECONDS = 300;
+export const MAX_TARGET = 8192;
+export const MAX_PATH = 2048;
+
+// 只分流确实可重定向的扩展名。清单/代码（js/css/json）留在游戏本体，因为它们可能与本地
+// 构建产物不同版本。nginx 用同一张表做粗筛，这里做权威判定。
+export const ALLOWED_EXT = new Set([
+  'png', 'jpg', 'jpeg', 'webp', 'gif', 'svg',
+  'atlas', 'skel', 'obj', 'mtl',
+  'mp3', 'm4a', 'aac', 'ogg', 'oga', 'opus', 'wav',
+  // 2026-10-22：上传通道已支持 mp4（cdn 仓 c6b3585f7），但边缘白名单漏了它 ——
+  // 结果 /assets/videos/*.mp4 被 allowedExt 判 false 直接 404。mp4 是二进制媒体容器，
+  // 与 mp3 同级，不是 html/svg 那种可执行内容位，加进来不扩大风险面。
+  'mp4',
+  'ttf', 'otf', 'woff', 'woff2',
+]);
+
+// 每段必须是 [A-Za-z0-9_[-] 开头、之后允许 . —— 于是 ".."、"尾点段"、控制字符全部被拒。
+const SEGMENT = /^[A-Za-z0-9_[-][A-Za-z0-9_.[\]-]*$/;
+
+/**
+ * 扩展名闸门：白名单之外只放一个例外 —— `/fonts/fonts.css`，官方客户端唯一的字体清单（它属于字体集，
+ * 镜像里就在 fonts/ 下）。`/assets/` 下的 css/js/json 仍然留给游戏本体：那些可能与本地构建产物版本不同。
+ */
+export function allowedExt(pathname) {
+  const ext = extensionOf(pathname);
+  if (ALLOWED_EXT.has(ext)) return true;
+  // `/fonts/fonts.css`（官方客户端唯一的字体清单）与提取出来的**本地美术**（`/assets/local/**` 的
+  // scene.json / scene.bin 与其它 json 清单）在容器里没有本地副本，不存在「与本地构建产物版本不一致」
+  // 的问题 —— 它们是本地美术的一部分，跟着同一张源表走。`/assets` 下其它位置的 css/js/json 仍留给游戏本体。
+  if (ext === 'css' && pathname.startsWith('/fonts/')) return true;
+  return (ext === 'json' || ext === 'bin') && pathname.startsWith('/assets/local/');
+}
+
+export function splittable(pathname) {
+  return pathname.startsWith('/assets/') || pathname.startsWith('/fonts/');
+}
+
+export function validPath(pathname) {
+  if (pathname.length < 2 || pathname.length > MAX_PATH) return false;
+  if (pathname.includes('//')) return false;
+  for (const seg of pathname.split('/')) {
+    if (seg === '') continue; // 前导 '/'
+    if (!SEGMENT.test(seg) || seg.endsWith('.')) return false;
+  }
+  return true;
+}
+
+export function extensionOf(pathname) {
+  const i = pathname.lastIndexOf('.');
+  if (i < 0) return '';
+  return pathname.slice(i + 1).toLowerCase();
+}
+
+/**
+ * Parse and validate sources.json. Throws on anything that would turn this sidecar into an open
+ * redirect: the file is a build-time artifact, but a hand edit must not get that far.
+ */
+export function parseSources(raw) {
+  const doc = JSON.parse(raw);
+  if (!doc || typeof doc !== 'object' || !Array.isArray(doc.sources) || !Array.isArray(doc.order)) {
+    throw new Error('sources.json: expected { sources: [], order: [] }');
+  }
+  const byId = new Map();
+  for (const src of doc.sources) {
+    if (typeof src?.id !== 'string' || typeof src?.base !== 'string') continue;
+    if (!src.base.startsWith('https://') || src.base.includes('..')) continue;
+    byId.set(src.id, src.base);
+  }
+  if (byId.size === 0) throw new Error('sources.json: no usable source');
+  // 个别路径任何一个源都供不了（平台的审核会把它们挡下），必须点名改道。
+  // 只接受指向已知源的 id：例外表也不能变成任意 URL。
+  const exceptions = new Map();
+  if (doc.exceptions && typeof doc.exceptions === 'object') {
+    for (const [p, id] of Object.entries(doc.exceptions)) {
+      if (typeof p === 'string' && typeof id === 'string' && byId.has(id)) exceptions.set(p, byId.get(id));
+    }
+  }
+  // **前缀级规避**（2026-10-14）：某些源是**整棵目录**供不了的——实测魔搭数据集对
+  // assets/voice/ 是 0/15、assets/char/ 只有 21%、assets/ui/ 只有 20%（详见
+  // _tmp/ms-failover-2026-10-14/MEASURED.md）。缺口是目录级而非随机散点，所以
+  // 「逐条存在性缓存」救不了第一次请求：它会先 302 到缺件源、拿到 404、再重来，
+  // 玩家白跑一趟。前缀规则让第一次请求就直奔正确的源。
+  //
+  // 与 `exceptions` 的区别：exceptions 是「这条路径**必须**用某个源」，prefixRules 是
+  // 「这个前缀**不许**用某些源」——前者点名，后者排除。
+  const prefixRules = [];
+  if (Array.isArray(doc.prefixRules)) {
+    for (const rule of doc.prefixRules) {
+      if (!rule || typeof rule.prefix !== 'string' || !Array.isArray(rule.skip)) continue;
+      // 同样不允许变成任意 URL / 任意 id：只接受已配置的源 id。
+      const skip = new Set(rule.skip.filter((id) => typeof id === 'string' && byId.has(id)));
+      if (!rule.prefix || skip.size === 0) continue;
+      prefixRules.push({ prefix: rule.prefix, skip });
+    }
+  }
+  // 接口清单基址（C 方案 2026-10-22）：/cdn/v1/* 从数据集取。与 sources 同等级校验 ——
+  // 必须是 https、不含 ".."；末尾斜杠统一剥掉，拼接方自己带前导 '/'。
+  const interfaceBase = (typeof doc.interfaceBase === 'string'
+    && doc.interfaceBase.startsWith('https://') && !doc.interfaceBase.includes('..'))
+    ? doc.interfaceBase.replace(/\/+$/, '') : null;
+  return { byId, order: doc.order.filter((id) => byId.has(id)), exceptions, prefixRules, interfaceBase };
+}
+
+/** 首个命中的前缀规则所屏蔽的源 id；无命中返回 null。有序，与 sources.json 里的书写顺序一致。 */
+export function prefixBlocked(config, pathname) {
+  if (!config.prefixRules || !config.prefixRules.length) return null;
+  for (const rule of config.prefixRules) {
+    if (pathname.startsWith(rule.prefix)) return rule.skip;
+  }
+  return null;
+}
+
+
+// ---- 源健康与「这个文件它有没有」--------------------------------------------------------------------
+// 判据不在这里重算：进程内跳转（server/http/asset-jump.js）唯一地做探测，并把结论写成一个快照文件，
+// 侧车只读它 —— nginx 把 /assets|fonts/** 交给侧车，少了这两条剔除，一个取不到的源仍会被发给玩家。
+const SNAPSHOT = process.env.SP_EDGE_SNAPSHOT
+  || (process.env.TMPDIR || process.env.TEMP || '/tmp') + '/sp-asset-state.json';
+let snapshot = { down: [], dead: [], miss: [] };
+let snapshotAt = 0;
+
+function readSnapshot(force = false) {
+  if (!force && Date.now() - snapshotAt < 5000) return snapshot;
+  snapshotAt = Date.now();
+  try {
+    const doc = JSON.parse(fs.readFileSync(SNAPSHOT, 'utf8'));
+    snapshot = { down: Array.isArray(doc.down) ? doc.down : [], dead: Array.isArray(doc.dead) ? doc.dead : [], miss: Array.isArray(doc.miss) ? doc.miss : [] };
+  } catch {
+    snapshot = { down: [], dead: [], miss: [] };   // 还没有快照：不做剔除，行为与修复前一致
+  }
+  return snapshot;
+}
+const knownDown = (id) => readSnapshot().down.includes(id);
+const knownDead = (id) => readSnapshot().dead.includes(id);
+const knownMiss = (id, pathname) => readSnapshot().miss.includes(id + '\n' + pathname);
+
+/** First source in config order, or null when the file names none that exist. */
+export function pick(config, id, pathname, skip = null) {
+  if (id) return config.byId.get(id) ?? null;
+  const forced = config.exceptions.get(pathname);
+  // 前缀规避：这个前缀在这些源上是**目录级**供不了的（实测依据见 parseSources 注释），
+  // 第一次请求就要避开，别拿玩家的请求去试错。
+  const blocked = prefixBlocked(config, pathname);
+  // `skip` 由调用方给出「已知缺这个文件」的源 id（进程内跳转会按存在性探测填它）；
+  // 例外表也要能被跳过，否则一个缺件的强制源会把 302 变成客户的 404。
+  //
+  // ⚠️ 健康/存在性缓存只对**容器自己要去取字节的源**有意义（私有数据集要换会话追 resolve）。
+  // 其余镜像（weishucdn/r2）是玩家浏览器直连的：容器的 HEAD 会被 Cloudflare 判 403 或超时，
+  // 而玩家的 GET 是 200。用容器视角把它们判死，会把整条 302 顺延链变成 404
+  // （实测：scene/<stage>/scene.bin 在健康探测跑完后全 404，浏览器直接取同 URL 是 200）。
+  const containerFetched = (want) => /modelscope\.cn/i.test(config.byId.get(want) || '');
+  const unusable = (want) =>
+    (skip && skip.has(want)) || (blocked && blocked.has(want)) ||
+    (containerFetched(want) && (knownDown(want) || knownMiss(want, pathname)));
+  // 例外表点名的那个源 id（exceptions 存的是 base，反查回 id 才能与 skip/blocked 对齐）。
+  let forcedId = null;
+  if (forced) for (const [k, base] of config.byId) if (base === forced) { forcedId = k; break; }
+  if (forced && !(forcedId && unusable(forcedId))) return forced;
+  for (const want of config.order) {
+    if (unusable(want)) continue;
+    const base = config.byId.get(want);
+    if (base) return base;
+  }
+  return null;
+}
+
+/** Drop only the `sp_source` key; every other query byte is forwarded verbatim. */
+export function stripSourceParam(query) {
+  if (!query) return '';
+  return query
+    .split('&')
+    .filter((part) => part !== '' && part.split('=')[0] !== 'sp_source')
+    .join('&');
+}
+
+/**
+ * The whole decision, as a pure function: no sockets, no clock, no globals.
+ * @returns {{status:number, location?:string, headers:Record<string,string>, source?:string}}
+ */
+export function decide(config, { method = 'GET', pathname = '/', query = '', skip = null } = {}) {
+  const cors = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+  };
+  if (method === 'OPTIONS') {
+    return { status: 204, headers: { ...cors, 'Cache-Control': 'no-store' } };
+  }
+  if (method !== 'GET' && method !== 'HEAD') {
+    return { status: 405, headers: { Allow: 'GET, HEAD, OPTIONS' } };
+  }
+  // nginx 已经按扩展名粗筛过；这里再判一次是防守，不是主逻辑。
+  if (!splittable(pathname) || !validPath(pathname) || !allowedExt(pathname)) {
+    return { status: 404, headers: {} };
+  }
+
+  const forced = query ? new URLSearchParams(query).get('sp_source') : null;
+  const base = pick(config, forced, pathname, skip);
+  if (!base) {
+    // 配置缺失时明确失败：静默 404 会让「边缘层有没有在工作」变成一个只能靠猜的问题。
+    return { status: 503, headers: { 'Content-Type': 'text/plain' } };
+  }
+
+  const rest = stripSourceParam(query);
+  const target = base + pathname + (rest ? `?${rest}` : '');
+  if (target.length > MAX_TARGET) return { status: 414, headers: {} };
+
+  return {
+    status: 302,
+    location: target,
+    source: base,
+    headers: {
+      ...cors,
+      Location: target,
+      'Cache-Control': `public, max-age=${CACHE_SECONDS}`,
+      'X-SP-Edge': forced ? `forced:${forced}` : 'order',
+    },
+  };
+}
+
+export function createServer(config, { verbose = false } = {}) {
+  return http.createServer({ maxHeaderSize: 8192, headersTimeout: 10_000, requestTimeout: 15_000 }, (req, res) => {
+    const url = new URL(req.url, 'http://localhost');
+    let out;
+    try {
+      out = decide(config, { method: req.method, pathname: url.pathname, query: url.search.slice(1) });
+    } catch (err) {
+      out = { status: 500, headers: { 'Content-Type': 'text/plain' } };
+      console.error('sp-edge: decide failed:', err?.message || err);
+    }
+    if (verbose) console.log(`sp-edge: ${req.method} ${url.pathname} -> ${out.status}${out.source ? ` ${out.source}` : ''}`);
+    res.writeHead(out.status, out.headers);
+    res.end();
+  });
+}
+
+function main() {
+  const configPath = process.env.SP_EDGE_SOURCES || DEFAULT_CONFIG_PATH;
+  const port = Number(process.env.SP_EDGE_PORT || DEFAULT_PORT);
+  let config;
+  try {
+    config = parseSources(fs.readFileSync(configPath, 'utf8'));
+  } catch (err) {
+    // 起不来就明确失败：nginx 的 @fallback 仍然能供素材，整容器不该因为这个进程停摆。
+    console.error(`sp-edge: cannot start — ${err?.message || err}`);
+    process.exit(1);
+  }
+  const server = createServer(config, { verbose: process.env.SP_EDGE_VERBOSE === '1' });
+  server.listen(port, '127.0.0.1', () => {
+    console.log(`sp-edge: listening on 127.0.0.1:${port}, order=${config.order.join(' > ')}, exceptions=${config.exceptions.size}`);
+  });
+  // 容器停的时候平台发 TERM；收紧到 in-flight 请求结束为止就够了。
+  for (const sig of ['SIGTERM', 'SIGINT']) {
+    process.on(sig, () => server.close(() => process.exit(0)));
+  }
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

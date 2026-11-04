@@ -1,0 +1,31 @@
+{
+  "manifest": 2,
+  "id": "roguelike-ui",
+  "name": {
+    "zh": "肉鸽节点图浮层",
+    "en": "Roguelike node graph overlay"
+  },
+  "description": {
+    "zh": "P0 垂直切片的节点图浮层：层名、行动力、节点序列、当前节点、结局钩子。只读 pub.rogue.nodes；不启动第二个棋盘渲染器。",
+    "en": "Node graph overlay for the P0 vertical slice: layer, action points, node sequence, current node, ending hook. Reads pub.rogue.nodes only."
+  },
+  "version": "0.1.0",
+  "app": ">=0.3.0 <0.5.0",
+  "api": 2,
+  "class": "ui",
+  "scope": [
+    "personal"
+  ],
+  "slots": [
+    "hud.right"
+  ],
+  "authors": [
+    "jingjiangze"
+  ],
+  "license": "GPL-3.0-or-later",
+  "code": {
+    "client": [
+      "js/ui/rogueNodes.js"
+    ]
+  }
+}

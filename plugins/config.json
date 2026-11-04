@@ -1,18 +1,47 @@
 {
   "trusted": {
-    "mota-coop": "b1ed43cd3ed500790a534085eaf104d028aca22af5804820597d37a0e592c432",
-    "mota": "83bfe5f41d6c37246b6266812769b1b03616f1a8892a01539452ee40838b1e75",
-    "ai-scoring": "d88c4ce98c13e378bcf690890ec8e67b4260bc2339e985760f031b92cd867c38",
-    "operator-skins": "aeedb155ce99dd6ef57cc30df362a44eaf4dd2d3465899ce6f201b0be5e52020",
-    "alliance-20": "4765d955f19d9dba4a4128fa6044b91f54258f77a1c78d59ec8b7ff14fd64117"
+    "mota": "95ad810aba354377a33021a1f190164bc1950103a3c3a9dab44e74e4f59eac29",
+    "ai-scoring": "669b316f3b254101ecdc9743354f85f6a5f38c18b27efc1cbf7f2c83f208cc17",
+    "operator-skins": "3967efa673a839faf99fecdeeec6409c73cc1647cb19bebc0d4eda8c537abde3",
+    "alliance-20": "c3f41920f07ca9d919db8b2994e5fa4292aa8f7810067db5e7411086ce6cec89",
+    "csp-allow": "c0f1ba669d9cb0645e687eb2fbc416962240a95d0ecc73051c7aaf524cb7e794",
+    "room-chat": "fd7a079dcfebfcd40e644d124e111ba66234a112aa273814258efb982118fb51",
+    "spectate": "dc8db04cd17cbfe830e3992d39f3bc3053349039077f8161ac7df326276f7e18",
+    "loan-pledge": "d09d4254afb55487c255b0c544c9aea408d7bf916ba880bed5efc5270b0fe393",
+    "cdn-local": "8a2803d253340fffb1a710ed46e6d1918b86241f480b61023b6801d360e1d07c",
+    "versus-room": "319816ee589b807578c5be76555cc1a410e5dc4ea86a55a4098f7cb16c6d7a50",
+    "xie-room": "12a4d59fcef72546c82e6e85227afe2b899faa09c8282c0233709097db2eb17d",
+    "relics-87": "e671929f75cf2c247532f9278c31e5696834d5d7ffdc3eca93e0c2fa8e0db580",
+    "random-stage": "67dcddc553d0d1edf8e2018ec48e0d17d4cd1930c8bbc9b6e9747db29bebbf5f",
+    "rogue": "1d6c3b3f32d47327b1fda82d8430a2ac633b94314479e4c291c87af37ad9276a",
+    "roguelike-core": "252c3b35697a51a4fdf36cb603ea31659c0490da8bbca790a817ea5a0d51973c",
+    "roguelike-data-ro4": "1a54ac8ab941a976977a66b2e9a51af16dec7185c4c2b29715aa929ce4ba765d",
+    "ave-mujica": "05ef9b5ad8bdeb9c843afe141df17f0babf7160b08567537f3878dbeb90c3a78",
+    "kits-ave-mujica": "26a60db8b46d2a735c930cca3facdea954b0bf63eafe94c89b9581e77e65362f",
+    "avemujica-look": "0d7ceb845fe6db3babd36e125dd033152102b6817948b900fcb94d217fda6e56"
   },
   "default": [
     "mota",
     "operator-skins",
     "alliance-20",
-    "ai-scoring"
+    "ai-scoring",
+    "room-chat",
+    "spectate",
+    "cdn-local",
+    "versus-room",
+    "xie-room",
+    "relics-87",
+    "random-stage",
+    "rogue",
+    "roguelike-core",
+    "roguelike-data-ro4",
+    "upstream-043-content",
+    "avemujica-look",
+    "kits-ave-mujica"
   ],
   "required": [
-    "mota"
+    "mota",
+    "room-chat",
+    "spectate"
   ]
 }

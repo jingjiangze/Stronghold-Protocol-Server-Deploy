@@ -40,6 +40,7 @@
 //   cast, a grant with no enemy there kept (备注 "在范围内不存在可选敌方单位时保留可付与次数").
 
 import { num, talentBb, traitBb, skillRec, batMod, up, once } from '../shared/tier1.js';
+import { hypot } from '../../../detmath.js';
 import { elementDmg } from '../shared/tier6.js';
 import { burstDamageUp } from '../shared/tier5.js';
 import { hasHp } from '../../../damage.js';
@@ -47,7 +48,7 @@ import { canTargetEnemy, enemyStealthed } from '../../../targeting.js';
 import { bodyInRange } from '../../../body.js';
 import { COLS, PALSY_MAX } from '../../../constants.js';
 import { burstLimit } from '../../../../../shared/plugins/steps.js';
-import { hypot } from '../../../detmath.js';
+
 
 const S1 = 'skchr_mantra_1';
 const S2 = 'skchr_mantra_2';

@@ -40,7 +40,12 @@
 //                a list of paths or (assets, theme) the object inline · i18n { <lang>: path } (content+) — paths are
 //                inside the folder (isPackPath) and .json, the files an inline `assets` names are art, models, audio
 //                or fonts
-//   entry        { sim, meta } (script, .js) · { client } (ui: .html, required; trusted: .js) · { server } (trusted, .js)
+//   entry        { sim, meta } (script, .js) · { client } (ui: .html, unless a non-empty `code.client`; trusted: .js) ·
+//                { server } (trusted, .js)
+//   code         a lossless mount's own code tree, kept as written (paths relative to the plugin folder): match and
+//                matchMixin (a match entry and mixes over it), client, data, lobby and static — read by
+//                server/plugins/contentSet.js, lobbyModules.js, staticModules.js and the registry's ui frame. A plain
+//                object; any other shape is ignored with a warning. Not a permission: the paths are the manifest's.
 //   slots        ui only: hud.right, result.tab, stats.tab, room.panel (UI_SLOT_IDS). Absent or []: a warning, the
 //                plugin still loads but the host grants no slot. A bad list, or slots on another class: a problem.
 //   lang class   the language fields of manifest 1 (lang, base, fallback, complete, machineTranslated, numberUnits —
@@ -183,7 +188,7 @@ const SETTING_TYPES = ['boolean', 'integer', 'number', 'enum'];
 /** Top-level fields of manifest 2 (anything else is warned about and ignored). */
 const V2_FIELDS = new Set(['$schema', 'manifest', 'id', 'name', 'englishName', 'description', 'version', 'app', 'api', 'class', 'scope',
   'authors', 'credits', 'license', 'homepage', 'sourceLang', 'requires', 'optional', 'conflicts', 'loadAfter', 'loadBefore', 'priority',
-  'settings', 'permissions', 'overrides', 'rules', 'entry', 'slots', 'notices', 'files', 'lang', 'base', 'fallback', 'complete', 'machineTranslated', 'numberUnits', ...Object.keys(PARTS)]);
+  'settings', 'permissions', 'overrides', 'rules', 'entry', 'code', 'slots', 'notices', 'files', 'lang', 'base', 'fallback', 'complete', 'machineTranslated', 'numberUnits', ...Object.keys(PARTS)]);
 /** Those fields, sorted, for the frozen API table (docs/PLUGIN-API.md). */
 export const MANIFEST_FIELDS = Object.freeze([...V2_FIELDS].sort());
 /** Fields only a lang plugin has. */
@@ -294,7 +299,7 @@ export function appVersionMatches(range, version = APP_VERSION) {
  *   homepage: string, sourceLang: string, requires: Record<string, string>, optional: Record<string, string>,
  *   conflicts: Record<string, string>, loadAfter: string[], loadBefore: string[], priority: number,
  *   settings: Record<string, PluginSetting>, permissions: string[], parts: Record<string, PluginPart>,
- *   entry: Record<string, string>, slots: string[], files: Record<string, string>, overrides?: string[],
+ *   entry: Record<string, string>, code?: Record<string, any>, slots: string[], files: Record<string, string>, overrides?: string[],
  *   themeVars?: Record<string, string>, notices?: PluginNotice[],
  *   lang?: string, base?: string | null, fallback?: string[], complete?: boolean, machineTranslated?: boolean,
  *   numberUnits?: string[] | null, rules?: Record<string, string> }} PluginManifest
@@ -596,6 +601,14 @@ export function readPluginManifest(raw, ctx) {
   if (!isPluginId(id)) list.problem('PLUGIN_ID', `"${id}" is not a plugin id (2–32 lower-case letters, digits and -, the folder name decides)`, { id });
   if (m.id !== undefined && m.id !== id) list.warning('PLUGIN_ID_MISMATCH', `"id": ${short(m.id)} is not "${id}" (the folder name decides)`, { at: ['id'], id });
   for (const k of Object.keys(m)) if (!V2_FIELDS.has(k)) list.warning('PLUGIN_FIELD_UNKNOWN', `"${k}" is not a field of manifest 2 (ignored)`, { at: [k] });
+  // `code` (see the header): a lossless mount's own code tree, kept as written — the code roots resolve its paths
+  // against the plugin folder. Only a plain object is one; anything else is ignored, as before.
+  /** @type {Record<string, any> | undefined} */
+  let code;
+  if (m.code !== undefined) {
+    if (isObj(m.code)) code = JSON.parse(JSON.stringify(m.code));
+    else list.warning('PLUGIN_FIELD_UNKNOWN', `"code": ${short(m.code)} is not an object (ignored)`, { at: ['code'] });
+  }
 
   const cls = typeof m.class === 'string' ? m.class : '';
   const kind = has(PLUGIN_CLASSES, cls) ? PLUGIN_CLASSES[cls] : null;
@@ -709,7 +722,11 @@ export function readPluginManifest(raw, ctx) {
       const text = `"slots": ${short(m.slots)} — a ui plugin lists ${UI_SLOT_IDS.join(', ')} (one each)`;
       list.problem('PLUGIN_UI_SLOTS', text, { at: ['slots'], detail: text });
     } else slots = UI_SLOT_IDS.filter((s) => m.slots.includes(s));
-    if (!entry.client) list.problem('PLUGIN_ENTRY', '"entry.client" is required for a ui plugin (an .html file)', { at: ['entry', 'client'] });
+    // Second shape: no frame page, only services from the same origin. A non-empty `code.client` (the .js modules
+    // public/js/ui/pluginSlots.js mounts into the slots) is enough — the registry serves that form with no frame files
+    // (server/plugins/registry.js readUiFrame). Only an empty `code.client` leaves the plugin without an entry.
+    const moduleRels = Array.isArray(code?.client) ? code.client.filter((x) => typeof x === 'string' && x) : [];
+    if (!entry.client && !moduleRels.length) list.problem('PLUGIN_ENTRY', '"entry.client" is required for a ui plugin (an .html file)', { at: ['entry', 'client'] });
   }
 
   // permissions: known, allowed for the class, one for every part and entry point
@@ -758,6 +775,7 @@ export function readPluginManifest(raw, ctx) {
     manifest: 2, id, class: cls, type: kind.packType, name, englishName, names, description, version, app: range, compatible, api, scope,
     authors: authorsOf(m.authors), credits: str(m.credits, 500), license: str(m.license, 100), homepage, sourceLang: sourceLang || SOURCE_LANG,
     requires, optional, conflicts, loadAfter, loadBefore, priority, settings, permissions, parts, entry, slots, files: {},
+    ...(code ? { code } : {}),
     ...(m.overrides !== undefined ? { overrides } : {}),
     ...(parts.theme?.themeVars ? { themeVars: parts.theme.themeVars } : {}),
     ...(notices ? { notices } : {}),

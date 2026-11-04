@@ -79,7 +79,14 @@ export class MatchViews {
       serverNow: this.sched.now(),
       modeId: this.modeId,
       difficulty: this.difficulty,
+      // 危机合约 (shared/contracts.js): the room's selection, so the settlement / the HUD can name it. Omitted while
+      // the room had none, so an ordinary match's m.public keeps its keys.
+      ...(this.contracts?.length ? { contracts: this.contracts.slice() } : {}),
       stageId: this.stageId,
+      // a non-default official version's match (DESIGN §35.23): its registry id, so a page that never saw the room (a
+      // reload after it closed: the lobby's result replay) reads the frames with that version's data; absent for the
+      // default, whose frames stay byte-identical
+      ...(this.version ? { version: this.version } : {}),
       setupRevision: this.setupRevision,
       rerollVote: this.setupVote ? {
         id: this.setupVote.id,
@@ -106,6 +113,7 @@ export class MatchViews {
         seat: ps.seat,
         name: ps.name,
         isBot: ps.isBot,
+        ...(Number.isInteger(ps.aiTakeoverRound) ? { aiTakeoverRound: ps.aiTakeoverRound } : {}),
         connected: ps.isBot || (ps.connected && !ps.left),
         alive: ps.alive,
         lp: Math.max(0, ps.lp),

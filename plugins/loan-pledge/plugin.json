@@ -1,0 +1,48 @@
+{
+  "manifest": 2,
+  "id": "loan-pledge",
+  "name": "魔塔·借贷抵押",
+  "englishName": "Mota loan pledge",
+  "description": "协同共竞的借贷扩展：每回合只扣利息、不动本金；借款时抵押一个手牌干员，还清后解锁。",
+  "version": "0.1.0",
+  "app": ">=0.3.0 <0.5.0",
+  "api": 2,
+  "class": "trusted",
+  "scope": [
+    "room"
+  ],
+  "permissions": [
+    "trusted.server"
+  ],
+  "requires": {
+    "mota": ">=0.3.0"
+  },
+  "loadAfter": [
+    "mota"
+  ],
+  "entry": {
+    "server": "host/noop.js"
+  },
+  "code": {
+    "match": "server/match/LoanMatch.js"
+  },
+  "settings": {
+    "enabled": {
+      "type": "boolean",
+      "default": true,
+      "label": "启用借贷抵押"
+    },
+    "pledge": {
+      "type": "boolean",
+      "default": true,
+      "label": "借款时抵押一个手牌干员"
+    },
+    "maxInterestRounds": {
+      "type": "integer",
+      "min": 0,
+      "max": 10,
+      "default": 3,
+      "label": "每笔借款最多扣息几个回合"
+    }
+  }
+}

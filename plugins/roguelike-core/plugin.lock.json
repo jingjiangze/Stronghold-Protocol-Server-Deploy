@@ -1,0 +1,21 @@
+{
+  "lock": 1,
+  "id": "roguelike-core",
+  "version": "0.1.0",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "host/noop.js": {
+      "sha256": "74f2479b26bd62b40555f5483d6563a4885ec928df41f256c7d0ac40c4fd69ff",
+      "bytes": 298
+    },
+    "plugin.json": {
+      "sha256": "63518f11b9783984e914a75fc086c252a18a1cb194c36e94e10479e5452de13e",
+      "bytes": 998
+    },
+    "server/match/NodeMixin.js": {
+      "sha256": "5ab0e36e80467a6382e0a4043ca21927267acf538bdea43c0ae838cf94b021c9",
+      "bytes": 14845
+    }
+  },
+  "spine": {}
+}

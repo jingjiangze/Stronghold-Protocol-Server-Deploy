@@ -1446,7 +1446,9 @@ export class Lobby {
         mode: room.mode,
         difficulty: room.difficulty,
         // a plugin mode the host chose (header "Gameplay plugins"), else the official mode of the difficulty
-        modeId: room.content?.modeId || modeIdFor(room.mode, room.difficulty, room.variant || null),   // 协同共竞: mode_xie_<difficulty>
+        // 协同共竞: mode_xie_<难度>；肉鸽: mode_rogue_<难度>（2026-11-03：独立模式没有 variant，必须按 room.mode 认）
+        modeId: room.content?.modeId
+          || modeIdFor(room.mode, room.difficulty, room.mode === 'rogue' ? 'rogue' : (room.variant || null)),
         ...(room.variant ? { variant: room.variant } : {}),
         // 「AI 队友最后选择」 (GitHub #338): fixed for the match
         aiPicksLast: room.mode !== 'solo' && room.aiPicksLast === true,

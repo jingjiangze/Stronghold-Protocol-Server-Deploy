@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
 import { fileURLToPath } from 'node:url';
-import { startServer } from '../../server/index.js';
+import { startServer } from '../../server/boot-main.js';
 import { zipFiles } from '../../server/plugins/zip.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');

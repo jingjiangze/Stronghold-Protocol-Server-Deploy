@@ -1,10 +1,7 @@
 // server/sim/content/kits/ops/chess_char_4_09-mizuki.js — 水月 (char_437_mizuki) kit, tier 4.
 // Conventions of the tier-4 kits: ../shared/tier4.js; kit contract and rules: ../README.md.
 
-import {
-  AURA, num, tbb, moduleBb, grid, batFlat, enemiesOnRange, whileDeployed, pulse, toggleBuff, skillActive, isSel, alt,
-  instantKind, withDefaults,
-} from '../shared/tier4.js';
+import { AURA, num, tbb, moduleBb, grid, batFlat, enemiesOnRange, whileDeployed, pulse, toggleBuff, skillActive, isSel, alt, instantKind, withDefaults } from '../shared/tier4.js';
 
 export default withDefaults({
   // ===== 水月 (stalker) S2 囚徒困境 — faster, +ATK, talent 1 +1 target & bind; talents 创伤性癔症 / 反移情; module slow

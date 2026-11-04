@@ -2,8 +2,8 @@
 // Conventions of the tier-3 kits: ../shared/tier3.js; kit contract and rules: ../README.md.
 
 import { PUSH_DIRECTIONAL_MIN_DIST } from '../../../constants.js';
-import { num, defOf, talentBb, traitBb, onTiles, gridKeys, fx, copyGrid } from '../shared/tier3.js';
 import { hypot } from '../../../detmath.js';
+import { num, defOf, talentBb, traitBb, onTiles, gridKeys, fx, copyGrid } from '../shared/tier3.js';
 
 /** Two enemy bodies touch within this distance (tiles) — 见行者 collision stun. */
 const COLLIDE = 0.6;

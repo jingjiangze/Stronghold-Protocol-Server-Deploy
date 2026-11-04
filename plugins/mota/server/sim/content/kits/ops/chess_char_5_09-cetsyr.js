@@ -2,9 +2,9 @@
 // Conventions of the tier-5 kits: ../shared/tier5.js; kit contract and rules: ../README.md.
 
 import { COLS } from '../../../constants.js';
+import { hypot, sin, cos } from '../../../detmath.js';
 import { rotateOffset } from '../../../dir.js';
 import { AURA_IV, AURA_DUR, num, talent, traitBb, skillGrid, isOp, leaderOf, whileOn } from '../shared/tier5.js';
-import { hypot, sin, cos } from '../../../detmath.js';
 
 /** 魔王 T1 微尘: collision radius of one mote (PRTS 备注 0.4); orbit radius / speed come from the talent bb. */
 const MOTE_HIT_RADIUS = 0.4;

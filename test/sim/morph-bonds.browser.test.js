@@ -38,7 +38,7 @@ function fixture(ids, items) {
 describe('converted bonds in the actual browser battle', { skip: !enabled }, () => {
   let srv, browser, page;
   before(async () => {
-    const { startServer } = await import('../../server/index.js');
+    const { startServer } = await import('../../server/boot-main.js');
     const P = (await import('puppeteer-core')).default;
     srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true });
     browser = await P.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox'] });

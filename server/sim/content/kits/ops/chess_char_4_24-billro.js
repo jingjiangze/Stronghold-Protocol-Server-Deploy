@@ -1,9 +1,7 @@
 // server/sim/content/kits/ops/chess_char_4_24-billro.js — 卡涅利安 (char_426_billro) kit, tier 4.
 // Conventions of the tier-4 kits: ../shared/tier4.js; kit contract and rules: ../README.md.
 
-import {
-  num, tbb, moduleBb, grid, batFlat, enemiesOnRange, whileDeployed, toggleBuff, skillActive, isSel, alt, withDefaults,
-} from '../shared/tier4.js';
+import { num, tbb, moduleBb, grid, batFlat, enemiesOnRange, whileDeployed, toggleBuff, skillActive, isSel, alt, withDefaults } from '../shared/tier4.js';
 
 /** 卡涅利安 S3 食噬之印: the ATK bonus climbs in 1 s steps over 20 s (PRTS 备注; the blackboard has no ramp time). */
 const BILLRO_S3_RAMP = 20;

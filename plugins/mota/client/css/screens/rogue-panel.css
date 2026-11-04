@@ -1,0 +1,536 @@
+/* plugins/mota/client/css/screens/rogue-panel.css — 肉鸽「集成战略」全屏叠加面板（2026-11-04 重做）。
+   screens/game.js 首次进对局时按需注入（同 hex.css 的注入法），核心 index.html 不引用它。
+   官方配色：深蓝黑底 + 金色标题 + 青色描边；卡片沿用官方 img_node_bkg.png（165×94）作底。
+   尺寸一律 rem（1rem = 100 设计 px，1280×720 下 1rem≈66.7px），字号 calc(N * var(--t)) 与 --t 同口径。 */
+
+.rpn {
+  --rp-gold: #ffb80d;
+  --rp-gold-hi: #ffe6a8;
+  --rp-cyan: #00e2e4;
+  --rp-navy: #050c16;
+  --rp-navy-2: #0a1727;
+  --rp-line: rgba(0, 226, 228, .28);
+  --rp-txt: #cfe2f0;
+  --rp-dim: #a6bccf;
+  position: absolute; inset: 0; z-index: 60;
+  display: grid; place-items: center;
+  padding: .1rem .2rem;
+  color: var(--rp-txt);
+  font-size: max(calc(.125 * var(--t)), 11px);
+}
+
+/* —— 遮罩 —— */
+.rpn__veil {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(62% 56% at 50% 42%, rgba(9, 24, 42, .93), rgba(2, 6, 12, .975) 78%),
+    repeating-linear-gradient(180deg, rgba(0, 226, 228, .03) 0 1px, transparent 1px 4px);
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+}
+
+/* —— 面板 —— */
+.rpn__panel {
+  position: relative;
+  display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+  width: min(11.6rem, calc(100vw - .4rem));
+  height: min(6.5rem, calc(100vh - .3rem));
+  background: linear-gradient(180deg, var(--rp-navy-2), var(--rp-navy) 72%);
+  border: 1px solid var(--rp-line);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .7), 0 .12rem .5rem rgba(0, 0, 0, .66), inset 0 0 .5rem rgba(0, 226, 228, .06);
+  animation: screen-in var(--t-slow) var(--ease-out);
+}
+.rpn__panel::before {
+  content: ""; position: absolute; inset: .045rem; pointer-events: none;
+  border: 1px solid rgba(255, 184, 13, .12);
+}
+
+/* —— 头部 —— */
+.rpn__head {
+  position: relative; display: flex; align-items: center; gap: .16rem;
+  padding: .1rem .18rem .09rem;
+  border-bottom: 1px solid var(--rp-line);
+  background: linear-gradient(180deg, rgba(14, 46, 66, .85), rgba(6, 14, 24, 0) 94%);
+}
+.rpn__headline { display: flex; flex-direction: column; gap: .02rem; min-width: 0; }
+.rpn__micro {
+  font-family: var(--font-mono); font-size: max(calc(.085 * var(--t)), 8px);
+  letter-spacing: .4em; text-indent: .4em; color: rgba(0, 226, 228, .72); white-space: nowrap;
+}
+.rpn__micro b { color: var(--rp-gold); font-weight: 600; }
+.rpn__title {
+  margin: 0; font-size: max(calc(.28 * var(--t)), 20px); font-weight: 700;
+  line-height: 1.08; letter-spacing: .12em; text-indent: .12em;
+  background: linear-gradient(96deg, #ffffff, var(--rp-gold-hi) 46%, var(--rp-gold) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 calc(.1 * var(--t)) rgba(255, 184, 13, .32));
+}
+.rpn__chips { display: flex; flex-wrap: wrap; align-items: center; gap: .07rem; margin-left: auto; }
+.rpn__chip {
+  padding: .03rem .09rem; border: 1px solid rgba(0, 226, 228, .26);
+  background: rgba(0, 226, 228, .07); color: #bfe8ee;
+  font-size: max(calc(.11 * var(--t)), 10px); letter-spacing: .02em; white-space: nowrap;
+}
+.rpn__chip--layer { color: var(--rp-gold-hi); border-color: rgba(255, 184, 13, .4); background: rgba(255, 184, 13, .08); }
+.rpn__chip--map { color: #bfe8ee; }
+.rpn__chip--map b { color: var(--rp-gold-hi); font-weight: 700; letter-spacing: .04em; }
+.rpn__chip--ap b { color: var(--rp-cyan); font-weight: 700; }
+.rpn__chip--relic { color: var(--rp-gold-hi); }
+.rpn__close {
+  flex: 0 0 auto; width: .42rem; height: .42rem; display: grid; place-items: center;
+  padding: 0; border: 1px solid rgba(0, 226, 228, .32); background: rgba(4, 10, 18, .72);
+  color: var(--rp-dim); cursor: pointer;
+  transition: color var(--t-fast), border-color var(--t-fast);
+}
+.rpn__close:hover { color: #fff; border-color: var(--rp-gold); }
+.rpn__close .icon { width: .22rem; height: .22rem; }
+
+/* 入口按钮（screens/game.js 的 .gm__corner 里，沿用 .gm__gear 的尺寸）：展开态金色、战斗中禁用变灰 */
+.gm__gear.gm__rogue[aria-expanded="true"] { color: var(--rp-gold, #ffb80d); border-color: var(--rp-gold, #ffb80d); }
+.gm__gear.gm__rogue:disabled { opacity: .32; cursor: not-allowed; }
+
+/* —— tab —— */
+.rpn__tabs {
+  display: flex; gap: .02rem; padding: 0 .18rem;
+  border-bottom: 1px solid var(--rp-line); background: rgba(4, 10, 18, .55);
+}
+.rpn__tab {
+  all: unset; cursor: pointer; padding: .08rem .22rem;
+  font-size: max(calc(.15 * var(--t)), 12px); letter-spacing: .16em; text-indent: .08em;
+  color: var(--rp-dim); border-bottom: 2px solid transparent;
+  transition: color var(--t-fast), border-color var(--t-fast);
+}
+.rpn__tab:hover { color: #e6f6fb; }
+.rpn__tab.is-on {
+  color: var(--rp-gold-hi); border-bottom-color: var(--rp-gold);
+  text-shadow: 0 0 calc(.1 * var(--t)) rgba(255, 184, 13, .45);
+}
+
+/* —— 主体 —— */
+.rpn__body { flex: 1; min-height: 0; display: flex; padding: .13rem .18rem .15rem; overflow: auto; }
+.rpn-empty { margin: 0; padding: .1rem 0; color: var(--rp-dim); font-size: max(calc(.125 * var(--t)), 11px); }
+
+/* ===== 节点页：左「时间轴 + 图例」· 中「三选一大卡」· 右「节点详情」 ===== */
+/* 左栏 2.2rem → 2.45rem：14 层名（`第四层 · 无灯的房间` / `第十二层 · 封锁线`）在 2.2rem 里会被省略号截断
+   （第五轮视觉验收）；中列（三选一卡宽）保持 2.9rem 不动，右列是 minmax(0, 1fr)，自动吸收这 0.25rem。 */
+.rpn-nodes {
+  flex: 1; min-height: 0; display: grid;
+  grid-template-columns: 2.45rem 2.9rem minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: .16rem;
+}
+
+/* —— 左：14 层时间轴 + 状态图例 —— */
+.rpn-rail {
+  display: flex; flex-direction: column; gap: .06rem; min-height: 0;
+  padding-right: .07rem; border-right: 1px solid rgba(0, 226, 228, .14);
+}
+.rpn-trail {
+  flex: 1 1 auto; min-height: 0; margin: 0; padding: 0; list-style: none;
+  overflow-y: auto; overflow-x: hidden;
+  display: flex; flex-direction: column; gap: .01rem;
+}
+.rpn-trail__row {
+  position: relative; display: grid; align-items: center;
+  grid-template-columns: .16rem .24rem minmax(0, 1fr) auto;
+  gap: .06rem; padding: .045rem .05rem .045rem .04rem;
+  color: var(--rp-dim);
+}
+.rpn-trail__row::before {
+  content: ""; position: absolute; left: .115rem; top: 0; bottom: 0; width: 1px;
+  background: rgba(0, 226, 228, .16);
+}
+.rpn-trail__dot {
+  position: relative; z-index: 1; width: .13rem; height: .13rem; border-radius: 50%;
+  border: 1px solid var(--rp-cyan); background: rgba(4, 10, 18, .92);
+}
+/* 已通过：金色实心 */
+.rpn-trail__row.is-done { color: rgba(138, 163, 186, .8); }
+.rpn-trail__row.is-done .rpn-trail__dot { background: var(--rp-gold); border-color: var(--rp-gold); }
+/* 当前：金色环 + 光晕 + 左侧金条 + 白字（时间轴上最亮的一行） */
+.rpn-trail__row.is-current {
+  color: #fff;
+  background: linear-gradient(90deg, rgba(255, 184, 13, .2), rgba(255, 184, 13, 0) 90%);
+  box-shadow: inset 2px 0 0 var(--rp-gold);
+}
+.rpn-trail__row.is-current .rpn-trail__dot {
+  background: rgba(255, 184, 13, .28); border: 2px solid var(--rp-gold);
+  box-shadow: 0 0 0 2px rgba(255, 184, 13, .18), 0 0 calc(.09 * var(--t)) rgba(255, 184, 13, .8);
+}
+.rpn-trail__row.is-current .rpn-trail__label { color: var(--rp-gold-hi); font-weight: 700; }
+/* 已选层：层名下面一行「已选 · 候选名」 */
+.rpn-trail__row.is-picked .rpn-trail__chosen { color: var(--rp-cyan); }
+/* 未到：青色空心环 */
+.rpn-trail__row.is-next .rpn-trail__dot { border-color: rgba(0, 226, 228, .8); }
+.rpn-trail__idx { font-family: var(--font-mono); font-size: max(calc(.1 * var(--t)), 9px); opacity: .7; text-align: right; }
+.rpn-trail__name { display: flex; flex-direction: column; gap: .01rem; min-width: 0; }
+/* 层名不再用省略号截断（第五轮视觉验收）：放不下就折成两行（`第四层 · 无灯的房间`），
+   行高收到 1.14，折行时仍与右侧单行类型列居中对齐。 */
+.rpn-trail__label {
+  font-size: max(calc(.125 * var(--t)), 11px); line-height: 1.14;
+  white-space: normal; overflow-wrap: anywhere;
+}
+.rpn-trail__chosen {
+  font-style: normal; font-size: max(calc(.085 * var(--t)), 8px);
+  color: var(--rp-gold-hi); opacity: .9;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* 类型列：auto 宽、贴右、单行不裁切（层名折行时也不跟着换行） */
+.rpn-trail__type { font-size: max(calc(.1 * var(--t)), 9px); color: var(--c, var(--rp-dim)); opacity: .85; white-space: nowrap; text-align: right; }
+
+/* 图例：已通过（金实心）/ 当前（金环）/ 未到（青空心）；键名字号与颜色都提到可读 */
+.rpn-rail__legend {
+  flex: 0 0 auto; margin: 0; padding: .06rem 0 0; list-style: none;
+  display: flex; flex-wrap: wrap; gap: .03rem .09rem;
+  border-top: 1px dashed rgba(0, 226, 228, .18);
+  font-size: max(calc(.095 * var(--t)), 9px); color: #b6cada;
+}
+.rpn-rail__legend li { display: flex; align-items: center; gap: .04rem; }
+.rpn-rail__legend i { flex: 0 0 auto; width: .1rem; height: .1rem; border-radius: 50%; }
+.rpn-rail__legend i.is-past { background: var(--rp-gold); }
+.rpn-rail__legend i.is-now { border: 2px solid var(--rp-gold); box-shadow: 0 0 0 1px rgba(255, 184, 13, .3); }
+.rpn-rail__legend i.is-todo { border: 1px solid var(--rp-cyan); }
+
+/* —— 中：下一层三选一（竖排大卡，宽约 2.9rem / 高约 1.4rem） —— */
+.rpn-pick {
+  min-width: 0; min-height: 0;
+  display: flex; flex-direction: column; gap: .08rem;
+  overflow-y: auto; overflow-x: hidden;
+}
+.rpn-pick__head { display: flex; flex-wrap: wrap; align-items: center; gap: .05rem .08rem; }
+.rpn-pick__head b {
+  font-size: max(calc(.16 * var(--t)), 12px); color: var(--rp-gold-hi); letter-spacing: .06em;
+}
+.rpn-pick__note {
+  padding: 0 .07rem; font-size: max(calc(.1 * var(--t)), 9px);
+  color: var(--rp-cyan); border: 1px solid rgba(0, 226, 228, .38);
+}
+.rpn-pick__warn { margin-left: auto; font-size: max(calc(.1 * var(--t)), 9px); color: #ffab97; }
+.rpn-pick__hint { margin: 0; font-size: max(calc(.1 * var(--t)), 9px); color: var(--rp-dim); }
+
+/* 卡间距收紧（第四轮视觉验收：卡高与卡间隙原来接近 1:1，三张卡像三块孤岛）。
+   卡高改成「内容决定」+ 最小高度：标题 / 效果 / 消耗三行都在卡内，消耗行自带分隔线，不再像卡外游离。 */
+.rpn-cards { display: flex; flex-direction: column; gap: .05rem; }
+
+/* 官方节点卡改造（业主 2026-11-04 第三轮）：深蓝黑底 + 金色描边 + 顶部类型色条，
+   不再用类型色整片填充（纯金块读不出信息）；官方 img_node_bkg.png 只作极淡纹理垫底。 */
+.rpn-card {
+  --c: var(--rp-gold);
+  position: relative; flex: 0 0 auto;
+  width: 100%; min-height: 1.16rem; box-sizing: border-box;
+  padding: .1rem .1rem .07rem;
+  display: flex; flex-direction: column; gap: .02rem;
+  border: 1px solid rgba(255, 184, 13, .52);
+  background: linear-gradient(172deg, #0d2236 0%, #071322 58%, #050c16 100%);
+  box-shadow: inset 0 0 .16rem rgba(0, 226, 228, .05);
+  overflow: hidden; cursor: pointer; color: var(--rp-txt); text-align: left;
+  transition: transform var(--t-fast) var(--ease-out), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+/* 顶部类型色条 */
+.rpn-card__bar {
+  position: absolute; left: 0; right: 0; top: 0; height: 2px;
+  background: linear-gradient(90deg, var(--c), rgba(255, 184, 13, .2) 92%);
+}
+.rpn-card::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(0, 226, 228, .06), rgba(0, 0, 0, .22) 96%);
+}
+.rpn-card__bg {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: fill; opacity: .12; mix-blend-mode: screen; pointer-events: none;
+}
+.rpn-card:hover:not(:disabled) {
+  transform: translateY(-.02rem); border-color: var(--rp-gold-hi);
+  box-shadow: inset 0 0 .16rem rgba(0, 226, 228, .1), 0 0 0 1px rgba(255, 184, 13, .4), 0 .04rem .16rem rgba(0, 0, 0, .6);
+}
+.rpn-card.is-picked {
+  border-color: var(--rp-cyan);
+  box-shadow: inset 0 0 0 1px rgba(0, 226, 228, .55), 0 0 calc(.1 * var(--t)) rgba(0, 226, 228, .35);
+}
+.rpn-card.is-off, .rpn-card:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.rpn-card__top { position: relative; z-index: 1; display: flex; align-items: center; gap: .05rem; min-width: 0; }
+/* 官方 _active 图标本身近白：深底上直接亮着用，只加一点描影分开底纹 */
+.rpn-card__icon {
+  flex: 0 0 auto; height: .24rem; width: auto; max-width: 1.05rem;
+  object-fit: contain; object-position: left center;
+  filter: drop-shadow(0 0 .03rem rgba(0, 0, 0, .85));
+}
+.rpn-card__type { font-size: max(calc(.1 * var(--t)), 9px); color: var(--c); letter-spacing: .06em; white-space: nowrap; }
+/* tier 徽章 / 已选标记与消耗、奖励分开：徽章只在顶行右端 */
+.rpn-card__badges { margin-left: auto; display: flex; align-items: center; gap: .04rem; }
+.rpn-card__tier {
+  padding: 0 .05rem; font-family: var(--font-mono);
+  font-size: max(calc(.085 * var(--t)), 8px); line-height: 1.5;
+  color: var(--rp-gold-hi); background: rgba(255, 184, 13, .12); border: 1px solid rgba(255, 184, 13, .45);
+}
+.rpn-card__mark {
+  padding: 0 .05rem; font-size: max(calc(.08 * var(--t)), 8px); line-height: 1.5;
+  color: #04121a; background: var(--rp-cyan);
+}
+.rpn-card__name {
+  position: relative; z-index: 1;
+  font-size: max(calc(.155 * var(--t)), 12px); font-weight: 700; letter-spacing: .02em; color: #fff;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* 效果 / 奖励单独一行（标题与效果分行） */
+.rpn-card__effect {
+  position: relative; z-index: 1;
+  font-size: max(calc(.1 * var(--t)), 9px); color: var(--rp-gold-hi);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* 消耗行：卡内分隔线 + 缩进，读成「这张卡要花多少」，不再像掉在卡外的一行字 */
+.rpn-card__foot {
+  position: relative; z-index: 1; margin-top: auto;
+  display: flex; align-items: baseline; gap: .06rem;
+  padding-top: .04rem; border-top: 1px solid rgba(255, 184, 13, .2);
+  font-size: max(calc(.1 * var(--t)), 9px); color: var(--rp-dim);
+}
+.rpn-card__cost { font-family: var(--font-mono); font-weight: 700; color: #bdeff4; }
+.rpn-card__busy {
+  position: absolute; inset: 0; z-index: 2;
+  background: linear-gradient(90deg, transparent, rgba(4, 10, 18, .55), transparent);
+  animation: rpnBusy 900ms linear infinite;
+}
+@keyframes rpnBusy { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+/* —— 右：节点详情（当前层 / 下一层预览 / 本局摘要 / 本层奖励·难度） —— */
+.rpn-detail {
+  min-width: 0; min-height: 0; display: flex; flex-direction: column;
+  justify-content: space-between; gap: .08rem;
+  padding-left: .14rem; border-left: 1px solid rgba(0, 226, 228, .12);
+  overflow-y: auto;
+}
+.rpn-detail__sec {
+  display: flex; flex-direction: column; gap: .045rem;
+  padding-bottom: .07rem; border-bottom: 1px solid rgba(0, 226, 228, .1);
+}
+.rpn-detail__sec--last { border-bottom: 0; padding-bottom: 0; }
+.rpn-detail__h {
+  margin: 0; display: flex; align-items: center; gap: .05rem;
+  font-size: max(calc(.11 * var(--t)), 10px); font-weight: 700; letter-spacing: .12em;
+  color: rgba(0, 226, 228, .92);
+}
+.rpn-detail__h::before { content: ""; width: 2px; height: .11rem; background: var(--rp-gold); }
+.rpn-detail__rows { margin: 0; display: flex; flex-direction: column; gap: .035rem; }
+.rpn-detail__rows > div { display: flex; align-items: baseline; justify-content: space-between; gap: .08rem; }
+.rpn-detail__rows dt { flex: 0 0 auto; font-size: max(calc(.1 * var(--t)), 9px); color: var(--rp-dim); }
+.rpn-detail__rows dd {
+  margin: 0; min-width: 0; text-align: right;
+  font-size: max(calc(.12 * var(--t)), 10px); color: #e8f6fb;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rpn-detail__rows dd.is-type { color: var(--c, var(--rp-gold-hi)); font-weight: 600; }
+
+.rpn-preview { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: .03rem; }
+.rpn-preview__row {
+  display: grid; grid-template-columns: .1rem minmax(0, 1fr) auto;
+  align-items: center; gap: .06rem; padding: .03rem .05rem;
+  border-left: 2px solid transparent;
+  font-size: max(calc(.11 * var(--t)), 10px); color: var(--rp-txt);
+}
+.rpn-preview__row.is-picked { border-left-color: var(--rp-cyan); background: rgba(0, 226, 228, .09); }
+.rpn-preview__dot {
+  width: .09rem; height: .09rem; border-radius: 50%;
+  background: var(--c, var(--rp-gold)); box-shadow: 0 0 .05rem var(--c, var(--rp-gold));
+}
+.rpn-preview__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 预览右列：主题 + tier（`RO5 · T1`），不再拼 `rogue_ro5_1-*` 这种资源前缀 */
+.rpn-preview__map {
+  font-family: var(--font-mono); font-size: max(calc(.095 * var(--t)), 9px);
+  color: var(--rp-gold-hi); white-space: nowrap;
+}
+.rpn-detail__note { margin: 0; font-size: max(calc(.1 * var(--t)), 9px); color: var(--rp-dim); }
+.rpn-detail__stats { display: flex; flex-wrap: wrap; gap: .04rem .07rem; font-size: max(calc(.105 * var(--t)), 9px); }
+.rpn-detail__stats span {
+  display: inline-flex; align-items: center; gap: .03rem;
+  padding: .02rem .06rem; color: #dbf2f7;
+  border: 1px solid rgba(0, 226, 228, .22); background: rgba(0, 226, 228, .06);
+}
+.rpn-detail__stats b { color: var(--rp-cyan); font-weight: 700; }
+.rpn-detail__reward {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .04rem .08rem;
+  font-size: max(calc(.105 * var(--t)), 9px);
+}
+.rpn-detail__diff { padding: 0 .05rem; font-family: var(--font-mono); font-weight: 700; color: #1a1204; background: var(--rp-gold); }
+.rpn-detail__rew { color: var(--rp-gold-hi); }
+.rpn-detail__cost { font-family: var(--font-mono); color: #bdeff4; }
+.rpn-detail__meter {
+  position: relative; height: .06rem;
+  background: rgba(255, 255, 255, .08); border: 1px solid rgba(0, 226, 228, .2);
+}
+.rpn-detail__meter i { display: block; height: 100%; background: linear-gradient(90deg, var(--rp-cyan), var(--rp-gold)); }
+
+/* ===== 地图页：地图占正文 64% 宽，图例横排在地图正下方，右侧是「关卡信息」信息卡 ===== */
+.rpn-map {
+  flex: 1; min-height: 0; display: grid;
+  grid-template-columns: minmax(0, 64%) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas: "stage side" "legend side";
+  gap: .1rem .18rem;
+}
+.rpn-map__stage {
+  grid-area: stage;
+  position: relative; min-width: 0; min-height: 0; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  padding: .06rem; box-sizing: border-box;
+  border: 1px solid rgba(0, 226, 228, .18);
+  background: radial-gradient(62% 62% at 50% 40%, rgba(10, 34, 52, .92), rgba(3, 8, 14, .97));
+}
+.rpn-map__bg {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; opacity: .26; pointer-events: none;
+  filter: saturate(.8);
+}
+/* 缩略图铺满这一列（60%+ 正文宽）：box 就是这一列的内容框，`meet` 只按比例居中内缩，
+   元素自身不再留 85px 的横向空槽 */
+.rpn-map__svg { position: relative; display: block; width: 100%; height: 100%; }
+.rpn-map__label {
+  position: absolute; left: .1rem; bottom: .07rem;
+  font-size: max(calc(.11 * var(--t)), 10px); color: #dff4fa;
+  text-shadow: 0 1px .04rem rgba(0, 0, 0, .9);
+}
+/* 右栏信息卡（第四轮视觉验收：原来 190×305 只挂 4 行键值、ink 1.5%，上下两段全空）。
+   结构：标题 / 关卡·回合·尺寸·主题 四行 / 6 格地图统计（吃满剩余高度）/ 2–3 行规则说明，
+   卡片自身带描边与底色，统计格按行等高撑开，右栏不留大片纯空。 */
+.rpn-map__side { grid-area: side; min-width: 0; min-height: 0; display: flex; }
+.rpn-map__card {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: .09rem;
+  padding: .12rem .12rem .11rem; box-sizing: border-box;
+  border: 1px solid rgba(0, 226, 228, .2);
+  background: linear-gradient(180deg, rgba(12, 34, 52, .92), rgba(5, 12, 20, .92));
+  box-shadow: inset 0 0 .3rem rgba(0, 226, 228, .05);
+}
+.rpn-map__h {
+  flex: 0 0 auto; margin: 0; display: flex; align-items: center; gap: .06rem;
+  padding-bottom: .05rem; border-bottom: 1px solid rgba(255, 184, 13, .28);
+  font-size: max(calc(.13 * var(--t)), 11px); font-weight: 700; letter-spacing: .1em;
+  color: var(--rp-gold-hi);
+}
+.rpn-map__h::before { content: ""; width: 2px; height: .13rem; background: var(--rp-gold); }
+.rpn-map__rows { flex: 0 0 auto; margin: 0; display: flex; flex-direction: column; gap: .045rem; }
+.rpn-map__rows > div {
+  display: flex; align-items: baseline; justify-content: space-between; gap: .08rem;
+  padding-bottom: .035rem; border-bottom: 1px dashed rgba(0, 226, 228, .13);
+}
+.rpn-map__rows > div:last-child { border-bottom: 0; padding-bottom: 0; }
+.rpn-map__rows dt { flex: 0 0 auto; font-size: max(calc(.11 * var(--t)), 10px); color: var(--rp-dim); }
+.rpn-map__rows dd {
+  margin: 0; min-width: 0; text-align: right;
+  font-size: max(calc(.125 * var(--t)), 10px); font-weight: 600; color: #e8f6fb;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* 地图统计：2 列 × 3 行，行高按剩余空间均分（吃满右栏，数字大、标签小） */
+.rpn-map__tiles {
+  flex: 1 1 auto; min-height: 0;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(.32rem, 1fr); gap: .06rem; align-content: stretch;
+}
+.rpn-map__tile {
+  display: flex; flex-direction: column; justify-content: center; gap: .01rem; min-width: 0;
+  padding: .04rem .07rem; box-sizing: border-box;
+  border: 1px solid rgba(0, 226, 228, .16); border-left: 2px solid var(--tc, rgba(255, 255, 255, .4));
+  background: rgba(0, 226, 228, .05);
+  font-size: max(calc(.1 * var(--t)), 9px); color: var(--rp-dim);
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.rpn-map__tile b { font-size: max(calc(.17 * var(--t)), 13px); line-height: 1.1; color: #eaf7fb; font-weight: 700; }
+/* 左侧色条与缩略图上色同口径（地面 / 高台 / 禁入 / 其他 / 两种部署点） */
+.rpn-map__tile.is-ground { --tc: #4f9d6f; }
+.rpn-map__tile.is-high { --tc: #b9cce0; }
+.rpn-map__tile.is-forbidden { --tc: #ce8a8c; }
+.rpn-map__tile.is-blocked { --tc: #6a7a88; }
+.rpn-map__tile.is-melee { --tc: #ffc75a; }
+.rpn-map__tile.is-ranged { --tc: #5ad1a0; }
+.rpn-map__note {
+  flex: 0 0 auto; margin: 0; padding-top: .06rem; border-top: 1px dashed rgba(0, 226, 228, .13);
+  font-size: max(calc(.1 * var(--t)), 9px); line-height: 1.55; color: var(--rp-dim);
+}
+.rpn-legend {
+  grid-area: legend; margin: 0; padding: 0; list-style: none;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .04rem .12rem;
+  font-size: max(calc(.1 * var(--t)), 9px); color: #b6cada;
+}
+.rpn-legend li { display: flex; align-items: center; gap: .05rem; min-width: 0; }
+.rpn-legend i {
+  flex: 0 0 auto; width: .11rem; height: .11rem; border: 1px solid rgba(255, 255, 255, .22);
+}
+.rpn-legend i.is-high { border-color: rgba(0, 226, 228, .8); }
+/* 禁入图例同步带斜纹（和缩略图里的 pattern 一致） */
+.rpn-legend i.is-forbidden {
+  background-image: repeating-linear-gradient(45deg, rgba(206, 138, 140, .55) 0 1px, transparent 1px 3px);
+}
+.rpn-legend i.is-dot { border-radius: 50%; }
+
+/* ===== 藏品页 ===== */
+.rpn-relics { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: .1rem; }
+.rpn-relics__head {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .1rem;
+  padding-bottom: .07rem; border-bottom: 1px solid rgba(0, 226, 228, .16);
+}
+.rpn-relics__head b { font-size: max(calc(.16 * var(--t)), 12px); color: var(--rp-gold-hi); letter-spacing: .04em; }
+.rpn-relics__affix { font-size: max(calc(.11 * var(--t)), 10px); color: #bfe8ee; }
+.rpn-relics__badge {
+  display: inline-flex; align-items: center; gap: .04rem;
+  padding: .02rem .08rem; font-size: max(calc(.1 * var(--t)), 9px);
+  color: #ffe6a8; background: rgba(255, 184, 13, .12); border: 1px solid rgba(255, 184, 13, .4);
+}
+.rpn-relics__badge .icon { width: .14rem; height: .14rem; }
+.rpn-relics__list {
+  margin: 0; padding: 0 0 .04rem; list-style: none;
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(3.3rem, 1fr)); gap: .08rem;
+  align-content: start;
+}
+.rpn-relic {
+  display: flex; align-items: center; gap: .08rem; min-width: 0;
+  padding: .07rem .09rem;
+  background: linear-gradient(180deg, rgba(12, 34, 52, .9), rgba(5, 12, 20, .9));
+  border: 1px solid rgba(0, 226, 228, .22); border-left: 2px solid var(--rp-gold);
+}
+.rpn-relic.is-negative { border-left-color: #e2705a; color: #f0c3b6; }
+.rpn-relic__icon {
+  flex: 0 0 auto; width: .34rem; height: .34rem; display: grid; place-items: center;
+  background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .12);
+}
+.rpn-relic__icon img { width: 100%; height: 100%; object-fit: contain; }
+.rpn-relic__icon .icon { width: .2rem; height: .2rem; color: var(--rp-dim); }
+.rpn-relic__body { display: flex; flex-direction: column; gap: .01rem; min-width: 0; }
+.rpn-relic__body b {
+  font-size: max(calc(.13 * var(--t)), 11px); color: #eef9fd;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rpn-relic__desc {
+  font-size: max(calc(.1 * var(--t)), 9px); color: var(--rp-dim); line-height: 1.35;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.rpn-relic__tier {
+  margin-left: auto; flex: 0 0 auto; font-family: var(--font-mono);
+  font-size: max(calc(.09 * var(--t)), 8px); color: var(--rp-gold-hi);
+}
+.rpn-relic__na {
+  flex: 0 0 auto; padding: 0 .05rem; font-size: max(calc(.09 * var(--t)), 8px);
+  color: var(--rp-dim); border: 1px solid rgba(255, 255, 255, .22);
+}
+
+/* 窄屏：单列铺满，时间轴 / 三选一 / 详情上下叠；地图的信息卡落到图例下方（不再整块隐藏，统计与规则说明要留着） */
+@media (max-width: 720px) {
+  .rpn-nodes { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); }
+  .rpn-rail {
+    max-height: 1.4rem; border-right: 0; border-bottom: 1px solid rgba(0, 226, 228, .14);
+    padding-right: 0; padding-bottom: .05rem;
+  }
+  .rpn-detail { border-left: 0; padding-left: 0; }
+  .rpn-map {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto auto;
+    grid-template-areas: "stage" "legend" "side";
+  }
+  .rpn-map__card { flex: 0 0 auto; }
+  .rpn-map__tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rpn-card { transition: none; }
+  .rpn-card__busy { animation: none; }
+}

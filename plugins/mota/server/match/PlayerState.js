@@ -155,7 +155,24 @@ export class PlayerState {
     this.lp = 0;
     this.bandId = null;
     this.funds = 0;
+    /** 个人储备（业主 2026-10-26 三层资金）：回合末结余进这里，用于买装备（熔毁商店），跨回合保留。 */
+    this.reserve = 0;
     this.pendingFunds = 0;
+    // ---- 海克斯（TFT 式 augment，从 hexmod 移植）----
+    /** 本局已选下的全部海克斯 id（按选择顺序）；hex = 第一张（兼容字段） */
+    this.hexes = [];
+    this.hex = null;
+    /** 当前未选完的候选（选完即 null）；hexOfferDraft = 属于第几次草案（0 = 没有） */
+    this.hexOffer = null;
+    this.hexOfferDraft = 0;
+    this.hexOfferPicked = null;
+    /** 每个候选各自的免费刷新次数（与 hexOffer 同下标）；选择截止时刻（0 = 不限时） */
+    this.hexRerolls = null;
+    this.hexDeadline = 0;
+    this.hexGrade = null;
+    this.hexDraftPicks = 0;
+    /** 熔毁商店给敌人叠的永久代价（debt）与本局成长计数 */
+    this.meltDebt = null;
     this.ready = false;
     this.infoReady = this.isBot;
     this.lastEmoteAt = -Infinity;
@@ -245,12 +262,29 @@ export class PlayerState {
     this.stats = {
       dmgDealt: 0, kills: 0, leaks: 0, gold: 0, refreshes: 0, merges: 0, itemMerges: 0, itemsEquipped: 0,
       bossDamage: 0, lpLost: 0, buys: 0, sells: 0, perfectRounds: 0, fundsGained: 0, healing: 0,
+      // 抢播报 (2026-10-31): BOSS_HIT 播报（敌方领袖伤害 20 / 50 / 80%），每名玩家每阈值每条记 1 次；结算带出，
+      // 客户端按累计次数解锁分段称号。
+      bossBroadcasts: 0,
       // per-defId battle totals (settle.js mergeUnits): defId → { dmg, kills, heal }. The remake's settle() accumulates
       // here; kept on the 0.3.0 base because that caller is shared with the line that has the MVP screen.
       unitStats: new Map(),
     };
     this.eliminatedRound = null;
     this.creditedKills = 0;
+    // ===== 对抗模式（2V2 / 4V4）事件期字段（server/match/match/event.js 读写） =====
+    /** 收到的词条：{ card, mag, from, round, target }；生效期 EVENT_DURATION_ROUNDS 回合。 */
+    this.eventEntries = [];
+    this.eventRound = 0;
+    /** 给过谁（整局不重复的 target key）与已抽到的友方词条 id。 */
+    this.eventTargets = [];
+    this.eventCards = [];
+    /** 累计修饰（eventModsFor）。 */
+    this.eventMods = {
+      atkPct: 0, aspd: 0, hpPct: 0, defPct: 0, defIgnorePct: 0, regenPct: 0, dmgTakenMul: 1, moveMul: 1, deploy: 0,
+      spRecoveryMul: 1, spRecoveryFlat: 0, spCostFlat: 0,
+      goldPerRound: 0, bountyGold: 0, enemySpeedMul: 1, refreshDiscount: 0, refreshUses: 0, sellDiscount: 0,
+    };
+
     this.lpAtFinal = null;
     /** last combat result for this player (unite carry state, bounties) */
     this.lastResult = null;

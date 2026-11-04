@@ -1,13 +1,11 @@
 // server/sim/content/kits/ops/chess_char_5_14-svash2.js — 凛御银灰 (char_1045_svash2) kit, tier 5.
 // Conventions of the tier-5 kits: ../shared/tier5.js; kit contract and rules: ../README.md.
 
+import { installSvash2Module20261101 } from '../shared/ark-update-modules-20261101.js';
 import { COLS } from '../../../constants.js';
 import { bodyKeys } from '../../../body.js';
 import { toLocal } from '../../../dir.js';
-import {
-  AURA_IV, AURA_DUR, num, on, talent, talentRec, skillGrid, mods, inFaction, isOp, selectedId, lazySkills, instantKind,
-  skillRange, whileOn, enemiesInGrid,
-} from '../shared/tier5.js';
+import { AURA_IV, AURA_DUR, num, on, talent, talentRec, skillGrid, mods, inFaction, isOp, selectedId, lazySkills, instantKind, skillRange, whileOn, enemiesInGrid } from '../shared/tier5.js';
 
 const isKjerag = (u) => inFaction(u, 'kjeragShip', ['kjerag']);
 
@@ -155,6 +153,7 @@ export default {
         } },
       ],
       install(battle, unit) {
+        installSvash2Module20261101(battle, unit, chess);
         const tok = battle.tokenDef(eyeId, unit); // the owner's skill variant (DESIGN §16)
         unit.mem.eyeCost = num(tok?.stats?.cost, 14);
         if (selectedId(chess, def) === 'skchr_svash2_3') {

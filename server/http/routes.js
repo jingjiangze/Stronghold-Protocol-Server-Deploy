@@ -4,14 +4,13 @@
 //   * a URL longer than 4096 characters → 414; one that does not parse → 400;
 //   * /studio and /studio/… → the plugin studio (server/studio/index.js: for this machine and the local network only — any
 //     other client gets the 404 page; its API also takes POST / PUT / DELETE), when the server has one;
-//   * /mod, /mod/… → the mod manager (server/mods/: the same local-only gate; GET the page and the status, POST an upload
-//     or an https fetch), when the server has one;
 //   * any method but GET / HEAD → 405 with `Allow: GET, HEAD`;
 //   * GET /healthz → JSON status (protocol `version`, release `app`, uptime, the served `build`, the vanilla content
 //     hash `content.vanilla`, the modded content sets in use `content.sets` and — only when there are some — how many
 //     unofficial plugins the server has, `content.plugins` (the title screen's count before any hello) — DESIGN §32 —,
 //     sockets, sessions,
-//     rooms, matches), never cached; `?traffic=1` adds the traffic counters (traffic.js: bytes by category since the
+//     rooms, matches; `versions: { enabled, default, hosts }` only when the server enables another official version than
+//     第二期下半 — DESIGN §35.23), never cached; `?traffic=1` adds the traffic counters (traffic.js: bytes by category since the
 //     start, WebSocket wire and payload bytes) for a loopback or private-network client only — the maintainer's
 //     decision of 2026-10-12: the figures are the host's, so any other client, also one a tunnel or proxy on this
 //     machine forwards, gets the plain report (net.js clientAddress, honouring TRUST_PROXY like the WebSocket limits);
@@ -46,13 +45,19 @@ function contentSets(lobby) {
  *           lobby: import('../lobby.js').Lobby, content?: { cs: string } | null,
  *           traffic?: ReturnType<typeof import('./traffic.js').createTrafficCounter>,
  *           assetIndex?: ReturnType<typeof import('./assetIndex.js').createAssetIndex> | null,
- *           views?: ReturnType<typeof import('./assetViews.js').createManifestViews> | null }} health
- *   content: the server's vanilla content (server/plugins/identity.js)
+ *           views?: ReturnType<typeof import('./assetViews.js').createManifestViews> | null, trusted?: any,
+ *           versions?: ReturnType<typeof import('../versions.js').createVersionSets> | null,
+ *           versionHosts?: { stats: () => object } | null }} health
+ *   content: the server's vanilla content (server/plugins/identity.js); versions / versionHosts: the official versions
+ *   and their match hosts (DESIGN §35.23)
  * @param {boolean} [withTraffic]
  */
-export function healthReport({ startedAt, network, registry, lobby, content = null, traffic, assetIndex, views, trusted }, withTraffic = false) {
+export function healthReport({ startedAt, network, registry, lobby, content = null, traffic, assetIndex, views, trusted, versions = null, versionHosts = null }, withTraffic = false) {
   const report = {
     ok: true, version: PROTOCOL_VERSION, app: APP_VERSION, uptimeSec: Math.round((Date.now() - startedAt) / 1000),
+    // 蓝绿部署（业主 2026-10-30）：这一份进程监听的端口。切流用 /etc/nginx/stronghold-upstream.conf，
+    // 肉眼看「现在由哪一色在服务」就看这个字段（3000 = 蓝即 stronghold.service，3001 = 绿即 @green）。
+    port: Number(process.env.PORT) || 3000,
     // the runtime the server is serving right now (public/js/ui/buildGuard.js): a page whose own build is
     // older than this reloads itself, so a deploy reaches clients that never reload
     build: buildTag(),
@@ -63,6 +68,11 @@ export function healthReport({ startedAt, network, registry, lobby, content = nu
     sockets: network.connectionCount, sessions: registry.size, ...lobby.stats(),
   };
   if (trusted && Object.keys(trusted).length) report.plugins = trusted;
+  // the official versions (DESIGN §35.23): only when another one than 第二期下半 is enabled
+  if (versions && versions.nonDefault.length) {
+    report.versions = { enabled: [...versions.ids], default: versions.defaultId,
+      hosts: versionHosts ? versionHosts.stats() : { workers: 0, matches: 0, transport: 'process' } };
+  }
   if (withTraffic && traffic) report.traffic = traffic.snapshot();
   // content-hashed asset URLs (assetIndex.js / assetViews.js): off, building, or ready with how many files and URLs
   if (withTraffic) report.assetHashes = assetIndex ? { ...assetIndex.stats(), views: views ? views.stats() : null } : null;
@@ -83,8 +93,7 @@ const wantsTraffic = (query) => /(?:^|&)traffic(?:=(?:1|true|yes))?(?:&|$)/i.tes
  *   plugin studio (server/studio/index.js), or none
  * @returns {(req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) => void}
  */
-export function createRequestHandler({ serveStatic, health, log, trustProxy = 'auto', studio = null, mods = null, csp = null, trustedRuntime = null }) {
-  const scoreBucket = { at: 0, last: 0 };   // 评分上报的每 IP（本进程全局）限速
+export function createRequestHandler({ serveStatic, health, log, trustProxy = 'auto', studio = null, mods = null, accounts = null, csp = null, trustedRuntime = null }) {
   async function handleRequest(req, res) {
     const url = req.url || '/';
     if (url.length > MAX_URL_LENGTH) { sendError(req, res, 414, '请求地址过长 · URI too long'); return; }
@@ -92,44 +101,13 @@ export function createRequestHandler({ serveStatic, health, log, trustProxy = 'a
     if (!parts) { sendError(req, res, 400, '请求地址无效 · Bad request'); return; }
     if (trustedRuntime && parts.rawPath.startsWith('/x/') && await trustedRuntime.route(req,res,parts.rawPath)) return;
     if (studio && studio.handles(parts.rawPath)) { await studio.handle(req, res, parts.rawPath, parts.query); return; }
-    // the mod manager (server/mods/): /mod, /mod/status.json and its two writes — before the GET-only rule below
+    // 模组管理器（server/mods/）：/mod、/mod/status.json 与它的两个写操作 —— 必须在下面的 GET-only 规则之前
     if (mods && mods.handles(parts.rawPath)) { await mods.handle(req, res, parts.rawPath, parts.query); return; }
-    // 评分上报是唯一的 POST 端点，放行到下面的分支。
-    if (req.method !== 'GET' && req.method !== 'HEAD' && parts.rawPath !== '/api/lineup-score') {
+    // 账号 / 公告 / 管理后台（server/accounts/）：/api/* 是 POST 入口，同样必须在 GET-only 规则之前
+    if (accounts && accounts.handles(parts.rawPath)) { await accounts.handle(req, res, parts.rawPath, parts.query); return; }
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
       res.setHeader('Allow', 'GET, HEAD');
       sendError(req, res, 405, '不支持的请求方法 · Method not allowed');
-      return;
-    }
-    // 评分上报（信任模型）：每 IP 限速，其余四条由聚合侧裁决；**永远 200**（fail-open，上报失败不影响对局）。
-    if (parts.rawPath === '/api/lineup-score') {
-      const cors = { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' };
-      if (req.method === 'OPTIONS') { res.writeHead(204, { ...cors, 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'content-type' }); res.end(); return; }
-      const now = Date.now();
-      scoreBucket.last = scoreBucket.last && now - scoreBucket.at < 1000 ? scoreBucket.last + 1 : 0;
-      scoreBucket.at = now;
-      if (scoreBucket.last > 5) { res.writeHead(200, cors); res.end('{"ok":true,"dropped":"rate"}'); return; }
-      let body = '';
-      req.on('data', (d) => { body += d; if (body.length > 64 * 1024) req.destroy(); });
-      req.on('end', () => { try { JSON.parse(body); } catch { /* 坏包只丢弃 */ } res.writeHead(200, cors); res.end('{"ok":true}'); });
-      return;
-    }
-
-    // P2P 平台诊断（未配置时 {enabled:false}）。
-    if (parts.rawPath === '/api/platform') {
-      const st = health && health.lobby && health.lobby.platformLink ? health.lobby.platformLink.status() : { enabled: false };
-      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
-      res.end(JSON.stringify(st));
-      return;
-    }
-    // 公开房间列表（外站读，CORS 开放）：只报公开房。
-    if (parts.rawPath === '/api/rooms') {
-      const lobby = health && health.lobby;
-      const rooms = lobby && lobby.rooms ? [...lobby.rooms.values()].filter((r) => !r.private).map((r) => ({
-        code: r.code, mode: r.mode, difficulty: r.difficulty, variant: r.variant || null,
-        humans: r.activeHumans().length, max: 4, modded: !!r.modded,
-      })) : [];
-      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' });
-      res.end(req.method === 'HEAD' ? undefined : JSON.stringify({ ok: true, rooms }));
       return;
     }
     if (parts.rawPath === '/healthz') {

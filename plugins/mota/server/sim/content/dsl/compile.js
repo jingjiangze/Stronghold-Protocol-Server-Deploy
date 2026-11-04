@@ -12,9 +12,7 @@
 import { num } from '../kits/shared/tier1.js';
 import { validateDsl, formatProblems } from './validate.js';
 import { clampDsl } from './bounds.js';
-import {
-  resolveValue, resolveMods, skillCallback, installTrigger, DEFAULT_BUDGET, PLUGIN_ID_RE,
-} from './vocab.js';
+import { resolveValue, resolveMods, skillCallback, installTrigger, DEFAULT_BUDGET, PLUGIN_ID_RE } from './vocab.js';
 
 export { DEFAULT_BUDGET };
 

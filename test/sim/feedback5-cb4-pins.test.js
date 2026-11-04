@@ -6,7 +6,7 @@
 //     15 round slots, SPECIAL (特异) the other 6, shuffled — R14 (leader) and R15 (hidden core) take slots too, so the 13
 //     normal rounds hold 7–9 type waves, at most 3 per type;
 //   item 35 「鸭爵策略的悬赏现在有时候会一波出现多只，比如多只鸭子」 — PRTS 下半/PRTS盟约记录 鸭爵 备注 「每回合将有0~2名敌人被
-//     替换为上述敌人之一」: each player's wave gets 0–2 swaps (bands/meta.js duckReplace), each one of the four at random, so
+//     替换为上述敌人之一」: each round's wave gets 0–2 swaps, one draw for every player (bands/meta.js duckPicks, GitHub #839), each one of the four at random, so
 //     two ducks in one wave is official (≈ 1 wave in 12 here); never more than 2 per player's wave;
 //   item 29 「会移动的关底boss在各个地图的移动路线复核下是否正确」 — the only leaders that walk are 铳 and 卢西恩 (the 巨型单位 are
 //     自缚: content/bosses.js SELF_BOUND); their official PATROL_MOVE checkpoints (level_act1autochess_h07_02 route 6,
@@ -96,8 +96,10 @@ test('item 35: the 鸭爵 strategy swaps 0–2 enemies of each player\'s wave, e
   for (const seed of [31, 32]) {
     const h = makeMatch({ mode: 'coop', difficulty: 'NORMAL', seed, fake: true }).start();
     h.toPrep(6, { band: 'band_ducklord' });
+    const seed0 = h.m.seed;
     for (const ps of h.m.alivePlayers()) {
       for (let k = 0; k < 40; k++) {
+        h.m.seed = seed0 + k; // one draw per round from the match seed (GitHub #839): another seed, another draw
         const ducks = h.m._normalOpts(ps).spawns.filter((x) => x.tag === 'duck');
         assert.ok(ducks.length <= 2, `${ducks.length} swaps in one wave`);
         hist[ducks.length]++;
@@ -126,7 +128,9 @@ function leaderField(bossId, { solo = true, stageId = 'act1autochess_m01', round
 }
 
 test('item 29: 铳 patrols (3,9) → (2,3) → (5,9) on every boss field over walkable tiles (the pair\'s copy the mirrored points); 卢西恩 loops without reaching the goal', () => {
-  const stages = Object.keys(DATA.stages).filter((id) => DATA.stages[id].active !== false && DATA.stages[id].weight > 0);
+  // 2026-11-03：肉鸽官方地图没有本作的 boss 半场（Boss 回合沿用本图），只校验 autochess 的 8 张正式战场
+  const stages = Object.keys(DATA.stages).filter((id) => !String(id).startsWith('rogue_')
+    && DATA.stages[id].active !== false && DATA.stages[id].weight > 0);
   assert.equal(stages.length, 8);
   for (const stageId of stages) {
     for (const solo of [true, false]) {
@@ -243,7 +247,11 @@ test('item 52: each leader attacks at its data interval while it has a target (1
     h.run(150);
     const boss = h.b.enemies.find((e) => e.isBoss);
     const max = Math.floor(150 / boss.s.interval);
-    assert.ok(boss.stats.attacks >= max - 1, `${bossId} ${L.enemyKey}: ${boss.stats.attacks} attacks, ${max} at its ${boss.s.interval} s interval`);
+    // an attack-class skill takes an attack's turn (昆图斯's 崩坍 / 大潮, §35.19): it counts as one of the attacks here
+    const slots = (boss.mem.ab ? boss.mem.ab.list : []).filter((a) => a && a.atk).reduce((n, a) => n + (a.casts ?? 0), 0);
+    const turns = boss.stats.attacks + slots;
+    assert.ok(turns >= max - 1, `${bossId} ${L.enemyKey}: ${boss.stats.attacks} attacks + ${slots} attack-class casts, ${max} at its ${boss.s.interval} s interval`);
+    if (bossId === 'boss_4') assert.ok(slots > 0, 'boss_4: 崩坍 / 大潮 took attack turns');
   }
 });
 

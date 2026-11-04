@@ -6,9 +6,7 @@ import { applyRedirectCut, redirectShare } from '../../../damage.js';
 import { COLS } from '../../../constants.js';
 import { bardRegen } from '../../../professions.js';
 import { startCountdown } from '../../tokens.js';
-import {
-  num, bv, tbb, tdesc, moduleBb, parseN, live, enemiesIn, isTok, onDefaultSkill, selectedSkill, aura,
-} from '../shared/tier6.js';
+import { num, bv, tbb, tdesc, moduleBb, parseN, live, enemiesIn, isTok, onDefaultSkill, selectedSkill, aura } from '../shared/tier6.js';
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
@@ -36,6 +34,11 @@ function inspire(battle, target, val, src, stat = 'atk') {
 // 浊心斯卡蒂 chess_char_6_04 (吟游者) — S3 "潮涌，潮枯"; 远古血亲 (海嗣); 捕食习性; module 蜕化的残迹
 
 function skadi2(bb, chess, def) {
+  /*
+   * ⚠ 这一行**四个变量都要**(实际用 `t1` / `tb` / `mod`,`t0` 目前没用到)。
+   * 清理时别按"某个名字没用到"删**整行** —— 那会把同一行里还在用的另外三个一起带走。
+   * 我正好犯过这个错,eslint 立刻报 'tb' is not defined。要删就只删那一个名字。
+   */
   const t0 = tbb(def, 0), t1 = tbb(def, 1), mod = moduleBb(chess), tb = def?.traitBb || {};
   const isDef = onDefaultSkill(chess), sid = selectedSkill(chess, def);
   const tokId = def?.talents?.[0]?.tokenKey || (chess?.tokens || [])[0] || 'token_10017_skadi2_dedant';

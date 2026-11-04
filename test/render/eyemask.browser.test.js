@@ -20,7 +20,7 @@ const enabled = process.env.RENDER_E2E === '1' && existsSync(CHROME) && existsSy
 const skip = enabled ? false : 'set RENDER_E2E=1 (needs Chrome and the downloaded assets)';
 
 test('纯烬艾雅法拉\'s eyes with the masks off look as with the stencil: shut in her blink and her S3, open in Idle (GitHub #647)', { skip, timeout: 120000 }, async (t) => {
-  const { startServer } = await import('../../server/index.js');
+  const { startServer } = await import('../../server/boot-main.js');
   const puppeteer = (await import('puppeteer-core')).default;
   const entry = JSON.parse(readFileSync(path.join(ROOT, 'data/assets.json'), 'utf8')).chars[ID].spine.front;
   const srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true });

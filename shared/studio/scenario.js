@@ -55,7 +55,7 @@ export function validateShape(s) {
   identifier(s.stageId, 'stageId'); identifier(s.modeId, 'modeId');
   oneOf(s.kind, ['normal', 'boss', 'hidden', 'unite'], 'kind');
   oneOf(s.enemyMode, ['official', 'custom'], 'enemyMode');
-  number(s.round, 1, 15, 'round', true); number(s.seed, 1, 0xffffffff, 'seed', true); number(s.seconds, 1, 1200, 'seconds');
+  number(s.round, 1, 21, 'round', true); number(s.seed, 1, 0xffffffff, 'seed', true); number(s.seconds, 1, 1200, 'seconds');
   if (s.waveId !== null) identifier(s.waveId, 'waveId');
   if (s.bossId !== null) identifier(s.bossId, 'bossId');
   array(s.players, s.kind === 'normal' ? 1 : 2, 'players');
@@ -123,7 +123,12 @@ export function validateShape(s) {
   }
   let total = 0;
   for (const e of array(s.enemies, 100, 'enemies')) {
-    keys(e, ['enemyKey', 'count', 'routeIndex', 'time', 'interval'], 'enemy'); identifier(e.enemyKey, 'enemy.enemyKey');
+    keys(e, ['enemyKey', 'count', 'routeIndex', 'time', 'interval', 'fixed', 'pos'], 'enemy'); identifier(e.enemyKey, 'enemy.enemyKey');
+    if (e.fixed !== undefined) bool(e.fixed, 'enemy.fixed');
+    if (e.pos !== undefined) {
+      array(e.pos, 2, 'enemy.pos'); if (e.pos.length !== 2) fail('enemy.pos', 'size');
+      e.pos.forEach(v => number(v, 0, 30, 'enemy.pos', true));
+    }
     number(e.count, 1, 100, 'enemy.count', true); number(e.routeIndex, 0, 255, 'enemy.routeIndex', true);
     number(e.time, 0, 1200, 'enemy.time'); number(e.interval, 0, 120, 'enemy.interval'); total += e.count;
   }

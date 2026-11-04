@@ -13,20 +13,20 @@
       "bytes": 739
     },
     "client/js/ui/skinPicker.js": {
-      "sha256": "f902951e12dde067a98ced99427fb2aa718311ad2ed504242ebc298cb619351e",
-      "bytes": 6082
+      "sha256": "5c7261bd361597bcd8ae6371d960ec1e3bf2953865b12fbd5b7f9f3851183953",
+      "bytes": 6484
     },
     "client/js/ui/skinsModel.js": {
       "sha256": "d7e02758b928e15b4098f91e2cf9947815e0c11cb0bfb75050f4ab2ae800386c",
       "bytes": 1847
     },
     "host/noop.js": {
-      "sha256": "60f0f107c874ae35cccf4171a35a3b2739c8c8ffc40d810dfc11b74bcc4558bc",
-      "bytes": 69
+      "sha256": "38e3b0a01e27c01d0d76ce331c50726999d2f8191864a1a12eb44c11844d04c1",
+      "bytes": 233
     },
     "plugin.json": {
-      "sha256": "3cf6ef058ada828d96c7707354126dbe666dc2f57c7204d518d8b4302ba121f2",
-      "bytes": 647
+      "sha256": "8ab8906a593fc217a249d08d6228c5a9ea0fb7ddc379a0c702a7926cf2f4465f",
+      "bytes": 700
     },
     "shared/skin-catalogue.js": {
       "sha256": "af225a465fcbad89d572c851d7a74e2c1fc0dcbc8b02b16c8e4185616799534f",

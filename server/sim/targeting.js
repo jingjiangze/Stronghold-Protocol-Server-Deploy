@@ -15,6 +15,7 @@
 // An enemy's area effects select allies with areaSelectable, its buff auras with auraSelectable (no 隐匿 ally, the one
 // blocking the source included — GitHub #97; 迷彩 is not checked — DESIGN §22.12).
 
+import { hornWebModuleActive } from '../../shared/hornWebModule20261101.js';
 import { COLS, ROWS } from './constants.js';
 import { normDir, rotateOffset } from './dir.js';
 import { bodyDist } from './body.js';
@@ -82,10 +83,11 @@ export function enemyStealthed(e) {
  * (blockedTargets) and the target condition of its skill triggers (they pass `unit.profile`).
  */
 export function canTargetEnemy(attacker, e, profile) {
+  if(e.mods?.eventTeam===1)return false;
   if (!e.alive || e.hidden || !e.deployed) return false;
   const f = e.s.flags;
   if (f.untargetable || (f.sleep && !(profile && profile.hitSleep))) return false;
-  if (f.stealth && enemyStealthed(e)) return false;
+  if (f.stealth && enemyStealthed(e) && !hornWebModuleActive(attacker?.def)) return false;
   // `dollHitsFly`: a 傀儡师 whose <替身> state hits air (风丸 — PRTS 特性备注 「<替身>状态下可对空，由技能产生的召唤物不可对空」,
   // GitHub community report of 2026-10-15) targets flyers while substituted (Unit.trait.doll, professions.js installDollkeeper)
   if (e.isFlying && !(profile && (profile.canHitFly || (profile.dollHitsFly && attacker && attacker.trait && attacker.trait.doll)))) return false;
@@ -111,7 +113,7 @@ export function canTargetAlly(e, a, ranged) {
   if (!a.alive || !a.deployed || a.hidden || a.kind === 'device') return false;
   const f = a.s.flags;
   if (f.untargetable || f.sleep) return false;
-  if (ranged && (f.stealth || f.camou) && (e.blockedBy !== a || (e.profile && e.profile.blockFree))) return false;
+  if (ranged && !f.reveal && ((f.stealth && !e.profile?.ignoreStealth) || (f.camou && !e.profile?.ignoreCamou)) && (e.blockedBy !== a || (e.profile && e.profile.blockFree))) return false;
   if (f.liftoff && evadesGround(e, a)) return false;
   return true;
 }
@@ -153,7 +155,7 @@ export function areaSelectable(src, a) {
 export function auraSelectable(src, a) {
   if (!a || !a.alive || !a.deployed || a.hidden || a.kind === 'device') return false;
   const f = a.s.flags;
-  if (f.untargetable || f.sleep || f.stealth) return false;
+  if (f.untargetable || f.sleep || (f.stealth && !f.reveal)) return false;
   return true;
 }
 
@@ -197,12 +199,7 @@ const PRIORITY_FNS = {
 };
 
 /**
- * Sort candidate enemies for an attacker (in place) and return them: the enemies it blocks first (the user's rule after
- * playtest #6, "阻挡了就一定要能打到", for every blocker — DESIGN §20.3), then the special priority, taunt, the remaining
- * route, the spawn order. One exception, the owner's decision of 2026-10-08 (GitHub #220 by TsangAsuna, #205): the 速射手 air priority
- * (trait 优先攻击空中单位 — priority 'fly', a skill's too) comes before its own blocked enemy, so a 速狙 on a melee tile
- * blocking a ground enemy shoots the flyer in its range (PRTS 索敌的概念 「阻挡（近战限定）→特殊优先级→…」); every other
- * priority keeps the blocked enemy first.
+ * Sort candidate enemies for an attacker (in place) and return them.
  * @param {object} attacker ally unit
  * @param {object[]} cands enemies
  * @param {string|null} priority profile/skill priority key
@@ -210,7 +207,6 @@ const PRIORITY_FNS = {
 export function sortEnemyTargets(battle, attacker, cands, priority) {
   if (cands.length <= 1) return cands;
   const pf = priority ? (PRIORITY_FNS[priority] || (priority === 'nearest' || priority === 'farthest' ? null : null)) : null;
-  const airFirst = priority === 'fly';
   const ax = attacker.x, ay = attacker.y;
   const keyed = cands.map((e) => ({
     e,
@@ -220,7 +216,7 @@ export function sortEnemyTargets(battle, attacker, cands, priority) {
     d: battle.remainingDistance(e),
     s: e.spawnSeq,
   }));
-  keyed.sort((a, b) => (airFirst ? a.p - b.p : 0) || a.b - b.b || a.p - b.p || a.t - b.t || a.d - b.d || a.s - b.s);
+  keyed.sort((a, b) => a.b - b.b || a.p - b.p || a.t - b.t || a.d - b.d || a.s - b.s);
   for (let i = 0; i < keyed.length; i++) cands[i] = keyed[i].e;
   return cands;
 }
@@ -235,9 +231,12 @@ export function sortEnemyTargets(battle, attacker, cands, priority) {
 export function sortAllyTargets(enemy, cands) {
   if (cands.length <= 1) return cands;
   const bl = enemy.profile && enemy.profile.blockFree ? null : enemy.blockedBy;   // 索敌不受阻挡影响: no blocker first
+  const rule = enemy.profile?.priority;
+  const priority = typeof rule === 'function' ? rule : PRIORITY_FNS[rule];
   cands.sort((a, b) => {
     const ba = bl === a ? 0 : 1, bb = bl === b ? 0 : 1;
-    return ba - bb || aggroCmp(a, b);
+    const owner = enemy.profile?.zoneOwnerId;
+    return (owner ? Number(b.ownerId === owner) - Number(a.ownerId === owner) : 0) || ba - bb || (priority ? priority(a)-priority(b) : 0) || aggroCmp(a, b);
   });
   return cands;
 }

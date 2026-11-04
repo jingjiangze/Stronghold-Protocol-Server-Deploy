@@ -6,7 +6,7 @@
   "$defs": {
     "slot": {
       "type": "string",
-      "enum": ["hud.right", "result.tab", "stats.tab", "room.panel"]
+      "enum": ["hud.right", "result.tab", "stats.tab", "room.panel", "title.login"]
     },
     "ready": {
       "type": "object",

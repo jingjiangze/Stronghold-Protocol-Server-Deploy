@@ -311,8 +311,12 @@ export function normRect(rect, rows = 19, cols = 21) {
  * Camera that frames `rect` inside the viewport.
  * @param {{r0,r1,c0,c1}} rect inclusive tile bounds
  * @param {{ width: number, height: number, padding?: { top?, right?, bottom?, left? } }} viewport CSS px
- * @param {{ tilt?, dist?, margin?: number, headroom?: number, maxTilePx?: number, minTilePx?: number }} [opts]
- *   margin (tiles) around the rect; headroom (tiles) of vertical space kept above the far row for units.
+ * @param {{ tilt?, dist?, margin?: number, headroom?: number, maxTilePx?: number, minTilePx?: number,
+ *   targetTilePx?: number, boardOnly?: boolean }} [opts]
+ *   margin (tiles) around the rect; headroom (tiles) of vertical space kept above the far row for units;
+ *   `targetTilePx` (CSS px per tile) caps the zoom — the scale is min(fit, targetTilePx) and the image stays centred
+ *   in the padded area; `boardOnly` frames just the rect's four corners grown by ½ tile at z = 0 (no margin, no
+ *   headroom) — for maps whose rect already is the whole board, so no space outside the tiles is reserved.
  */
 export function fitCamera(rect, viewport, options) {
   const opts = options && typeof options === 'object' ? options : {};
@@ -323,8 +327,9 @@ export function fitCamera(rect, viewport, options) {
   const pt = Math.max(0, finite(pad.top, 0)), pr = Math.max(0, finite(pad.right, 0));
   const pb = Math.max(0, finite(pad.bottom, 0)), pl = Math.max(0, finite(pad.left, 0));
   const availW = Math.max(16, W - pl - pr), availH = Math.max(16, H - pt - pb);
-  const margin = Math.max(0, finite(opts.margin, 0.35));
-  const headroom = Math.max(0, finite(opts.headroom, 1.2));
+  const boardOnly = opts.boardOnly === true;
+  const margin = boardOnly ? 0 : Math.max(0, finite(opts.margin, 0.35));
+  const headroom = boardOnly ? 0 : Math.max(0, finite(opts.headroom, 1.2));
   const cam = new Camera({
     tx: (R.c0 + R.c1) / 2, ty: (R.r0 + R.r1) / 2, tz: 0,
     tilt: finite(opts.tilt, DEFAULT_OPTICS.tilt), dist: finite(opts.dist, DEFAULT_OPTICS.dist), scale: 1, cx: 0, cy: 0,
@@ -333,7 +338,8 @@ export function fitCamera(rect, viewport, options) {
   const y0 = R.r0 - 0.5 - margin, y1 = R.r1 + 0.5 + margin;
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   const p = { x: 0, y: 0, s: 0, depth: 0 };
-  for (const x of [x0, x1]) for (const y of [y0, y1]) for (const z of [0, headroom]) {
+  const zs = boardOnly ? [0] : [0, headroom];
+  for (const x of [x0, x1]) for (const y of [y0, y1]) for (const z of zs) {
     cam.project(x, y, z, p);
     if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
     if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
@@ -341,7 +347,9 @@ export function fitCamera(rect, viewport, options) {
   const bw = Math.max(EPS, maxX - minX), bh = Math.max(EPS, maxY - minY);
   let s = Math.min(availW / bw, availH / bh);
   const maxTile = finite(opts.maxTilePx, 360), minTile = finite(opts.minTilePx, 4);
+  const targetTile = finite(opts.targetTilePx, 0);
   s = clamp(s, minTile, maxTile);
+  if (targetTile > 0) s = Math.min(s, targetTile); // zoom cap: the caller wants no more than that many px per tile
   cam.scale = s;
   cam.cx = pl + availW / 2 - s * (minX + maxX) / 2;
   cam.cy = pt + availH / 2 - s * (minY + maxY) / 2;
@@ -435,6 +443,8 @@ const sameRect = (a, b) => !!a && !!b && a.r0 === b.r0 && a.r1 === b.r1 && a.c0 
  * `opts.half` frames only that half of a unite/boss field; `opts.shop === false` uses the shop-collapsed prep camera.
  * `opts.hud` = { top, bottom } (CSS px of HUD along the top / bottom edge): the official prep / Final Assault prep
  * camera keeps the bench and the field clear of it (`clearHud`, the preset's `keep` band).
+ * `opts.boardOnly` / `opts.targetTilePx` reach the fitted fallback only (`fitCamera`): frame the rect's corners alone
+ * (no margin / headroom) and cap the zoom at that many CSS px per tile.
  */
 export function presetCamera(kind, viewport, options) {
   const opts = options && typeof options === 'object' ? options : {};
@@ -475,6 +485,7 @@ export function presetCamera(kind, viewport, options) {
     tilt: finite(opts.tilt, base.tilt), dist: finite(opts.dist, base.dist),
     margin: finite(opts.margin, preset.margin), headroom: finite(opts.headroom, preset.headroom),
     maxTilePx: opts.maxTilePx, minTilePx: opts.minTilePx,
+    targetTilePx: opts.targetTilePx, boardOnly: opts.boardOnly,
   });
 }
 

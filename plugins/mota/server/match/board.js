@@ -1,7 +1,9 @@
 // server/match/board.js — placement legality (DESIGN §3), board/hand/temp slot helpers.
 //
-// Deploy map: for every tile of the own board region (rows 9–12, cols 2–10) the legality class is derived from the
-// stage legend (data/stages.json `tiles[glyph]`: height + buildable) and the stage devices:
+// Deploy map: for every tile of the own board region the legality class is derived from the stage legend
+// (data/stages.json `tiles[glyph]`: height + buildable) and the stage devices. That region is the stage's own deploy
+// rect (fieldRectOf): a rogue stage's official map fills the whole 19×21 frame (`stage.rogueFrame`, the same bounds the
+// sim paths with, combat.js `_fieldRect`), every other stage the classic board window GEO.FIELD (rows 9–12, cols 2–10):
 //   'melee'  — LOW tile with buildable ALL/MELEE, or a 深水区 under an active 特制水上平台 (waterPlatform, "在水上建立可以
 //              部署任意单位的平台"): melee AND ranged chess may stand here ("所有行动内远程干员可部署在近战位").
 //   'ranged' — HIGH tile with buildable ALL/RANGED, or a tile under an active platform (射击台): ranged only (and the
@@ -42,6 +44,16 @@ import { meleeOnHighGround } from '../../shared/highGround.js';
 import { DEFAULT_DIR, isDir, rotateOffset } from '../sim/dir.js';
 import { BOSS_ROW_OFFSET, COLS } from '../sim/constants.js';
 
+/**
+ * A board region, in board tiles.
+ * @typedef {{ r0: number, r1: number, c0: number, c1: number }} FieldRect
+ */
+/**
+ * A deploy map (`buildDeployMap`): the tile keys and their class, plus the region it was built on — `canPlace` /
+ * `legalTiles` read their bounds from `rect` (absent on a hand-built map ⇒ FIELD, the classic window).
+ * @typedef {Map<string, 'melee'|'ranged'> & { rect?: FieldRect }} DeployMap
+ */
+
 export const FIELD = GEO.FIELD; // { r0: 9, r1: 12, c0: 2, c1: 10 }
 export const tileKey = (r, c) => `${r},${c}`;
 export const parseKey = (k) => { const [r, c] = String(k).split(',').map(Number); return [r, c]; };
@@ -49,7 +61,36 @@ export const parseKey = (k) => { const [r, c] = String(k).split(',').map(Number)
 export const pieceDir = (piece) => (piece && isDir(piece.dir) ? piece.dir : DEFAULT_DIR);
 /** An intent's optional direction: undefined / null ⇒ RIGHT, a direction name ⇒ itself, anything else ⇒ null (invalid). */
 export const parseDir = (d) => (d === undefined || d === null ? DEFAULT_DIR : isDir(d) ? d : null);
-export const inField = (r, c) => Number.isInteger(r) && Number.isInteger(c) && r >= FIELD.r0 && r <= FIELD.r1 && c >= FIELD.c0 && c <= FIELD.c1;
+
+/**
+ * The board region a stage is deployed on: its `rogueFrame` — the official level embedded in the 19×21 board as
+ * `{ row, col, h, w }` (tools/build-rogue-maps-v2.mjs), clamped to the board — else `FIELD`, the classic window. The
+ * same clamp as the sim's rect (server/match/match/combat.js `_fieldRect`): a rogue stage's board IS its official map,
+ * so the rows 9–12 × cols 2–10 window covers only part of it and its `deployTiles.normal` are written over the frame.
+ * @param {object|null} stage data/stages.json entry
+ * @returns {FieldRect}
+ */
+export function fieldRectOf(stage) {
+  const frame = stage && stage.rogueFrame;
+  if (!frame || typeof frame !== 'object') return FIELD;
+  const int = (v) => (Number.isFinite(Number(v)) ? Math.trunc(Number(v)) : null);
+  const row = int(frame.row);
+  const col = int(frame.col);
+  if (row == null || col == null) return FIELD;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const r0 = clamp(row, 0, GEO.ROWS - 1);
+  const c0 = clamp(col, 0, GEO.COLS - 1);
+  const h = Math.max(1, int(frame.h) ?? 1);
+  const w = Math.max(1, int(frame.w) ?? 1);
+  return { r0, r1: clamp(r0 + h - 1, r0, GEO.ROWS - 1), c0, c1: clamp(c0 + w - 1, c0, GEO.COLS - 1) };
+}
+
+/** A board tile inside `rect` (default: FIELD, the classic window). */
+export const inField = (r, c, rect = FIELD) => Number.isInteger(r) && Number.isInteger(c) && r >= rect.r0 && r <= rect.r1 && c >= rect.c0 && c <= rect.c1;
+/** `inField` on the region this stage is deployed on (a rogue stage's own frame, fieldRectOf). */
+export const inFieldOf = (stage, r, c) => inField(r, c, fieldRectOf(stage));
+/** The region a deploy map was built on (a map without one — hand-built, or copied through `new Map` — is FIELD). */
+export const rectOfMap = (map) => (map && map.rect && Number.isInteger(map.rect.r0) && Number.isInteger(map.rect.c0) ? map.rect : FIELD);
 
 const OBSTACLE_ROLES = new Set(['crate', 'mound']);
 const PLATFORM_ROLES = new Set(['platform']);
@@ -85,15 +126,18 @@ export function boardTileOf(field, r, c) {
 /**
  * @param {object|null} stage data/stages.json entry
  * @param {{ deviceOverrides?: Record<string, boolean>, tileOverrides?: Record<string, string>, field?: 'normal'|'bossL'|'bossR' }} [opts]
- * @returns {Map<string, 'melee'|'ranged'>} keyed by BOARD tile 'r,c' (rows 9–12, cols 2–10)
+ * @returns {DeployMap} keyed by BOARD tile 'r,c' (FIELD's rows 9–12, cols 2–10; a rogue stage's own frame)
  */
 export function buildDeployMap(stage, { deviceOverrides = {}, tileOverrides = {}, field = 'normal' } = {}) {
-  /** @type {Map<string, 'melee'|'ranged'>} */
+  /** @type {DeployMap} */
   const map = new Map();
   const rows = stage && Array.isArray(stage.rows) ? stage.rows : null;
   const legend = stage && stage.tiles && typeof stage.tiles === 'object' ? stage.tiles : {};
-  for (let r = FIELD.r0; r <= FIELD.r1; r++) {
-    for (let c = FIELD.c0; c <= FIELD.c1; c++) {
+  // The scanned region: the stage's own deploy rect. The boss halves keep the classic window — a board tile there is a
+  // tile of the stage's boss half (fieldTile), not of the stage's frame. `map.rect` carries it to canPlace / legalTiles.
+  const rect = fieldOf(field) === 'normal' ? fieldRectOf(stage) : FIELD;
+  for (let r = rect.r0; r <= rect.r1; r++) {
+    for (let c = rect.c0; c <= rect.c1; c++) {
       const [sr, sc] = fieldTile(field, r, c);
       const line = rows && typeof rows[sr] === 'string' ? rows[sr] : null;
       let cls = null;
@@ -116,7 +160,7 @@ export function buildDeployMap(stage, { deviceOverrides = {}, tileOverrides = {}
   for (const d of devices) {
     if (!d || !Array.isArray(d.pos)) continue;
     const [r, c] = boardTileOf(field, d.pos[0], d.pos[1]);
-    if (!inField(r, c)) continue;
+    if (!inField(r, c, rect)) continue;
     let active;
     if (d.alias != null && deviceOverrides && Object.hasOwn(deviceOverrides, d.alias)) active = !!deviceOverrides[d.alias];
     else if (typeof d.active === 'boolean') active = d.active;
@@ -129,10 +173,11 @@ export function buildDeployMap(stage, { deviceOverrides = {}, tileOverrides = {}
   }
   for (const [k, v] of Object.entries(tileOverrides || {})) {
     const [r, c] = parseKey(k);
-    if (!inField(r, c)) continue;
+    if (!inField(r, c, rect)) continue;
     if (v === 'melee' || v === 'ranged') map.set(tileKey(r, c), v);
     else if (v === 'none') map.delete(tileKey(r, c));
   }
+  map.rect = rect;
   return map;
 }
 
@@ -181,9 +226,9 @@ export function basePositionClass(rec) {
   return 'all';
 }
 
-/** Whether a unit of placement class `pos` may stand on (r, c). */
+/** Whether a unit of placement class `pos` may stand on (r, c) — on the region the map was built on. */
 export function canPlace(map, pos, r, c) {
-  if (!inField(r, c)) return false;
+  if (!inField(r, c, rectOfMap(map))) return false;
   const cls = map.get(tileKey(r, c));
   if (!cls) return false;
   if (pos === 'melee') return cls === 'melee';
@@ -208,11 +253,12 @@ export function ownerRangeKeys(grid, r, c, dir) {
   return out;
 }
 
-/** Legal tiles for a placement class, in reading order (top→bottom, left→right). */
+/** Legal tiles for a placement class, in reading order (top→bottom, left→right), within the map's region. */
 export function legalTiles(map, pos) {
   const out = [];
-  for (let r = FIELD.r1; r >= FIELD.r0; r--) {
-    for (let c = FIELD.c0; c <= FIELD.c1; c++) if (canPlace(map, pos, r, c)) out.push([r, c]);
+  const rect = rectOfMap(map);
+  for (let r = rect.r1; r >= rect.r0; r--) {
+    for (let c = rect.c0; c <= rect.c1; c++) if (canPlace(map, pos, r, c)) out.push([r, c]);
   }
   return out;
 }
@@ -237,11 +283,13 @@ export function boardOrder(board) {
  * public/js/ui/gameLogic.js mergeTarget mirrors it for the client.
  * @param {Array<{ key: string, dir?: string }>} tiles
  * @param {(r: number, c: number) => boolean} [legal]
+ * @param {FieldRect} [rect] the board region the tiles may lie on — the deploy map's `rect` (`rectOfMap(map)`); FIELD
+ *   (the classic window) by default. A rogue stage's frame lies outside the window.
  * @returns {{ key: string, dir?: string, r: number, c: number } | null}
  */
-export function mergeTile(tiles, legal = () => true) {
+export function mergeTile(tiles, legal = () => true, rect = FIELD) {
   const sorted = (tiles || []).map((t) => { const [r, c] = parseKey(t.key); return { ...t, r, c }; }).sort((a, b) => a.c - b.c || b.r - a.r);
-  return sorted.find((t) => inField(t.r, t.c) && legal(t.r, t.c)) || null;
+  return sorted.find((t) => inField(t.r, t.c, rect) && legal(t.r, t.c)) || null;
 }
 
 /** Index of the free slot to fill (right→left, config.economy.handFillOrder), or -1. */

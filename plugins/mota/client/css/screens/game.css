@@ -112,6 +112,14 @@
 .gtop > * { pointer-events: auto; }
 .gtop__left { display: flex; align-items: center; gap: .16rem; }
 .gtop__meta { display: flex; flex-direction: column; align-items: flex-start; gap: .06rem; }
+/* 对抗模式（2V2 / 4V4）：难度旁的两队共享血池 + 狩猎期起始回合 */
+.gtop__versus { display: inline-flex; align-items: center; gap: .08rem; padding: .02rem .08rem; border: 1px solid var(--line); border-radius: 3px; background: rgba(0, 0, 0, .35); color: var(--text-md); font-size: calc(.11 * var(--t)); }
+.gtop__vmode { color: var(--mint-500, #6ee7b7); letter-spacing: .02em; }
+.gtop__vpool { display: inline-flex; align-items: center; gap: .03rem; }
+.gtop__vpool.is-self { color: #d7fbe9; }
+.gtop__vhunt { opacity: .85; }
+/* 攻防角色（进攻/防守） */
+/* 进攻方等待面板 / 守方来袭预告 */
 /* a match with gameplay plugins (DESIGN §32.6): the HUD corner's MOD mark */
 .gtop__mod { pointer-events: auto; }
 .gtop__rules { max-width: 3.4rem; font-size: calc(.11 * var(--t)); line-height: 1.4; color: var(--text-md); overflow-wrap: anywhere; }
@@ -645,6 +653,10 @@
 .team__frame--plain { inset: -.04rem; background: none; -webkit-mask: none; mask: none; border: 2px solid var(--mint-500); box-shadow: 0 0 .14rem rgba(78, 216, 175, .65); }
 .team__row.is-self.is-team .pavatar { box-shadow: none; }
 .team__bubble { position: absolute; left: calc(100% + .06rem); top: 50%; transform: translateY(-50%); width: max-content; max-width: 3.2rem; }
+/* 9 名以上玩家时面板变成滚动容器（overflow-y:auto ⇒ 计算出的 overflow-x 是 hidden，实测 scrollWidth 204 >
+   clientWidth 132），气泡挂在行右侧、整颗落在滚动框外，被裁掉——声音和广播都正常，玩家却什么都看不到。
+   滚动档把气泡放到行内右侧：可见、不扩面板命中区，3 秒后自己消失。 */
+.team--scroll .team__bubble { left: auto; right: 0; z-index: 4; }
 /* 前往查看 / 返回战场 (research 09 §3.1: tapping a teammate's avatar expands a mint button under it) */
 .team__row.is-open .pavatar { box-shadow: 0 0 0 2px var(--mint-400), 0 0 .2rem rgba(23, 249, 183, .45); }
 .team__row.is-open .team__info { background: linear-gradient(90deg, rgba(13, 44, 36, .92), rgba(8, 11, 10, 0)); }
@@ -1493,3 +1505,6 @@
 @media (prefers-reduced-motion: reduce) {
   .downm__face.is-out, .downm__title { animation: none; }
 }
+
+/* ↑ 本文件不在 plugins/mota/plugin.json 的 code.client 清单内：这里写的规则不会下发。
+   .gm__attackwait / .gm__incoming / .gtop__vrole 已移至 css/screens/game-panels.css。 */

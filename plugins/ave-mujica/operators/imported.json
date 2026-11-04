@@ -1,0 +1,2139 @@
+[
+  {
+    "op": 1,
+    "charId": "char_x_ave_mujica_char_5_30",
+    "name": "三角初华",
+    "profession": "SUPPORT",
+    "subProfessionId": "bard",
+    "position": "RANGED",
+    "rarity": 4,
+    "as": "chess",
+    "forms": {
+      "normal": {
+        "stats": {
+          "maxHp": 1057,
+          "atk": 276,
+          "def": 202,
+          "res": 0,
+          "cost": 5,
+          "blockCnt": 1,
+          "bat": 1.3,
+          "aspd": 100,
+          "respawnTime": 66,
+          "spRecovery": 1,
+          "hpRecoveryPerSec": 0,
+          "moveSpeed": 1,
+          "tauntLevel": 0,
+          "massLevel": 0,
+          "deployLimit": 1,
+          "deckStack": 0
+        },
+        "rangeGrid": [
+          [
+            2,
+            0
+          ],
+          [
+            1,
+            -1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            -2
+          ],
+          [
+            0,
+            -1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            -1,
+            -1
+          ],
+          [
+            -1,
+            0
+          ],
+          [
+            -1,
+            1
+          ],
+          [
+            -2,
+            0
+          ]
+        ],
+        "skills": [
+          {
+            "skillId": "skx_ave_mujica_skchr_dolris_1",
+            "name": "我思念的",
+            "default": true,
+            "desc": "攻击范围扩大，攻击范围内所有友方单位获得相当于自身攻击力与防御力30%的鼓舞效果，友方受到伤害时自身会为其治疗65点生命。",
+            "descRaw": "攻击范围扩大，攻击范围内所有友方单位获得相当于自身攻击力与防御力30%的鼓舞效果，友方受到伤害时自身会为其治疗65点生命。",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 30,
+            "spType": "INCREASE_WITH_TIME",
+            "spCost": 45,
+            "initSp": 21,
+            "maxChargeTime": 1,
+            "increment": 1,
+            "bb": {
+              "rangeExtend": 1,
+              "share": 0.3,
+              "def_share": 0.3,
+              "heal": 65,
+              "duration": 30
+            },
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          },
+          {
+            "skillId": "skx_ave_mujica_skchr_dolris_2",
+            "name": "我悲悯的",
+            "default": false,
+            "desc": "技能生效期间每0.3秒对攻击范围内随机一名敌人造成相当于攻击力70%的法术伤害，并为一个友方治疗相当于攻击力15%的生命；攻击范围内其他友方获得相当于自身攻击力80%的鼓舞效果。[ASSUMED]",
+            "descRaw": "技能生效期间每0.3秒对攻击范围内随机一名敌人造成相当于攻击力70%的法术伤害，并为一个友方治疗相当于攻击力15%的生命；攻击范围内其他友方获得相当于自身攻击力80%的鼓舞效果。[ASSUMED]",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 12,
+            "spType": "INCREASE_WITH_TIME",
+            "spCost": 37,
+            "initSp": 12,
+            "maxChargeTime": 1,
+            "increment": 1,
+            "bb": {
+              "interval": 0.3,
+              "dps_scale": 0.7,
+              "heal_scale": 0.15,
+              "inspire": 0.8,
+              "duration": 12
+            },
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          }
+        ],
+        "tags": [
+          "支援",
+          "治疗"
+        ],
+        "tokens": [],
+        "trait": {
+          "desc": "不攻击，持续恢复范围内所有友军生命（每秒相当于自身攻击力10%的生命），自身不受鼓舞影响",
+          "descRaw": "不攻击，持续恢复范围内所有友军<@ba.kw>生命</>（每秒相当于自身攻击力<@ba.kw>10%</>的生命），自身不受<$ba.inspire>鼓舞</>影响",
+          "bb": {
+            "attack@atk_to_hp_recovery_ratio": 0.1
+          }
+        },
+        "talents": [
+          {
+            "name": "谎言的假面",
+            "desc": "技能未开启时每4秒治疗攻击范围内生命最低的友方单位相当于攻击力30%的生命；技能期间优先选择丰川祥子作为治疗目标",
+            "descRaw": "技能未开启时每4秒治疗攻击范围内生命最低的友方单位相当于攻击力30%的生命；技能期间优先选择丰川祥子作为治疗目标",
+            "bb": {
+              "interval": 4,
+              "heal_scale": 0.3
+            },
+            "hidden": false
+          },
+          {
+            "name": "毋畏悲伤",
+            "desc": "治疗Ave Mujica成员时使Fever+5；攻击范围内Ave Mujica成员攻击时，附带三角初华攻击力30%的法术伤害",
+            "descRaw": "治疗<$ba.mujica>Ave Mujica</>成员时使<$ba.fever>Fever</>+5；攻击范围内<$ba.mujica>Ave Mujica</>成员攻击时，附带三角初华攻击力30%的法术伤害",
+            "bb": {
+              "fever": 5,
+              "bonus_scale": 0.3
+            },
+            "hidden": false
+          }
+        ]
+      },
+      "elite": {
+        "stats": {
+          "maxHp": 1463,
+          "atk": 329,
+          "def": 240,
+          "res": 0,
+          "cost": 5,
+          "blockCnt": 1,
+          "bat": 1.3,
+          "aspd": 100,
+          "respawnTime": 66,
+          "spRecovery": 1,
+          "hpRecoveryPerSec": 0,
+          "moveSpeed": 1,
+          "tauntLevel": 0,
+          "massLevel": 0,
+          "deployLimit": 1,
+          "deckStack": 0
+        },
+        "rangeGrid": [
+          [
+            2,
+            0
+          ],
+          [
+            1,
+            -1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            -2
+          ],
+          [
+            0,
+            -1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            -1,
+            -1
+          ],
+          [
+            -1,
+            0
+          ],
+          [
+            -1,
+            1
+          ],
+          [
+            -2,
+            0
+          ]
+        ],
+        "skills": [
+          {
+            "skillId": "skx_ave_mujica_skchr_dolris_1",
+            "name": "我思念的",
+            "default": false,
+            "desc": "攻击范围扩大，攻击范围内所有友方单位获得相当于自身攻击力与防御力40%的鼓舞效果，友方受到伤害时自身会为其治疗80点生命。",
+            "descRaw": "攻击范围扩大，攻击范围内所有友方单位获得相当于自身攻击力与防御力40%的鼓舞效果，友方受到伤害时自身会为其治疗80点生命。",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 30,
+            "spType": "INCREASE_WITH_TIME",
+            "spCost": 40,
+            "initSp": 23,
+            "maxChargeTime": 1,
+            "increment": 1,
+            "bb": {
+              "rangeExtend": 1,
+              "share": 0.4,
+              "def_share": 0.4,
+              "heal": 80,
+              "duration": 30
+            },
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          },
+          {
+            "skillId": "skx_ave_mujica_skchr_dolris_2",
+            "name": "我悲悯的",
+            "default": true,
+            "desc": "技能生效期间每0.3秒对攻击范围内随机一名敌人造成相当于攻击力80%的法术伤害，并为一个友方治疗相当于攻击力20%的生命；攻击范围内其他友方获得相当于自身攻击力90%的鼓舞效果。[ASSUMED]",
+            "descRaw": "技能生效期间每0.3秒对攻击范围内随机一名敌人造成相当于攻击力80%的法术伤害，并为一个友方治疗相当于攻击力20%的生命；攻击范围内其他友方获得相当于自身攻击力90%的鼓舞效果。[ASSUMED]",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 12,
+            "spType": "INCREASE_WITH_TIME",
+            "spCost": 34,
+            "initSp": 15,
+            "maxChargeTime": 1,
+            "increment": 1,
+            "bb": {
+              "interval": 0.3,
+              "dps_scale": 0.8,
+              "heal_scale": 0.2,
+              "inspire": 0.9,
+              "duration": 12
+            },
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          }
+        ],
+        "tags": [
+          "支援",
+          "治疗"
+        ],
+        "tokens": [],
+        "trait": {
+          "desc": "不攻击，持续恢复范围内所有友军生命（每秒相当于自身攻击力10%的生命），自身不受鼓舞影响",
+          "descRaw": "不攻击，持续恢复范围内所有友军<@ba.kw>生命</>（每秒相当于自身攻击力<@ba.kw>10%</>的生命），自身不受<$ba.inspire>鼓舞</>影响",
+          "bb": {
+            "attack@atk_to_hp_recovery_ratio": 0.1,
+            "atk": 0.08
+          }
+        },
+        "talents": [
+          {
+            "name": "谎言的假面",
+            "desc": "技能未开启时每4秒治疗攻击范围内生命最低的友方单位相当于攻击力30%的生命；技能期间优先选择丰川祥子作为治疗目标",
+            "descRaw": "技能未开启时每4秒治疗攻击范围内生命最低的友方单位相当于攻击力30%的生命；技能期间优先选择丰川祥子作为治疗目标",
+            "bb": {
+              "interval": 4,
+              "heal_scale": 0.3
+            },
+            "hidden": false
+          },
+          {
+            "name": "毋畏悲伤",
+            "desc": "治疗Ave Mujica成员时使Fever+5；攻击范围内Ave Mujica成员攻击时，附带三角初华攻击力30%的法术伤害",
+            "descRaw": "治疗<$ba.mujica>Ave Mujica</>成员时使<$ba.fever>Fever</>+5；攻击范围内<$ba.mujica>Ave Mujica</>成员攻击时，附带三角初华攻击力30%的法术伤害",
+            "bb": {
+              "fever": 5,
+              "bonus_scale": 0.3
+            },
+            "hidden": false
+          }
+        ]
+      }
+    },
+    "skills": [
+      {
+        "skillId": "skx_ave_mujica_skchr_dolris_1",
+        "name": "我思念的",
+        "default": true,
+        "desc": "攻击范围扩大，攻击范围内所有友方单位获得相当于自身攻击力与防御力30%的鼓舞效果，友方受到伤害时自身会为其治疗65点生命。",
+        "descRaw": "攻击范围扩大，攻击范围内所有友方单位获得相当于自身攻击力与防御力30%的鼓舞效果，友方受到伤害时自身会为其治疗65点生命。",
+        "skillType": "MANUAL",
+        "durationType": "NONE",
+        "duration": 30,
+        "spType": "INCREASE_WITH_TIME",
+        "spCost": 45,
+        "initSp": 21,
+        "maxChargeTime": 1,
+        "increment": 1,
+        "bb": {
+          "rangeExtend": 1,
+          "share": 0.3,
+          "def_share": 0.3,
+          "heal": 65,
+          "duration": 30
+        },
+        "trigger": {
+          "rule": "DEFAULT",
+          "rawRule": "DEFAULT",
+          "customRangeGrid": null
+        }
+      },
+      {
+        "skillId": "skx_ave_mujica_skchr_dolris_2",
+        "name": "我悲悯的",
+        "default": false,
+        "desc": "技能生效期间每0.3秒对攻击范围内随机一名敌人造成相当于攻击力70%的法术伤害，并为一个友方治疗相当于攻击力15%的生命；攻击范围内其他友方获得相当于自身攻击力80%的鼓舞效果。[ASSUMED]",
+        "descRaw": "技能生效期间每0.3秒对攻击范围内随机一名敌人造成相当于攻击力70%的法术伤害，并为一个友方治疗相当于攻击力15%的生命；攻击范围内其他友方获得相当于自身攻击力80%的鼓舞效果。[ASSUMED]",
+        "skillType": "MANUAL",
+        "durationType": "NONE",
+        "duration": 12,
+        "spType": "INCREASE_WITH_TIME",
+        "spCost": 37,
+        "initSp": 12,
+        "maxChargeTime": 1,
+        "increment": 1,
+        "bb": {
+          "interval": 0.3,
+          "dps_scale": 0.7,
+          "heal_scale": 0.15,
+          "inspire": 0.8,
+          "duration": 12
+        },
+        "trigger": {
+          "rule": "DEFAULT",
+          "rawRule": "DEFAULT",
+          "customRangeGrid": null
+        }
+      }
+    ],
+    "kit": "generic",
+    "chess": {
+      "tier": 4,
+      "bonds": [
+        "bond_x_ave_mujica_avemujica",
+        "deputShip"
+      ],
+      "price": 3,
+      "sellPrice": 1,
+      "identifier": 430,
+      "shopSortId": 430,
+      "ids": {
+        "normal": "chess_x_ave_mujica_char_5_30_a",
+        "elite": "chess_x_ave_mujica_char_5_30_b"
+      }
+    },
+    "appellation": "Doloris",
+    "subProfessionName": "吟游者",
+    "nationId": "rhodes",
+    "dmgType": "phys",
+    "attackKind": "ranged",
+    "projectile": "bolt",
+    "canHitFly": true,
+    "art": {
+      "ref": "char_x_ave_mujica_char_5_30",
+      "assets": {
+        "avatar": "char_x_ave_mujica_char_5_30",
+        "avatarGolden": "char_x_ave_mujica_char_5_30",
+        "portrait": "char_x_ave_mujica_char_5_30_2",
+        "portraitGolden": "char_x_ave_mujica_char_5_30_2",
+        "spine": "char_x_ave_mujica_char_5_30",
+        "spineGolden": "char_x_ave_mujica_char_5_30",
+        "skillIcon": "skchr_am_doloris_1",
+        "skillIconGolden": "skchr_am_doloris_2",
+        "subProfIcon": "sub_bard_icon",
+        "subProfIconGolden": "sub_bard_icon",
+        "voice": "char_x_ave_mujica_char_5_30"
+      }
+    }
+  },
+  {
+    "op": 1,
+    "charId": "char_x_ave_mujica_char_5_31",
+    "name": "祐天寺若麦",
+    "profession": "WARRIOR",
+    "subProfessionId": "hammer",
+    "position": "MELEE",
+    "rarity": 2,
+    "as": "chess",
+    "forms": {
+      "normal": {
+        "stats": {
+          "maxHp": 1861,
+          "atk": 987,
+          "def": 300,
+          "res": 0,
+          "cost": 18,
+          "blockCnt": 2,
+          "bat": 1.8,
+          "aspd": 100,
+          "respawnTime": 70,
+          "spRecovery": 1,
+          "hpRecoveryPerSec": 0,
+          "moveSpeed": 1,
+          "tauntLevel": 0,
+          "massLevel": 0,
+          "deployLimit": 1,
+          "deckStack": 0
+        },
+        "rangeGrid": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "skills": [
+          {
+            "skillId": "skx_ave_mujica_skchr_amoris_1",
+            "name": "如焰般热烈",
+            "default": true,
+            "desc": "攻击变为特殊的三连击，第一次攻击的攻击力变为130%且溅射范围扩大，后两次攻击的攻击力变为20%。[ASSUMED]",
+            "descRaw": "攻击变为特殊的三连击，第一次攻击的攻击力变为130%且溅射范围扩大，后两次攻击的攻击力变为20%。[ASSUMED]",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 15,
+            "spType": "INCREASE_WHEN_ATTACK",
+            "spCost": 25,
+            "initSp": 0,
+            "maxChargeTime": 1,
+            "increment": 1,
+            "bb": {
+              "first_scale": 1.3,
+              "sub_scale": 0.2,
+              "hits": 3,
+              "splash_radius": 1.1,
+              "duration": 15
+            },
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          },
+          {
+            "skillId": "skx_ave_mujica_skchr_amoris_2",
+            "name": "如麦般生长",
+            "default": false,
+            "desc": "攻击范围扩大，攻击变为特殊的八连击，第一、五次攻击的攻击力变为100%，其余攻击的攻击力变为10%，随机攻击范围内的目标。[ASSUMED]",
+            "descRaw": "攻击范围扩大，攻击变为特殊的八连击，第一、五次攻击的攻击力变为100%，其余攻击的攻击力变为10%，随机攻击范围内的目标。[ASSUMED]",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 24,
+            "spType": "INCREASE_WHEN_ATTACK",
+            "spCost": 42,
+            "initSp": 18,
+            "maxChargeTime": 1,
+            "increment": 1,
+            "bb": {
+              "hits": 8,
+              "main_scale": 1,
+              "sub_scale": 0.1,
+              "rangeExtend": 1,
+              "duration": 24
+            },
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          }
+        ],
+        "tags": [
+          "群攻",
+          "输出",
+          "削弱"
+        ],
+        "tokens": [],
+        "trait": {
+          "desc": "攻击使目标周围的其他敌人受到相当于攻击力50%的群体物理伤害",
+          "descRaw": "攻击使目标周围的其他敌人受到相当于攻击力<@ba.kw>50%</>的<@ba.kw>群体</>物理伤害",
+          "bb": {
+            "attack@ability_range_radius": 1,
+            "attack@atk_scale_2": 0.5
+          }
+        },
+        "talents": [
+          {
+            "name": "双利手",
+            "desc": "祐天寺若麦可以进行持续攻击；攻击时10%概率使敌人获得8%脆弱，持续2秒",
+            "descRaw": "祐天寺若麦可以进行持续攻击；攻击时10%概率使敌人获得8%<@ba.kw>脆弱</>，持续2秒",
+            "bb": {
+              "prob": 0.1,
+              "fragile": 0.08,
+              "fragile_dur": 2
+            },
+            "hidden": false
+          },
+          {
+            "name": "毋畏爱意",
+            "desc": "在场时每秒使Fever+3；Ave Mujica成员的攻击力+8%",
+            "descRaw": "在场时每秒使<$ba.fever>Fever</>+3；<$ba.mujica>Ave Mujica</>成员的攻击力+8%",
+            "bb": {
+              "fever_per_sec": 3,
+              "atk": 0.08
+            },
+            "hidden": false
+          }
+        ]
+      },
+      "elite": {
+        "stats": {
+          "maxHp": 2464,
+          "atk": 1195,
+          "def": 353,
+          "res": 0,
+          "cost": 18,
+          "blockCnt": 2,
+          "bat": 1.8,
+          "aspd": 100,
+          "respawnTime": 70,
+          "spRecovery": 1,
+          "hpRecoveryPerSec": 0,
+          "moveSpeed": 1,
+          "tauntLevel": 0,
+          "massLevel": 0,
+          "deployLimit": 1,
+          "deckStack": 0
+        },
+        "rangeGrid": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "skills": [
+          {
+            "skillId": "skx_ave_mujica_skchr_amoris_1",
+            "name": "如焰般热烈",
+            "default": false,
+            "desc": "攻击变为特殊的三连击，第一次攻击的攻击力变为130%且溅射范围扩大，后两次攻击的攻击力变为20%。[ASSUMED]",
+            "descRaw": "攻击变为特殊的三连击，第一次攻击的攻击力变为130%且溅射范围扩大，后两次攻击的攻击力变为20%。[ASSUMED]",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 15,
+            "spType": "INCREASE_WHEN_ATTACK",
+            "spCost": 25,
+            "initSp": 0,
+            "maxChargeTime": 1,
+            "increment": 1,
+            "bb": {
+              "first_scale": 1.3,
+              "sub_scale": 0.2,
+              "hits": 3,
+              "splash_radius": 1.1,
+              "duration": 15
+            },
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          },
+          {
+            "skillId": "skx_ave_mujica_skchr_amoris_2",
+            "name": "如麦般生长",
+            "default": true,
+            "desc": "攻击范围扩大，攻击变为特殊的八连击，第一、五次攻击的攻击力变为100%，其余攻击的攻击力变为10%，随机攻击范围内的目标。[ASSUMED]",
+            "descRaw": "攻击范围扩大，攻击变为特殊的八连击，第一、五次攻击的攻击力变为100%，其余攻击的攻击力变为10%，随机攻击范围内的目标。[ASSUMED]",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 24,
+            "spType": "INCREASE_WHEN_ATTACK",
+            "spCost": 42,
+            "initSp": 18,
+            "maxChargeTime": 1,
+            "increment": 1,
+            "bb": {
+              "hits": 8,
+              "main_scale": 1,
+              "sub_scale": 0.1,
+              "rangeExtend": 1,
+              "duration": 24
+            },
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          }
+        ],
+        "tags": [
+          "群攻",
+          "输出",
+          "削弱"
+        ],
+        "tokens": [],
+        "trait": {
+          "desc": "攻击使目标周围的其他敌人受到相当于攻击力50%的群体物理伤害",
+          "descRaw": "攻击使目标周围的其他敌人受到相当于攻击力<@ba.kw>50%</>的<@ba.kw>群体</>物理伤害",
+          "bb": {
+            "attack@ability_range_radius": 1,
+            "attack@atk_scale_2": 0.5,
+            "atk_scale": 1.15
+          }
+        },
+        "talents": [
+          {
+            "name": "双利手",
+            "desc": "祐天寺若麦可以进行持续攻击；攻击时10%概率使敌人获得8%脆弱，持续2秒",
+            "descRaw": "祐天寺若麦可以进行持续攻击；攻击时10%概率使敌人获得8%<@ba.kw>脆弱</>，持续2秒",
+            "bb": {
+              "prob": 0.1,
+              "fragile": 0.08,
+              "fragile_dur": 2
+            },
+            "hidden": false
+          },
+          {
+            "name": "毋畏爱意",
+            "desc": "在场时每秒使Fever+3；Ave Mujica成员的攻击力+8%",
+            "descRaw": "在场时每秒使<$ba.fever>Fever</>+3；<$ba.mujica>Ave Mujica</>成员的攻击力+8%",
+            "bb": {
+              "fever_per_sec": 3,
+              "atk": 0.08
+            },
+            "hidden": false
+          }
+        ]
+      }
+    },
+    "skills": [
+      {
+        "skillId": "skx_ave_mujica_skchr_amoris_1",
+        "name": "如焰般热烈",
+        "default": true,
+        "desc": "攻击变为特殊的三连击，第一次攻击的攻击力变为130%且溅射范围扩大，后两次攻击的攻击力变为20%。[ASSUMED]",
+        "descRaw": "攻击变为特殊的三连击，第一次攻击的攻击力变为130%且溅射范围扩大，后两次攻击的攻击力变为20%。[ASSUMED]",
+        "skillType": "MANUAL",
+        "durationType": "NONE",
+        "duration": 15,
+        "spType": "INCREASE_WHEN_ATTACK",
+        "spCost": 25,
+        "initSp": 0,
+        "maxChargeTime": 1,
+        "increment": 1,
+        "bb": {
+          "first_scale": 1.3,
+          "sub_scale": 0.2,
+          "hits": 3,
+          "splash_radius": 1.1,
+          "duration": 15
+        },
+        "trigger": {
+          "rule": "DEFAULT",
+          "rawRule": "DEFAULT",
+          "customRangeGrid": null
+        }
+      },
+      {
+        "skillId": "skx_ave_mujica_skchr_amoris_2",
+        "name": "如麦般生长",
+        "default": false,
+        "desc": "攻击范围扩大，攻击变为特殊的八连击，第一、五次攻击的攻击力变为100%，其余攻击的攻击力变为10%，随机攻击范围内的目标。[ASSUMED]",
+        "descRaw": "攻击范围扩大，攻击变为特殊的八连击，第一、五次攻击的攻击力变为100%，其余攻击的攻击力变为10%，随机攻击范围内的目标。[ASSUMED]",
+        "skillType": "MANUAL",
+        "durationType": "NONE",
+        "duration": 24,
+        "spType": "INCREASE_WHEN_ATTACK",
+        "spCost": 42,
+        "initSp": 18,
+        "maxChargeTime": 1,
+        "increment": 1,
+        "bb": {
+          "hits": 8,
+          "main_scale": 1,
+          "sub_scale": 0.1,
+          "rangeExtend": 1,
+          "duration": 24
+        },
+        "trigger": {
+          "rule": "DEFAULT",
+          "rawRule": "DEFAULT",
+          "customRangeGrid": null
+        }
+      }
+    ],
+    "kit": "generic",
+    "chess": {
+      "tier": 2,
+      "bonds": [
+        "bond_x_ave_mujica_avemujica",
+        "skillfulShip"
+      ],
+      "price": 3,
+      "sellPrice": 1,
+      "identifier": 231,
+      "shopSortId": 231,
+      "ids": {
+        "normal": "chess_x_ave_mujica_char_5_31_a",
+        "elite": "chess_x_ave_mujica_char_5_31_b"
+      }
+    },
+    "appellation": "Amoris",
+    "subProfessionName": "撼地者",
+    "nationId": "rhodes",
+    "dmgType": "phys",
+    "attackKind": "melee",
+    "projectile": "bolt",
+    "canHitFly": false,
+    "art": {
+      "ref": "char_x_ave_mujica_char_5_31",
+      "assets": {
+        "avatar": "char_x_ave_mujica_char_5_31",
+        "avatarGolden": "char_x_ave_mujica_char_5_31",
+        "portrait": "char_x_ave_mujica_char_5_31_2",
+        "portraitGolden": "char_x_ave_mujica_char_5_31_2",
+        "spine": "char_x_ave_mujica_char_5_31",
+        "spineGolden": "char_x_ave_mujica_char_5_31",
+        "skillIcon": "skchr_am_amoris_1",
+        "skillIconGolden": "skchr_am_amoris_2",
+        "subProfIcon": "sub_hammer_icon",
+        "subProfIconGolden": "sub_hammer_icon",
+        "voice": "char_x_ave_mujica_char_5_31"
+      }
+    }
+  },
+  {
+    "op": 1,
+    "charId": "char_x_ave_mujica_char_5_32",
+    "name": "八幡海铃",
+    "profession": "SPECIAL",
+    "subProfessionId": "stalker",
+    "position": "MELEE",
+    "rarity": 3,
+    "as": "chess",
+    "forms": {
+      "normal": {
+        "stats": {
+          "maxHp": 1469,
+          "atk": 655,
+          "def": 274,
+          "res": 30,
+          "cost": 19,
+          "blockCnt": 0,
+          "bat": 3.5,
+          "aspd": 100,
+          "respawnTime": 70,
+          "spRecovery": 1,
+          "hpRecoveryPerSec": 0,
+          "moveSpeed": 1,
+          "tauntLevel": -1,
+          "massLevel": 0,
+          "deployLimit": 1,
+          "deckStack": 0
+        },
+        "rangeGrid": [
+          [
+            1,
+            -1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            -1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            -1,
+            -1
+          ],
+          [
+            -1,
+            0
+          ],
+          [
+            -1,
+            1
+          ]
+        ],
+        "skills": [
+          {
+            "skillId": "skx_ave_mujica_skchr_tmoris_1",
+            "name": "颤栗之弦",
+            "default": true,
+            "desc": "发动一次5连击，对攻击范围内的地面敌人每次造成相当于攻击力55%的法术伤害。[ASSUMED]",
+            "descRaw": "发动一次5连击，对攻击范围内的地面敌人每次造成相当于攻击力55%的法术伤害。[ASSUMED]",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 2.1,
+            "spType": "INCREASE_WHEN_ATTACK",
+            "spCost": 6,
+            "initSp": 0,
+            "maxChargeTime": 2,
+            "increment": 1,
+            "bb": {
+              "hits": 5,
+              "atk_scale": 0.55,
+              "duration": 2.1
+            },
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          },
+          {
+            "skillId": "skx_ave_mujica_skchr_tmoris_2",
+            "name": "无存之所",
+            "default": false,
+            "desc": "立即使攻击范围内的敌人恐惧1.5秒，每秒对攻击范围内的敌人造成相当于攻击力70%的法术伤害。[ASSUMED]",
+            "descRaw": "立即使攻击范围内的敌人恐惧1.5秒，每秒对攻击范围内的敌人造成相当于攻击力70%的法术伤害。[ASSUMED]",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 15,
+            "spType": "INCREASE_WITH_TIME",
+            "spCost": 50,
+            "initSp": 20,
+            "maxChargeTime": 1,
+            "increment": 1,
+            "bb": {
+              "fear_dur": 1.5,
+              "dps_scale": 0.7,
+              "duration": 15
+            },
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          }
+        ],
+        "tags": [
+          "输出",
+          "控场"
+        ],
+        "tokens": [],
+        "trait": {
+          "desc": "对攻击范围内所有敌人造成伤害\n拥有50%的物理和法术闪避且不容易成为敌人的攻击目标",
+          "descRaw": "对攻击范围内<@ba.kw>所有敌人</>造成伤害\n拥有50%的物理和法术闪避且不容易成为敌人的<@ba.kw>攻击目标</>",
+          "bb": {
+            "prob": 0.5
+          }
+        },
+        "talents": [
+          {
+            "name": "应召而至",
+            "desc": "被八幡海铃伤害的敌人有21%概率被停顿3秒；技能期间，八幡海铃的攻击范围扩大",
+            "descRaw": "被八幡海铃伤害的敌人有21%概率被<@ba.kw>停顿</>3秒；技能期间，八幡海铃的攻击范围扩大",
+            "bb": {
+              "prob": 0.21,
+              "sluggish_dur": 3
+            },
+            "hidden": false
+          },
+          {
+            "name": "毋畏恐惧",
+            "desc": "造成停顿时使Fever+2；在场时，Ave Mujica成员对处于停顿、恐惧的敌人造成的伤害增加10%",
+            "descRaw": "造成<@ba.kw>停顿</>时使<$ba.fever>Fever</>+2；在场时，<$ba.mujica>Ave Mujica</>成员对处于<@ba.kw>停顿</>、<@ba.kw>恐惧</>的敌人造成的伤害增加10%",
+            "bb": {
+              "fever": 2,
+              "dmg_up": 0.1
+            },
+            "hidden": false
+          }
+        ]
+      },
+      "elite": {
+        "stats": {
+          "maxHp": 1768,
+          "atk": 805,
+          "def": 317,
+          "res": 30,
+          "cost": 19,
+          "blockCnt": 0,
+          "bat": 3.5,
+          "aspd": 105,
+          "respawnTime": 70,
+          "spRecovery": 1,
+          "hpRecoveryPerSec": 0,
+          "moveSpeed": 1,
+          "tauntLevel": -1,
+          "massLevel": 0,
+          "deployLimit": 1,
+          "deckStack": 0
+        },
+        "rangeGrid": [
+          [
+            1,
+            -1
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            -1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            -1,
+            -1
+          ],
+          [
+            -1,
+            0
+          ],
+          [
+            -1,
+            1
+          ]
+        ],
+        "skills": [
+          {
+            "skillId": "skx_ave_mujica_skchr_tmoris_1",
+            "name": "颤栗之弦",
+            "default": false,
+            "desc": "发动一次5连击，对攻击范围内的地面敌人每次造成相当于攻击力55%的法术伤害。[ASSUMED]",
+            "descRaw": "发动一次5连击，对攻击范围内的地面敌人每次造成相当于攻击力55%的法术伤害。[ASSUMED]",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 2.1,
+            "spType": "INCREASE_WHEN_ATTACK",
+            "spCost": 6,
+            "initSp": 0,
+            "maxChargeTime": 2,
+            "increment": 1,
+            "bb": {
+              "hits": 5,
+              "atk_scale": 0.55,
+              "duration": 2.1
+            },
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          },
+          {
+            "skillId": "skx_ave_mujica_skchr_tmoris_2",
+            "name": "无存之所",
+            "default": true,
+            "desc": "立即使攻击范围内的敌人恐惧1.5秒，每秒对攻击范围内的敌人造成相当于攻击力70%的法术伤害。[ASSUMED]",
+            "descRaw": "立即使攻击范围内的敌人恐惧1.5秒，每秒对攻击范围内的敌人造成相当于攻击力70%的法术伤害。[ASSUMED]",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 15,
+            "spType": "INCREASE_WITH_TIME",
+            "spCost": 50,
+            "initSp": 20,
+            "maxChargeTime": 1,
+            "increment": 1,
+            "bb": {
+              "fear_dur": 1.5,
+              "dps_scale": 0.7,
+              "duration": 15
+            },
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          }
+        ],
+        "tags": [
+          "输出",
+          "控场"
+        ],
+        "tokens": [],
+        "trait": {
+          "desc": "对攻击范围内所有敌人造成伤害\n拥有65%的物理和法术闪避且不容易成为敌人的攻击目标",
+          "descRaw": "对攻击范围内<@ba.kw>所有敌人</>造成伤害\n拥有65%的物理和法术闪避且不容易成为敌人的<@ba.kw>攻击目标</>",
+          "bb": {
+            "prob": 0.65
+          }
+        },
+        "talents": [
+          {
+            "name": "应召而至",
+            "desc": "被八幡海铃伤害的敌人有21%概率被停顿3秒；技能期间，八幡海铃的攻击范围扩大",
+            "descRaw": "被八幡海铃伤害的敌人有21%概率被<@ba.kw>停顿</>3秒；技能期间，八幡海铃的攻击范围扩大",
+            "bb": {
+              "prob": 0.21,
+              "sluggish_dur": 3
+            },
+            "hidden": false
+          },
+          {
+            "name": "毋畏恐惧",
+            "desc": "造成停顿时使Fever+2；在场时，Ave Mujica成员对处于停顿、恐惧的敌人造成的伤害增加10%",
+            "descRaw": "造成<@ba.kw>停顿</>时使<$ba.fever>Fever</>+2；在场时，<$ba.mujica>Ave Mujica</>成员对处于<@ba.kw>停顿</>、<@ba.kw>恐惧</>的敌人造成的伤害增加10%",
+            "bb": {
+              "fever": 2,
+              "dmg_up": 0.1
+            },
+            "hidden": false
+          }
+        ]
+      }
+    },
+    "skills": [
+      {
+        "skillId": "skx_ave_mujica_skchr_tmoris_1",
+        "name": "颤栗之弦",
+        "default": true,
+        "desc": "发动一次5连击，对攻击范围内的地面敌人每次造成相当于攻击力55%的法术伤害。[ASSUMED]",
+        "descRaw": "发动一次5连击，对攻击范围内的地面敌人每次造成相当于攻击力55%的法术伤害。[ASSUMED]",
+        "skillType": "MANUAL",
+        "durationType": "NONE",
+        "duration": 2.1,
+        "spType": "INCREASE_WHEN_ATTACK",
+        "spCost": 6,
+        "initSp": 0,
+        "maxChargeTime": 2,
+        "increment": 1,
+        "bb": {
+          "hits": 5,
+          "atk_scale": 0.55,
+          "duration": 2.1
+        },
+        "trigger": {
+          "rule": "DEFAULT",
+          "rawRule": "DEFAULT",
+          "customRangeGrid": null
+        }
+      },
+      {
+        "skillId": "skx_ave_mujica_skchr_tmoris_2",
+        "name": "无存之所",
+        "default": false,
+        "desc": "立即使攻击范围内的敌人恐惧1.5秒，每秒对攻击范围内的敌人造成相当于攻击力70%的法术伤害。[ASSUMED]",
+        "descRaw": "立即使攻击范围内的敌人恐惧1.5秒，每秒对攻击范围内的敌人造成相当于攻击力70%的法术伤害。[ASSUMED]",
+        "skillType": "MANUAL",
+        "durationType": "NONE",
+        "duration": 15,
+        "spType": "INCREASE_WITH_TIME",
+        "spCost": 50,
+        "initSp": 20,
+        "maxChargeTime": 1,
+        "increment": 1,
+        "bb": {
+          "fear_dur": 1.5,
+          "dps_scale": 0.7,
+          "duration": 15
+        },
+        "trigger": {
+          "rule": "DEFAULT",
+          "rawRule": "DEFAULT",
+          "customRangeGrid": null
+        }
+      }
+    ],
+    "kit": "generic",
+    "chess": {
+      "tier": 3,
+      "bonds": [
+        "bond_x_ave_mujica_avemujica",
+        "siracusaShip",
+        "soloShip"
+      ],
+      "price": 3,
+      "sellPrice": 1,
+      "identifier": 332,
+      "shopSortId": 332,
+      "ids": {
+        "normal": "chess_x_ave_mujica_char_5_32_a",
+        "elite": "chess_x_ave_mujica_char_5_32_b"
+      }
+    },
+    "appellation": "Timoris",
+    "subProfessionName": "伏击客",
+    "nationId": "rhodes",
+    "dmgType": "phys",
+    "attackKind": "melee",
+    "projectile": "bolt",
+    "canHitFly": false,
+    "art": {
+      "ref": "char_x_ave_mujica_char_5_32",
+      "assets": {
+        "avatar": "char_x_ave_mujica_char_5_32",
+        "avatarGolden": "char_x_ave_mujica_char_5_32",
+        "portrait": "char_x_ave_mujica_char_5_32_2",
+        "portraitGolden": "char_x_ave_mujica_char_5_32_2",
+        "spine": "char_x_ave_mujica_char_5_32",
+        "spineGolden": "char_x_ave_mujica_char_5_32",
+        "skillIcon": "skchr_am_timoris_1",
+        "skillIconGolden": "skchr_am_timoris_2",
+        "subProfIcon": "sub_stalker_icon",
+        "subProfIconGolden": "sub_stalker_icon",
+        "voice": "char_x_ave_mujica_char_5_32"
+      }
+    }
+  },
+  {
+    "op": 1,
+    "charId": "char_x_ave_mujica_char_6_30",
+    "name": "丰川祥子",
+    "profession": "WARRIOR",
+    "subProfessionId": "lord",
+    "position": "MELEE",
+    "rarity": 6,
+    "as": "chess",
+    "forms": {
+      "normal": {
+        "stats": {
+          "maxHp": 1624,
+          "atk": 613,
+          "def": 352,
+          "res": 10,
+          "cost": 18,
+          "blockCnt": 2,
+          "bat": 1.3,
+          "aspd": 100,
+          "respawnTime": 66,
+          "spRecovery": 1,
+          "hpRecoveryPerSec": 0,
+          "moveSpeed": 1,
+          "tauntLevel": 0,
+          "massLevel": 0,
+          "deployLimit": 1,
+          "deckStack": 0
+        },
+        "rangeGrid": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            0,
+            3
+          ],
+          [
+            -1,
+            0
+          ],
+          [
+            -1,
+            1
+          ]
+        ],
+        "skills": [
+          {
+            "skillId": "skchr_oblvns_1",
+            "name": "新月的苏醒",
+            "default": true,
+            "desc": "对攻击范围内的一名敌人依次演奏8个音符，造成依次递减的攻击力50%%、46%%、38%%、29%%、21%%、17%%、8%%、3%%的法术伤害，可充能2次。[ASSUMED]",
+            "descRaw": "对攻击范围内的一名敌人依次演奏8个音符，造成依次递减的攻击力50%%、46%%、38%%、29%%、21%%、17%%、8%%、3%%的法术伤害，可充能2次。[ASSUMED]",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 0,
+            "spType": "INCREASE_WHEN_ATTACK",
+            "spCost": 5,
+            "initSp": 0,
+            "maxChargeTime": 2,
+            "increment": 1,
+            "bb": {
+              "notes": 8,
+              "duration": 0
+            },
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          },
+          {
+            "skillId": "skchr_oblvns_2",
+            "name": "满月的舞会",
+            "default": false,
+            "desc": "切换为满月的舞会：攻击力+40%，攻击速度+60，攻击变为造成法术伤害的二连击。[ASSUMED]",
+            "descRaw": "切换为满月的舞会：攻击力+40%，攻击速度+60，攻击变为造成法术伤害的二连击。[ASSUMED]",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 0,
+            "spType": "INCREASE_WHEN_ATTACK",
+            "spCost": 6,
+            "initSp": 0,
+            "maxChargeTime": 1,
+            "increment": 1,
+            "bb": {
+              "atkMul": 1.4,
+              "aspd": 60,
+              "hits": 2,
+              "duration": 0
+            },
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          },
+          {
+            "skillId": "skchr_oblvns_3",
+            "name": "残月的余响",
+            "default": false,
+            "desc": "攻击范围扩大，攻击同时使用钢琴与风琴音色，各演奏2个造成相当于攻击力140%%的物理与法术伤害的音符，分别追踪法术抗性和防御力最高的敌人。[ASSUMED]",
+            "descRaw": "攻击范围扩大，攻击同时使用钢琴与风琴音色，各演奏2个造成相当于攻击力140%%的物理与法术伤害的音符，分别追踪法术抗性和防御力最高的敌人。[ASSUMED]",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 25,
+            "spType": "INCREASE_WHEN_ATTACK",
+            "spCost": 48,
+            "initSp": 28,
+            "maxChargeTime": 1,
+            "increment": 1,
+            "bb": {
+              "hits": 4,
+              "atk_scale": 1.4,
+              "rangeExtend": 1,
+              "duration": 25
+            },
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          }
+        ],
+        "tokens": [],
+        "trait": {
+          "desc": "可以进行远程攻击，但此时攻击力降低至80%",
+          "descRaw": "可以进行<@ba.kw>远程攻击</>，但此时攻击力降低至80%",
+          "bb": {
+            "atk_scale": 0.8
+          }
+        },
+        "talents": [
+          {
+            "name": "颂乐音符",
+            "desc": "丰川祥子可以持续攻击且攻击会演奏追踪敌人的音符，音符飘出攻击范围一段时间后消失。每存在一个音符，Ave Mujica成员无视敌人3%的防御力和2%法术抗性（最多叠加至10层）",
+            "descRaw": "丰川祥子可以持续攻击且攻击会演奏追踪敌人的音符，音符飘出攻击范围一段时间后消失。每存在一个音符，<$ba.mujica>Ave Mujica</>成员无视敌人3%的防御力和2%法术抗性（最多叠加至10层）",
+            "bb": {
+              "def_pen": 0.03,
+              "res_pen": 0.02,
+              "max_stack": 10
+            },
+            "hidden": false
+          },
+          {
+            "name": "毋畏遗忘",
+            "desc": "对敌人造成伤害时使Fever+3",
+            "descRaw": "对敌人造成伤害时使<$ba.fever>Fever</>+3",
+            "bb": {
+              "fever": 3
+            },
+            "hidden": false
+          }
+        ]
+      },
+      "elite": {
+        "stats": {
+          "maxHp": 2090,
+          "atk": 742,
+          "def": 400,
+          "res": 10,
+          "cost": 18,
+          "blockCnt": 2,
+          "bat": 1.3,
+          "aspd": 105,
+          "respawnTime": 66,
+          "spRecovery": 1,
+          "hpRecoveryPerSec": 0,
+          "moveSpeed": 1,
+          "tauntLevel": 0,
+          "massLevel": 0,
+          "deployLimit": 1,
+          "deckStack": 0
+        },
+        "rangeGrid": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            0,
+            3
+          ],
+          [
+            -1,
+            0
+          ],
+          [
+            -1,
+            1
+          ]
+        ],
+        "skills": [
+          {
+            "skillId": "skchr_oblvns_1",
+            "name": "新月的苏醒",
+            "default": false,
+            "desc": "对攻击范围内的一名敌人依次演奏8个音符，造成依次递减的攻击力50%%、46%%、38%%、29%%、21%%、17%%、8%%、3%%的法术伤害，可充能2次。[ASSUMED]",
+            "descRaw": "对攻击范围内的一名敌人依次演奏8个音符，造成依次递减的攻击力50%%、46%%、38%%、29%%、21%%、17%%、8%%、3%%的法术伤害，可充能2次。[ASSUMED]",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 0,
+            "spType": "INCREASE_WHEN_ATTACK",
+            "spCost": 5,
+            "initSp": 0,
+            "maxChargeTime": 2,
+            "increment": 1,
+            "bb": {
+              "notes": 8,
+              "duration": 0
+            },
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          },
+          {
+            "skillId": "skchr_oblvns_2",
+            "name": "满月的舞会",
+            "default": true,
+            "desc": "切换为满月的舞会：攻击力+40%，攻击速度+60，攻击变为造成法术伤害的二连击。[ASSUMED]",
+            "descRaw": "切换为满月的舞会：攻击力+40%，攻击速度+60，攻击变为造成法术伤害的二连击。[ASSUMED]",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 0,
+            "spType": "INCREASE_WHEN_ATTACK",
+            "spCost": 6,
+            "initSp": 0,
+            "maxChargeTime": 1,
+            "increment": 1,
+            "bb": {
+              "atkMul": 1.4,
+              "aspd": 60,
+              "hits": 2,
+              "duration": 0
+            },
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          },
+          {
+            "skillId": "skchr_oblvns_3",
+            "name": "残月的余响",
+            "default": false,
+            "desc": "攻击范围扩大，攻击同时使用钢琴与风琴音色，各演奏2个造成相当于攻击力140%%的物理与法术伤害的音符，分别追踪法术抗性和防御力最高的敌人。[ASSUMED]",
+            "descRaw": "攻击范围扩大，攻击同时使用钢琴与风琴音色，各演奏2个造成相当于攻击力140%%的物理与法术伤害的音符，分别追踪法术抗性和防御力最高的敌人。[ASSUMED]",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 25,
+            "spType": "INCREASE_WHEN_ATTACK",
+            "spCost": 48,
+            "initSp": 28,
+            "maxChargeTime": 1,
+            "increment": 1,
+            "bb": {
+              "hits": 4,
+              "atk_scale": 1.4,
+              "rangeExtend": 1,
+              "duration": 25
+            },
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          }
+        ],
+        "tokens": [],
+        "trait": {
+          "desc": "可以进行远程攻击，但此时攻击力降低至80%",
+          "descRaw": "可以进行<@ba.kw>远程攻击</>，但此时攻击力降低至80%",
+          "bb": {
+            "atk_scale": 0.8,
+            "attack_speed": 12
+          }
+        },
+        "talents": [
+          {
+            "name": "颂乐音符",
+            "desc": "丰川祥子可以持续攻击且攻击会演奏追踪敌人的音符，音符飘出攻击范围一段时间后消失。每存在一个音符，Ave Mujica成员无视敌人3%的防御力和2%法术抗性（最多叠加至10层）",
+            "descRaw": "丰川祥子可以持续攻击且攻击会演奏追踪敌人的音符，音符飘出攻击范围一段时间后消失。每存在一个音符，<$ba.mujica>Ave Mujica</>成员无视敌人3%的防御力和2%法术抗性（最多叠加至10层）",
+            "bb": {
+              "def_pen": 0.03,
+              "res_pen": 0.02,
+              "max_stack": 10
+            },
+            "hidden": false
+          },
+          {
+            "name": "毋畏遗忘",
+            "desc": "对敌人造成伤害时使Fever+3",
+            "descRaw": "对敌人造成伤害时使<$ba.fever>Fever</>+3",
+            "bb": {
+              "fever": 3
+            },
+            "hidden": false
+          }
+        ]
+      }
+    },
+    "skills": [
+      {
+        "skillId": "skchr_oblvns_1",
+        "name": "新月的苏醒",
+        "default": true,
+        "desc": "对攻击范围内的一名敌人依次演奏8个音符，造成依次递减的攻击力50%%、46%%、38%%、29%%、21%%、17%%、8%%、3%%的法术伤害，可充能2次。[ASSUMED]",
+        "descRaw": "对攻击范围内的一名敌人依次演奏8个音符，造成依次递减的攻击力50%%、46%%、38%%、29%%、21%%、17%%、8%%、3%%的法术伤害，可充能2次。[ASSUMED]",
+        "skillType": "MANUAL",
+        "durationType": "NONE",
+        "duration": 0,
+        "spType": "INCREASE_WHEN_ATTACK",
+        "spCost": 5,
+        "initSp": 0,
+        "maxChargeTime": 2,
+        "increment": 1,
+        "bb": {
+          "notes": 8,
+          "duration": 0
+        },
+        "trigger": {
+          "rule": "DEFAULT",
+          "rawRule": "DEFAULT",
+          "customRangeGrid": null
+        }
+      },
+      {
+        "skillId": "skchr_oblvns_2",
+        "name": "满月的舞会",
+        "default": false,
+        "desc": "切换为满月的舞会：攻击力+40%，攻击速度+60，攻击变为造成法术伤害的二连击。[ASSUMED]",
+        "descRaw": "切换为满月的舞会：攻击力+40%，攻击速度+60，攻击变为造成法术伤害的二连击。[ASSUMED]",
+        "skillType": "MANUAL",
+        "durationType": "NONE",
+        "duration": 0,
+        "spType": "INCREASE_WHEN_ATTACK",
+        "spCost": 6,
+        "initSp": 0,
+        "maxChargeTime": 1,
+        "increment": 1,
+        "bb": {
+          "atkMul": 1.4,
+          "aspd": 60,
+          "hits": 2,
+          "duration": 0
+        },
+        "trigger": {
+          "rule": "DEFAULT",
+          "rawRule": "DEFAULT",
+          "customRangeGrid": null
+        }
+      },
+      {
+        "skillId": "skchr_oblvns_3",
+        "name": "残月的余响",
+        "default": false,
+        "desc": "攻击范围扩大，攻击同时使用钢琴与风琴音色，各演奏2个造成相当于攻击力140%%的物理与法术伤害的音符，分别追踪法术抗性和防御力最高的敌人。[ASSUMED]",
+        "descRaw": "攻击范围扩大，攻击同时使用钢琴与风琴音色，各演奏2个造成相当于攻击力140%%的物理与法术伤害的音符，分别追踪法术抗性和防御力最高的敌人。[ASSUMED]",
+        "skillType": "MANUAL",
+        "durationType": "NONE",
+        "duration": 25,
+        "spType": "INCREASE_WHEN_ATTACK",
+        "spCost": 48,
+        "initSp": 28,
+        "maxChargeTime": 1,
+        "increment": 1,
+        "bb": {
+          "hits": 4,
+          "atk_scale": 1.4,
+          "rangeExtend": 1,
+          "duration": 25
+        },
+        "trigger": {
+          "rule": "DEFAULT",
+          "rawRule": "DEFAULT",
+          "customRangeGrid": null
+        }
+      }
+    ],
+    "kit": {
+      "ref": "char_4182_oblvns"
+    },
+    "chess": {
+      "tier": 6,
+      "bonds": [
+        "bond_x_ave_mujica_avemujica",
+        "miraShip"
+      ],
+      "price": 5,
+      "sellPrice": 1,
+      "identifier": 630,
+      "shopSortId": 630,
+      "ids": {
+        "normal": "chess_x_ave_mujica_char_6_30_a",
+        "elite": "chess_x_ave_mujica_char_6_30_b"
+      }
+    },
+    "appellation": "Oblivionis",
+    "subProfessionName": "领主",
+    "nationId": "rhodes",
+    "dmgType": "phys",
+    "attackKind": "ranged",
+    "projectile": "bolt",
+    "canHitFly": false,
+    "origin": {
+      "charId": "char_4182_oblvns"
+    },
+    "art": {
+      "ref": "char_x_ave_mujica_char_6_30",
+      "assets": {
+        "avatar": "char_x_ave_mujica_char_6_30",
+        "avatarGolden": "char_x_ave_mujica_char_6_30",
+        "portrait": "char_x_ave_mujica_char_6_30_2",
+        "portraitGolden": "char_x_ave_mujica_char_6_30_2",
+        "spine": "char_x_ave_mujica_char_6_30",
+        "spineGolden": "char_x_ave_mujica_char_6_30",
+        "skillIcon": "skchr_am_oblivionis_1",
+        "skillIconGolden": "skchr_am_oblivionis_3",
+        "subProfIcon": "sub_lord_icon",
+        "subProfIconGolden": "sub_lord_icon",
+        "voice": "char_x_ave_mujica_char_6_30"
+      }
+    }
+  },
+  {
+    "op": 1,
+    "charId": "char_x_ave_mujica_char_5_25",
+    "name": "若叶睦",
+    "profession": "SPECIAL",
+    "subProfessionId": "dollkeeper",
+    "position": "MELEE",
+    "rarity": 5,
+    "as": "chess",
+    "forms": {
+      "normal": {
+        "stats": {
+          "maxHp": 1746,
+          "atk": 616,
+          "def": 263,
+          "res": 0,
+          "cost": 13,
+          "blockCnt": 2,
+          "bat": 1.2,
+          "aspd": 100,
+          "respawnTime": 66,
+          "spRecovery": 1,
+          "hpRecoveryPerSec": 0,
+          "moveSpeed": 1,
+          "tauntLevel": 0,
+          "massLevel": 0,
+          "deployLimit": 1,
+          "deckStack": 0
+        },
+        "rangeGrid": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "skills": [
+          {
+            "skillId": "skx_ave_mujica_skchr_mortis_1",
+            "name": "多首野兽",
+            "default": false,
+            "desc": "防御力+65%，阻挡数+2，更容易成为敌人的攻击目标；技能期间被击倒后，<替身>也能阻挡敌人且享受技能效果，直到<替身>退场",
+            "descRaw": "防御力<@ba.vup>+65%</>，阻挡数<@ba.vup>+2</>，更容易成为敌人的攻击目标；技能期间被击倒后，<替身>也能阻挡敌人且享受技能效果，直到<替身>退场",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 14,
+            "spType": "INCREASE_WITH_TIME",
+            "spCost": 26,
+            "initSp": 10,
+            "maxChargeTime": 1,
+            "increment": 1,
+            "bb": {
+              "def": 0.65,
+              "block_cnt": 2,
+              "taunt_level": 1
+            },
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          },
+          {
+            "skillId": "skx_ave_mujica_skchr_mortis_2",
+            "name": "破坏与滋养",
+            "default": true,
+            "desc": "攻击范围扩大，每次攻击变为攻击力75%法术伤害的三连发，随机攻击范围内的目标，每次攻击到敌人时自身受到20点法术伤害",
+            "descRaw": "攻击范围扩大，每次攻击变为攻击力<@ba.vup>75%</>法术伤害的三连发，随机攻击范围内的目标，每次攻击到敌人时自身受到<@ba.vdown>20</>点法术伤害",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 15,
+            "spType": "INCREASE_WITH_TIME",
+            "spCost": 27,
+            "initSp": 7,
+            "maxChargeTime": 1,
+            "increment": 1,
+            "bb": {
+              "base_attack_time": 0,
+              "attack@atk_scale": 0.75,
+              "value": 20
+            },
+            "rangeGrid": [
+              [
+                2,
+                0
+              ],
+              [
+                1,
+                0
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                1
+              ],
+              [
+                0,
+                2
+              ],
+              [
+                -1,
+                0
+              ],
+              [
+                -1,
+                1
+              ],
+              [
+                -2,
+                0
+              ]
+            ],
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          }
+        ],
+        "tags": [
+          "防护",
+          "快速复活"
+        ],
+        "tokens": [],
+        "trait": {
+          "desc": "受到致命伤时不撤退，切换成<替身>作战（替身阻挡数为0），持续20秒后自身再次替换<替身>",
+          "descRaw": "受到致命伤时不撤退，切换成<替身>作战（替身阻挡数为0），持续20秒后自身再次替换<替身>",
+          "bb": {
+            "duration": 20,
+            "atk": 0,
+            "max_hp": 0,
+            "talent_override_rangeid_flag": 1
+          },
+          "rangeGrid": [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        },
+        "talents": [
+          {
+            "name": "另一个“她”",
+            "desc": "若叶睦和<替身>受到物理和法术伤害的30%转化为一半的凋亡损伤；<替身>不攻击，防御力+24%（+4%），Ave Mujica成员攻击时有20%的概率使替身持续时间缩短1秒",
+            "descRaw": "若叶睦和<替身>受到物理和法术伤害的30%转化为一半的<$ba.dt.apoptosis>凋亡损伤</>；<替身>不攻击，防御力+24%<@ba.talpu>（+4%）</>，<$ba.mujica>Ave Mujica</>成员攻击时有20%的概率使替身持续时间缩短1秒",
+            "bb": {
+              "damage_resistance": 0.3,
+              "dark_damage_mul_factor": 0.5,
+              "def": 0.24,
+              "prob": 0.2,
+              "delta_time": 1
+            },
+            "rangeGrid": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "hidden": false
+          },
+          {
+            "name": "毋畏死亡",
+            "desc": "自身受到一次伤害或损伤时使Fever+3，在场时Ave Mujica成员生命上限+10%",
+            "descRaw": "自身受到一次伤害或损伤时使<$ba.fever>Fever</>+3，在场时<$ba.mujica>Ave Mujica</>成员生命上限+10%",
+            "bb": {
+              "cnt": 3,
+              "max_hp": 0.1
+            },
+            "hidden": false
+          }
+        ]
+      },
+      "elite": {
+        "stats": {
+          "maxHp": 2293,
+          "atk": 718,
+          "def": 340,
+          "res": 0,
+          "cost": 13,
+          "blockCnt": 2,
+          "bat": 1.2,
+          "aspd": 100,
+          "respawnTime": 66,
+          "spRecovery": 1,
+          "hpRecoveryPerSec": 0,
+          "moveSpeed": 1,
+          "tauntLevel": 0,
+          "massLevel": 0,
+          "deployLimit": 1,
+          "deckStack": 0
+        },
+        "rangeGrid": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "skills": [
+          {
+            "skillId": "skx_ave_mujica_skchr_mortis_1",
+            "name": "多首野兽",
+            "default": false,
+            "desc": "防御力+80%，阻挡数+2，更容易成为敌人的攻击目标；技能期间被击倒后，<替身>也能阻挡敌人且享受技能效果，直到<替身>退场",
+            "descRaw": "防御力<@ba.vup>+80%</>，阻挡数<@ba.vup>+2</>，更容易成为敌人的攻击目标；技能期间被击倒后，<替身>也能阻挡敌人且享受技能效果，直到<替身>退场",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 15,
+            "spType": "INCREASE_WITH_TIME",
+            "spCost": 23,
+            "initSp": 15,
+            "maxChargeTime": 1,
+            "increment": 1,
+            "bb": {
+              "def": 0.8,
+              "block_cnt": 2,
+              "taunt_level": 1
+            },
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          },
+          {
+            "skillId": "skx_ave_mujica_skchr_mortis_2",
+            "name": "破坏与滋养",
+            "default": true,
+            "desc": "攻击范围扩大，攻击间隔略微缩短，每次攻击变为攻击力90%法术伤害的三连发，随机攻击范围内的目标，每次攻击到敌人时自身受到20点法术伤害",
+            "descRaw": "攻击范围扩大，攻击间隔略微缩短，每次攻击变为攻击力<@ba.vup>90%</>法术伤害的三连发，随机攻击范围内的目标，每次攻击到敌人时自身受到<@ba.vdown>20</>点法术伤害",
+            "skillType": "MANUAL",
+            "durationType": "NONE",
+            "duration": 15,
+            "spType": "INCREASE_WITH_TIME",
+            "spCost": 26,
+            "initSp": 8,
+            "maxChargeTime": 1,
+            "increment": 1,
+            "bb": {
+              "base_attack_time": -0.3,
+              "attack@atk_scale": 0.9,
+              "value": 20
+            },
+            "rangeGrid": [
+              [
+                2,
+                0
+              ],
+              [
+                1,
+                0
+              ],
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                1
+              ],
+              [
+                0,
+                2
+              ],
+              [
+                -1,
+                0
+              ],
+              [
+                -1,
+                1
+              ],
+              [
+                -2,
+                0
+              ]
+            ],
+            "trigger": {
+              "rule": "DEFAULT",
+              "rawRule": "DEFAULT",
+              "customRangeGrid": null
+            }
+          }
+        ],
+        "tags": [
+          "防护",
+          "快速复活"
+        ],
+        "tokens": [],
+        "trait": {
+          "desc": "受到致命伤时不撤退，切换成<替身>作战（替身阻挡数为0但生命值提升），持续20秒后自身再次替换<替身>",
+          "descRaw": "受到致命伤时不撤退，切换成<替身>作战（替身阻挡数为0但生命值<@ba.kw>提升</>），持续20秒后自身再次替换<替身>",
+          "bb": {
+            "duration": 20,
+            "max_hp": 0.2
+          }
+        },
+        "talents": [
+          {
+            "name": "另一个“她”",
+            "desc": "若叶睦和<替身>受到物理和法术伤害的30%转化为一半的凋亡损伤；<替身>不攻击，防御力+24%（+4%），Ave Mujica成员攻击时有20%的概率使替身持续时间缩短1秒",
+            "descRaw": "若叶睦和<替身>受到物理和法术伤害的30%转化为一半的<$ba.dt.apoptosis>凋亡损伤</>；<替身>不攻击，防御力+24%<@ba.talpu>（+4%）</>，<$ba.mujica>Ave Mujica</>成员攻击时有20%的概率使替身持续时间缩短1秒",
+            "bb": {
+              "damage_resistance": 0.3,
+              "dark_damage_mul_factor": 0.5,
+              "def": 0.24,
+              "prob": 0.2,
+              "delta_time": 1
+            },
+            "rangeGrid": [
+              [
+                0,
+                0
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "hidden": false
+          },
+          {
+            "name": "毋畏死亡",
+            "desc": "自身受到一次伤害或损伤时使Fever+3，在场时Ave Mujica成员生命上限+10%",
+            "descRaw": "自身受到一次伤害或损伤时使<$ba.fever>Fever</>+3，在场时<$ba.mujica>Ave Mujica</>成员生命上限+10%",
+            "bb": {
+              "cnt": 3,
+              "max_hp": 0.1
+            },
+            "hidden": false
+          }
+        ]
+      }
+    },
+    "skills": [
+      {
+        "skillId": "skx_ave_mujica_skchr_mortis_1",
+        "name": "多首野兽",
+        "default": false,
+        "desc": "防御力+65%，阻挡数+2，更容易成为敌人的攻击目标；技能期间被击倒后，<替身>也能阻挡敌人且享受技能效果，直到<替身>退场",
+        "descRaw": "防御力<@ba.vup>+65%</>，阻挡数<@ba.vup>+2</>，更容易成为敌人的攻击目标；技能期间被击倒后，<替身>也能阻挡敌人且享受技能效果，直到<替身>退场",
+        "skillType": "MANUAL",
+        "durationType": "NONE",
+        "duration": 14,
+        "spType": "INCREASE_WITH_TIME",
+        "spCost": 26,
+        "initSp": 10,
+        "maxChargeTime": 1,
+        "increment": 1,
+        "bb": {
+          "def": 0.65,
+          "block_cnt": 2,
+          "taunt_level": 1
+        },
+        "trigger": {
+          "rule": "DEFAULT",
+          "rawRule": "DEFAULT",
+          "customRangeGrid": null
+        }
+      },
+      {
+        "skillId": "skx_ave_mujica_skchr_mortis_2",
+        "name": "破坏与滋养",
+        "default": true,
+        "desc": "攻击范围扩大，每次攻击变为攻击力75%法术伤害的三连发，随机攻击范围内的目标，每次攻击到敌人时自身受到20点法术伤害",
+        "descRaw": "攻击范围扩大，每次攻击变为攻击力<@ba.vup>75%</>法术伤害的三连发，随机攻击范围内的目标，每次攻击到敌人时自身受到<@ba.vdown>20</>点法术伤害",
+        "skillType": "MANUAL",
+        "durationType": "NONE",
+        "duration": 15,
+        "spType": "INCREASE_WITH_TIME",
+        "spCost": 27,
+        "initSp": 7,
+        "maxChargeTime": 1,
+        "increment": 1,
+        "bb": {
+          "base_attack_time": 0,
+          "attack@atk_scale": 0.75,
+          "value": 20
+        },
+        "rangeGrid": [
+          [
+            2,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            -1,
+            0
+          ],
+          [
+            -1,
+            1
+          ],
+          [
+            -2,
+            0
+          ]
+        ],
+        "trigger": {
+          "rule": "DEFAULT",
+          "rawRule": "DEFAULT",
+          "customRangeGrid": null
+        }
+      }
+    ],
+    "kit": "generic",
+    "chess": {
+      "tier": 5,
+      "bonds": [
+        "bond_x_ave_mujica_avemujica",
+        "indomShip"
+      ],
+      "price": 4,
+      "sellPrice": 1,
+      "identifier": 278,
+      "shopSortId": 25,
+      "ids": {
+        "normal": "chess_x_ave_mujica_char_5_25_a",
+        "elite": "chess_x_ave_mujica_char_5_25_b"
+      }
+    },
+    "appellation": "Mutsumi Wakaba",
+    "subProfessionName": "傀儡师",
+    "dmgType": "phys",
+    "attackKind": "melee",
+    "projectile": "none",
+    "canHitFly": false,
+    "art": {
+      "ref": "char_x_ave_mujica_char_5_25",
+      "assets": {
+        "avatar": "char_x_ave_mujica_char_5_25",
+        "avatarGolden": "char_x_ave_mujica_char_5_25",
+        "portrait": "char_x_ave_mujica_char_5_25_2",
+        "portraitGolden": "char_x_ave_mujica_char_5_25_2",
+        "spine": "char_x_ave_mujica_char_5_25",
+        "spineGolden": "char_x_ave_mujica_char_5_25",
+        "skillIcon": "skx_ave_mujica_skchr_mortis_2",
+        "skillIconGolden": "skx_ave_mujica_skchr_mortis_2",
+        "subProfIcon": "sub_dollkeeper_icon",
+        "subProfIconGolden": "sub_dollkeeper_icon",
+        "voice": "char_x_ave_mujica_char_5_25"
+      }
+    }
+  }
+]

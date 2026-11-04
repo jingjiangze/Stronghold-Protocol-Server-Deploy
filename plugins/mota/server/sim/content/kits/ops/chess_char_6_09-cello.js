@@ -3,9 +3,7 @@
 
 import { bodyInRange } from '../../../body.js';
 import { hasHp } from '../../../damage.js';
-import {
-  num, tbb, moduleBb, live, isElite, enemiesIn, selectedSkill, skillGridOf, bstate, onElementHit, elementDmg, aura,
-} from '../shared/tier6.js';
+import { num, tbb, moduleBb, live, isElite, enemiesIn, selectedSkill, skillGridOf, bstate, onElementHit, elementDmg, aura } from '../shared/tier6.js';
 
 // ------------------------------------------------------------------------------------------------------------------
 // 塑心 chess_char_6_09 (巫役) — S1 “黄金的狂喜”; 无词哀歌; 精神逆构; module 强弱法

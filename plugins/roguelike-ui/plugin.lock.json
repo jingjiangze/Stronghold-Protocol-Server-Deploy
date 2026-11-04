@@ -1,0 +1,17 @@
+{
+  "lock": 1,
+  "id": "roguelike-ui",
+  "version": "0.1.0",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "client/js/ui/rogueNodes.js": {
+      "sha256": "3fa2c4a5af27675898ee6fe6469f076e2030213c4c8db4f5f35025c50c50ff87",
+      "bytes": 10674
+    },
+    "plugin.json": {
+      "sha256": "623404fc813a33463abb24b7aa7e82edb7e3dc6f80304bddf2230ef47d3ac614",
+      "bytes": 771
+    }
+  },
+  "spine": {}
+}

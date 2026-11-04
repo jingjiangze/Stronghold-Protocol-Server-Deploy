@@ -5,56 +5,68 @@
   "generator": "tools/plugin.mjs pack",
   "files": {
     "client/css/components.css": {
-      "sha256": "d5b4f93afec9a3373500b12c7ccaa63959b8a5bb71eda63d97b336f7cb848ea4",
-      "bytes": 56346
+      "sha256": "cad003bcff56ecc52d0137c8f63a2ec58c8c104f226963b2bc4d9611bf1220c1",
+      "bytes": 54802
     },
     "client/css/screens/draft.css": {
       "sha256": "5889207f20424202cb91938f5d8b3cca65941f9910129f60a04ebabcffd32fec",
       "bytes": 22285
     },
     "client/css/screens/game-panels.css": {
-      "sha256": "e4d6005f32ec0b9bd00f7997bb86fc58e9f57c7e74ccc9c259573519a96034ae",
-      "bytes": 68417
+      "sha256": "5426d4e53f88d17a47a1aaa877e5ce53290b10824be30af77201cc74b64fd372",
+      "bytes": 98004
     },
     "client/css/screens/game-shop.css": {
-      "sha256": "58e746b627546375848597563263290a4b0b8af16e66ffd230f2f2318634abfb",
-      "bytes": 38896
+      "sha256": "efc2ad36f4c1abf3016b49249a0e87f673dcbbb13b8765ae593d91f99410b38c",
+      "bytes": 39457
     },
     "client/css/screens/game.css": {
-      "sha256": "14a9293f66d99c588936f441ba55918104229e1dea056a5be7049c692bd8a003",
-      "bytes": 128562
+      "sha256": "746dd21f6726b55d4cc7267745e95fcd12beda20b325efa2a1869c14b9a54fe0",
+      "bytes": 129847
     },
     "client/css/screens/guide.css": {
       "sha256": "aef6cc3b6aaf027b61ddf509f6c75798e5dfbc15afb1497b6d65f034468ecf51",
       "bytes": 7134
     },
+    "client/css/screens/hex.css": {
+      "sha256": "caf539587113a59d52475d656c397c3fed950d05deb7364097c687b93ad206c2",
+      "bytes": 68472
+    },
     "client/css/screens/loadout.css": {
-      "sha256": "4137f3ecff85e63ce06217f963ca26aebf6aba51dc29530d2e7c28d5bb68dcc1",
-      "bytes": 92848
+      "sha256": "00732f46481b43b35d2b5ecf678675ee2b28b01fed0f4a00fd78e9c644d375d3",
+      "bytes": 93081
     },
     "client/css/screens/lobby.css": {
-      "sha256": "0280eb3719bbf3de709650f89b71e855f3d66fd85da2e7d458200a290091e352",
-      "bytes": 188084
+      "sha256": "b9ad4f9983840e95e14c041c4e2a982f2028da8c1f9e2b3c9d7ac3e7f2933d80",
+      "bytes": 188308
+    },
+    "client/css/screens/proto-dock.css": {
+      "sha256": "a97198c38dfd1a52a3e0867532ae0a5180e8683e9d7089b5936321a3eda69be2",
+      "bytes": 6927
     },
     "client/css/screens/result.css": {
       "sha256": "c7866269527d676d6d557268c7138885ab2c872b082c8877ada15ce351d0f922",
       "bytes": 43453
+    },
+    "client/css/screens/rogue-panel.css": {
+      "sha256": "a29b3e2185fd6e6e330824a2bc6b6586ae9c0a690dc0281ca4be0e115edf26ee",
+      "bytes": 26907
     },
     "client/js/assets.js": {
       "sha256": "40ca0664da58db3e416fc3268cbfad7a914099ed5c16b0e3aab51e44f941996e",
       "bytes": 57760
     },
     "client/js/content.js": {
-      "sha256": "ff1bfa349152ba1985dc39e0690a602db30caef9a1be14729640207913408187",
-      "bytes": 40413
+      "sha256": "e945d88ca7fe196e4c13e4157a0adf6c0a72c25b80f31209c39938f459d5b617",
+      "bytes": 51083
     },
     "client/js/federation.js": {
       "sha256": "ad171aa72dc6cac7aa3f207c6a0613fa353b4f942c2d8db4a0780c4dd66f2162",
       "bytes": 424
     },
     "client/js/main.js": {
-      "sha256": "c82c2f40d43865442f294cfe51505cc7f7324b4330256bf4817cc09dc69a897d",
-      "bytes": 25726
+      "sha256": "ccf80cb0c943732abe90b706e75da515dd7ae7d3cd7e6161a63007ac45825d4e",
+      "bytes": 30153
     },
     "client/js/matchDelta.js": {
       "sha256": "854a770d9f3f176caf188447f984fb954b2e210e3bb36d242d3036a45f2b4927",
@@ -81,8 +93,8 @@
       "bytes": 5601
     },
     "client/js/render/app.js": {
-      "sha256": "fa24cf8cc252463c6356f7fdfd393a8cd772da843e337f714f6dca474f08270d",
-      "bytes": 137915
+      "sha256": "d8e2162b9372a2b67bb246a91ce32fc31fbd7c997f6a5d18814a1daa56b1f9a2",
+      "bytes": 142309
     },
     "client/js/render/fx/arrivals.js": {
       "sha256": "617f94b266e3349b5d99f6d12423cd6573fdc32c56902e5af7b6fa6d8bcd7efe",
@@ -136,41 +148,37 @@
       "sha256": "d658b5800dd73bfa1ea82b0bb51a9318e456714cab1869735408b0a23394023f",
       "bytes": 22631
     },
-    "client/js/screens/chat.js": {
-      "sha256": "351608bb65dd804d4ecb48f69083b382645f40c91c053c299c1ccf2fd0218cad",
-      "bytes": 7096
-    },
     "client/js/screens/diy.js": {
       "sha256": "4d35755d9711a7a8d0427c4c86c68a49c3a83d75ccdd00595fe1eac568913b51",
       "bytes": 22978
     },
     "client/js/screens/game.js": {
-      "sha256": "69bec8779de554a9f4cd4c3ea6dcb7cb544fd6d06084c446051f148e3990ce50",
-      "bytes": 127078
+      "sha256": "4b7b174f4f2eaa4510daf87ff1d940ba9b8f73019e29ad8bc12abfc5c7da5a93",
+      "bytes": 136854
     },
     "client/js/screens/loadout.js": {
-      "sha256": "5835bfe965ae748b7a50ec521b8846b64c8bc7519fe91d39b1b59aad75515539",
-      "bytes": 98915
+      "sha256": "475a2a94b2f2b82bc769875dc6455816997302fb20e841083e4626e6754d7873",
+      "bytes": 98875
     },
     "client/js/screens/lobby.js": {
-      "sha256": "49c0b64840f64046e52e03aff1c10072be18786de1fa78da5481b435ac6eaa53",
-      "bytes": 71493
+      "sha256": "35d20d75019e174235e1ce23e79c4e9e748bb4d0be2b1d039632b334c81feb11",
+      "bytes": 82889
     },
     "client/js/screens/lobbyLinks.js": {
       "sha256": "9bc64d256ebfa569878082119b997dc5f99f2b9cbdef52e7b9013aa429c9a953",
       "bytes": 2473
     },
     "client/js/screens/room.js": {
-      "sha256": "b10e60c757d3fc944b2916371806ef825d364debdd8d8c7e20244265411f8b2b",
-      "bytes": 59185
+      "sha256": "1dd2200a85c2ec637525db44db89d6ee28a90206317b99f12ed611b909b06266",
+      "bytes": 67370
     },
     "client/js/screens/settle.js": {
       "sha256": "b24be7296acfddff02d34011becb8f5c9d2eed0796d6cdacb235d924e8471d61",
       "bytes": 45555
     },
     "client/js/screens/stats.js": {
-      "sha256": "623f8104c0471b89cef3b2072f90830f29746be21ec7eaa047b22cd48db6f664",
-      "bytes": 36387
+      "sha256": "f023983f3d26282b0974f2fef289ef609d161785cfa75f756735fa6f60766c75",
+      "bytes": 37268
     },
     "client/js/screens/support.js": {
       "sha256": "99133b7ee628211555c1a8755a78457aecad7c402306f8d27274fd29369de905",
@@ -189,12 +197,12 @@
       "bytes": 7334
     },
     "client/js/store.js": {
-      "sha256": "0498ee8af8fad0b7fc5e432c1e4184b71f48e4307497ba0096654dccd83ffe56",
-      "bytes": 11325
+      "sha256": "a03d464cfbf678979bd104989620c314c07c7183b8b65e5aa51f2eccdc31cb31",
+      "bytes": 11777
     },
     "client/js/ui/accounts.js": {
-      "sha256": "e712954bd6ffa7ec7d52dd255d646d3378f173cc20daacea6af5f0e2e22ed7ab",
-      "bytes": 9132
+      "sha256": "cad2ca34ddf1e8dbe26f042133ceafb7e67907a18c75411a82c46b41a8dac708",
+      "bytes": 10734
     },
     "client/js/ui/achievements.js": {
       "sha256": "5819fa2c9205c349097a4607ad4225f7c1da2badbb27230ec2871b57eb4fe9d7",
@@ -204,9 +212,13 @@
       "sha256": "b90399d55320f8f928410fed6a8a104ba9ff300497a5b58d985ff27c3b868654",
       "bytes": 12716
     },
+    "client/js/ui/assetDownload.js": {
+      "sha256": "84a9ce85c4aa89e50c073b271e6ae204c863d0904ee429db7bbec4f26f8da501",
+      "bytes": 4562
+    },
     "client/js/ui/assetUrls.js": {
-      "sha256": "57b609d9106a94c0c57d9a3b746a10409388d1628e8e871a6d9fd746ba2b6f6d",
-      "bytes": 9362
+      "sha256": "5467601dcd5a6b1aa0cfa3173d974beee6f9aac13fa1aabb410a9995d7cb1699",
+      "bytes": 10704
     },
     "client/js/ui/bondStrip.js": {
       "sha256": "bb99926ed4ca1524c67a10b86a6b9ca598859b87791fb34410574d534d26a216",
@@ -229,16 +241,36 @@
       "bytes": 2439
     },
     "client/js/ui/components.js": {
-      "sha256": "9df53b76db35e6740ef3466265cf8ba4f09347ece2e28a37c633f4eadc11f621",
-      "bytes": 49784
+      "sha256": "87c7f4e17c7ccee7bc19361ccaf658c3dbcf59d929179b2d37967d638eed3ea1",
+      "bytes": 50684
+    },
+    "client/js/ui/confrontOverlay.js": {
+      "sha256": "eb6a97d60ff4eea155b6b40bfe7e3ed84e938b378b92c2f8eebe44fcc83bfb0d",
+      "bytes": 36149
+    },
+    "client/js/ui/connBanner.js": {
+      "sha256": "619e0eea7ddd3b5e7585bcffc2de7a5d0d0cb9f242cb79ef2ad4db7ffd855487",
+      "bytes": 5411
     },
     "client/js/ui/detailPanel.js": {
       "sha256": "3137c5fffaa4be1734a0a58105d666b4bc8519325ecf5fb06a77f976a63a591c",
       "bytes": 68430
     },
     "client/js/ui/econBar.js": {
-      "sha256": "4dea44a56a9cfd302cd56caf5cada4930e655e7c291828ad366798a3b6260099",
-      "bytes": 7634
+      "sha256": "d995278e9698e8cc3e661411b3ee6dc39283bb21e4df277ca56210da94c9f225",
+      "bytes": 8744
+    },
+    "client/js/ui/entryDetail.js": {
+      "sha256": "328f7b9dde4285dc2db80300d72809b081eeef05ecb7dba83a3c1f354d449dcd",
+      "bytes": 7293
+    },
+    "client/js/ui/eventFoe.js": {
+      "sha256": "867654e131a8cf92b6f8ed5edb0ef963fc852a7dbfcdda4fc613cf14565878e8",
+      "bytes": 352
+    },
+    "client/js/ui/eventOverlay.js": {
+      "sha256": "c343c9992b4f1dd3600015de10c735c244d48f5c69fee17171fbb05ff7b43417",
+      "bytes": 23348
     },
     "client/js/ui/extensions.js": {
       "sha256": "7f1b72925859b729db35ffa5e416e9654f8bc28c5562e4afb7d5ec4f46cebdfc",
@@ -249,8 +281,8 @@
       "bytes": 1557
     },
     "client/js/ui/gameActions.js": {
-      "sha256": "21c32cb53b9288f76f83c2c66472642976dd2816825a041a84dea0124f3578fa",
-      "bytes": 13455
+      "sha256": "f128e31765907f08d796843694057cbb7fd5ca10e44ecdab9bb50310df4382d1",
+      "bytes": 15139
     },
     "client/js/ui/gameComponents.js": {
       "sha256": "76e555b4f2b9cc7997389aafed3cee90035f93c8003dde0e3f84378d79eb9aae",
@@ -269,32 +301,40 @@
       "bytes": 7537
     },
     "client/js/ui/gameLogic/shop.js": {
-      "sha256": "d4746b6d40a1f1dba48f516d3f5d27a682f8df804c9d88d5ba181b4c67d9ab57",
-      "bytes": 12713
+      "sha256": "0e4f22ad91dfe5526a26be381ccb07ee7bd1b58b9b15979dfb96495e9fe9f93a",
+      "bytes": 12561
     },
     "client/js/ui/gameLogic.js": {
       "sha256": "c5d775682242edb0a10ff0814bfb5893cb90268627ff6429d57c3a951131d3a4",
       "bytes": 5799
     },
     "client/js/ui/guide.js": {
-      "sha256": "07b8ec92fd926a306d1a0347f0c2933d699a4bc1710b07f7100ebb267ebd166a",
-      "bytes": 17174
+      "sha256": "fcfb288936a361724985baf247fb73d6fd1aaf49f7add966aad169f9c3494d51",
+      "bytes": 18033
+    },
+    "client/js/ui/hexGlyph.js": {
+      "sha256": "c30c1e997cc5cc9164a52b282452fe3bb363a96eabd071e057663a1f41217b17",
+      "bytes": 2440
+    },
+    "client/js/ui/hexOverlay.js": {
+      "sha256": "cb43625db1963744a61ef5e1505a145d1c166e2731a1f7a4ae23a83ec5fa549b",
+      "bytes": 10088
     },
     "client/js/ui/hubBackdrop.js": {
       "sha256": "e87d8af2f044521870849903066b02497bc820fba98190c989d80136de35457d",
       "bytes": 21967
     },
     "client/js/ui/hud.js": {
-      "sha256": "6243dfae3230d7015069fe28c0fdffcaf8eea3bdac673a21262b0ff9890fabcd",
-      "bytes": 37246
+      "sha256": "f0f56b9e8e1d5ea86b6b09544b69f09ea717209606f1b51b09616c5ea1a1b466",
+      "bytes": 41114
     },
     "client/js/ui/loadoutModel.js": {
-      "sha256": "66fcfa2f128b58cce23c419ba8836b3087ce3d877c27be5c2152eb5a8bb8ed90",
-      "bytes": 28179
+      "sha256": "4936cd429a77513b47b213995676dfdf995e3b696f7de02540def208d0de053d",
+      "bytes": 34114
     },
     "client/js/ui/loadoutSync.js": {
-      "sha256": "bcddc8c03d7f380da45c74d70cf86f915d78633c2a094ae01d0d3a1acfc6eb52",
-      "bytes": 25540
+      "sha256": "14b6fae5c75b7b596631720cdaf2f152af4ceffe5d5947a49be48bba4de6e152",
+      "bytes": 45998
     },
     "client/js/ui/lobbyMusic.js": {
       "sha256": "13f382cac453d8f20039f7c130f08de516c622f082e8ae913e219d3163584872",
@@ -324,13 +364,17 @@
       "sha256": "263ffb6554b63627eee40eb3f5ac2f52821b30a69779f3537f17e4abe288b7bb",
       "bytes": 786
     },
+    "client/js/ui/meltdownOverlay.js": {
+      "sha256": "7ad9b8296ddc3f13f180d408a746f740d58c54848ec189b2212b3c56ae469d81",
+      "bytes": 16133
+    },
     "client/js/ui/modComponents.js": {
       "sha256": "f0dfe29c7af5d524715da0a34fa052b51b9e32f665d9e07d71af9232f127d324",
       "bytes": 9534
     },
     "client/js/ui/namecards.js": {
-      "sha256": "a63cde8ed733d61371088b5c7f6b04cd180c7f398eb1d5eb86747d9d1af468b4",
-      "bytes": 328
+      "sha256": "e2a5b4512b5a984d4833280cab0ae18af8e957736c96e247597d324684e48fbc",
+      "bytes": 1530
     },
     "client/js/ui/ownerName.js": {
       "sha256": "1756f151a6e3cca49e7afcccae59ca24d93fe73f9675f0cf0df3138a3520fa46",
@@ -341,8 +385,8 @@
       "bytes": 7550
     },
     "client/js/ui/pluginPanel.js": {
-      "sha256": "d656e65347b091e4ca205d5ec8b6d9662ba5450e761bedd0d0be7e673968b10a",
-      "bytes": 20330
+      "sha256": "eb5c615b96bcac962849b5d49e9a483c37a9d23122fddc7c3da99e4002f9f2bf",
+      "bytes": 27806
     },
     "client/js/ui/portraitChain.js": {
       "sha256": "366ee15af0ee43a8be63fb3ed0d37479575c61d6a3a3eb0c7e790b8a1d95ae5f",
@@ -352,21 +396,53 @@
       "sha256": "d4c657994e823ecaecb98770559c54f127d9f77c89371da0446cd395ad02bf0c",
       "bytes": 7147
     },
+    "client/js/ui/relicOverlay.js": {
+      "sha256": "f17198c2059a6bddd05ef4f7288ee1fe865dab631ace3a0e81f11c7d8aa529af",
+      "bytes": 2799
+    },
     "client/js/ui/revivePlate.js": {
       "sha256": "c1e3632e9e01ff09bb598fd4b81813f00190b4b0cb7ba79b85ec6e47851a6f62",
       "bytes": 4463
     },
+    "client/js/ui/rogueEventOverlay.js": {
+      "sha256": "58febcf6634b567318f9aefc110db35db9ebfdc176f642925ebfbe6a2726e57b",
+      "bytes": 2090
+    },
+    "client/js/ui/rogueHud.js": {
+      "sha256": "5556fde94453b1eb2557bbcdd92e0df90a30161bc5a6cba519dba32f89501ff7",
+      "bytes": 3833
+    },
+    "client/js/ui/rogueMapDock.js": {
+      "sha256": "0be99c3c43a441ab017fbe48ee347530488932858a921ed3fd415f140766112d",
+      "bytes": 4821
+    },
+    "client/js/ui/rogueMapModel.js": {
+      "sha256": "df3694db0fca1e3c20a17bfad811a3a43da381e2fe0acdba28e15264a40366ec",
+      "bytes": 3744
+    },
+    "client/js/ui/rogueNodesHost.js": {
+      "sha256": "82004977e5231c8b8db6e3ddccc6baa206a02fe3d1db3f82ddf607427b971c13",
+      "bytes": 1011
+    },
+    "client/js/ui/roguePanel.js": {
+      "sha256": "ced82e9f48334a8a9710a08095d7a60f2ccc56893cad63ce0afa79a6e0c5965f",
+      "bytes": 34787
+    },
+    "client/js/ui/rosterPanel.js": {
+      "sha256": "51d39b9e193e0fb664894c9446e6681af7f49e1c79cb14fbb6d425fd74f60c74",
+      "bytes": 3025
+    },
     "client/js/ui/seatArt.js": {
-      "sha256": "4f7f2adad540ecefff01f2c6c2f29bd30a11f369d9114b9f861e153e65a0b31d",
-      "bytes": 2193
+      "sha256": "a86069e1b21e44973af303a84af2cab4f6ac71842d25ea71728a18c6740de1c1",
+      "bytes": 3725
     },
     "client/js/ui/settings.js": {
       "sha256": "f5442353725239dc0c42b2cca6658716ca914488c1104054d59230f992a88d2f",
       "bytes": 40486
     },
     "client/js/ui/shopBar.js": {
-      "sha256": "0d76561565de7cbbc4b77e4641e27dcc6a639c5e0cc9effed5861b24e62d9f3c",
-      "bytes": 36816
+      "sha256": "7a2d96353ee26181281c0f91192061654bbaaae0b2d37860fc45eae84ceb1c0b",
+      "bytes": 38342
     },
     "client/js/ui/skinAssets.js": {
       "sha256": "b00acebb65124363b9cd0bc1ee0ee6710f22b3a4e5f0b38c172c1dcee42d5d38",
@@ -421,24 +497,24 @@
       "bytes": 4250193
     },
     "data/config.json": {
-      "sha256": "a3cfbf9e777a08461049ed9b39109c287afa89f8b18b17142fb3b027cfa7015f",
-      "bytes": 164669
+      "sha256": "f4cbbf3e490a40052e1eae74eac3a05374dc9459c5c4bc38945b5e06b2da8f44",
+      "bytes": 1177151
     },
     "data/local-assets.json": {
-      "sha256": "193614eab918e1e0e122a07df90e216dbf5df7140b405d97c713c5c7347cd1d5",
-      "bytes": 177735
+      "sha256": "e25fe65d5205abbb7ea94a539ee0acd9991b52d1e58c2975e9355143861dc63d",
+      "bytes": 388710
     },
     "data/local-fx.json": {
       "sha256": "c01733388022e0b239b134ff1843780d30463fe8bde5df00281cd5d8134b4c06",
       "bytes": 1007006
     },
     "host/noop.js": {
-      "sha256": "1534852177e97998313c38632b29169b768951d75e03adf95bbbb1b13c3b0f69",
-      "bytes": 80
+      "sha256": "35a86c0ed101a85bd363ca99c375f8c8086e009e87daa862a87574d7eccd8cbe",
+      "bytes": 244
     },
     "plugin.json": {
-      "sha256": "847bbd4d9afa8b8f15ca2318abb4e225957f19284899e64d3d9df1a4d80a9cb6",
-      "bytes": 3560
+      "sha256": "bcde5c3d33a41b855234f8521b9a3f68976f2b7d271adf4faa71da110d880e0f",
+      "bytes": 4284
     },
     "server/data.js": {
       "sha256": "a286b7bafb289988e081c1dbc7415488f1f1f82a2d775f4d4640a046d9ff9107",
@@ -453,8 +529,8 @@
       "bytes": 10658
     },
     "server/http/asset-jump.js": {
-      "sha256": "0a12bb8e15c14219dfb0710263d587e4a66642a61bca350b76ed33534127adb1",
-      "bytes": 26138
+      "sha256": "6f8fa9aac784304a0da20cf867c4d88024775ac4d1f8455350d3efe2eb1b3cb5",
+      "bytes": 27134
     },
     "server/http/assetIndex.js": {
       "sha256": "775aeedea4714f727bf9178b55650eccd27a853f76089d89cedc6fc2b5dff867",
@@ -537,8 +613,8 @@
       "bytes": 18139
     },
     "server/lineupLibrary.js": {
-      "sha256": "eaafe0b5584dd661443afe214a0709882e14c90574556614042cf2257f4adf46",
-      "bytes": 22341
+      "sha256": "7e0b1fdadda4f275c1bc2ad397f69fc82adfb8cad440c1d39d4b8149dba4ebf2",
+      "bytes": 24181
     },
     "server/lineupOutbox.js": {
       "sha256": "e16a8ee2a1b0112f1cf062a89dd7f8e7791811759796bafa87df443ffdb8afd2",
@@ -553,40 +629,40 @@
       "bytes": 7558
     },
     "server/lobby.js": {
-      "sha256": "af1d16ddc92c65cb600508a7c573fe0da7bfe5be5764cf1c81d2477a56361d96",
-      "bytes": 108035
+      "sha256": "d2201ed1ca728af1e0aa8e95d056b4b196374503929919bc8b149d8f54fa7757",
+      "bytes": 108184
     },
     "server/lobbyPush.js": {
       "sha256": "d1237ce245737f913ecf536179d048159fc71737b430521105dd1da008e40aaa",
       "bytes": 4401
     },
     "server/match/Match.js": {
-      "sha256": "e4edd283795069f7952e37a03cd785cb7c087d1eaa530590ece6dcfc5cdf962f",
-      "bytes": 49209
+      "sha256": "39968b932f6098af1ef78aeb5c0367645e7b6d8f2398e08aac0f727d7c0666c2",
+      "bytes": 58000
     },
     "server/match/PlayerState.js": {
-      "sha256": "9c09852d0b0e58ab03826dc3cd15c86eae98c1e28a3ba42db55aa5af41fb6e67",
-      "bytes": 21828
+      "sha256": "15d92ddbf47f7175183220bb6e8297c6c9b824a05fae440efec999b28c45a5af",
+      "bytes": 23730
     },
     "server/match/StubMatch.js": {
       "sha256": "b0b3821046b37d2591dfb12efe7c55f72a1c5eb75400bf5292022cb21d9fa259",
       "bytes": 13536
     },
     "server/match/audit.js": {
-      "sha256": "ef776a8816ba26b8dc2a8b49a7456f816e209dfe2982fea339291bf7a3cc1dc5",
-      "bytes": 31541
+      "sha256": "67e752708ce966f23d000b75f46eda2ff56d496b5bcf5467c91d95cda5faf8ca",
+      "bytes": 31569
     },
     "server/match/board.js": {
-      "sha256": "80cef04c104c0a79dae318555dc36501896f590e1ef587f1cd09dc434721e4f8",
-      "bytes": 14511
+      "sha256": "f2b669d1cbe223184349968f729d6f0d674f7c6908f3b31e507bac7301194f3e",
+      "bytes": 17618
     },
     "server/match/bondsMeta.js": {
       "sha256": "e705d81848c1bbba102b4e160d46cf26cc94af3d8186fa94419f73710d6d472a",
       "bytes": 12635
     },
     "server/match/bot.js": {
-      "sha256": "562f25922691614f4308fbd838cf60b435640709499b2263fa31d32dcb65f8cf",
-      "bytes": 111462
+      "sha256": "dd27eb25429f92c1a2c0c32eee95f745eb8dd183869bc578a549ce938f696015",
+      "bytes": 113700
     },
     "server/match/botEmotes.js": {
       "sha256": "d617b26a4db1606cbd6c9d478f5f8c7c53026526b6f13dc7c8d808a735457bf7",
@@ -597,8 +673,8 @@
       "bytes": 20187
     },
     "server/match/choices.js": {
-      "sha256": "1aa7ff5bb44cf3bac4592572d3ffbdb7542cb802f9763dc02d95d50e292d1d4f",
-      "bytes": 30734
+      "sha256": "be3deb37978d48de739e25698fc2b0bf4bbfc8fbc0d57a562ccc4f0a3b2a2fef",
+      "bytes": 31958
     },
     "server/match/dslMeta.js": {
       "sha256": "b04d17ed59aa1b6de13ea55c429e5d70edd2a3aefa6ddfce7d603316bed93a72",
@@ -617,8 +693,8 @@
       "bytes": 9682
     },
     "server/match/gamedata.js": {
-      "sha256": "754b7a2a278c53d9354e34f90c4793e73cdb0fadd5701f0f70e59cd8c790fa33",
-      "bytes": 50394
+      "sha256": "dc931c3fe167f474f1fd78c8033c70c0a1179b4345af16600ca0e08510c0641a",
+      "bytes": 52587
     },
     "server/match/host/childHost.js": {
       "sha256": "436eb37702cb1d8d10de75d228a780b807842031004bdb771a73ec8f14bc3033",
@@ -637,40 +713,68 @@
       "bytes": 3251
     },
     "server/match/host/proxy.js": {
-      "sha256": "b04915187af6530a8966a93922de29580266a4fbd2fc08b9a23bd2208ec5240c",
-      "bytes": 11410
+      "sha256": "9e6f0014571bb6918fb8a4efa3a795719881f433fcabe7c2421ea8bec5aed298",
+      "bytes": 11896
     },
     "server/match/invariants.js": {
-      "sha256": "9a8f024205d712e3fa1a6e06483472a9f6f33146a67b8978d79621caa1bb3ac7",
-      "bytes": 24436
+      "sha256": "c9d3008ddaba1a19300f355dce4405d5188acd6a09dc22a4f6dbaf1e8b7ed47b",
+      "bytes": 24937
     },
     "server/match/match/bossRounds.js": {
-      "sha256": "46ae1d9b0cf04d39f5b30bd4d9f309866e90d9cd11101f41adbba153e998f0b3",
-      "bytes": 29520
+      "sha256": "ea3dca5ff92b3c974fc0f508788a536561a26d21cd31eb98691ad39089bab881",
+      "bytes": 30584
+    },
+    "server/match/match/chaosRoll.js": {
+      "sha256": "0c98e2c0d476aba6f722c8b4009dfb93f8de9917e953fa64405731eb67329b9f",
+      "bytes": 12491
     },
     "server/match/match/clientCombat.js": {
       "sha256": "1880f03d62a530abc35dc08a26bb729dea7905020e9247a1ff7a30260b75c48d",
       "bytes": 13335
     },
     "server/match/match/combat.js": {
-      "sha256": "d9ea23ae1cfe8904e2d013a59b0dd72add00a48f6a05ead3a4a23095c90e4346",
-      "bytes": 8657
+      "sha256": "f95b00d0336d42090749d59fe348dfb4aa4ad317336784a070e91dcf89918100",
+      "bytes": 17475
     },
     "server/match/match/common.js": {
       "sha256": "dee3c31d53386e1ec49eb0286e1614f28407956535003d4ba492701ece437f28",
       "bytes": 1605
     },
+    "server/match/match/confront.js": {
+      "sha256": "297c953701b3c54053aff2749f64b733700f2bd122421260ed9c42a1f463cb4c",
+      "bytes": 99617
+    },
+    "server/match/match/confrontFill.js": {
+      "sha256": "8518d0b6f6f3dd807575e973774298ef1466f6243c3599ff7b34472f2734c730",
+      "bytes": 2553
+    },
+    "server/match/match/confrontTraits.js": {
+      "sha256": "b339e572b69bf0560d351726b47d02ca2ee1eab21db981aa2b70d9423b04eab0",
+      "bytes": 12383
+    },
     "server/match/match/economy.js": {
-      "sha256": "aeed06675070fafacfc8956e5f8aedb5c532f03783c5f88a04bd1c77d6377b26",
-      "bytes": 61254
+      "sha256": "ff3a776ff7377c534ccc51e9b10e1237901af36039b04f0375bab36f764e1bbf",
+      "bytes": 70237
+    },
+    "server/match/match/event.js": {
+      "sha256": "5d0b311a84243e7080a8c283bf4a74f30281728ea08d3ef0c99caee6256c4130",
+      "bytes": 37760
+    },
+    "server/match/match/hexDraft.js": {
+      "sha256": "60541d2342e9b234be2faca8c840152846a8f0593396fdcc6861afb184b4c9b8",
+      "bytes": 68606
     },
     "server/match/match/infra.js": {
-      "sha256": "667ba0a3fc60da7275a37a5caa368b9dae0121f7b92ae039beb982b0b7404749",
-      "bytes": 7755
+      "sha256": "9e2431b9a017e41ce6ac8c8285efb1fd1668201770610895757f3bc10f51fea4",
+      "bytes": 11680
     },
     "server/match/match/intents.js": {
-      "sha256": "657f8b290a76a19b7f425b2b333bfa75a2adc53f155f28ccb0f75fbb776b6c72",
-      "bytes": 10595
+      "sha256": "ba26cb562aa39ec79e2bd2eb3662ea1ca2e4c0f6a8c602c924ff142c71c35f5c",
+      "bytes": 12715
+    },
+    "server/match/match/meltdown.js": {
+      "sha256": "6fdc9069cf8c852c4dfe559d51f82337199cdc8f1169cd836c0b37f2885f6097",
+      "bytes": 77088
     },
     "server/match/match/messaging.js": {
       "sha256": "d72fe00e998f146d6ad2cfc26fc9cf76a13544f65c5bbcb115847a64d609e10b",
@@ -685,20 +789,32 @@
       "bytes": 3566
     },
     "server/match/match/phases.js": {
-      "sha256": "4d704c2f6a69c5bc13a17a1898cb0185856ed789d42639252d3783337207b711",
-      "bytes": 25638
+      "sha256": "7ddf34d95d125c8c7bc12617847c8a647d2e5c8d44ede8b91c0a01fc01fd6a91",
+      "bytes": 35371
     },
     "server/match/match/platform.js": {
-      "sha256": "a13fa4dab17e01415cc9ccaec15f4411ca7b2f60e765411706d05f4684b36619",
-      "bytes": 19822
+      "sha256": "229a7f02263d8a2b5a1c5bf3dd16de656a7bc143fff8ee23973f3cbc1db93249",
+      "bytes": 21073
+    },
+    "server/match/match/poolFill.js": {
+      "sha256": "51cf6a09ec0fcfc1ed981d3a8723645d49f94dd9ac613a9b994d21cabf958df3",
+      "bytes": 1314
     },
     "server/match/match/prep.js": {
-      "sha256": "df4af555dc9454fd8e0a6eb2deb65ec6a2a88b33c8ba05c9fecff8b753ade359",
-      "bytes": 11509
+      "sha256": "1a669192c2673a591655a58e601a36c584a591e872c3a8c7ce6eb97ceb40ff92",
+      "bytes": 13131
+    },
+    "server/match/match/projectEffects.js": {
+      "sha256": "40a7bd2df35da6f602ca205f1939c2d97679819cf16e902ea9d36611293ce4c8",
+      "bytes": 2067
+    },
+    "server/match/match/pureShares.js": {
+      "sha256": "a65c23397dad7d6dd0786e39cddd71ee00fa4cb4b0aed9e5bd1143298702dba8",
+      "bytes": 5142
     },
     "server/match/match/rehearsal.js": {
-      "sha256": "5295dd06ee2789f6d88dbea7251ad27358f2c9634045ea7dc5fc1557c82b064a",
-      "bytes": 9994
+      "sha256": "9cf1e963d288f2547cdb2ba85fb9f94e00345063245c09d425fc89b2d2ba6b2f",
+      "bytes": 10299
     },
     "server/match/match/reports.js": {
       "sha256": "c041af0366326fb7ff523f06589e6c62003016197a60d20d41a25cd04a96871f",
@@ -709,12 +825,12 @@
       "bytes": 11879
     },
     "server/match/match/settle.js": {
-      "sha256": "a0be8f0befddae2a7220b113e2186dbc71c0caf40f547ff0193546a7b06a9e13",
-      "bytes": 15033
+      "sha256": "097fa4e097b63dcbf43cff41163630a7a29daff821450766c800079bcb66d4b9",
+      "bytes": 18272
     },
     "server/match/match/setupVote.js": {
-      "sha256": "bc642a4e7e73e8781b1e52a61fff28a71af1894ac311b2b4ca894f8970cd3b89",
-      "bytes": 4965
+      "sha256": "882608ca73c50a9daf7d03a7a74a5fb5654377ac78e9e70d1d39efbf072896d6",
+      "bytes": 5181
     },
     "server/match/match/spDraft.js": {
       "sha256": "02fe5ab934998fefc7af30ae17b455404abed08fb480e459d41f6422dee945f8",
@@ -725,24 +841,28 @@
       "bytes": 18059
     },
     "server/match/match/unitePhase.js": {
-      "sha256": "b13c88735c7cbc80eea032bb9d5e07eef9c4bf89c386389f710c2b29d672e4d4",
-      "bytes": 8339
+      "sha256": "0f4060f2ec360bc2c0ed9727edec17394dfb1745891240d9ceb63484a1355c36",
+      "bytes": 8832
     },
     "server/match/match/views.js": {
-      "sha256": "70557ba7f36d53e5b72dcea55792b678c3ed3c28a773533d08b4e740474e708a",
-      "bytes": 27735
+      "sha256": "e1c6986b8840b3d7e897591009aee2f8e82cd62229a8f25511970c79b99aafbf",
+      "bytes": 35410
+    },
+    "server/match/match/warLadder.js": {
+      "sha256": "481f3c0e5e1dc544c00a27417f1123a4aaeba896289094761037bb883a478b53",
+      "bytes": 5385
     },
     "server/match/match/watch.js": {
-      "sha256": "d6cb9f007472a6cc63c9db9665c3611d9423ee8a32218a7147903da480d0758a",
-      "bytes": 13341
+      "sha256": "b5b13a3fcb1f22b2f35a9d9db634ad62806d6646a0cbfc9c37cb66f0a2d6e243",
+      "bytes": 13838
     },
     "server/match/operatorTraits.js": {
       "sha256": "b4e7a023e0784c611d71ef97ba9d9ff964095dc56433e6a18cc230a35e00a6bb",
       "bytes": 4231
     },
     "server/match/player/acquire.js": {
-      "sha256": "eac5c5e1610eea2c30637cdaa5916b6025b7c291f627e21876f13c43b63c0d5a",
-      "bytes": 20582
+      "sha256": "5e118e84a3ee1ffa7d03bc674868c1a7cfeed41ec747f1a734710234c6324d37",
+      "bytes": 21122
     },
     "server/match/player/basics.js": {
       "sha256": "47379557236bb1157636df32d0670d7e151d1c2eeb71c48de72d420c773f253e",
@@ -757,36 +877,36 @@
       "bytes": 14789
     },
     "server/match/player/economy.js": {
-      "sha256": "fc1c7a749afeab0bdab49c8cb1c7c754d2525dacc74e9ca08baf39ed9e0d07a3",
-      "bytes": 13715
+      "sha256": "7ac62141878ff09cc8bd50c9fd14ddeecd46a556274c8cdf0bfa889ac330d73f",
+      "bytes": 16055
     },
     "server/match/player/items.js": {
-      "sha256": "9c0fefce996ab79fc1aa39cc50c9a9d1f47ab41c38c715da189d7ad2ba32db0d",
-      "bytes": 11234
+      "sha256": "b952e33a26fc94b95437fd3bc2b347ca69972d3f9733bdca272f2caaf8bf562e",
+      "bytes": 11794
     },
     "server/match/player/pieces.js": {
-      "sha256": "bfb1ace266bac9eaccba84a0fcd2881e4c3550ad00d450cf4f0cf604b943d52a",
-      "bytes": 12834
+      "sha256": "b0aef3d649445d7d7832d783b4d53599373cf6b8fd01f0606efc28bb7e86891c",
+      "bytes": 13809
     },
     "server/match/player/placement.js": {
-      "sha256": "ce6697633aab7e2f81c2449fd828d02d2c30e7edbb091170b7975419addabbae",
-      "bytes": 17934
+      "sha256": "d1b43ae0aa37e792ea081c13280e80f07f58c33577a7a59573a5af9b4f671083",
+      "bytes": 18003
     },
     "server/match/player/prep.js": {
-      "sha256": "508d0f18af39a07fb95e751923f27994bfea09cd6933fe219ce7a7f04af98939",
+      "sha256": "1e9f0fad205a4f2de52a7f9cfa7f257337cd6a3fb4b7ccfc571d326b3383f4d8",
       "bytes": 5242
     },
     "server/match/player/round.js": {
-      "sha256": "49e613a8d37745e72d8faba03c86c23f30cbda71cdcf3f403ffd2a173b113073",
-      "bytes": 10352
+      "sha256": "72c40cee3235a8b6c34b1e25065215ac916732a3131e4933e022b448861f0c0c",
+      "bytes": 19822
     },
     "server/match/player/support.js": {
       "sha256": "7281adb0ce518ae5ce9f41645ee112b0324b6b9da2d0c9052bb372ddefae9cd0",
       "bytes": 3523
     },
     "server/match/player/views.js": {
-      "sha256": "0dd60a7a06cb929ff7ebcf1ed54426afc452b4b44fce409c87da4b30bc25da07",
-      "bytes": 9205
+      "sha256": "72331994f00e574fbf1a2e2f142f6584bd4bda3f8c84a72fc63aefa2d9ee5117",
+      "bytes": 11428
     },
     "server/match/pool.js": {
       "sha256": "5b5df53dab81523125f0a9e1e0a062d69ad33f04aff11a8f8dab433ced053adf",
@@ -797,8 +917,8 @@
       "bytes": 3289
     },
     "server/match/results.js": {
-      "sha256": "95f93b7cdf1b43e9007a9bd64c9d2f26200484b7150aeb8bfe307b65bda13dc7",
-      "bytes": 8155
+      "sha256": "aae3a155daa162b6dc6351160cc627d416064b1bf95cf1d47724bfe70b80b156",
+      "bytes": 11903
     },
     "server/match/scheduler.js": {
       "sha256": "40f1e057f19f545e1c2b75e85bda584a87808c9cd5faf3208a4897387f4427d3",
@@ -813,12 +933,12 @@
       "bytes": 6173
     },
     "server/match/unite.js": {
-      "sha256": "e81230743e84a24046c98e186fc4ade3abcfeaa6060eee3c6200b687d0e7c839",
-      "bytes": 15778
+      "sha256": "ec9aa19ad5d408b95cca3b0a64e7d00394b1e32926a205182af1ae73cd08112b",
+      "bytes": 16179
     },
     "server/match/waves.js": {
-      "sha256": "9d6dbdb198695a0d6295011668a14650cd1d8f9101e9b633c547b46440bafc9f",
-      "bytes": 37877
+      "sha256": "ccf5ae07fedf0a80c4c3446190a752f777bb69f8058598425636b93014156ee5",
+      "bytes": 39986
     },
     "server/matchmaking.js": {
       "sha256": "99db93224294fef2be5800a3a374f23adc583e89948793af9b663694b3661563",
@@ -996,69 +1116,117 @@
       "sha256": "c934d7d3d61be66b224123426d5cba76f91f715ebcf12fe2f041b8fa568f7db4",
       "bytes": 14746
     },
+    "server/protocol.js": {
+      "sha256": "e527eb136306c95815c7b94cdb5120e4de6ca55d41caf81778af47a2c2010a74",
+      "bytes": 1444
+    },
+    "server/sim/AGENTS.md": {
+      "sha256": "2f8efc9f8ef76322f63048ff90ae8096b84766d355d0dc55647580bab8a55515",
+      "bytes": 976
+    },
     "server/sim/Battle.js": {
-      "sha256": "686d177cd0f9092be6822ea7f2ed4b9b17d60cb83e24e9c288317fee47fde31e",
-      "bytes": 14210
+      "sha256": "e7b3e2cef6716f14a781ad0e9bd2610c54c072fc98cbd1be40fb0f4f14939e3d",
+      "bytes": 15233
     },
     "server/sim/ai.js": {
-      "sha256": "1d8f94a0d794f7119ec9090a61dc22398609329b87140c82272f135b016a1c2d",
-      "bytes": 62833
+      "sha256": "fcbbf75a64b24c1d1fdd51b56304af43ed0a72103c11d969a1287d37f16e4c5f",
+      "bytes": 65818
+    },
+    "server/sim/attack/calculation.js": {
+      "sha256": "ffa2f7a8cb68a36f26e9baffe56f5da3f4dfc05b68eae4cfa16cceb1e417a7ec",
+      "bytes": 3966
+    },
+    "server/sim/attack/effects.js": {
+      "sha256": "e586c22405c2b52c86cd8a6f090bebad4d356bc073c4e127d36c909ddeabf7a0",
+      "bytes": 6448
+    },
+    "server/sim/attack/element.js": {
+      "sha256": "0ec1d88c8a22379dc58439bd7a64dd4be9838360c573f3d92b3c2aa5ced84527",
+      "bytes": 16308
+    },
+    "server/sim/attack/heal.js": {
+      "sha256": "236e0659a6566ece1554bf53aba4d3f816842abeda585273c12c043282332dc4",
+      "bytes": 3857
+    },
+    "server/sim/attack/health.js": {
+      "sha256": "12222d864d9b4968565e4135634b960eaaac778881837ae832d7aa5e385be991",
+      "bytes": 6873
+    },
+    "server/sim/attack/helpers.js": {
+      "sha256": "e5ed33c36fbf768645ee9a2ad2b59d07389583ac0966949f3c95b172ed547de6",
+      "bytes": 6972
+    },
+    "server/sim/attack/hit.js": {
+      "sha256": "dc11d565ab78cef89fa8622e97c97c654d312b8f8ca4df4aa718112bf2ef5168",
+      "bytes": 6709
+    },
+    "server/sim/attack/legacy.js": {
+      "sha256": "97fd4c188bab80db3c0b9c684b5b56377703a66b272aba468c7adae4664722c0",
+      "bytes": 1775
+    },
+    "server/sim/attack/transfer.js": {
+      "sha256": "840d2d38fad83696fb86f034cff2fd9c244955d7775009de7c3521af55bead58",
+      "bytes": 1212
+    },
+    "server/sim/attack.js": {
+      "sha256": "2e0d4c72dac99721fe28ffe1f80cdc802cf73bd1eae285a0ceff7aa23bb4f318",
+      "bytes": 4835
     },
     "server/sim/battle/blocking.js": {
       "sha256": "8bb78a5148152b9a9ca4401de59cf9f0aad9e0e7fd6b90fde71793e8440d98fc",
       "bytes": 8464
     },
     "server/sim/battle/combat.js": {
-      "sha256": "7fcf9298fb03291db98487801c2c7621cb1904a815d74a2ebb63fdf41669a435",
-      "bytes": 3691
+      "sha256": "2504be7c7b215aee3ebf119fcfbcae0315d681cd8dc7929dc23bc2918c6ec36b",
+      "bytes": 3722
     },
     "server/sim/battle/deploy.js": {
-      "sha256": "0e0f7577ba4ab679b6110a1222e8e34f06facc1bae6b88eae914f838a459ce17",
-      "bytes": 15118
+      "sha256": "20a00da451bc864c7539e3824ec4607f6a41ee656fff38bde7366a0e24921d25",
+      "bytes": 16757
     },
     "server/sim/battle/displacement.js": {
       "sha256": "7372f5ebf329b920a5a7214d9269ea8b4ae79198b9aa6b1e9c28bc27fe6b5543",
       "bytes": 14743
     },
     "server/sim/battle/economy.js": {
-      "sha256": "194dda9be4c7eff13b3b16673c95f86f40015e9aba488e47fee8f9ab029c1faf",
-      "bytes": 4399
+      "sha256": "59686c0520ec31d3bd2df447e11d1770a35daf00f734f589573c3247173bdd60",
+      "bytes": 6451
     },
     "server/sim/battle/events.js": {
-      "sha256": "dd68347806268ca1ccd8cd5bcd5df062d7821050708643e34b2d805af07f124f",
-      "bytes": 7131
+      "sha256": "378df3a3dd9defb69719eac7dd853056d6ff04e7fb185b58614e0d4ea4c715d3",
+      "bytes": 9527
     },
     "server/sim/battle/hooks.js": {
-      "sha256": "91034ccdc6f534b87bf2a95e2811b84e510a1ca8aa074fd8c5840f8c718d122a",
-      "bytes": 8172
+      "sha256": "82bf59db2d74951e45645d520ba67d1dffe1cf578004a21a3e1c4c9ef48f115a",
+      "bytes": 8468
     },
     "server/sim/battle/lifecycle.js": {
-      "sha256": "36cf9ce7ad12f5047d5ea06b247b2634ef6d41bbe57bbbcda5928b6075361e24",
-      "bytes": 15179
+      "sha256": "d56136e78db73a6774e7b044032b3b50d40198e45fa2574ae7611517f5ffd281",
+      "bytes": 16445
     },
     "server/sim/battle/players.js": {
-      "sha256": "d90aee2598e8b23db7ee154a9aebdf33b8bf33e049d37075878b3cc7849405cf",
-      "bytes": 13914
+      "sha256": "baa1f8478ed9817fe8610f505be2c792e3c06bad5ded431ebfebe8ff83e7db8e",
+      "bytes": 17194
     },
     "server/sim/battle/queries.js": {
-      "sha256": "4cdb051120d415e0ddc522f9afa7978f4c845e5bf275d81ff5fa0e184ddddffc",
-      "bytes": 19463
+      "sha256": "15e827a2f83a7efbd7808658020b3c2e5dc3ebded651e5f6c35da28c8c615f82",
+      "bytes": 19735
     },
     "server/sim/battle/spawns.js": {
-      "sha256": "1f75d075862c1b8598a882da1871c9cd5ed84fb4b67607a845feda63f4f602a4",
-      "bytes": 12855
+      "sha256": "2bd6d6eb65e38e484bee69df69c96c29cf7e002e41bde68d593eec647ecda9cb",
+      "bytes": 17491
     },
     "server/sim/battle/status.js": {
-      "sha256": "3e9bdac208907759e07e9e7f2e7eb026af378b7c5468c4372fcf582b3f0faab0",
-      "bytes": 20027
+      "sha256": "1c5f50c500355ac20a4249873db6b590a2fa2a3309dfa25b52202a8069e7c926",
+      "bytes": 20198
     },
     "server/sim/battle/summons.js": {
       "sha256": "c04a4bd3947582264b0d19c28997d11e9d0405a9c1d69f7e75ca95919acd4ce5",
       "bytes": 8378
     },
     "server/sim/battle/tiles.js": {
-      "sha256": "db59d81f8d88ebc0028dc35c2ee931a09bcc7f40ee06d1f073fa35075cbae4c8",
-      "bytes": 13413
+      "sha256": "a1d2558fa08c1aa0714ddf18b26f4d3381c8c51bff9cc6ee3a0a1eb0ecf9da40",
+      "bytes": 13658
     },
     "server/sim/battle/util.js": {
       "sha256": "0f3210ed921192ce587c5ea7aa40949990755e064148cf976deabde0ac27e749",
@@ -1069,28 +1237,40 @@
       "bytes": 9819
     },
     "server/sim/buffs.js": {
-      "sha256": "7b6f13733a2d33d8ee2f55bee3e77cbf403447d937c9edc81a4728f18cb70f7d",
-      "bytes": 14402
+      "sha256": "a30253fec86e1d49f693c6e16a20b763f18c885eb83a811a66a95d59db01a34d",
+      "bytes": 12598
+    },
+    "server/sim/centralLeaderSpawn20261101.js": {
+      "sha256": "0ff14756185a27f34741638dd63f4650719656e11e980ccdfd416f539748dfae",
+      "bytes": 3822
     },
     "server/sim/constants.js": {
-      "sha256": "ce1afca545ab83d26f320ce184ed91551d9764dc4b931614a435070cf61b1abe",
-      "bytes": 19520
+      "sha256": "1101c8c8932387140f93d81594743af2746c9c9c912f16043c591c60d5e45720",
+      "bytes": 19488
     },
     "server/sim/content/bands/battle.js": {
-      "sha256": "c659015202267b1bee48172f384b46fe49fa3f4a5a5a7f81263c5c02841aa64d",
-      "bytes": 14939
+      "sha256": "a0da9d3b2f710f0c18d8d870c02673b09e81835fd2afd0316a69ee2df5375523",
+      "bytes": 17836
     },
     "server/sim/content/bands/meta.js": {
-      "sha256": "bd2a7e47c8e4acd391df8ac25f81607a8fee178afafa6aa17fdb83477f8c770e",
-      "bytes": 26579
+      "sha256": "8b859c8ab0fc7c047cf54ad78fc13b94cb835a6ac1a329a381e9935cb1384b78",
+      "bytes": 28334
+    },
+    "server/sim/content/bands/mod-shu.js": {
+      "sha256": "1371ac160b7bc1727b2382d667a3229d826777e4c97f2a4434084e601c7bd29c",
+      "bytes": 6492
+    },
+    "server/sim/content/bands/owner-strategies.js": {
+      "sha256": "c71d575eff0f3da5c5dd5ef69d7f128b92207a23dedc1501f09df7316aee2ac7",
+      "bytes": 1646
     },
     "server/sim/content/bands.js": {
       "sha256": "547d2fcbbecfa5804ed7bddb03059c56b55ad5b5d857fd390eb8c4171e6f454e",
       "bytes": 1307
     },
     "server/sim/content/bonds/addon/battle.js": {
-      "sha256": "56cc880d6e76afc74bf8d2123ce5d1da3d1d867705c997e447b17fc4319f83f3",
-      "bytes": 41797
+      "sha256": "8f056f13517e9285c3fd8e66194862d1b1cb36a5bc0308bdf47d38a77fa51f6f",
+      "bytes": 41879
     },
     "server/sim/content/bonds/addon/meta.js": {
       "sha256": "bef1a97f67b16bb288b2e429351f5f569a8998f7c1f81daab80eadc10a30f2bf",
@@ -1101,24 +1281,60 @@
       "bytes": 823
     },
     "server/sim/content/bonds/core.js": {
-      "sha256": "b8975dd03eb0bfa46177d70d716f42b908477a9456c343c4aaefbac04b6e7b91",
-      "bytes": 42713
+      "sha256": "5b75cc3435d8c86b406bfd26c38c3bf7c56e1f7bfafeda19056e3bbd36186fec",
+      "bytes": 42810
+    },
+    "server/sim/content/bonds/timers.js": {
+      "sha256": "9580b5c3f7fe8dadeef9434c60be42137eb2a5b77ec4880eeba60df179ce91f1",
+      "bytes": 1507
     },
     "server/sim/content/bonds.js": {
       "sha256": "efb8599a69feee06d2efa4ffeaf30783e3a650ed474359b4d37f42122acd8f89",
       "bytes": 2015
     },
+    "server/sim/content/bosses/blacksnake-projectiles.js": {
+      "sha256": "773777d4a9ecc5e19190e1e067be025e6df2daa6683f24c79ebfb7b84d0482ea",
+      "bytes": 1633
+    },
+    "server/sim/content/bosses/blacksnake-tactics.js": {
+      "sha256": "96e5efda82691216d4b76bbc659b4ce98e9b1554a1ee7262ee5af218f3437942",
+      "bytes": 14342
+    },
+    "server/sim/content/bosses/patriot.js": {
+      "sha256": "d45e9e531afcfc0b46aac9e2b1683e299e735613296d3971bde71fe89e4ba15c",
+      "bytes": 14337
+    },
+    "server/sim/content/bosses/periodic-escorts.js": {
+      "sha256": "3d5e218720f04a82d34ce1fd0f3e04c3e761c0c7d5420eb1023dc61a003b7d43",
+      "bytes": 4021
+    },
+    "server/sim/content/bosses/pursuer.js": {
+      "sha256": "5047da7f9dcfa8bcf3dd3bfff5e62730fa60f1e877c5f017ba4d9f3c9d100426",
+      "bytes": 18306
+    },
+    "server/sim/content/bosses/sui-layout.js": {
+      "sha256": "51d7942fd1a400492db1c8603fc5274a733df6a1688ed7ede3fe5d05153f9624",
+      "bytes": 2600
+    },
+    "server/sim/content/bosses/sui.js": {
+      "sha256": "904c6cb7ae7cc9b37d391e5b9515e3687f23f7e245498911ac996cb079197648",
+      "bytes": 17846
+    },
+    "server/sim/content/bosses/touch.js": {
+      "sha256": "5bb5651460857bfb5a47165900159ac2f81cbbb8c7c75367fb56f2d68b3e2c7d",
+      "bytes": 12249
+    },
     "server/sim/content/bosses.js": {
-      "sha256": "31d4229f6da9fa1d1c63afabce1d9c476f86420d2e5a36b55424ad0f9e06ddd5",
-      "bytes": 75106
+      "sha256": "feb2465fbab87ad121d8736fd6e123f1e32b44c02a9159c93d72b85b9b0297c8",
+      "bytes": 105582
     },
     "server/sim/content/choices.js": {
       "sha256": "ad450507fc8ecea20110fc247796e4ae0fa60247c82563bf10c0582c4a39e6dc",
       "bytes": 27432
     },
     "server/sim/content/devices.js": {
-      "sha256": "5f167a3bd0b94a4255e0115d2c9b08ac5a909e1092dddf18d1a2d741a64172e9",
-      "bytes": 30538
+      "sha256": "bf448768620dba6c75c421ede635fc3eb9e18bd58816bb66bd336f63f98a2438",
+      "bytes": 30333
     },
     "server/sim/content/dsl/bounds.js": {
       "sha256": "68e03437f78397c587f56d8ed430bbfeab5a6df20aca8ad800d9b49c7c8b00ce",
@@ -1129,20 +1345,108 @@
       "bytes": 3448
     },
     "server/sim/content/dsl/compile.js": {
-      "sha256": "2909269fd5b918d7efd96b503fc5f75f19a3c4c23bc0dbd9b0b7fb2b97163812",
-      "bytes": 8136
+      "sha256": "797cf2eee3eeb5704e37c237a02d84bd3f3d1595d245085cdeaf42f620f4fe30",
+      "bytes": 8133
     },
     "server/sim/content/dsl/validate.js": {
-      "sha256": "0b637fb1ea69941f090750df08e78885ab68ee8d72a3057c30951857fe7db055",
-      "bytes": 26912
+      "sha256": "bc489f8a201d73611def3bf8e71eec110fea6ad941966f7ec4ff496fb8e57f7c",
+      "bytes": 26907
     },
     "server/sim/content/dsl/vocab.js": {
-      "sha256": "d39d70f17f1ad089bf13c28252ae269947e47f7739597b27a338eed3440861df",
-      "bytes": 26332
+      "sha256": "4222c3ffae7a0aecf6c9c16173c1eaf0280bd98d4bcd56f61e376cef14d5fbde",
+      "bytes": 26327
+    },
+    "server/sim/content/enemies/additional-leader-helpers.js": {
+      "sha256": "a7aed18e124816ba963e270116f842f449ceaff12013de9122abc89a86ef661e",
+      "bytes": 6564
+    },
+    "server/sim/content/enemies/additional-leader-supports.js": {
+      "sha256": "a0aedaf6dfd6ab36bcce249c6dfeb0a6999aef5979b313234228125bc54bbef0",
+      "bytes": 1578
+    },
+    "server/sim/content/enemies/additional-leaders-combat.js": {
+      "sha256": "90f88d943b36bf428939a863488ecf66a6c391e117b100b4ceefa1b395a98d5c",
+      "bytes": 10649
+    },
+    "server/sim/content/enemies/additional-leaders-core.js": {
+      "sha256": "b087c16d2e917953851daf7cdc65ae03a0f675315ea27932eab8133c39eb0d5c",
+      "bytes": 7718
+    },
+    "server/sim/content/enemies/additional-leaders-objectives.js": {
+      "sha256": "ab36636e25861a992acb31abf228b745c9ddd54ad949e34400b9e1df68b7df23",
+      "bytes": 10551
+    },
+    "server/sim/content/enemies/ambush.js": {
+      "sha256": "a839ba29a4c4782dd6a791f8dbac48037a02175dcb17dcee1155dad3d3a73ada",
+      "bytes": 6912
     },
     "server/sim/content/enemies/archetypes.js": {
-      "sha256": "79dfae53adc6da33b60896a9686f02f70e0f2e78d3f585fe3347ef608abbd7d8",
-      "bytes": 40758
+      "sha256": "b96461e355d2682b1ef55533db1ad99d0cfd77167ce761f8d9047ab5b12173db",
+      "bytes": 41325
+    },
+    "server/sim/content/enemies/ark-update-bounty-sfx-20261101.js": {
+      "sha256": "4f86aad98f13ec620523f8d63732dbdd3d45ac94366e8658ec9eaced200d2c09",
+      "bytes": 973
+    },
+    "server/sim/content/enemies/ark-update-elite-bounties-20261101.js": {
+      "sha256": "7e565f0c8c08ccc610a783815be3051f6359f6e35c784e3c8527bb655e047f8d",
+      "bytes": 9357
+    },
+    "server/sim/content/enemies/ark-update-ursus-20261101.js": {
+      "sha256": "18a5232df7a5345c05e248639f79bfa3f68a6973fb5969968c982736563e1487",
+      "bytes": 10543
+    },
+    "server/sim/content/enemies/blackflow-elites-20261102.js": {
+      "sha256": "70b3816bddabb49c3117f357fe51f0fe75b28232801c0a939036233ecfacdf99",
+      "bytes": 2033
+    },
+    "server/sim/content/enemies/bolivar.js": {
+      "sha256": "7faa029e418959afcb01853597d648326ad95c9f8a3aabcedadfd44cd39e214b",
+      "bytes": 5429
+    },
+    "server/sim/content/enemies/columbia.js": {
+      "sha256": "2a2835da4fd01ca40629de3573130f8067f71bf11d1e8e4047901b65b5524cc3",
+      "bytes": 7036
+    },
+    "server/sim/content/enemies/compatibility-ammo.js": {
+      "sha256": "fea16cfe86930859772b0c04c4f2c169b7c9769ef9a98541acfbc6d7701e817d",
+      "bytes": 6117
+    },
+    "server/sim/content/enemies/compatibility-basic.js": {
+      "sha256": "cb175212f36f7b7afcda656b1f460db016b4d9b722b6231de4903fd93861a825",
+      "bytes": 6604
+    },
+    "server/sim/content/enemies/compatibility-deep.js": {
+      "sha256": "f78c3df7eef561bb688c030d5b7e045026410244f3e9ba33eed37188dd05632f",
+      "bytes": 6208
+    },
+    "server/sim/content/enemies/compatibility-helpers.js": {
+      "sha256": "025824533621822b3f00cdda5fe217de2a86a0ac4b9c4807c52cb6f40ae27b06",
+      "bytes": 3349
+    },
+    "server/sim/content/enemies/compatibility-mobility.js": {
+      "sha256": "b18af78a1d3c04a7011e6770045c06e24b81851f49766d3f833a3c028979a5e9",
+      "bytes": 9291
+    },
+    "server/sim/content/enemies/compatibility-named.js": {
+      "sha256": "8ef535ff2a41a6b8b5a2f04e8667074e2e5e6a807b70cccf76b36c8cce08412d",
+      "bytes": 2107
+    },
+    "server/sim/content/enemies/compatibility-paper.js": {
+      "sha256": "b6dd797323637f1bed5c95c3d236389f083f16f7518a62c99a7411359e707747",
+      "bytes": 3799
+    },
+    "server/sim/content/enemies/compatibility-sarkaz.js": {
+      "sha256": "201c6b5a00454169868e60760cd931031b6d51f56e7ae98f9f280245b25fd798",
+      "bytes": 5333
+    },
+    "server/sim/content/enemies/contract-creatures.js": {
+      "sha256": "2558965250649d6d752b29b3346183c3c328df1b1bf5547c4e3402611e5ee3d3",
+      "bytes": 4376
+    },
+    "server/sim/content/enemies/contract-expansion.js": {
+      "sha256": "814e1829832e4dd1174e0a04698210ff33949b99adb8fb339f992912c86471da",
+      "bytes": 2175
     },
     "server/sim/content/enemies/dot.js": {
       "sha256": "a316427ca3816f529e8a1740a4efd121e428d506feb5e340fe6c36882ea7b8af",
@@ -1152,53 +1456,137 @@
       "sha256": "a8a1cf897ed3419d0ec520443b7af331c79925e8a6963111cd1fe66a6604dff5",
       "bytes": 12494
     },
+    "server/sim/content/enemies/extra-mini-bosses.js": {
+      "sha256": "5c2cf5b1cfee91b66ce36f06c8e3d780c08d55407339f351ea2de2ce31b2bd3f",
+      "bytes": 2053
+    },
+    "server/sim/content/enemies/faction-leaders.js": {
+      "sha256": "3683c4beb909689c050910a2c2ff3534d5f6c90851970f1a7eb6252f2abd44d7",
+      "bytes": 3793
+    },
     "server/sim/content/enemies/fly.js": {
-      "sha256": "e565ba6b274640975c46745405d181080df140374f8eb5ff9a375402659022ed",
-      "bytes": 19805
+      "sha256": "d3d65853c9190a692880139733f9f2ce685accf8f7cdbfc9b73ea60104c21a1c",
+      "bytes": 20631
     },
     "server/sim/content/enemies/helpers.js": {
-      "sha256": "ca861f805e7b98e6372b0706762f08ac51aa04aae505477824471d40014802d2",
-      "bytes": 22299
+      "sha256": "4cd60b0226db02ff3e25ef422a318f08ce0fe423abde6de6c97d675cf8a06349",
+      "bytes": 24233
+    },
+    "server/sim/content/enemies/investigation.js": {
+      "sha256": "ca5ce79a5a9bcb8340b8e0560c06a96989a16f2049bbe963863721bd17759fbb",
+      "bytes": 2213
     },
     "server/sim/content/enemies/invisible.js": {
       "sha256": "66e11ad95f7b7270411aa98bced47c070c26dc3aa1606e2c9fffac80e3ee26d1",
       "bytes": 11646
     },
+    "server/sim/content/enemies/kaltsit-talulah.js": {
+      "sha256": "c3f17789fb2038fd04647ecedd42b1745395c9780e726bf5362b91d4518d8361",
+      "bytes": 3519
+    },
+    "server/sim/content/enemies/kazimierz.js": {
+      "sha256": "1ff870322f72119c4f54d0d06491c4009d4227991e5b60955189c72056d2c8c3",
+      "bytes": 1664
+    },
     "server/sim/content/enemies/leaders.js": {
       "sha256": "4ec728b92dc5d460f4739175f62970d6574e2e89be399b8031ff031d5eb3a76e",
       "bytes": 57975
     },
+    "server/sim/content/enemies/native-bounty-objectives-20261101.js": {
+      "sha256": "9e33fe414da2ce444f4d95266d1e836013a70f6c8823fbaa9012fa8182dcfe83",
+      "bytes": 4285
+    },
+    "server/sim/content/enemies/orchestra.js": {
+      "sha256": "13824d85214c3883d10f7e9c5a38dc9f79979edd75ff624bc4c87c2a2689fe2d",
+      "bytes": 3684
+    },
+    "server/sim/content/enemies/other-leaders.js": {
+      "sha256": "5969ab3070e8e2c51def0e312c9baee76a2ac079ae1e746b44b665fa232f5600",
+      "bytes": 9192
+    },
     "server/sim/content/enemies/passengers.js": {
-      "sha256": "70288526055c00a87146253735d957268947b54fbab10bde6696a54275e255d4",
-      "bytes": 6388
+      "sha256": "0aed363563b4f7cb7fa1f84c0a908d8f2a9dbe399a97e00d101aa8146867f776",
+      "bytes": 6751
+    },
+    "server/sim/content/enemies/pressure.js": {
+      "sha256": "cc16713c3f5043840397768cd9cbe8b1e118fc1ad055371ea51c8a4a6e8a767d",
+      "bytes": 525
+    },
+    "server/sim/content/enemies/prisoners.js": {
+      "sha256": "ba807af4fd068bdb0d79bfe9165ddb51baa5b18cde25d1950f87336049839c95",
+      "bytes": 1607
     },
     "server/sim/content/enemies/reflection.js": {
       "sha256": "45a17aedb956eeae43d36841558ebdbaae540e01ac49111852c950234cc27909",
       "bytes": 3600
     },
+    "server/sim/content/enemies/returning-boss.js": {
+      "sha256": "ed3923d19eb9ba3ba6ae582bebacb777c0e3d21dfacef84d94ab8ed8ce740931",
+      "bytes": 3588
+    },
+    "server/sim/content/enemies/rogue-leaders.js": {
+      "sha256": "0688be432bd3baa0a6ffa8e4e58fba0894b18e835f17977199b3db125e36fca2",
+      "bytes": 10074
+    },
+    "server/sim/content/enemies/sankta.js": {
+      "sha256": "989badc186888a36ed9c915dee617d72dbed11e326c3d81af2c4685bba91b4ee",
+      "bytes": 4149
+    },
+    "server/sim/content/enemies/siracusa.js": {
+      "sha256": "d9e661e1c6af598a7b74ea5c950df74b03edfc3a5d3e159aa0f4cc06091d80d4",
+      "bytes": 6194
+    },
     "server/sim/content/enemies/special.js": {
-      "sha256": "aa0af41242dac9575d6366c10b8c187dca80493f8d9892d7ddd22b335e28281e",
-      "bytes": 33355
+      "sha256": "b737b4889f9ffca5f755f404a691a152a0c892d111b93d392681d8e71195711d",
+      "bytes": 33956
+    },
+    "server/sim/content/enemies/standby.js": {
+      "sha256": "111484d8ecd1b8a201c7252f9b2ed455b00db7858e48e31b90f7952bd899a04f",
+      "bytes": 907
+    },
+    "server/sim/content/enemies/sunken.js": {
+      "sha256": "a873c77d2f6b0688a1a3ff66dfeb8290efb7f89d110b10447d2fc3bb8627ee2a",
+      "bytes": 7530
     },
     "server/sim/content/enemies/times.js": {
       "sha256": "1c168b7b1cf3f7e67f24156bd880daeb5e68c4e3b17a2aa4ec9c3207a6ddd3b9",
       "bytes": 10456
     },
+    "server/sim/content/enemies/training-roster.js": {
+      "sha256": "a879a5ec0f467ff10007f073d341a17cfac716fa0ea4f9d4b6cc8e9733d90a9d",
+      "bytes": 10730
+    },
+    "server/sim/content/enemies/ursus-war-caster.js": {
+      "sha256": "e5caa45f68727a89aa4719d617707befbaa61d8e1db2a99e2838ffd05c251072",
+      "bytes": 3539
+    },
     "server/sim/content/enemies.js": {
-      "sha256": "bcee76e390c76265de17b5692787d318174001b65518e33efcb8d056b45e0fc3",
-      "bytes": 23069
+      "sha256": "a68f8297eba0f0bb75127f4ecf404a786e1ee75250f53c74562f29fa452a12be",
+      "bytes": 27341
     },
     "server/sim/content/extensions.js": {
       "sha256": "3cd99c82195dd272a67f93bb55035fcab5809e93affd803be1b50282f41a3bec",
       "bytes": 7793
     },
     "server/sim/content/garrisons/battle.js": {
-      "sha256": "0dbb5f8617cf0c9ebf85ec44acd4c0fec02e480bfe44d244474fd5271bcd1a7d",
-      "bytes": 24170
+      "sha256": "57e46e8d9d72dcbda3c9c686ec9b32524df4610abfa0e0836d529bca0229cee3",
+      "bytes": 24549
     },
     "server/sim/content/garrisons/meta.js": {
-      "sha256": "7d042b3dfa33b1a28a5437a2a4718a4496508554739774c6b31ce152c4fbf164",
-      "bytes": 21132
+      "sha256": "bfa40f16fad07bc16f2ae14565a7db7100ac752924d80f7befc88ff8943c4f3f",
+      "bytes": 21792
+    },
+    "server/sim/content/garrisons/ownerBattle.js": {
+      "sha256": "64b0d96b529b56dd7e615f5a36be74906b5eb614532540a1b79bb7b7115b7c4d",
+      "bytes": 2170
+    },
+    "server/sim/content/garrisons/ownerMeta.js": {
+      "sha256": "8801011a50920533137e18d9a24a64d99e4b5756b0fac2a841ad09e5484193b4",
+      "bytes": 2922
+    },
+    "server/sim/content/garrisons/webTraits20261101.js": {
+      "sha256": "794a7629d54d8f997f2f517eeb3d0b13e1611eb6c9bfd4b33c74b65f32a09dbf",
+      "bytes": 13144
     },
     "server/sim/content/garrisons.js": {
       "sha256": "39d01a4cfc45d96d40adffc923a4048558ae1be9cf851265c31a64bf4e96dd06",
@@ -1209,12 +1597,12 @@
       "bytes": 27781
     },
     "server/sim/content/index.js": {
-      "sha256": "d4baec82d6b48a26ce79e79fb713848deaf1d6385c01bc28a1a52253bc7aabc9",
-      "bytes": 19222
+      "sha256": "61e64fac2ed9f08f5b303e01c82714f14f381f978e24de631013b7c8594d4506",
+      "bytes": 19084
     },
     "server/sim/content/items/battle.js": {
-      "sha256": "3aac2a0c934ed498c5e0a0427d2720383c8affd4c11d45d180100f02fa36dd22",
-      "bytes": 51760
+      "sha256": "7495cf2a1d9c52e152982089b526e843f8aefca48aeee9b95a8d6a46c2ae20bb",
+      "bytes": 51683
     },
     "server/sim/content/items/meta.js": {
       "sha256": "fba5ef362d514d0dfc87e652e2fc3ca0805f730a5bca6a5d9dd6073fcf80c026",
@@ -1225,12 +1613,12 @@
       "bytes": 662
     },
     "server/sim/content/kits/README.md": {
-      "sha256": "32f1aabdfed81ce0752a0c81f819a14132b4a2c2e1820a6707bbbf20f1d642a0",
-      "bytes": 31298
+      "sha256": "b5b8543f393e4ae510d9253a73cde1d0f34f955e2e18aa645f9b5dd0edcf86e9",
+      "bytes": 33913
     },
     "server/sim/content/kits/index.js": {
-      "sha256": "8d243e9823d83f902193b3aaf27a032a4cbf268895509d9ade17eecae9e23b80",
-      "bytes": 10859
+      "sha256": "f97607d0a58d3b3df2f5425cb928521f49a0f13160d1ef5374e0542297f5799b",
+      "bytes": 15242
     },
     "server/sim/content/kits/ops/chess_char_1_01-inside.js": {
       "sha256": "c760d133c0400c83ee73f72ac2b5bd3d673faeac8e9f5a4c0816cdb13035f258",
@@ -1281,8 +1669,8 @@
       "bytes": 1970
     },
     "server/sim/content/kits/ops/chess_char_1_13-podego.js": {
-      "sha256": "1884519a2e220a6b067a22c1438b45d9aa213848a60de362bd2cbe8a85db5240",
-      "bytes": 3563
+      "sha256": "973dc298975e62ef6f4d6c12b42b1c4e7f3b391eb6af10a485af0ebcf98110b4",
+      "bytes": 3560
     },
     "server/sim/content/kits/ops/chess_char_1_14-greyy.js": {
       "sha256": "f32462b248c14dcddb342d1f314241bc5cc7d40f9d6228ffa24de4ed6e03754e",
@@ -1293,8 +1681,8 @@
       "bytes": 3364
     },
     "server/sim/content/kits/ops/chess_char_1_16-tinman.js": {
-      "sha256": "53d3c3f382a72ac318a3f079ac6242b4fd9a8369349a4daeaa048c9da6d2bbbe",
-      "bytes": 4333
+      "sha256": "2b15468a8fa16198d94668af8f9a5080b0baf75c4efbf1de4132a6d476f9e9d0",
+      "bytes": 4404
     },
     "server/sim/content/kits/ops/chess_char_1_17-indigo.js": {
       "sha256": "9ad57ea26f81f025b7bb457fa610f367f045b1934e8bd05d0713033017c016c9",
@@ -1309,8 +1697,8 @@
       "bytes": 3913
     },
     "server/sim/content/kits/ops/chess_char_1_20-liskam.js": {
-      "sha256": "d53c0c1fc5e3a07f00d2f263580f5d2b28d0ebdf1f3e8eec79cfc13fa12cb6e7",
-      "bytes": 4689
+      "sha256": "2344f161376622659301924f113d1052c18c6692ac9266e28d0a2909624c159e",
+      "bytes": 4684
     },
     "server/sim/content/kits/ops/chess_char_2_01-excu.js": {
       "sha256": "b21d30e46c1d29ddbf6dd4d635b9ef541a9f45a279b0868dccbdc54d06abcf07",
@@ -1325,8 +1713,8 @@
       "bytes": 2273
     },
     "server/sim/content/kits/ops/chess_char_2_04-grabds.js": {
-      "sha256": "eae79b8a6855b606ccf23538d8da22b4aaa73abe62a446214541f07509b9adc6",
-      "bytes": 2627
+      "sha256": "9884f58e00567ce559cdb905d196981e001f4585a2cdfdaede0e12733601d840",
+      "bytes": 2624
     },
     "server/sim/content/kits/ops/chess_char_2_05-harold.js": {
       "sha256": "489387b0d992c6e9f2234dd15999503d1739937958e8844687ae899f59c6bec6",
@@ -1377,24 +1765,24 @@
       "bytes": 2599
     },
     "server/sim/content/kits/ops/chess_char_2_17-branch.js": {
-      "sha256": "104061d370a5fd25e0c6b0a21d474c3234e5728241bb9f51ed011ab1e9fd283c",
-      "bytes": 2631
+      "sha256": "e86ecbc3c7ac167ca169078a3bdcc441538946f62c11dc2af7e8c01b528ace62",
+      "bytes": 2734
     },
     "server/sim/content/kits/ops/chess_char_2_18-ashlok.js": {
       "sha256": "1b19c4a912590b20c1c3350dcb73ac1e344dd6d3682b0c855e67347d541a1f16",
       "bytes": 2157
     },
     "server/sim/content/kits/ops/chess_char_2_19-tinman.js": {
-      "sha256": "ffee173259668e7420fceca7e3310e1198628264745ddad7118abfff48c29573",
-      "bytes": 2912
+      "sha256": "16eec2ad65946d155523a5ca2cb9e997726f7c55083821d49ceb7e5755e82b01",
+      "bytes": 2969
     },
     "server/sim/content/kits/ops/chess_char_3_01-angel.js": {
       "sha256": "13fd8219267fb338535b4760f950be7f7a149b1cc4ec7d97aca7578878b72af9",
       "bytes": 2957
     },
     "server/sim/content/kits/ops/chess_char_3_02-ayer.js": {
-      "sha256": "8e578ed8dd88de275cdd68acbebdb0e97d3120da675c60e02ec3521a7aa8c38f",
-      "bytes": 3217
+      "sha256": "55b4392cb38819e1b46afdc1b15473cb8ee93614b98e8a6146c4316b3fd6eca1",
+      "bytes": 3214
     },
     "server/sim/content/kits/ops/chess_char_3_03-swire.js": {
       "sha256": "f3917948951be411b541ce49896d0f86656c26385bd9caa96aa7fd31ac447bd7",
@@ -1409,11 +1797,11 @@
       "bytes": 3379
     },
     "server/sim/content/kits/ops/chess_char_3_06-philae.js": {
-      "sha256": "e7fa84499b8fbe289820ae7f691178b689db3ed591f16c51ddcca6e1ec899989",
-      "bytes": 6658
+      "sha256": "6c9470244bccee5ebc47e89707e1a4873719db9fd3c76e045b56bc24eb053589",
+      "bytes": 6689
     },
     "server/sim/content/kits/ops/chess_char_3_07-forcer.js": {
-      "sha256": "56e248e427f4db725afa2cbea63ec22a3a2e7a229ef51c48c5a3668c9839cc03",
+      "sha256": "b178f853beca8b854117ca2083e42d6892c39c9b4939abfd45e2d08acb5487d7",
       "bytes": 4272
     },
     "server/sim/content/kits/ops/chess_char_3_08-mint.js": {
@@ -1429,12 +1817,12 @@
       "bytes": 3053
     },
     "server/sim/content/kits/ops/chess_char_3_11-snhunt.js": {
-      "sha256": "2045271df079beb874f7bfd9189426c66b1dfe035a355f379620b96d3dc8e725",
-      "bytes": 4042
+      "sha256": "103d1e86466bd2a5c693c74d8c58fbd56e5dbea5d7f8681e1974c566cb208ee7",
+      "bytes": 4039
     },
     "server/sim/content/kits/ops/chess_char_3_12-blemsh.js": {
-      "sha256": "bf1d6ccf949ccb70ba4086744e96e39c1974fa4a2b89180e54a4070e6ac487a7",
-      "bytes": 10440
+      "sha256": "c4207cfa5994479fa586c20aaa4f25ef74990912603cb636a7029931cbe601e3",
+      "bytes": 10435
     },
     "server/sim/content/kits/ops/chess_char_3_13-malist.js": {
       "sha256": "e4918dc8d8406767b015619ced7f5a839a5a4575be60e86cf7f7204e4eec9220",
@@ -1457,28 +1845,28 @@
       "bytes": 2230
     },
     "server/sim/content/kits/ops/chess_char_3_18-vulpis.js": {
-      "sha256": "5fc6e1306f71bb13076bad3aa7149de05dd465737755e084548764bd41c4ec11",
-      "bytes": 8064
+      "sha256": "a4340498fbcc932670c0e8ddf7741fac36a81b54d286775492f57b7b130724eb",
+      "bytes": 8059
     },
     "server/sim/content/kits/ops/chess_char_3_19-vigil.js": {
       "sha256": "e7599e09f99706ab6222e095b98669de7941492ac44b1ee8563702e56ea5685e",
       "bytes": 19898
     },
     "server/sim/content/kits/ops/chess_char_3_20-kjera.js": {
-      "sha256": "0ca81a856dbf9fd364e452b1e13c3d2c2e3b82f53e795654ba4f1981cf57258d",
-      "bytes": 6989
+      "sha256": "dc42bc6fd11b05c1c9556de0e5b5d4f3fe21f4a5ea7da67427f41c87b07e61d0",
+      "bytes": 7056
     },
     "server/sim/content/kits/ops/chess_char_3_21-archet.js": {
-      "sha256": "cac873a31f88e3bb26db6872fbba3ff51762e136ac1938377a45819f98a72036",
-      "bytes": 6231
+      "sha256": "1c4a5cb416a8f47c194c60c97f5a3bb6c53e7a92ab4026a10f667f9b5ed548a0",
+      "bytes": 6228
     },
     "server/sim/content/kits/ops/chess_char_4_01-rmixer.js": {
-      "sha256": "aa12bc8b5d53bf5b1acde9b2ce172674a36648f837b7e5006be060b742c8a3fa",
-      "bytes": 10360
+      "sha256": "722b007e6fcf697bd1a3c2fa0768a2d3c44c2ed2cf58f4721d4ec9d3772d2835",
+      "bytes": 10400
     },
     "server/sim/content/kits/ops/chess_char_4_02-mostma.js": {
-      "sha256": "0b6a78c28d1601e2f2a38e5b24a3622257fc05e61065067233075db3153b7cb8",
-      "bytes": 3883
+      "sha256": "6f3d9270950553679283e7b8a238b2baffb9c05c9e571958a8169b23d76217aa",
+      "bytes": 4090
     },
     "server/sim/content/kits/ops/chess_char_4_03-kjera.js": {
       "sha256": "72290a2601626a7e0e73b42cd5cf15bf4eb2dedb1a890ac99f1b55595da9209e",
@@ -1489,8 +1877,8 @@
       "bytes": 10379
     },
     "server/sim/content/kits/ops/chess_char_4_05-beewax.js": {
-      "sha256": "f4faca04f2f7989349e7e72395b049b1e4b052f054236ada0bf781d48774aeb9",
-      "bytes": 4016
+      "sha256": "101ae52a8efd92d1fb429de0ccf35aee47727a9158b96c90543d87c10a095133",
+      "bytes": 4013
     },
     "server/sim/content/kits/ops/chess_char_4_06-kroos2.js": {
       "sha256": "9565a7a5ea809b390e0af9f9cce5ad0bb2bb9d3e826e301db09ab3fd7facd879",
@@ -1501,15 +1889,15 @@
       "bytes": 3283
     },
     "server/sim/content/kits/ops/chess_char_4_08-rosesa.js": {
-      "sha256": "0da81fa54c62c853970df4de510ba9cd539504d6c4002edd2cafe355ba397651",
-      "bytes": 2750
+      "sha256": "3ee5d484640f1dba35b28d6af36d097ef865f6320ee8efda0ebbdcef4e40974b",
+      "bytes": 2747
     },
     "server/sim/content/kits/ops/chess_char_4_09-mizuki.js": {
-      "sha256": "df99ecaea6509ca4bdf2227510d75a0349e3f9a4c59731c067fc04d651d30aa5",
-      "bytes": 3816
+      "sha256": "dffc6ab23cf6e51a673deee5cff4a2044948c4d5e0bffa743cc44a84a0ea5ef2",
+      "bytes": 3811
     },
     "server/sim/content/kits/ops/chess_char_4_10-aroma.js": {
-      "sha256": "feeddb351b43dd284c39eeffd6ee81b736c33a9127786dbb7b7878a02f2c2842",
+      "sha256": "9b702b9f51f0efe4fd5329fd2f5250505c203e7953dc0d3381dd81827dc9583e",
       "bytes": 4665
     },
     "server/sim/content/kits/ops/chess_char_4_11-cathy.js": {
@@ -1517,39 +1905,39 @@
       "bytes": 2081
     },
     "server/sim/content/kits/ops/chess_char_4_12-glady.js": {
-      "sha256": "f91e4b1a88fec6bbe03b08b486ca27c2ecb6f4d50d3a88566027c6af6d5a61c1",
-      "bytes": 6476
+      "sha256": "55796a562a073d60495ce5db8804846159bcecb739b67dd7e245ed7dd789ad30",
+      "bytes": 6472
     },
     "server/sim/content/kits/ops/chess_char_4_13-gnosis.js": {
-      "sha256": "054d17f071601e17d28dca09144d9b1d70c6b1fd10ed906d2fad51ffdf578a97",
-      "bytes": 6898
+      "sha256": "c4f26e7290369cba6cca93cd873a02f9ccefc7533e96c94658954623bc8ad015",
+      "bytes": 6893
     },
     "server/sim/content/kits/ops/chess_char_4_14-lionhd.js": {
-      "sha256": "00ad9e89717f9ac13dce568ed0344b36e358ec689270e6dfa699b045c9727468",
-      "bytes": 2052
+      "sha256": "3b01d746247e7371bc86ee8c51deaff0b69127b030fa575e48fe96de4b5db029",
+      "bytes": 2049
     },
     "server/sim/content/kits/ops/chess_char_4_15-reckpr.js": {
       "sha256": "8806fde67e5c73d64bf38488cdcf0b1ff3b212aa720033e517c4dde8361ae764",
       "bytes": 2318
     },
     "server/sim/content/kits/ops/chess_char_4_16-texas2.js": {
-      "sha256": "deea8687b96c977cbd9bfe3ae5fc0d88f8eabb40537221f79e645f0009b2c67c",
-      "bytes": 8657
+      "sha256": "7e31232f58791fbe44195644e14613d1abdce2f3ff17c8e63c7516c4e17e8dec",
+      "bytes": 8654
     },
     "server/sim/content/kits/ops/chess_char_4_17-hsguma.js": {
-      "sha256": "f7610ba7aa1a063bbb695ac041962938473d02b8ecf8d0f633dbbe928c768217",
-      "bytes": 3218
+      "sha256": "fde3f87b15b382ffd1eae17b5fc231a72a6210338c6c0e5ecfe665d2cb6d9060",
+      "bytes": 3632
     },
     "server/sim/content/kits/ops/chess_char_4_18-mudrok.js": {
-      "sha256": "3b2017c898b0c8bae53054a7fc4c882a309ef4dc383c50dea9a92dd0ee6d03e1",
-      "bytes": 6252
+      "sha256": "a8690cdc8af9e0a5d0a9bf81c43937df21403e84944a19ec2c8f8e48c613a4f3",
+      "bytes": 6247
     },
     "server/sim/content/kits/ops/chess_char_4_19-flamtl.js": {
-      "sha256": "f7f4c90e7d2780fee682bb173a6501c095918e6c942ccdfc4d963032270f9999",
-      "bytes": 7340
+      "sha256": "9512264f56e49e0621aabe11451ed37ad6ddc11399fbdd8bdcb9dced608fd7df",
+      "bytes": 7335
     },
     "server/sim/content/kits/ops/chess_char_4_20-fartth.js": {
-      "sha256": "067506dbdc81910b284071a204b617fb9072e0e72e124f9be6a0a9945757d6b3",
+      "sha256": "b67256114caa883b67728242a13330778c0fc6e4cd32cb397060029b15716907",
       "bytes": 6122
     },
     "server/sim/content/kits/ops/chess_char_4_21-plosis.js": {
@@ -1557,59 +1945,59 @@
       "bytes": 1253
     },
     "server/sim/content/kits/ops/chess_char_4_22-svrash.js": {
-      "sha256": "62ec1dc8b3bebf6c06f20983150a6dd82bf8c31a4ed6848afe43e2116d254279",
-      "bytes": 3039
+      "sha256": "1f2cb29a2dd7254ecadb09252af49b43fff92c97603b5a124cde6b3bdb6e77e4",
+      "bytes": 3036
     },
     "server/sim/content/kits/ops/chess_char_4_23-gvial2.js": {
-      "sha256": "64b9f4100f7329e927ee89457f6b42d399a21be825dc5de64cdd12949b8cb765",
-      "bytes": 4525
+      "sha256": "bee2269cc476c1d8213ee121e89ff58911181434c7b396d34e89353f87ec7ea1",
+      "bytes": 4522
     },
     "server/sim/content/kits/ops/chess_char_4_24-billro.js": {
-      "sha256": "537a249745c4c0abf9fd55aa6effb70393c5c33a5df5710601047bcbbeec27db",
-      "bytes": 10055
+      "sha256": "e6913e21c167d34c477ab4bc7007c2c2fc4eee43117e6fc0e688d7dee91d0b51",
+      "bytes": 10052
     },
     "server/sim/content/kits/ops/chess_char_4_25-cetsyr.js": {
-      "sha256": "3b1f336ad00037c81526145353c265f61be81420077a1150caeacb1c9d9f89bb",
-      "bytes": 9428
+      "sha256": "40ca2aa1f79a4127fbead767ff4c735062bdc2c3e1ad18eb3b8d022d15a1c592",
+      "bytes": 9423
     },
     "server/sim/content/kits/ops/chess_char_4_26-bldsk.js": {
       "sha256": "e9559284db7eed97e527c3ba962ee0e4fa428ef2952038b6e1bc0e7175891f62",
       "bytes": 3931
     },
     "server/sim/content/kits/ops/chess_char_5_01-excu2.js": {
-      "sha256": "5c2d5516f01e5db12eeae898e991ab4003a7584aa15ba42925d0c41a38721c70",
-      "bytes": 7638
+      "sha256": "4dc40814d2a4fe1425979ba4d1f1d1dcde2c37fe1d18db9dfa23c8e891c6e315",
+      "bytes": 7635
     },
     "server/sim/content/kits/ops/chess_char_5_02-titi.js": {
-      "sha256": "9693c11b104046760073c4724ca6898bdc151ef81222227597b23cd06412a934",
-      "bytes": 11362
+      "sha256": "ce03c5cbe8814c4e0d7f9fcd55d57abf87c34d345fc011b2f9a38be60f1a4c7e",
+      "bytes": 11359
     },
     "server/sim/content/kits/ops/chess_char_5_03-blaze2.js": {
-      "sha256": "df08a16ba502cae8dcc6e0096de25b1d392cf100bdb56a34adcaf168915c0d46",
-      "bytes": 10694
+      "sha256": "69d490f087713f2445eaa1852f586de29752097def5f921fa63a76f5444465a1",
+      "bytes": 10689
     },
     "server/sim/content/kits/ops/chess_char_5_04-bldsk.js": {
       "sha256": "9e2b28b484f2e814062ae9028d10c2af7efef04966be3948462c4a33f937769f",
       "bytes": 3341
     },
     "server/sim/content/kits/ops/chess_char_5_05-ulpia.js": {
-      "sha256": "63f95f4a7a62ed4549bfc0a7b19267a6a4c6494468f766c3358226d8b3ae9cff",
-      "bytes": 13179
+      "sha256": "9ccb8200248aed6cde32af6881061595324db0d6e859894e9bc99e83cfd33ce3",
+      "bytes": 13281
     },
     "server/sim/content/kits/ops/chess_char_5_06-etlchi.js": {
-      "sha256": "674c25039e241d9ba34a773529e9e2a90b46c7df7461fab211d651e6d9004693",
-      "bytes": 11854
+      "sha256": "65e49a83a567e594d54744cfa032329ac938508b3e02e30421756a9789d0edee",
+      "bytes": 11851
     },
     "server/sim/content/kits/ops/chess_char_5_07-surtr.js": {
       "sha256": "a0bb00727425cb695738ff5614e27dbf3d20414a2ab528043f398dfcdf731969",
       "bytes": 6973
     },
     "server/sim/content/kits/ops/chess_char_5_08-horn.js": {
-      "sha256": "fe3d8d689f5075f668afcbc95cb17cfe79297923f0bde89ae6b5d7a0eda242fc",
-      "bytes": 8859
+      "sha256": "998c07c74da7c877d7a73c7403bdfddb93e297419ce457ec9a932e13d14a94a0",
+      "bytes": 8998
     },
     "server/sim/content/kits/ops/chess_char_5_09-cetsyr.js": {
-      "sha256": "bd03318d51d0714439f9d1cf2d71f7a8fadc640655d40ee1efa56b9beb0d687f",
+      "sha256": "7f51875d47ab05f30da3fb61cfe6eb8477e82b01aea633d0eedd7b78f2711f9c",
       "bytes": 7353
     },
     "server/sim/content/kits/ops/chess_char_5_10-lisa.js": {
@@ -1617,100 +2005,100 @@
       "bytes": 4578
     },
     "server/sim/content/kits/ops/chess_char_5_11-demkni.js": {
-      "sha256": "7642727748b3d9f2e1f9ea33b00b4aae7b155769e358a6be63070027ac62e5ca",
-      "bytes": 6431
+      "sha256": "bfc916e4ae7ee84d5be6d64db2cc112aff17f91776e970bda2f8f0e9fa61232e",
+      "bytes": 6426
     },
     "server/sim/content/kits/ops/chess_char_5_12-dusk.js": {
-      "sha256": "85763bcaf3e7260e18c6e22c98203edd84083cd835988e412aea072c6552c2a3",
-      "bytes": 6708
+      "sha256": "5c3832674205f2c22012fb8f5d2323df07fcd67212adb85fadc5bf2882e9f00d",
+      "bytes": 6705
     },
     "server/sim/content/kits/ops/chess_char_5_13-ghost2.js": {
-      "sha256": "d641584add63afb335b2fe0201a2c9072261074ba062ad6a843d3687d96bab2a",
-      "bytes": 6688
+      "sha256": "b06f8980cc862f3eb5caac4a8af0e33251a7b2a5dbbff24e116eb5b8449bb358",
+      "bytes": 6685
     },
     "server/sim/content/kits/ops/chess_char_5_14-svash2.js": {
-      "sha256": "db34505bfd1abb0f285e5071d932762e8afe0b29c1ad4a613a071623e55cf2d3",
-      "bytes": 11595
+      "sha256": "ecd9e8ac5ab57dae20cbb92f3ee5edc7d036c9fa99d1aa212a1ef9b625f53ba7",
+      "bytes": 11736
     },
     "server/sim/content/kits/ops/chess_char_5_15-thorn2.js": {
-      "sha256": "de3c7ae115b24ef7f49d856d327f6f3a325b4f0394d2d066590030bc188053e5",
-      "bytes": 15183
+      "sha256": "3c18d1d96a153c9aaa3c58ec57555efab36c88faa2a7ea634defdc549bcf84b5",
+      "bytes": 15179
     },
     "server/sim/content/kits/ops/chess_char_5_16-plosis.js": {
       "sha256": "62a4133e17afb0939ee8c965ff719cb7c588fc3ace414af1a62bb0f8feec3691",
       "bytes": 1129
     },
     "server/sim/content/kits/ops/chess_char_5_17-f12yin.js": {
-      "sha256": "f22343ce3d2307ed0b1585d11e93d4bd21a6c548b94b368bb3f0559204d3d920",
-      "bytes": 4330
+      "sha256": "a55e405fb3684a5ee6eac47d2222822ca6036fff2e5185095964a16d39f5c011",
+      "bytes": 4325
     },
     "server/sim/content/kits/ops/chess_char_5_18-gvial2.js": {
       "sha256": "3975c2e681d703dc2e7f8a323263c1c287690cfb808a9af8529c4b6d8f02c330",
       "bytes": 2537
     },
     "server/sim/content/kits/ops/chess_char_5_19-mlynar.js": {
-      "sha256": "1f746e83d952be710c79a9549a7eae94896ec44e2186364ef3313d737b81c34f",
-      "bytes": 8804
+      "sha256": "11760b622136daa68c32d34fcef61a6de173be6555bac4a6d6895c58a9d4a1cc",
+      "bytes": 8799
     },
     "server/sim/content/kits/ops/chess_char_5_20-aglina.js": {
-      "sha256": "dac8f8f8aa859c4711aea6b1cf4161269ecd9ac0596e8934a615361540f78283",
-      "bytes": 4962
+      "sha256": "5deb0e7354e95cfc85cd6fde9f156bdf484eac7122a503ab753311ac3c8cf41d",
+      "bytes": 4959
     },
     "server/sim/content/kits/ops/chess_char_5_21-sntlla.js": {
       "sha256": "5ee53012659dac0e9716b403e0936080e19a65aa198c36e16382c18dfe555a39",
       "bytes": 4816
     },
     "server/sim/content/kits/ops/chess_char_5_22-nymph.js": {
-      "sha256": "5c3a995293b68e804ac1a5c26c0094a11b027d4be5f53276ab823c6c9d9d4c3e",
-      "bytes": 6278
+      "sha256": "e54d3fc99e9043d6ea9dd9bb38b792f599af684d9947ce90b31b557502478e16",
+      "bytes": 6273
     },
     "server/sim/content/kits/ops/chess_char_5_23-reckpr.js": {
-      "sha256": "e75878734a18c894f10af821725138a09f0196c6107d414519ffccf1fa699396",
-      "bytes": 2783
+      "sha256": "bb0267e70d857e61de921ac7086d59abde8903307acfd9599a05590eb6bc98fa",
+      "bytes": 2780
     },
     "server/sim/content/kits/ops/chess_char_6_01-lemuen.js": {
-      "sha256": "002771ff2da32dc92a558e2577b53f7e2993b7bdfc8082cc0c527306b3164ed2",
-      "bytes": 15472
+      "sha256": "4c8ac4c2df872340d8b1a0299757f77e9157ea7a4282a51bc333034b32796b48",
+      "bytes": 18858
     },
     "server/sim/content/kits/ops/chess_char_6_02-sbell2.js": {
-      "sha256": "c2bad5876b2d7ffebce716b36caa3e7e270920f093eda541fffbabad11fbff66",
+      "sha256": "0f20e4da75ee677c7902b6c9b33ef4d5a5d10bd90b79ff3250858e574148b809",
       "bytes": 12516
     },
     "server/sim/content/kits/ops/chess_char_6_03-yu.js": {
-      "sha256": "774eda91f669f2e8f7b697a91c70b5c388f8ed634c6cc6831ebdef4836cd8091",
-      "bytes": 9972
+      "sha256": "62dd069235dba6c9add0e5f7753b687a18cfc2dbccf74681c8122fd6c58d1f60",
+      "bytes": 9967
     },
     "server/sim/content/kits/ops/chess_char_6_04-skadi2.js": {
-      "sha256": "b5e1acfc9c449dbd4a262934174c8712ac76eedf2a179b22c07c44caf5b73f7c",
-      "bytes": 12604
+      "sha256": "999569a9119b67ea14224454ea577c6d321498d9a8de052cb2c2eca3b0ef9cac",
+      "bytes": 12936
     },
     "server/sim/content/kits/ops/chess_char_6_05-pasngr.js": {
-      "sha256": "0f5c03c0252dd568f3c57fa0aebdc703cfb209297c3532b1f461ca50be55db19",
-      "bytes": 6945
+      "sha256": "6aa2383cb2669645083742b422a22d9982be39795010af6740b1b809f1db6664",
+      "bytes": 6946
     },
     "server/sim/content/kits/ops/chess_char_6_06-pepe.js": {
-      "sha256": "cb455d4018da12e7a2332062d159907c9331b16e32f19fd7b0f269e4110dbdb1",
-      "bytes": 6175
+      "sha256": "d6762d95d12a37d7663186d764588fe5a03bff5fc5056b3bf25842a12b8cb368",
+      "bytes": 6172
     },
     "server/sim/content/kits/ops/chess_char_6_07-siege2.js": {
-      "sha256": "87bf0270d9f1b344dad204129c8c4ab845c59653fb61830322377b2fbd259bfb",
-      "bytes": 7540
+      "sha256": "238c4b8126925d67457b05fe09e9f1788fe3e023c64b79cdfe154a4f4a8fca5a",
+      "bytes": 7537
     },
     "server/sim/content/kits/ops/chess_char_6_08-reed2.js": {
       "sha256": "c36e59724bf4259bba1f1bae45d67ba8b49b5f5154a50fd3320c76b0687acbad",
       "bytes": 7368
     },
     "server/sim/content/kits/ops/chess_char_6_09-cello.js": {
-      "sha256": "886e8c802571a28c50ce79ed96bb4fe56a25f4bd8c3e416da48a90c33d5d0844",
-      "bytes": 8585
+      "sha256": "c2180a958f831cb4608128338ebde220f24f1c5fbb1a61581559b6e8b7243557",
+      "bytes": 8582
     },
     "server/sim/content/kits/ops/chess_char_6_10-nymph.js": {
       "sha256": "46674e972b2f60a1210dfcfa940fd641fba38c2463fc22cda8588cf08f89c76d",
       "bytes": 3802
     },
     "server/sim/content/kits/ops/chess_char_6_11-mlyss.js": {
-      "sha256": "884636d9e20a2b6e3ce04c6f611046b3b6ae251247ebdbad6c49179f41784a28",
-      "bytes": 19597
+      "sha256": "ac08771e33e10603ff5ecc34491d314833d1e5c6edad359c60354e8b0962ba7c",
+      "bytes": 19790
     },
     "server/sim/content/kits/ops/chess_char_6_12-rosmon.js": {
       "sha256": "5db5b28cc2f8c44901efc52f19cfd84fd2a5423bb681c3b349a46c826edcc4ba",
@@ -1721,36 +2109,40 @@
       "bytes": 10509
     },
     "server/sim/content/kits/ops/chess_char_6_14-lumen.js": {
-      "sha256": "004fea06202a9e1a5252fa730a53ca8c2b3abbf5da9377f65e545e589cd534c5",
-      "bytes": 6793
+      "sha256": "c2ec2e1deaa4311d7ee9831964fffff038aa9f293eedf4965f64e7e087c7608f",
+      "bytes": 6852
     },
     "server/sim/content/kits/ops/chess_char_6_15-qiubai.js": {
       "sha256": "12bf0455dcd4e9892865cee96eaca647838199ea58d91770833ad89e336be91e",
       "bytes": 5737
     },
     "server/sim/content/kits/ops/chess_char_6_16-halo2.js": {
-      "sha256": "37548a107989102ab8f8355a9dc8e5152dff634a2ce61c721c23bd30fa7ff933",
-      "bytes": 8065
+      "sha256": "67f8c0280c0bab8a4a009082f80e76c74d82fca0de07aa207693a18407ebdf06",
+      "bytes": 8204
     },
     "server/sim/content/kits/ops/chess_char_6_17-nearl2.js": {
-      "sha256": "6eede3ec1bbda2f8c6d31d430581ec38f0df3d7bb4526720d1d0313c5a9d6fbe",
-      "bytes": 8220
+      "sha256": "443e3fc37069fde8fc342a33c3c24b12de434744129b4ee8f39e5ad531b19572",
+      "bytes": 8217
     },
     "server/sim/content/kits/ops/chess_char_6_18-whitw2.js": {
-      "sha256": "aff4f2c8cf14c6cb439aafe48b27012fce755f03165355ae3fed363a9c8d9c2e",
-      "bytes": 19649
+      "sha256": "8dcc0cb76f49bafb2915cd85fc16f1cbef8e04379056af02f3c6158709e6c4a6",
+      "bytes": 19466
     },
     "server/sim/content/kits/ops/chess_char_6_19-blkkgt.js": {
-      "sha256": "fd54aaeede9e10ad77debb9e088ba93b250a98b952a7018ba2d152cf785bbcab",
-      "bytes": 8015
+      "sha256": "ed0df5f513e81b085c135a60edf4f79897be33121ab54e5db231a8fbe45c33bb",
+      "bytes": 8505
     },
     "server/sim/content/kits/ops/chess_char_6_20-agoat2.js": {
       "sha256": "b29ed8a834d640cacebe234f40465866e000b29262852f47c73def053f9e12e2",
       "bytes": 8142
     },
     "server/sim/content/kits/ops/op-aglna2.js": {
-      "sha256": "81055cfd89e37b47430f12799b6e4f5c31780c0276b651a8d05f84fd71112b42",
-      "bytes": 24882
+      "sha256": "d481458215b3392b12eaf9e0e14139e7cc1a0c55e3b657cd931d8acb1606be8f",
+      "bytes": 24883
+    },
+    "server/sim/content/kits/ops/op-alga.js": {
+      "sha256": "aa69e2ab83df454e59a3012190bf2b01a8141a01185c29b5f96d81f06ee8f8a0",
+      "bytes": 2358
     },
     "server/sim/content/kits/ops/op-amgoat.js": {
       "sha256": "ea22dfd57b7dbd24095fb1d1b80dc38e2643b025f3b683f932a8732d75fa16fe",
@@ -1781,8 +2173,8 @@
       "bytes": 14164
     },
     "server/sim/content/kits/ops/op-chen2.js": {
-      "sha256": "763bf272e9a3ff3f95ea53ce84a8449be5b9f474e1db8a42f62d8600ce2f4aca",
-      "bytes": 17578
+      "sha256": "9de6cb6e86b62e16fc1e1935c6e0b8d613916b0526ef060a73956a4c93823bd1",
+      "bytes": 17574
     },
     "server/sim/content/kits/ops/op-chen3.js": {
       "sha256": "629794dcfaa3d0b0f63d08802b4cd44940d8016628761de4c21789277c79c178",
@@ -1793,16 +2185,16 @@
       "bytes": 14384
     },
     "server/sim/content/kits/ops/op-clemnt.js": {
-      "sha256": "9a865c53c81292e166ee23c0cd882a5a21eef019d3da78eb68eff02ca4549c2a",
-      "bytes": 13713
+      "sha256": "fbb08b535c451040c7fb3c89352a26638d110818ece4689cb8b6cc9f5c5839ba",
+      "bytes": 13153
     },
     "server/sim/content/kits/ops/op-closur.js": {
       "sha256": "d4fa6efa81aa9a041f3311a41b16eb8c192d6c7b7058663c12877c8dd30984f9",
       "bytes": 25588
     },
     "server/sim/content/kits/ops/op-cqbw.js": {
-      "sha256": "772a649173cf2bb432db372414b1ec799eb2e933909ad6e4eb6cd8873b3f18fa",
-      "bytes": 22097
+      "sha256": "48ae5fc99ff09f4a7318aaf461cdc1c96fc37628441359a0727f5c7d43669e3b",
+      "bytes": 22098
     },
     "server/sim/content/kits/ops/op-crosly.js": {
       "sha256": "3d25034cc10a4723a38dc04491c727ad379e18d0b117d65af24ddd4be5bd76f8",
@@ -1812,25 +2204,29 @@
       "sha256": "8973b414696ca854cdc20fd7821626a1dd0dc3df59f59a41de64b0bff2676467",
       "bytes": 21737
     },
+    "server/sim/content/kits/ops/op-dminon.js": {
+      "sha256": "51485b0c892ecc707b01337495b762f04b5b9ecb82123f6c328f7e9f451aead6",
+      "bytes": 5951
+    },
     "server/sim/content/kits/ops/op-doroth.js": {
       "sha256": "8ded912319ebfdbc8e825df3b4d92072a8e33373d95904fda97032380ac16d90",
       "bytes": 20462
     },
     "server/sim/content/kits/ops/op-ebnhlz.js": {
-      "sha256": "2f1103a67a71bb6e4143bdf1fa7e1369696641a599d70f1ec164378f38fee430",
-      "bytes": 21733
+      "sha256": "ca1b677a682bd639860539f183963518734dbaea40ec134ea4ba843ecbf128ba",
+      "bytes": 21734
     },
     "server/sim/content/kits/ops/op-gdglow.js": {
       "sha256": "be1b6dc9db68ae16267c040eaad541d01d0d654dc05a4c0c6d9ff89ccfcc40cc",
       "bytes": 11215
     },
     "server/sim/content/kits/ops/op-haak.js": {
-      "sha256": "7dcd93681545828e6b067d7c80c13e8b8529993968eb41a98fd147f6272d3e47",
-      "bytes": 13261
+      "sha256": "8fee94af9eafec7227818f4baa240472793db8f643ac4509e682ed11d11bfe75",
+      "bytes": 13262
     },
     "server/sim/content/kits/ops/op-haruka.js": {
-      "sha256": "26a1e71a586730458b3c9a64e40c2a63f18415f6ac067e258c7e4408584167fd",
-      "bytes": 16779
+      "sha256": "df13d1d0e9925a81b810204349903a39cc8f3772501ece34b5a9982a55b3b877",
+      "bytes": 16780
     },
     "server/sim/content/kits/ops/op-headb2.js": {
       "sha256": "9483960f8070c17c7dec14014f67d460b045ccf4d9b783f4c62167c60aad4f2f",
@@ -1849,12 +2245,12 @@
       "bytes": 12842
     },
     "server/sim/content/kits/ops/op-hsgma2.js": {
-      "sha256": "3d523dcb8ce108b024a54978772b0c219e8fba7dbdb7305e15ed1e76f8934ad4",
-      "bytes": 21883
+      "sha256": "de5d078d3ba92ece97ebf701d6714765c01b828bee5c445e257da671da1f8f7e",
+      "bytes": 21500
     },
     "server/sim/content/kits/ops/op-huang.js": {
-      "sha256": "a20984021df799d27dc53d9b28a94867f372723b78d9d9927d1b003c920a99f8",
-      "bytes": 15354
+      "sha256": "d0750af6360f7424ec77b6fec338dcce29fc3683ba0ce24edbd5eea34eff8651",
+      "bytes": 15677
     },
     "server/sim/content/kits/ops/op-ifrit.js": {
       "sha256": "1604f3b4c2468c313e406ff9b78ef466bcc41a83744183cf6ba38fff5dc47e35",
@@ -1869,8 +2265,8 @@
       "bytes": 27438
     },
     "server/sim/content/kits/ops/op-jesca2.js": {
-      "sha256": "80ac6511eff7e7113376304e58df6a86fcf1509182e4e61f0892bc4046100561",
-      "bytes": 21197
+      "sha256": "b41b123cf66194cc3a2d6e5611d77b3ff60c8b738df01b751ce168c12a0c6bed",
+      "bytes": 21198
     },
     "server/sim/content/kits/ops/op-judge.js": {
       "sha256": "8ea57be3334a264ca12fe43807b12c3b3fc5132efa7d14cb133df0bbcd01037d",
@@ -1881,12 +2277,12 @@
       "bytes": 18400
     },
     "server/sim/content/kits/ops/op-kalts2.js": {
-      "sha256": "a624fbe703452f627fa68897db11322b55618aefcfa93779e1626c0b872b72ba",
-      "bytes": 23881
+      "sha256": "2002a78ffe48087fe0c0873ffd36f4aa8726550b119ccf63bb45ac7d4c56aa09",
+      "bytes": 23882
     },
     "server/sim/content/kits/ops/op-leizi2.js": {
-      "sha256": "bc17826b893197b4efae2410c3dd6af3cef963ec6d5cbf0cd42f6b728a26bc72",
-      "bytes": 23412
+      "sha256": "f14d8f3be8d426428608e0bd68304c8e3a54f2bc2f438daf1535e0730e85ab68",
+      "bytes": 23348
     },
     "server/sim/content/kits/ops/op-lessng.js": {
       "sha256": "0344dc2970d8753da341837efc98c1efbd8b04dad61005877f39d9668c0185ff",
@@ -1908,13 +2304,17 @@
       "sha256": "1924e2993f3430a9bbb1824205338739da63428c415f0fc3d76898c52f857851",
       "bytes": 17790
     },
+    "server/sim/content/kits/ops/op-makoto.js": {
+      "sha256": "65e5565a733db1aa70c43e1dfac3af93af2bec3d18aabe2432ab4dcbd8a6abd4",
+      "bytes": 48246
+    },
     "server/sim/content/kits/ops/op-mantra.js": {
-      "sha256": "f5a0f1bb1e4648e7217b0c6fc99e2432248c5ad27846f6514f67a38461b654a3",
-      "bytes": 19472
+      "sha256": "11289c82e3d45c8912b8766951a5a9a98b810635f3615a34a417b31f11e347ed",
+      "bytes": 19473
     },
     "server/sim/content/kits/ops/op-mcnist.js": {
-      "sha256": "47f3c7df2e66fcfdb25d4cd010d1919a29efee24a4129258da3ba81e9e72706d",
-      "bytes": 25368
+      "sha256": "9fa7f89f0f8dc30911c1192a2d7fab0034410c06a48f9acd7fae4794378ef052",
+      "bytes": 25369
     },
     "server/sim/content/kits/ops/op-mgllan.js": {
       "sha256": "4088d688c827790139478a3819cc9eb0da690ccab49b444cf286bace6824db02",
@@ -1925,48 +2325,56 @@
       "bytes": 22533
     },
     "server/sim/content/kits/ops/op-narant.js": {
-      "sha256": "8a1ea2ed152a9ab26dd57ae977297e240ae6e86dfdc555c2969688b2eae73a20",
-      "bytes": 17743
+      "sha256": "1200c8aea45cd425851e5bda6bd51ac5f230ed41d7a91c7dcc7fdb7e1dfe0489",
+      "bytes": 17744
     },
     "server/sim/content/kits/ops/op-nasti.js": {
       "sha256": "e5caf22895945366826374a8bbf8796a81e2a0cb80efc87ef740836db6175f47",
       "bytes": 29022
     },
     "server/sim/content/kits/ops/op-necras.js": {
-      "sha256": "953f549187adbf74ffbd46d5e5e150c79a6d3f05f3c3538e2d1c0b83ec0a5922",
-      "bytes": 27516
+      "sha256": "69b3ed663f01474d8091b43105c1bdc62bbac3c9a118aa0c15667ceb69c1173a",
+      "bytes": 27579
     },
     "server/sim/content/kits/ops/op-nian.js": {
       "sha256": "63c00ba349cc6a2939f2044b83efc9092293794df892bae8998b536fca1ec014",
       "bytes": 12204
+    },
+    "server/sim/content/kits/ops/op-oblvns.js": {
+      "sha256": "360f27b2ca015c7dd8e93ca6b7d7e5faae34908df7eae989253191a9de27cba1",
+      "bytes": 16005
+    },
+    "server/sim/content/kits/ops/op-oxi.js": {
+      "sha256": "43ddcdc902812d27cc33db4260742b706f59d12cf5cb491f555c06d2bec59594",
+      "bytes": 11159
     },
     "server/sim/content/kits/ops/op-pallas.js": {
       "sha256": "fd48359457439dafe4ca3f47c1daaf99528a2d96be088fa7c898d0abca034c0e",
       "bytes": 11691
     },
     "server/sim/content/kits/ops/op-phatm2.js": {
-      "sha256": "3f95d825d894563d739e9d132d0c9338854fe94599b1ebe7afd05917e1f3f12d",
-      "bytes": 26347
+      "sha256": "73e58a5469cdf5a75e3d100314256d4b620d5659880e63e7436a8df04fbe2a2f",
+      "bytes": 26348
     },
     "server/sim/content/kits/ops/op-phatom.js": {
       "sha256": "8311bc318ed307dec5d891628f5b7c734ea132979b1270af014c87ecbe2e1a47",
       "bytes": 17294
     },
     "server/sim/content/kits/ops/op-phenxi.js": {
-      "sha256": "57b01486eec5a596dd29fbcc2108385ac4aebe775841a4100b5e12c1a738119d",
-      "bytes": 16467
+      "sha256": "1bafbf77ce668719f67f08d1c5717d50228c3a008026e7ea2adcdc82a490eadb",
+      "bytes": 16468
     },
     "server/sim/content/kits/ops/op-poca.js": {
-      "sha256": "406167e2168727a3ca03e2085de3431ba47fd0987bf0aba5583c3da042f14d25",
-      "bytes": 11702
+      "sha256": "ec64ed3f7598751b4994a4683d37da2e4d3f9262a4c847633a045c8d0c4b2c97",
+      "bytes": 11703
     },
     "server/sim/content/kits/ops/op-radian.js": {
-      "sha256": "7588ab04a094cf776001ce777b5e2bd4c80d486f3825be22a4ce0cb41308fdb9",
-      "bytes": 20046
+      "sha256": "357689ddef4f6bf9cb43028fe9350cb5aa36345374ca3e785dcd8c330a7bb624",
+      "bytes": 20047
     },
     "server/sim/content/kits/ops/op-ray.js": {
-      "sha256": "046372db6d621e7fd946d211b3ce29e563541d2a2ff6185d2217d91b09beb1d8",
-      "bytes": 21447
+      "sha256": "fccb3f42385389c490f6c15fa9ae0abf390b9fdbf48f3875357ea2c8f687367c",
+      "bytes": 21448
     },
     "server/sim/content/kits/ops/op-saga.js": {
       "sha256": "bc1d49f24a887171b90c7e2b6efeef1559c10e4f03afe9af845130a822bf6ff2",
@@ -1977,16 +2385,16 @@
       "bytes": 10102
     },
     "server/sim/content/kits/ops/op-shu.js": {
-      "sha256": "af9f4cbcfb8bf5cce607e50c974ad3de555bc067f1489b0f08bf94c9a63e79af",
-      "bytes": 21390
+      "sha256": "2f0c391a4488ed4f54de3d00d530fbd43b6965d4fe6af2aa3edafb9218899139",
+      "bytes": 22048
     },
     "server/sim/content/kits/ops/op-shwaz.js": {
       "sha256": "b2398d4013027e5169381a83f6d21c7d2c2070635077ff499ab8e844ed83081c",
       "bytes": 10495
     },
     "server/sim/content/kits/ops/op-siege.js": {
-      "sha256": "f83eb03282502e657150903f0528aee20c2fd2c3d51cf6e2eee5790548d45dca",
-      "bytes": 8204
+      "sha256": "e0f27cc2224f5a41521589c8afbd0f8e7c802c8d8e550bee9dba94f5854b2179",
+      "bytes": 8202
     },
     "server/sim/content/kits/ops/op-sleach.js": {
       "sha256": "f145a1203b05414d7ca2c5c59e1cc048fb62fad981615878ae8bdbe3a72aefac",
@@ -2004,13 +2412,17 @@
       "sha256": "a4523fb51abaf6ee1b4949765c79659a84281f0dc7457815ba08c3a2f7337106",
       "bytes": 21255
     },
+    "server/sim/content/kits/ops/op-tocka.js": {
+      "sha256": "645ff213fd50146177b34c89aa5a0f396338b4338ab91e2dabda8bed36b1bd3e",
+      "bytes": 9366
+    },
     "server/sim/content/kits/ops/op-typhon.js": {
       "sha256": "ca78b5ff69b86b91e15782a9c5016efc406665bb7b8a4d484348ae58836ea6bc",
       "bytes": 14080
     },
     "server/sim/content/kits/ops/op-veen.js": {
-      "sha256": "c584c582eccc4f4f4908ae0960b82d76e82eee2634a749e71dd2f0e40ab8452d",
-      "bytes": 15864
+      "sha256": "474e9bbac23b0c76666e9cd9fbffae4a8aa310218568209425d34ba2c45b1d63",
+      "bytes": 15865
     },
     "server/sim/content/kits/ops/op-vvana.js": {
       "sha256": "9ba4b21c0e5b9cdd9f69abcfc5ba06fc8ee5f51ffd93e014825c6757452e10e7",
@@ -2021,8 +2433,8 @@
       "bytes": 28243
     },
     "server/sim/content/kits/ops/op-weedy.js": {
-      "sha256": "a6b4ac079beefd8e0d7284464761fef947cadda85fe38b6067e175519c097e07",
-      "bytes": 19520
+      "sha256": "1f20e4f38634128a6dbd2dfabfc818b9ba7b084e8aa948640cd337214439c319",
+      "bytes": 19502
     },
     "server/sim/content/kits/ops/op-wisdel.js": {
       "sha256": "34d9d189e4c8aae3105ac48177d233145de0f52b45bd0b39ab1ff484de703c49",
@@ -2035,6 +2447,54 @@
     "server/sim/content/kits/ops/op-zuole.js": {
       "sha256": "b66a524353968102f48261f06a8d26f3a00e6b41467bdad7533ac60248f8efc1",
       "bytes": 17013
+    },
+    "server/sim/content/kits/ops/owner-aosta.js": {
+      "sha256": "79e50b2a2c9ec015e84d9fb98ee50b4b2c65e27016f587ca3e59dee3cf8c061a",
+      "bytes": 1419
+    },
+    "server/sim/content/kits/ops/owner-buildr.js": {
+      "sha256": "d7dd1031ecd7fe12d0480208c411cfc607bc7046636281f54d2287c3a52767cf",
+      "bytes": 1880
+    },
+    "server/sim/content/kits/ops/owner-cammou.js": {
+      "sha256": "3f03e2fae7dce60b827116a16034ccb9adf8615bf2dae59848229e25cd939fcd",
+      "bytes": 889
+    },
+    "server/sim/content/kits/ops/owner-cuttle.js": {
+      "sha256": "43ef9e6006bcea26fc8a1de15dff89134fe016f9162037480a8d21e9e90e6506",
+      "bytes": 1115
+    },
+    "server/sim/content/kits/ops/owner-fang2.js": {
+      "sha256": "23ecff3c2a17ebfdaa30ab6f118414ee384838144784c3ec6682ff373b25e2a3",
+      "bytes": 757
+    },
+    "server/sim/content/kits/ops/owner-halo.js": {
+      "sha256": "0d54eb45f5f24b58cf0a8fbc3f41093b1177d6e2b9cfc54e6843145d4a1aca7f",
+      "bytes": 1362
+    },
+    "server/sim/content/kits/ops/owner-ju.js": {
+      "sha256": "ccecafcc7ad07fa5956a2617681e4adf1f0e44bca54b93e7ae4864c209d1e6bd",
+      "bytes": 3740
+    },
+    "server/sim/content/kits/ops/owner-kichi.js": {
+      "sha256": "97f57354284ac57fe58b81926aded75cac4ef15b0655914a4ef98c93bbdcd941",
+      "bytes": 2126
+    },
+    "server/sim/content/kits/ops/owner-liesel.js": {
+      "sha256": "936f6286ab9ddcc11d07b4e07fab27115350caa639c2dd87f1154a9f197110cc",
+      "bytes": 2540
+    },
+    "server/sim/content/kits/ops/owner-mitm.js": {
+      "sha256": "50b65b6e77ea2ad64965ec52746b6ce0f89e6b150093c02a30f78499f683ca2c",
+      "bytes": 5634
+    },
+    "server/sim/content/kits/ops/owner-swllow.js": {
+      "sha256": "7342a7cf1be562fb634541c62215a1d7bd7733a4b38c7e8c203e09d695992d50",
+      "bytes": 941
+    },
+    "server/sim/content/kits/ops/owner-varkis.js": {
+      "sha256": "be27475e4fdc9b3db1a68704932f01e34668fd5476cd3e96522a802c8360b552",
+      "bytes": 2080
     },
     "server/sim/content/kits/ops/standin-accast.js": {
       "sha256": "342bab471e69a17a77f4292438e58b9e27903881954eb90b1ac9a8d486d7a302",
@@ -2072,6 +2532,118 @@
       "sha256": "af590f67ad5dd1e4d25b62169214bbe41f7b66d0a3aec3f0e1cf6704be87206e",
       "bytes": 3806
     },
+    "server/sim/content/kits/ops/ver-aurora.js": {
+      "sha256": "b80cff3998efbdaf8dae2a5cff4e0e02d8907391de155a782c0fb22a5cb8b0ee",
+      "bytes": 3333
+    },
+    "server/sim/content/kits/ops/ver-blackd.js": {
+      "sha256": "499ff3d015a762cc3116482a6d3cef49fa743c1a190e6295e012ba707ec2edd1",
+      "bytes": 1921
+    },
+    "server/sim/content/kits/ops/ver-ceylon.js": {
+      "sha256": "23754738a9fe795944b467c4f31ddf58c9096b60f1dba3afa25e5eaf7550d678",
+      "bytes": 2424
+    },
+    "server/sim/content/kits/ops/ver-cuttle.js": {
+      "sha256": "e6b8286e84344f6209ea2b7d7ce1e176d89f55ed4cd3acc370831a07b1ec890a",
+      "bytes": 2460
+    },
+    "server/sim/content/kits/ops/ver-diy.js": {
+      "sha256": "83249861aeaa7cfdff9e8276649567090b6950506cec0a92e4bebafd5d59cec1",
+      "bytes": 4627
+    },
+    "server/sim/content/kits/ops/ver-ethan.js": {
+      "sha256": "88f0374d6efef7907d8f7416f7ac4f1c945afe3e9bb6f40f72fcea0ad6aca4f9",
+      "bytes": 2278
+    },
+    "server/sim/content/kits/ops/ver-fmout.js": {
+      "sha256": "eb4516194cbb803f1134488978a8eb94993509027bbcc0caca253483352820ec",
+      "bytes": 2073
+    },
+    "server/sim/content/kits/ops/ver-folnic.js": {
+      "sha256": "e00ca1bf38a13f6202fd7b68c4674653c7a646f1f892bd72f5289af9f78c3d8d",
+      "bytes": 2775
+    },
+    "server/sim/content/kits/ops/ver-glider.js": {
+      "sha256": "a70075ef3f7f2728d7e3aa84d8affa3330ef762c6297372b0f6345e0e0e244f3",
+      "bytes": 3011
+    },
+    "server/sim/content/kits/ops/ver-halo.js": {
+      "sha256": "856563158f914f5566f3530b6e65582830cdf089666ab46395a54f1e048d9608",
+      "bytes": 2180
+    },
+    "server/sim/content/kits/ops/ver-heidi.js": {
+      "sha256": "e3ca9c935dd4dfe5ef70073bcfc8ec199c57a813ab972fcd18805e6a534e73c7",
+      "bytes": 2976
+    },
+    "server/sim/content/kits/ops/ver-mantic.js": {
+      "sha256": "10d9e2af5a7a803a7dd068cb7b52eb171c242a12f8001c104d8742d9a5b08f83",
+      "bytes": 3115
+    },
+    "server/sim/content/kits/ops/ver-mberry.js": {
+      "sha256": "750213ce452c5b7976cb73c3f7fb0b07a4cc835a2cb67bc5b581feaa5ad64e18",
+      "bytes": 2851
+    },
+    "server/sim/content/kits/ops/ver-mm.js": {
+      "sha256": "d0ec90c7546268c9419e3477330335ea4cceff1cf18ae5ca8c28fddfa60d98d3",
+      "bytes": 1718
+    },
+    "server/sim/content/kits/ops/ver-pudd.js": {
+      "sha256": "afa7dd8eb46cbfc2a7e38b066e045900b85f648aba7cfba9f4c0b13b769c85fc",
+      "bytes": 1050
+    },
+    "server/sim/content/kits/ops/ver-savage.js": {
+      "sha256": "3d3b5e1955b239194732bfe8be4344664fcba308f6423bae5fefc4d726019071",
+      "bytes": 1712
+    },
+    "server/sim/content/kits/ops/ver-spikes.js": {
+      "sha256": "cd12261ffe202d6d40d58b785f8246aed129e7b53786ae9ae122f4519040f84a",
+      "bytes": 2161
+    },
+    "server/sim/content/kits/ops/ver-waaifu.js": {
+      "sha256": "f75a3923db375ed91cee17138a04079aad84a7559ecd4327c0a44db7f7ca09b7",
+      "bytes": 2627
+    },
+    "server/sim/content/kits/ops/ver-wanqin.js": {
+      "sha256": "9e5317da2eb2a40827de9e83bd2135597fcfdeb7410e7cb1e46320fbaabdade1",
+      "bytes": 3790
+    },
+    "server/sim/content/kits/ops/ver-zebra.js": {
+      "sha256": "87839853dc9b0b877270a5a9be77f122d8dc24d5ead4b8b065650abdd76a3491",
+      "bytes": 2463
+    },
+    "server/sim/content/kits/shared/ark-update-20261101.js": {
+      "sha256": "045c89dd651d3941003ff0be65d10cc72f7e85bcc5063f6959a97863e5f9d8ae",
+      "bytes": 1867
+    },
+    "server/sim/content/kits/shared/ark-update-modules-20261101.js": {
+      "sha256": "934549dfa61e694941fe9ae1b6b90d3f00912888182e7c95e0a17bc8736275d1",
+      "bytes": 3675
+    },
+    "server/sim/content/kits/shared/borrow.js": {
+      "sha256": "f2b4f48524b49f692cec35a7c5f8afd28b86d462bd4b4f93058ec019f3f138e7",
+      "bytes": 4596
+    },
+    "server/sim/content/kits/shared/hornWebModule20261101.js": {
+      "sha256": "fccba6ae610aa6208c96240790373a633a3cbb31395bc75f48aab6011fc84463",
+      "bytes": 3850
+    },
+    "server/sim/content/kits/shared/injury.js": {
+      "sha256": "6d016aee0e5c70ae1ed6fdb45a8b502aabde739f4cbf8aa148950b5b41ae9835",
+      "bytes": 908
+    },
+    "server/sim/content/kits/shared/lord.js": {
+      "sha256": "22bf4e06d6625bf312637295b38d8b6f4eb50c266585627762d1b35f1ef9298d",
+      "bytes": 771
+    },
+    "server/sim/content/kits/shared/mod-tier3.js": {
+      "sha256": "85a3c1af4ea1b25005ae340d84b770252d2a858e2eeae531efe90a6a04f8e382",
+      "bytes": 5985
+    },
+    "server/sim/content/kits/shared/operatorSfxSignals20261101.js": {
+      "sha256": "edff51550d059446a9bfc41cab7497b4494bec9c1f1354e504e7080104320daa",
+      "bytes": 965
+    },
     "server/sim/content/kits/shared/summoner.js": {
       "sha256": "ebce68011fb2a1d54154487a2bfdb6c0b1c8d1b42b09ba3de1ac8c2567e656fa",
       "bytes": 10307
@@ -2097,28 +2669,48 @@
       "bytes": 13924
     },
     "server/sim/content/kits/shared/tier6.js": {
-      "sha256": "a0620fdb9316b6ca3e18ffd17a16f309c97c628851078df67926c2543d44f9fc",
-      "bytes": 20763
+      "sha256": "c554f618d757e1ec580bf463636c360e584f0888dff052b6de4ce0bb72e6d2b2",
+      "bytes": 20764
+    },
+    "server/sim/content/kits/shared/version.js": {
+      "sha256": "370ccbad8ccf0df0f9738431383036437ea80426bb6a65f7f8922f67bc82f147",
+      "bytes": 6913
     },
     "server/sim/content/support/index.js": {
-      "sha256": "5a77ff5b905d33215740b8e429767fe713e518e8ecad48463c8f73952a09441a",
-      "bytes": 18935
+      "sha256": "c052f764dae2b79a86b5caee7db7dbac76c0e9e920f714da245023da86843d51",
+      "bytes": 19909
     },
     "server/sim/content/support/meta.js": {
-      "sha256": "c6c357add3da407d38576cdccf401e1407a06965ab99fad248c784d1c7571b73",
-      "bytes": 4739
+      "sha256": "1ee3458be1815947a3a6d7fe996d0fa7cb45cce31d287fe236d1b45f03ecb4e9",
+      "bytes": 5630
+    },
+    "server/sim/content/support/ownerLayerCap.js": {
+      "sha256": "f9bd08f29af955e6b3c1b1a0faf50123bfe93b019196783c548556138e03b81f",
+      "bytes": 973
     },
     "server/sim/content/tokens.js": {
-      "sha256": "5a83468516791a7c64de21906f79fc849b9cdf12c611f642129a8167cc5c618d",
-      "bytes": 107748
+      "sha256": "89bcd75d35246e52f813a97514970e519be50e14f51a46e0dda4746272811685",
+      "bytes": 111174
     },
     "server/sim/content/traitMods.js": {
       "sha256": "6ae635fdad23f0e0144e068ab3b21124b87658199db75c723c15cc0a755be695",
       "bytes": 14829
     },
+    "server/sim/contractSupport.js": {
+      "sha256": "15103b3175cafb8442172e537e272a4e7481c5b5f20309f8e772f1530bc5aeda",
+      "bytes": 4275
+    },
+    "server/sim/cosmeticSkillHits20261102.js": {
+      "sha256": "8df414c1e6839c0fbf6b8b07c38e82c2045146f03033125f016a0503bee0df40",
+      "bytes": 2778
+    },
+    "server/sim/cricket.js": {
+      "sha256": "1ca2272e847e9f6ae50f75ab36e6aa6acbfcff8659922ce29a3367e416b148ed",
+      "bytes": 3459
+    },
     "server/sim/damage.js": {
-      "sha256": "ae64cbdc4e77188713674f67ed01e876dad27582c5e40f3dbc389c4b59b61a9a",
-      "bytes": 40814
+      "sha256": "4cfd53624662c59972de475ff699e6b2b5a35ea1fffb80f2190c1fa8ad5feb49",
+      "bytes": 45522
     },
     "server/sim/detmath.js": {
       "sha256": "31c0a9de55d5addbcf8cbff211d3e2adce6d1c083eeb3f43bed53889b2293615",
@@ -2128,25 +2720,45 @@
       "sha256": "2eff762512dfd5960f37e9cdf45bf1e635a11d8a69216602ab4c27ed5172e0ae",
       "bytes": 4788
     },
+    "server/sim/dminonRealm20261101.js": {
+      "sha256": "958f883fcd8b1d9496faf6e545f58d6f9435814dd9fcc230670fce211e66d810",
+      "bytes": 2956
+    },
+    "server/sim/elementContribution20261101.js": {
+      "sha256": "72565779bccadc2647554dcc8151f4d22aec811726532a1b5e256f7abc22ed7f",
+      "bytes": 2021
+    },
+    "server/sim/eventTeams.js": {
+      "sha256": "6476989b9430a371691c49b57042eb448aac68aa575315e869dace64a97baeae",
+      "bytes": 1633
+    },
     "server/sim/fear.js": {
-      "sha256": "a3547563fa1d226b7091c75a6c37f99a0399e0d35022563a67b1e97bc672886c",
+      "sha256": "336c3a2b7f3704b3a047bd665444959f75ac90244393bb348f37602d6f9a501c",
       "bytes": 11378
     },
     "server/sim/grid.js": {
-      "sha256": "5791f7b17b97cf3e33085043958213e9d147704dd988b92ff46c4513a5aaeb41",
-      "bytes": 31452
+      "sha256": "fe9b5dad94db7134a54e3054aed8eb6575c7c594e91c75a66c3cca6c5b802b78",
+      "bytes": 31335
     },
     "server/sim/groundPaths.js": {
       "sha256": "7ba06bced6d7b8dab6cf14e1f632ac7d85714aeb766d9416ce842778b8eec388",
       "bytes": 2753
+    },
+    "server/sim/hitCountDurability.js": {
+      "sha256": "227277a9bbcc60fbf8b8e9fad4c8597f2f7e8356cdf9e0f21eb45b5c9c3fb118",
+      "bytes": 766
+    },
+    "server/sim/negativeBuff.js": {
+      "sha256": "ecf65a851406327eede5393f32020940256c86b98bf41011aae72a08e34ae580",
+      "bytes": 1455
     },
     "server/sim/nodeData.js": {
       "sha256": "b411033b4ca0db06857c6ec6aec8185bcfda3197ebc9a66667e1f18bac11af00",
       "bytes": 2563
     },
     "server/sim/professions.js": {
-      "sha256": "e9a197d33cb745635615f80a50ae89d3f27d1a05eb172d74d224dcb293ce62c7",
-      "bytes": 46337
+      "sha256": "387496f72709952f348f32fd829c559093ae7535a86080525eaf0c5585432c7c",
+      "bytes": 46077
     },
     "server/sim/projectiles.js": {
       "sha256": "05f2b4e3a1a611aa93bc4f9717af212ad379c46d139902317f5b698f4188f2d6",
@@ -2160,29 +2772,61 @@
       "sha256": "e5f41d979aeed27d0375488c21f1dc717498ba4222f8a4452dc03b979e00fc5d",
       "bytes": 2136
     },
+    "server/sim/roundEventEnemies.js": {
+      "sha256": "68e11105a521d177423fa260d534eb02bddba8d306c3dde2411c15b402902aca",
+      "bytes": 4710
+    },
+    "server/sim/roundEventGeometry.js": {
+      "sha256": "5780ea967182f8b7bb005f0cba641ec3d9849613433110c78f978378d1d8c36d",
+      "bytes": 4016
+    },
+    "server/sim/roundEvents.js": {
+      "sha256": "7b6d59077042180063ee16684d2c6764962089fd1596632cae4f1c688a93e1a9",
+      "bytes": 5282
+    },
+    "server/sim/routePrediction.js": {
+      "sha256": "719b6689223349d4ac35195a285af100ea6e57989469dd1bbe1e4319b7d77b79",
+      "bytes": 9400
+    },
     "server/sim/simdata.js": {
-      "sha256": "5066c960c7f18d51a0c70ac59170736682ff96c983f1bf0c700640f80fbefab6",
-      "bytes": 46681
+      "sha256": "b9eacf5d7a4d13a19bd41088732c1564806418fee0caca295b613004db4c28f8",
+      "bytes": 47232
     },
     "server/sim/skills.js": {
       "sha256": "b6ed6582b3e773d391199f33702c5a9befe64bbfa59d0953cf5600b6c1f4fc2d",
       "bytes": 40044
     },
     "server/sim/snapshot.js": {
-      "sha256": "a459bc2e8a4fca081566b51c65da3c4f28770d3cc1329facb725fad874736671",
-      "bytes": 13339
+      "sha256": "35c9ed2e46c7fdf1315bb219597cf78d028b7950900626a55edc872f6ffed790",
+      "bytes": 16022
     },
     "server/sim/spec.js": {
-      "sha256": "5618e6624eff1ca8ccfaec9f4d5d96112a4184176da8fc2f25ff8f087372c79d",
-      "bytes": 28315
+      "sha256": "25b18c3b24d9fa52c0019b5e8eaa80a0419abc58f965ff106a84be8e39360267",
+      "bytes": 32197
+    },
+    "server/sim/studioMirror.js": {
+      "sha256": "765ae101e3a573c33b48d3e429fb07415139beae339a2740c900f1d13020ba55",
+      "bytes": 12012
+    },
+    "server/sim/studioPatriot.js": {
+      "sha256": "ca5da585b84e447bec7e17cb13440548877265b027e2730c0c57c2163cf241fe",
+      "bytes": 4484
+    },
+    "server/sim/studioPatriotAtmosphere.js": {
+      "sha256": "6d59c434c99438cf29c5675dd6a7abd0e95dd4400bb967b81d692bf651a9c1e4",
+      "bytes": 3521
+    },
+    "server/sim/studioPursuer.js": {
+      "sha256": "5ac25f802f3f69008e026f48ff86c422c2b4946b8e9e7e1084e81298c7761674",
+      "bytes": 5725
     },
     "server/sim/targeting.js": {
-      "sha256": "ae6ea4294a46c130c7dd4eab18e13e074bcb4164299a1c61af37a403090e723c",
-      "bytes": 17911
+      "sha256": "d8ec98c276595b3f222b023e1ee32c1c9acf5e40261138d02b6a5a14b10a5247",
+      "bytes": 17716
     },
     "server/sim/units.js": {
-      "sha256": "51ad612fe72b8db5b16038bd82ffc8390f26185e5123278228aba07a4cfd595a",
-      "bytes": 14877
+      "sha256": "90628e352c41ee9d7f0d6f2d8fbcc79b57b8d6c938cf1a3110d051c82e293334",
+      "bytes": 15579
     },
     "server/studio/authorMerge.js": {
       "sha256": "1537b52f0ca040e6c821d3ace5c1d6b7f6baa3f9273f0915f9a1e9b3d47801e2",
@@ -2408,6 +3052,22 @@
       "sha256": "1303eeb89381118d2de4729891389e2a9db0adf8b43248668bd8d5bf20639a08",
       "bytes": 105885
     },
+    "shared/additionalLeaders.js": {
+      "sha256": "2a3b9d320af53ec46e61b8c19b2e95241f2d2b622b69cdc1cbde4741d5332e83",
+      "bytes": 1322
+    },
+    "shared/arkUrsusCarry20261101.js": {
+      "sha256": "74c9e486e73559ac939b0c48a44dcd768a5f299e123ad3dd342e1aa8212075e8",
+      "bytes": 1511
+    },
+    "shared/arkWebTraitRules20261101.js": {
+      "sha256": "f14fc966843235dda7a4559307a68bce4d46487a7595e2bfbcadc8933ae66cf1",
+      "bytes": 1015
+    },
+    "shared/arkWebTraits20261101.js": {
+      "sha256": "49527631ee5e1c98a5078d35b2795531d4586ecd99fca8078dde9cf3389a9ff6",
+      "bytes": 3790
+    },
     "shared/assetPaths.js": {
       "sha256": "5a4dec54b49954fdf5987e047fc773e67485ed8b303bae53f64046c56c5c61e2",
       "bytes": 4754
@@ -2420,17 +3080,93 @@
       "sha256": "d21c74c25b4c93dbf38d758cf683fdd769853a914abdee575de117e2e445b09a",
       "bytes": 29496
     },
+    "shared/blacksnakeRoster.js": {
+      "sha256": "2bc52141042fae8e2b511fee5a7332fb8183ce8efafb052f047caa4c8716a3a1",
+      "bytes": 572
+    },
+    "shared/bondTimers.js": {
+      "sha256": "7609ecb9c47c5305dd12d7c7498301b01d1ae23499db39693549ceb4300a706b",
+      "bytes": 1030
+    },
+    "shared/bossBurstGuard.js": {
+      "sha256": "2b71fb6da78c6591c0f8295522b53150243ad8a06af8389471e251b00be4a910",
+      "bytes": 4141
+    },
+    "shared/bossEscortSchedule.js": {
+      "sha256": "ef50456fd2043c81020162d6297c1c4b8cbeef926f743b557e549fb66f40dc6b",
+      "bytes": 4324
+    },
+    "shared/bountyDifficulty.js": {
+      "sha256": "5054a6e90e76973c05b94090a9fb0e50f1c4a05adc5a0454ba348ec404d850b6",
+      "bytes": 855
+    },
+    "shared/bountyRewards.js": {
+      "sha256": "be3cdcad21c6019c4ee02889881131a8d6d5f8bf9d81fe9dbf6c9e83ef65aaf8",
+      "bytes": 4111
+    },
     "shared/constants.js": {
-      "sha256": "ff48a6fceebbeb9d3eee74725d953c81e3f576a64023e779811cad46b480e323",
-      "bytes": 22602
+      "sha256": "78a0358935fe1943fa33d008ccae2d47809b7642ab53c6bda6292915d3360bd2",
+      "bytes": 48361
+    },
+    "shared/contractBountyEconomy.js": {
+      "sha256": "6dc3df61c3671a79e0de20b47babd47ec60c78553623da0f373726c6ac361733",
+      "bytes": 3342
+    },
+    "shared/contractCompletion.js": {
+      "sha256": "9abc1a9c0a1e140990445ca35947012baf556af82da48316a0b499580230d9e1",
+      "bytes": 4920
+    },
+    "shared/contractDescriptions.js": {
+      "sha256": "273658ab8b333ade2b9b19267e45354b8b402de101ec359df9300d83eefaa8fb",
+      "bytes": 12269
+    },
+    "shared/contractEffects.js": {
+      "sha256": "dc5bcb0ba071115395df6cffed91ed931f846449824e3d931167b7cb5517fcda",
+      "bytes": 16316
+    },
+    "shared/contractExpansion.js": {
+      "sha256": "f1d5baed28cd4bf130104bb74aa28a6c9a9f7de44ecb6c9fcc526a26e167d63e",
+      "bytes": 7456
+    },
+    "shared/contractPactVariants.js": {
+      "sha256": "938913a8ed3f78a60014a03e6de5cdf4222793adabd5b0f3e10c8c610022a9b4",
+      "bytes": 2770
+    },
+    "shared/contracts.js": {
+      "sha256": "0802d1cc5a81a22d4944432c2c6494300700775168e98dc2f9690c83e09bc235",
+      "bytes": 70001
+    },
+    "shared/cosmeticSkillHitPolicy20261102.js": {
+      "sha256": "30b8a6ced80a79aa300007615398df57f21a317979de0d20292526429d07a1b7",
+      "bytes": 495
     },
     "shared/diy.js": {
-      "sha256": "8240720f174b49cda0f5199eda1c9c14f8b7eec411c7e35ff3a5d412d036c346",
-      "bytes": 17250
+      "sha256": "9f9a4fe2d8a15a245b01dc5b9fcc50918cfaf1457eb1e63895f15758979aa1ae",
+      "bytes": 17379
     },
     "shared/enabled.js": {
       "sha256": "3b98be25b0ce179930af768c063a33cf7c28ef6b723e177b6e82bb78b28802aa",
       "bytes": 5329
+    },
+    "shared/enemyPressure.js": {
+      "sha256": "95efad40561ce2ab9092c8e2250c36bd85516c7a5ae88f9675b4ea0a28d74285",
+      "bytes": 4257
+    },
+    "shared/enemyResultSources.js": {
+      "sha256": "d2e40c66e4fc703364eafc883aed03037f55209a8b1c5b7d76d86149460e8ff1",
+      "bytes": 1147
+    },
+    "shared/enemyRoles.js": {
+      "sha256": "a46f076824cf4f315bc8d2aa1d565483ac9950598d3bff3b7cb63268a5858112",
+      "bytes": 951
+    },
+    "shared/enemyThreat.js": {
+      "sha256": "e0e399058a06f5ca6baef26c6fae00004a524b2686e73869f24434894fc24c7b",
+      "bytes": 6492
+    },
+    "shared/enemyVariants.js": {
+      "sha256": "4192eaa133aa68201cce05d21a1fa4421a9462b68690bcfea904fdc68829ad62",
+      "bytes": 1235
     },
     "shared/formNames.js": {
       "sha256": "459f51f889474b3829c5d26b436ccc83a5e985c03f9e60849cfcb8c8c63e116c",
@@ -2440,9 +3176,21 @@
       "sha256": "26400c539fad3a20e96fc9a0fe2f63472a835d57193735761ac50f5797702ba7",
       "bytes": 8631
     },
+    "shared/hexes.js": {
+      "sha256": "3cd24efabfe5d2290e3c0f463c704d2a334a01bd77e0c72ef866769761d4fcc1",
+      "bytes": 47054
+    },
     "shared/highGround.js": {
       "sha256": "b987b4e79399abf7ba776ff45d01b00d868b37c68a5911f204d2dcd1bb166123",
       "bytes": 2871
+    },
+    "shared/hornWebModule20261101.js": {
+      "sha256": "8eea3bb872d0d505322f556fb27912831ac8dae12fa9eef4849ae28124df07ff",
+      "bytes": 541
+    },
+    "shared/huntProgression.js": {
+      "sha256": "f7c31c9404bf2ec089d19b69138c7abf0c4f896e962f4fee897039e3ed695748",
+      "bytes": 3527
     },
     "shared/i18n.js": {
       "sha256": "0ff38ff54043dcb6abd3259f543b6065c1e7baece77709e89c16e7efc62b41cd",
@@ -2468,9 +3216,21 @@
       "sha256": "10cb2811b545d3bd28bc0dec7e05de53e3c64dffccedc73ebf9d733ed17be497",
       "bytes": 13361
     },
+    "shared/leaderEscorts.js": {
+      "sha256": "3d608d5bea702e25094b176145c3f753790e7bfbc92280d07b99ad095a36d675",
+      "bytes": 2333
+    },
+    "shared/leaderSpawns.js": {
+      "sha256": "7d8acc165666b14795d2ad510ff02c09ad909a85cf4b516885bf3a392739ded9",
+      "bytes": 288
+    },
     "shared/loadoutRecord.js": {
       "sha256": "2a3a5df882511f55a4db4c55e6ae5137dd4cf2407295bbd72c8147b44d3506c9",
       "bytes": 13458
+    },
+    "shared/mapCharSpot.js": {
+      "sha256": "25914b2a64ca7be079598fbf7499cb62821b9d8e99ad5835b786386a5372aa69",
+      "bytes": 3087
     },
     "shared/media.js": {
       "sha256": "ba69a3950cc1d64a4b9d32960f8e3b559f62e7877f80c6e1948b273d1e588770",
@@ -2484,6 +3244,10 @@
       "sha256": "5c7e7f4628aa19d87b41fe2683fcdcfe1fbc684e6fb3aac214e1001d0dc12b58",
       "bytes": 23887
     },
+    "shared/operatorSfxModes20261101.js": {
+      "sha256": "de91e1f6957906c1907e0cd65712433ed287ac6c5f4de73e5ee78b7765228543",
+      "bytes": 963
+    },
     "shared/packForms.js": {
       "sha256": "99c027e557bcd544dbdd71e0d7d7da3b88d046574597863f89bbe5ce61ee037e",
       "bytes": 13298
@@ -2491,6 +3255,10 @@
     "shared/packs.js": {
       "sha256": "f056f4bd1de9bad11e2b85b6b241719c51bf59339fe65aa9e794e26570de21d3",
       "bytes": 9196
+    },
+    "shared/pierce.js": {
+      "sha256": "fad62f542548280f20ae1bfc3b4f73fe6a88815b2b6267d90881fd9d66d7020b",
+      "bytes": 6436
     },
     "shared/plugins/catalog.js": {
       "sha256": "5a74fd9311fe85ab84f45dcda11ad865fc79a5a8386081281a874d8a645d89d4",
@@ -2513,12 +3281,12 @@
       "bytes": 7276
     },
     "shared/plugins/limits.js": {
-      "sha256": "107aa84a28511fb05f6e33dcde9b1b54e073bfa55c6f5ed8fdaf119318d58af7",
-      "bytes": 3842
+      "sha256": "e0ab8389d921b4284b4162f38bd1d245c3511d073b0355847075af0a1bbc9de9",
+      "bytes": 3927
     },
     "shared/plugins/manifest.js": {
-      "sha256": "87b7a594dfbcdd975145ca1a69b2bd3470b6b1481da9c110fb38cd736cf2641d",
-      "bytes": 63982
+      "sha256": "00c2d53ffaa7ed0c87a8fbfc0107e13bd8e5731dd92ef33f50f3dfc1c6804db8",
+      "bytes": 65531
     },
     "shared/plugins/notices.js": {
       "sha256": "e5fb93e7fc45fbbae05b8d358ff064bdcc83e08dc2b742f2a8b5bb7494503d88",
@@ -2529,8 +3297,8 @@
       "bytes": 16680
     },
     "shared/plugins/officialBounds.js": {
-      "sha256": "34a35870cd47e69d2448d8c3e8bd7241c26f1e0993edd028008fe022257bcabc",
-      "bytes": 15027
+      "sha256": "486f67c8e59d6237e8c8a305ea29f21ac2f0b7da0e0fe47871b63f6e04ba9ed2",
+      "bytes": 15145
     },
     "shared/plugins/order.js": {
       "sha256": "b111a9e38770864aa9e03bb27bbd222f0f6726c2545d14d505ef164969c64e52",
@@ -2597,8 +3365,8 @@
       "bytes": 32798
     },
     "shared/plugins/validate.js": {
-      "sha256": "6d95ac9cd1ad6c874a04bcb53115e7ac0d0d0819fed3cb3faddf5d96b7811dfb",
-      "bytes": 24966
+      "sha256": "6c2dc9abb60a5c3779e01b8ee99b676a18c460677ef06821ae930240c0abc721",
+      "bytes": 26477
     },
     "shared/plugins/visual.js": {
       "sha256": "ac45cb8b914653b2199e4d82cd00f80e9f03cd7b5d697c2e7f68ca6671d09456",
@@ -2609,12 +3377,40 @@
       "bytes": 11883
     },
     "shared/protocol.js": {
-      "sha256": "69e75a7dffa5b55a4d3f024890ab2beeee6bb00edc3c1a8afaf0fb63f46d6a38",
-      "bytes": 50585
+      "sha256": "22246c65b4035fc2ad24e070395b43d355344b905a9b09348464d2932f1c2f5d",
+      "bytes": 60584
+    },
+    "shared/pursuerEncounter.js": {
+      "sha256": "a9200752354c6331d6bce57655cf062185508f47bc189104da2e506e7f7393f6",
+      "bytes": 2069
+    },
+    "shared/pursuerRealm.js": {
+      "sha256": "6289d2a0ef5de76e2efc5fdc1ec51f71b50af97a51c36b6ae348bf5d5bdf329d",
+      "bytes": 1147
+    },
+    "shared/pursuerRoutes.js": {
+      "sha256": "6a1acb8d48fa1dec3efdb1f0c7abbd2c2348a136ddfcb960cb4df759bb1185a6",
+      "bytes": 2617
     },
     "shared/randomMode.js": {
       "sha256": "d928caa6e6302b8477ccfcf2914e30c6eef5376dcf75e02cc38a2dcc83dd6b89",
       "bytes": 921
+    },
+    "shared/returningBoss.js": {
+      "sha256": "b7f282ec75f34efcdb7aecb27ba7b7bda6e0d61cdf60becfec2205d9ce3a0bb8",
+      "bytes": 478
+    },
+    "shared/rogueLeaders.js": {
+      "sha256": "42244f82831821239c72bce11765db829b81797eb2a2fa9355f7e6b57de3c3fd",
+      "bytes": 443
+    },
+    "shared/roundEvents.js": {
+      "sha256": "de03eefbae1b2fd575c9a80445d3c8faea00a44c6416c8ebe7ff8473fcd13d94",
+      "bytes": 3379
+    },
+    "shared/sanctumAutomaton.js": {
+      "sha256": "10ae35cece6522b4267e3170da08b8177ef08af97cf5553d396c1807c262c82a",
+      "bytes": 617
     },
     "shared/sha256.js": {
       "sha256": "e11d2a14c88e2cd6e4f74d3675dc3ca83eacf7c625e64d57fd3d6aa1103627e6",
@@ -2628,13 +3424,25 @@
       "sha256": "a35bba124a5ca9d240c304ff0c3351ee7c1fa0aad2f1ca9556a4d7962dd63257",
       "bytes": 1589
     },
+    "shared/spyInvestigation.js": {
+      "sha256": "0f00fef5321bb552ff34a83c6e48475a093f255b14ce9d6e5d46116725dc8f83",
+      "bytes": 3284
+    },
     "shared/standIn.js": {
       "sha256": "237b59e9bed89a42feee7cdf97710ce878e917320dc09f88b95c9cb2e390664e",
       "bytes": 9757
     },
+    "shared/strategyBoost.js": {
+      "sha256": "45980094509bee966584c577413399b3333b24668f37c05a9710bf9d56ba2db4",
+      "bytes": 7853
+    },
     "shared/studio/scenario.js": {
       "sha256": "52a137c2e3917d4fdbe94d4c16b1b83935ed821e77a45fbb33ac6bd705840ef1",
       "bytes": 9138
+    },
+    "shared/suiArena.js": {
+      "sha256": "333b045ac55e237c84248cf99d69f194d300b249a0fd34df741a97d277aa4b84",
+      "bytes": 1663
     },
     "shared/summonPlacement.js": {
       "sha256": "29908babccbc209bd219fe542dcd3eddb7138183f7ecd820e575af8448573492",
@@ -2648,9 +3456,25 @@
       "sha256": "863433f350a4ed1beb6ad07c71579f3e17cbcec7d380e44422dcddc4e10f99d2",
       "bytes": 9361
     },
+    "shared/trainingEnemyCatalog.js": {
+      "sha256": "7ea7d7284a3e76b1849e79805ea0408c9e8560ba3b0bf16af1bf7bd344f3240b",
+      "bytes": 15602
+    },
     "shared/variants.js": {
       "sha256": "3be083a384e0cbf43b8a0191d9879571b6ac8f4b8fa89fc2b16006c6f17b1d0d",
       "bytes": 17084
+    },
+    "shared/versions.js": {
+      "sha256": "90fbc4920fbe89be345571f27c701846369f7083bcf83c4993ea3cef31ca046b",
+      "bytes": 4132
+    },
+    "shared/warLadder.js": {
+      "sha256": "afec184fc5c42fcffc939b201b01b686099dedc5c269f481d30379e3283f8bf2",
+      "bytes": 2523
+    },
+    "shared/waveProgression.js": {
+      "sha256": "5ab520b2a663983648adf847e286bb426b184e77ada1dca1ea52eaae8b033377",
+      "bytes": 837
     },
     "shared/workshop.js": {
       "sha256": "f9dacc68a6cd6c6a121fed3e9157040686346da3a8cca8d23d599b903e3dca12",

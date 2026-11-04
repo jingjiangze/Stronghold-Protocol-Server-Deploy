@@ -1,9 +1,7 @@
 // server/sim/content/kits/ops/chess_char_3_11-snhunt.js — 雪猎 (char_4211_snhunt) kit, tier 3.
 // Conventions of the tier-3 kits: ../shared/tier3.js; kit contract and rules: ../README.md.
 
-import {
-  num, defOf, talentBb, traitBb, selectedId, altSkills, instantKindOf, alive, fx, textCount, enemiesOn,
-} from '../shared/tier3.js';
+import { num, defOf, talentBb, traitBb, selectedId, altSkills, instantKindOf, alive, fx, textCount, enemiesOn } from '../shared/tier3.js';
 
 export default {
   // ---- 3_11 雪猎 · 猎手 — S2 风雪连弩: instant special-bullet double shot (higher vs non-moving targets), charges;

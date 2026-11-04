@@ -43,9 +43,10 @@ import { boundedCount } from '../../../../../shared/plugins/limits.js';
 import { bbCap } from '../../../../../shared/plugins/officialBounds.js';
 import { textCount } from '../../../../../shared/plugins/textNumber.js';
 import { num, talentBb, moduleBb, traitBb, skillRec, statBuff, toggleBuff, onHitBy, enemiesInGrid, cheb, up, giveSp } from '../shared/tier1.js';
+import { hypot } from '../../../detmath.js';
 import { canTargetEnemy } from '../../../targeting.js';
 import { isHpLoss } from '../../../damage.js';
-import { hypot } from '../../../detmath.js';
+
 
 const S1 = 'skchr_narant_1';
 const S2 = 'skchr_narant_2';

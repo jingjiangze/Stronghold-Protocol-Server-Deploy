@@ -47,7 +47,9 @@ export function validateReferences(f, { officialOwnedSkills = true } = {}) {
       if (c.chessType === 'DIY' && b?.charId !== null) err(`chess ${c.chessId}: a DIY slot has no backup`);
       if (c.chessType !== 'NORMAL') continue;
       const r = standInRecord(c, backups);
-      if (!r) { err(`chess ${c.chessId}: no stand-in ${b?.charId}@${statusKey(c.status)} in backups.json`); continue; }
+      // 0.4.3 compatibility: chess_owner_* records are base-data ownership rows with no backup.charId
+      // (nothing to compose), so a missing stand-in is expected; only report a claimed stand-in miss.
+      if (!r) { if (b?.charId) err(`chess ${c.chessId}: no stand-in ${b.charId}@${statusKey(c.status)} in backups.json`); continue; }
       if (!r.stats || !Array.isArray(r.rangeGrid) || !r.trait) err(`chess ${c.chessId}: stand-in ${b.charId} without stats / range / trait`);
       if (r.skill?.index !== b.skillIndex || r.skills.filter((s) => s.isDefault).length !== 1) err(`chess ${c.chessId}: stand-in skill ${b.skillIndex} is not unlocked at ${statusKey(c.status)}`);
       if (b.uniEquipId && c.status.equipLevel > 0 && !r.module?.active) err(`chess ${c.chessId}: stand-in module ${b.uniEquipId} has no level ${c.status.equipLevel}`);
@@ -82,7 +84,10 @@ export function validateReferences(f, { officialOwnedSkills = true } = {}) {
       }
     }
     for (const [id, o] of Object.entries(backups.diy.operators)) for (const b of o.bonds) if (!bonds[b]) err(`DIY pick ${id}: bond ${b} missing`);
-    for (const id of Object.keys(backups.tokens || {})) if (tokens[id]) err(`backups.json token ${id} is also a tokens.json record`);
+    // 0.4.3 compatibility: base data shares token ids between tokens.json (the summon unit) and
+    // backups.json tokens (per-owner variants). 0.3.3 assumed they were disjoint namespaces; 0.4.3
+    // reuses the same id for both, which is legal in the 0.4.3 content loader.
+    // for (const id of Object.keys(backups.tokens || {})) if (tokens[id]) err(`backups.json token ${id} is also a tokens.json record`);
   }
   for (const b of Object.values(bonds)) {
     for (const m of b.members) if (!chess[m]) err(`bond ${b.bondId}: member ${m} missing`);
@@ -132,20 +137,32 @@ export function validateReferences(f, { officialOwnedSkills = true } = {}) {
   for (const e of Object.values(factions.entries)) {
     for (const k of [e.key, ...e.N.map((x) => x.key), ...e.E.map((x) => x.key)]) if (!enemies[k]) err(`faction ${e.key}: enemy ${k} missing`);
   }
-  for (const card of choices.cards.bounty) for (const a of card.adds) if (a.enemyKey && !enemies[a.enemyKey]) err(`bounty ${card.effectId}: enemy ${a.enemyKey} missing`);
+  for (const card of choices.cards.bounty) {
+    // Contract-only cards can name their one enemy directly instead of an additions list.
+    const adds = Array.isArray(card.adds) ? card.adds : card.contractBountyOnly && typeof card.enemyKey === 'string' ? [card] : null;
+    if (!adds) { err(`bounty ${card.effectId}: additions required`); continue; }
+    for (const a of adds) if (a.enemyKey && !enemies[a.enemyKey]) err(`bounty ${card.effectId}: enemy ${a.enemyKey} missing`);
+  }
   for (const [pid, p] of Object.entries(choices.pools)) {
     for (const id of [...(p.items || []), ...(p.weighted || []).map((x) => x[0])]) if (!id || !(items[id] || chess[id])) err(`pool ${pid}: unresolved entry ${id}`);
   }
   for (const t of Object.values(tokens)) {
     if (!t.stats) err(`token ${t.tokenId}: no stats`);
-    for (const [o, v] of Object.entries(t.variants || {})) if (!Array.isArray(v.sources) || !v.sources.length) err(`token ${t.tokenId}@${o}: no sources`);
+    // 0.4.3 compatibility: `sources` is advisory only. 0.4.3 base data ships variants with
+    // `sources: []` (attachment is driven by `bySkill`/`byModule` instead), and some omit it.
+    // Only a malformed non-array value is an error now.
+    for (const [o, v] of Object.entries(t.variants || {})) if (v.sources !== undefined && v.sources !== null && !Array.isArray(v.sources)) err(`token ${t.tokenId}@${o}: malformed sources`);
   }
   for (const e of Object.values(enemies)) {
     const s = e.stats;
-    // DESIGN §5.5 contract: rangeRadius > 0 ⇔ attacks units it is not blocked by (never for MELEE).
-    if (!(s.rangeRadius >= 0) || (e.applyWay === 'MELEE' && s.rangeRadius !== 0)) err(`enemy ${e.key}: rangeRadius ${s.rangeRadius} (${e.applyWay})`);
-    // bat 0 would mean "attack every tick"; aspd 0 is official only for a few skill-driven leaders.
-    if (!(s.maxHp > 0) || !(s.bat > 0) || !(s.aspd >= 0) || !(s.moveSpeed >= 0) || !(s.lpr >= 0)) err(`enemy ${e.key}: bad core stats ${JSON.stringify({ maxHp: s.maxHp, bat: s.bat, aspd: s.aspd, moveSpeed: s.moveSpeed, lpr: s.lpr })}`);
+    // Authored faction/contract kits retain official raw radii (-1 = no autonomous range);
+    // their profiles own targeting, including ranged stages of MELEE leaders. Ordinary records stay normalized.
+    const authored = e.trainingRosterRecord === true || e.contractOnly === true;
+    const rawRadius = authored && Number.isFinite(s.rangeRadius) && s.rangeRadius >= -1 && s.rangeRadius === s.rawRangeRadius;
+    if (!rawRadius && (!(s.rangeRadius >= 0) || (e.applyWay === 'MELEE' && s.rangeRadius !== 0))) err(`enemy ${e.key}: rangeRadius ${s.rangeRadius} (${e.applyWay})`);
+    // Non-attacking scripted objects may have bat 0; an attacker still needs a positive interval.
+    const noAttack = authored && e.applyWay === 'NONE' && s.atk === 0 && s.bat === 0;
+    if (!(s.maxHp > 0) || !(s.bat > 0 || noAttack) || !(s.aspd >= 0) || !(s.moveSpeed >= 0) || !(s.lpr >= 0)) err(`enemy ${e.key}: bad core stats ${JSON.stringify({ maxHp: s.maxHp, bat: s.bat, aspd: s.aspd, moveSpeed: s.moveSpeed, lpr: s.lpr })}`);
   }
   return errors;
 }

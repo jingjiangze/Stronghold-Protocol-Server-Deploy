@@ -37,7 +37,10 @@ const unblockable = () => ({ spawn(b, e) { b.addBuff(e, { key: 'ab:unblockable',
 const runWhenHit = (v) => ({ taken(c, b, e, a) { if (a.on || !(v > 0)) return; a.on = true; b.addBuff(e, { key: 'ab:duckRun', persist: true, mods: { moveMul: 1 + v } }); } });
 
 /**
- * 频次 (the 14 器物 keys, kitTimes): maxHp = hits = the data's max HP × the spawn's HP multiplier. The round effects reach
+ * 频次 (the 14 器物 keys, kitTimes): raw HP keeps spawn and later aura modifiers; Unit._recalc converts its multiplier
+ * once through a shared soft growth curve. Owner 2026-10-29 R2 rejects a common100-hit ceiling: native30/35/45 must
+ * retain their tiers. [ASSUMED] growth approaches20/9, so native45 approaches100 while smaller relics stay smaller.
+ * The round effects reach
  * these units like any enemy (攻坚装备 / II / III leave out only 炎佑), but not 补给线 / 补给线II, whose `enemy_exclude` lists
  * exactly these 14 keys (activity_table aceffect_enemy_2 / 2_2, data/effects.json): that share (`mods.supplyHpMul`, co-op
  * 终极 R5–R15) comes out again — a 频次 enemy's death spawn inherits the parent's mods, so it travels with them. Whole hits:
@@ -47,7 +50,12 @@ const runWhenHit = (v) => ({ taken(c, b, e, a) { if (a.on || !(v > 0)) return; a
 const times = (artsOnly = false) => ({
   spawn(b, e) {
     const s = Number(e.mods && e.mods.supplyHpMul);
-    setHits(e, e.base.maxHp / (Number.isFinite(s) && s > 0 ? s : 1));
+    // Canonical native stats also cover effectRef copies and wave stat overrides:
+    // their extra HP belongs to growth, not to an inflated native hit baseline.
+    e.mem.hitCountBase = (b.data.getEnemy(e.def.raw?.effectRef ?? e.defId) ?? e.def).maxHp;
+    e.base.maxHp /= Number.isFinite(s) && s > 0 ? s : 1;
+    e.markDirty();
+    e.hp = e.s.maxHp;
     hitCount(b, e, true, artsOnly);
   },
 });
@@ -613,8 +621,8 @@ function dmgZone(b, src, x, y, r, life, iv, amount, type = 'arts', kind = 'zone'
 }
 
 /** A cooldown skill ability (`id` labels it for tests / other abilities). */
-const skill = (s, fire, { cond = null, sil = false, cd = null, icd = null, id = null } = {}) => (s || cd != null) && fire ? ({
-  id: id ?? null, sil, cd: cd ?? s.cd, icd: icd ?? s.icd, cond, fire, sk: s || null,   // sk: its slot for the 'cast' event
+const skill = (s, fire, { cond = null, sil = false, cd = null, icd = null, id = null,fxDuration=null } = {}) => (s || cd != null) && fire ? ({
+  id: id ?? null, sil, cd: cd ?? s.cd, icd: icd ?? s.icd, cond, fire, sk: s || null,fxDuration,   // sk: its slot for the 'cast' event
 }) : null;
 
 /** Blink past the blocker along the path (弑君者 / 卢西恩). Returns the start position. */

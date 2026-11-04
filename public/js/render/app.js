@@ -137,10 +137,12 @@
 // The helpers live in public/js/render/app/*.js and are re-exported below, so existing imports keep
 // working. createFieldView stays here: it is one closure over the view's own state.
 
+import { attackRateEvents } from './attackRate.js';
 import { GEO, ANIM } from '../../../shared/constants.js';
 import { fxForm } from '../../../shared/protocol.js';
 import { Camera, presetCamera, lerpCamera, easeInOutCubic, pickTile, normRect } from './projection.js';
 import { SnapshotBuffer, frameTime } from './interp.js';
+import { BattlePresentation } from './battlePresentation.js';
 import { TileField } from './tiles.js';
 import { UnitView, ItemView, DeviceView, FORMS, syncView } from './units.js';
 import { FxSystem, ensureDamageFonts, projSpeed } from './fx.js';
@@ -162,6 +164,7 @@ import { pickOnTile, pickBattle, hitTiles } from './pick.js';
 import { promotionsOf } from './promote.js';
 import { ensurePixi } from './app/pixi.js';
 import { advanceEffectClock } from './app/playback.js';
+import { createWindUpLookahead } from './app/windup.js';
 import { pieceDirOf, pickUnitOf } from './app/pick.js';
 import { CAMERA_MS, BOARD3D_STABLE_MS, BOARD3D_RETRY_MS, PEN_CAMERA_MS, RANGE_GROUPS, LEADER_HIT_STYLE, DRAG_HOLD_TILES, CHAIN_KINDS, DROP_PENDING_MS, DEPLOY_REPLAY_MS } from './app/tune.js';
 import { boardPreference, switchableBox, bandFor, fieldRows, boardArea, viewKind, restView, flightView } from './app/view.js';
@@ -330,6 +333,7 @@ export async function createFieldView(host, options = {}) {
   const gone = new Set();
   const woundUp = new WeakSet(); // atk event tuples whose attack wind-up already started
   const interp = new SnapshotBuffer({ delay: 0.1, rate: 2 });
+  const presentation = new BattlePresentation();
   const sample = new Map();
   const meleePending = new Map(); // target id → { src, t }
   const consumedIds = new Set();  // battle ids used up by their own effect (fx `consumed`): no death particles
@@ -457,6 +461,7 @@ export async function createFieldView(host, options = {}) {
   setupCleanup.push(() => { clearTimeout(recover.timer); disable3d(); });
   /** The stage's official scene, once loaded (the procedural board shows meanwhile and when there is none). */
   function useOfficialScene(st) {
+    // 肉鸽小图也加载官方场景，几何由 board3d/scene.js 按 rogueFrame 裁剪
     const id = st && typeof st.id === 'string' ? st.id : '';
     if (!id || !board3d) return;
     loadScenePack(assets, id).then((scene) => {
@@ -465,6 +470,9 @@ export async function createFieldView(host, options = {}) {
   }
   function enable3d(THREE, pack) {
     if (destroyed || board3d || !THREE || !pack) return false;
+    // 肉鸽官方小图有 stage.rogueFrame：3D 层只建画框那一块（rogueArea），可以和 2D 层对齐；
+    // 没有 frame 的非标准图仍是 19×21 语义（board3d/layout.js），套在小图上会错位，继续走 2D 棋盘
+    if (stageRec && !stdField() && !stageRec.rogueFrame) return false;
     recover.THREE = THREE; recover.pack = pack;
     try {
       try { if (getComputedStyle(host).position === 'static') host.style.position = 'relative'; } catch { /* ignore */ }
@@ -481,7 +489,7 @@ export async function createFieldView(host, options = {}) {
       board3d = b;
       tiles.setExternal(true);
       backdrop.visible = false;
-      b.setArea(boardArea(viewKind(camKind, camOpts)));
+      b.setArea(rogueArea() || boardArea(viewKind(camKind, camOpts)));
       if (stageRec) { b.setStage(stageRec); useOfficialScene(stageRec); }
       b.setFocus(camRect());
       b.setBattleRect(mode === 'battle' && battleMeta ? battleMeta.rect : null);
@@ -589,6 +597,13 @@ export async function createFieldView(host, options = {}) {
     return { top: h * 0.13, bottom: h * 0.12, left: Math.min(170, w * 0.09), right: w * 0.05 };
   }
 
+  // 肉鸽官方小图 (stage.rogueFrame)：官方 1280×720 战斗半场 ≈ 102.5 px/格（0.14231 × 视口高），小图按它的 0.9 倍
+  // 显示（≈92 px/格）——取景只拟合棋盘四角，再用这个专用的小 padding 把棋盘放进 HUD 之间（与 plugins/mota 同源）。
+  const ROGUE_TILE_PX = 0.9 * 0.14231;
+  function roguePadding(sz) {
+    return { top: sz.height * 0.08, bottom: sz.height * 0.06, left: sz.width * 0.02, right: sz.width * 0.02 };
+  }
+
   // the HUD bands the prep cameras keep the bench / field clear of (projection.js clearHud; user playtest #5 item 9):
   // `opts.hud` = (kind, size, { shop }) => { top, bottom } | null, or a fixed object; none → the plain official framing.
   // `shop: false` asks for the folded shop's band (the camera request's `shop: false`, public issue #5)
@@ -598,7 +613,46 @@ export async function createFieldView(host, options = {}) {
     return opts.hud && typeof opts.hud === 'object' ? opts.hud : null;
   }
 
+  /**
+   * 当前场地的尺寸与「是否标准 19×21」（与 plugins/mota 的 render/app.js 同构）：
+   * 肉鸽关卡是 5×12 / 7×9 这类小图嵌在 19×21 画框里，官方那套按半场（HAND_ROW / bossLeft / bossRight）的取景不适用。
+   */
+  function mapSize() {
+    const s = stageRec && Array.isArray(stageRec.size) ? stageRec.size : null;
+    return s && s.length >= 2 ? [Number(s[0]) || 19, Number(s[1]) || 21] : [19, 21];
+  }
+  function stdField() { const [h, w] = mapSize(); return h === 19 && w === 21 && !(stageRec && stageRec.rogueFrame); }
+
+  /**
+   * 肉鸽官方小图在 19×21 画框里的位置（`stage.rogueFrame` = { row, col, h, w }，clamp 到画框），非肉鸽图 null。
+   * 取景（camRect）与 3D 层的构建区域（rogueArea）都从这里来，保证两边一致。
+   */
+  function rogueFrameRect() {
+    const f = stageRec && stageRec.rogueFrame;
+    if (!f || typeof f !== 'object') return null;
+    const [h, w] = mapSize();
+    const row = Math.max(0, Math.min(h - 1, Number(f.row) || 0));
+    const col = Math.max(0, Math.min(w - 1, Number(f.col) || 0));
+    return {
+      r0: row, r1: Math.min(h - 1, row + Math.max(1, Number(f.h) || 1) - 1),
+      c0: col, c1: Math.min(w - 1, col + Math.max(1, Number(f.w) || 1) - 1),
+    };
+  }
+
+  /**
+   * 3D 层要建的棋盘块：肉鸽官方小图只建画框那一块（场景几何按小图 (0,0) 起算，scene.js 平移到画框）；
+   * 非肉鸽图返回 null，由各处的 `boardArea` / `restView` 决定。
+   */
+  function rogueArea() { const r = rogueFrameRect(); return r ? [r] : null; }
+
   function camRect() {
+    // 肉鸽官方小图嵌在 19×21 画框里：取景用 stageRec.rogueFrame（clamp 到画框），没有 frame 才退回整张 mapSize
+    if (!stdField()) {
+      const frame = rogueFrameRect();
+      if (frame) return frame;
+      const [h, w] = mapSize();
+      return { r0: 0, r1: h - 1, c0: 0, c1: w - 1 };
+    }
     const k = viewKind(camKind, camOpts);
     if (k === 'pen') return { r0: 14, r1: 18, c0: 7, c1: 13 };
     // prep lights the bench (hand row 7 / temp row 8) with the field, like the official prep view
@@ -611,16 +665,20 @@ export async function createFieldView(host, options = {}) {
   function targetCamera(kind, o) {
     const sz = size();
     const k = kind === 'hidden' ? 'boss' : (['prep', 'normal', 'unite', 'boss', 'bossPrep', 'pen'].includes(kind) ? kind : 'normal');
-    let rect = o.rect ? normRect(o.rect) : null;
-    if (k === 'prep') rect = rect ? { ...rect, r0: Math.min(rect.r0, GEO.HAND_ROW) } : null;
+    // 肉鸽官方小图嵌在 19×21 画框里（与 plugins/mota 的 render/app.js 同源）：整张画框就是取景
+    const rogue = !!(stageRec && stageRec.rogueFrame);
+    let rect = rogue ? camRect() : (o.rect ? normRect(o.rect) : null);
+    if (k === 'prep' && stdField()) rect = rect ? { ...rect, r0: Math.min(rect.r0, GEO.HAND_ROW) } : null;
     // official configBlackBoard framing (render/projection.js presetCamera); the padding only matters for the
     // fitted fallback (custom rects, portrait viewports); a prep camera keeps the bench and the field clear of the HUD
     // — `shop: false` (the folded shop, public issue #5) = the official shop-collapsed camera, clear of the folded
     // shop's HUD band (re-evaluated on resize: camOpts keep the flag)
     const vk = viewKind(kind, o); // (a 'prep' camera on the boss rows = the Final Assault prep)
-    return presetCamera(k, { width: sz.width, height: sz.height, padding: o.padding || defaultPadding(k, sz) }, {
-      rect, side: o.side, half: !!o.half, shop: o.shop, fit: !!o.fit, config: stageRec?.config || null,
+    return presetCamera(k, { width: sz.width, height: sz.height, padding: o.padding || (rogue ? roguePadding(sz) : defaultPadding(k, sz)) }, {
+      rect, side: o.side, half: !!o.half, shop: o.shop, fit: !!o.fit || rogue, config: stageRec?.config || null,
       hud: hudBands(vk, sz, { shop: o.shop !== false }),
+      // 肉鸽官方小图：只拟合棋盘四角（不留 margin / headroom），缩放上限 = 官方半场 px/格 × 0.9
+      ...(rogue ? { boardOnly: true, targetTilePx: ROGUE_TILE_PX * sz.height } : null),
     });
   }
 
@@ -648,11 +706,13 @@ export async function createFieldView(host, options = {}) {
     else if (vk === 'bossPrep') setPrepField(bossPrepField(camOpts.side === 'R' ? 'R' : 'L'));
     const target = targetCamera(camKind, camOpts);
     const rest = restView(vk);
+    // 肉鸽官方小图：3D 层只有画框那一块可建（取景也停在画框上），寻常场地按视图决定区域
+    const area3d = rogueArea();
     const focus = camRect();
     board3d?.setFocus(focus);
     camMs = Number.isFinite(o.ms) && o.ms >= 0 ? o.ms : (vk === 'pen' || prevView === 'pen' ? PEN_CAMERA_MS : CAMERA_MS);
     if (o.instant || camMs === 0 || mode === 'idle' && !camTo) {
-      board3d?.setArea(rest.area);
+      board3d?.setArea(area3d || rest.area);
       cam = target; camFrom = camTo = null;
       tiles.setView(rest.band, focus, rest.field);
       setPenHidden(!rest.pen);
@@ -666,10 +726,10 @@ export async function createFieldView(host, options = {}) {
       // the prep camera into a battle drops it at once)
       const fly = flightView(prevView, vk);
       tiles.setView(fly.band, focus, fly.field);
-      board3d?.setArea(fly.area);
+      board3d?.setArea(area3d || fly.area);
       setPenHidden(!fly.pen);
       setLeaderHidden(!fly.leader);
-      pendingView = { ...rest, focus };
+      pendingView = { ...rest, area: area3d || rest.area, focus };
     }
     return true;
   }
@@ -739,6 +799,9 @@ export async function createFieldView(host, options = {}) {
   function setStage(st) {
     if (!st || typeof st !== 'object' || !Array.isArray(st.rows)) return false;
     stageRec = st;
+    // 换到非标准尺寸、又没有官方画框（rogueFrame）的场地时，把已开的 3D 棋盘关掉，交给 2D 层画整张图；
+    // 肉鸽官方小图有画框，3D 层只建画框那一块，留着
+    if (board3d && !stdField() && !(st && st.rogueFrame)) disable3d();
     tiles.setStage(st);
     tiles.setBattleRect(mode === 'battle' && battleMeta ? battleMeta.rect : null);
     if (board3d) { board3d.setStage(st); board3d.setBattleRect(mode === 'battle' && battleMeta ? battleMeta.rect : null); useOfficialScene(st); }
@@ -1501,6 +1564,7 @@ export async function createFieldView(host, options = {}) {
   function enterBattle(meta) {
     if (destroyed || !meta || typeof meta !== 'object') return false;
     holdScene(true); // before the prep views go: the cache is never "quiet" across the switch
+    presentation.reset();
     drag.reset();
     endDragVisual(false);
     cancelReplay();  // the round start's replay is a prep-board thing: none of it reaches a battle (or a scouted board)
@@ -1665,33 +1729,13 @@ export async function createFieldView(host, options = {}) {
     }
     // the official effects of units joining the battle load ahead of their first attack (render/vfx/wiring.js more)
     if (fresh) wiring.more(fresh);
-    return interp.pushEvents(list, performance.now() / 1000, t);
+    return interp.pushEvents(attackRateEvents(list), performance.now() / 1000, t);
   }
 
   // attack wind-ups: an 'atk' still queued in the buffer starts its Spine clip early enough for the strike frame to
-  // land when the event is rendered (the look-ahead is the interpolation delay, ~0.2 game s)
-  function windUpAttacks(renderT) {
-    upcomingT = renderT;
-    upSkill.clear();
-    interp.forEachUpcoming(renderT, renderT + 1.5, onUpcoming);
-  }
-  let upcomingT = 0;
-  // the look-ahead's skill state: a ['skill', id, on] queued before an 'atk' of that unit (an instant skill sends 1, its
-  // attack and 0 in one tick) — the official cast effects of the wind-up are the skill's own then
-  const upSkill = new Map();
-  function onUpcoming(e, t) {
-    if (e[0] === 'skill') { upSkill.set(e[1], !!e[2]); return; }
-    if (e[0] !== 'atk' || woundUp.has(e) || CHAIN_KINDS.has(e[3])) return;
-    const v = views.get(e[1]);
-    if (!v || !v.windUp) return;
-    if (v.windUp(t - upcomingT, e[3])) {
-      woundUp.add(e);
-      // the official cast effects that start with the cast play with the clip (render/vfx/wiring.js castStart)
-      const a = v.actor;
-      const skillOn = upSkill.has(e[1]) ? upSkill.get(e[1]) : undefined;
-      wiring.castStart(v, views.get(e[2]), e[3], a ? { skip: a.windSkip || 0, left: a.windCastLeft || 0, skillOn } : { skillOn });
-    }
-  }
+  // land when the event is rendered (app/windup.js; the official cast effects play with the clip — vfx/wiring.js castStart)
+  const lookahead = createWindUpLookahead({ views, woundUp, castStart: (v, tv, kind, o) => wiring.castStart(v, tv, kind, o) });
+  function windUpAttacks(renderT) { lookahead.run(interp, renderT); }
 
   const EVS = [];
   /** State events handed out more than 1.5 game s late (a stall, a hidden tab, a field entered late) → how late. */
@@ -1711,7 +1755,9 @@ export async function createFieldView(host, options = {}) {
         const info = applyInfo(e[1]);
         if (!info) break;
         gone.delete(info.id);
+        const reused = views.get(info.id);   // a 重生 / a second life keeps the view: re-seed its pacing (#729)
         const v = battleView(info.id);
+        if (v && reused) v.respawn?.(info);
         if (v && info.side === 'enemy' && renderT0Battle != null && now - renderT0Battle > 0.2) fx.ring(info.x, info.y, 0, 0.1, 0.7, 0xff5a4a, 0.4);
         // an enemy's or a summon's deploy talents (render/vfx/talentfx.js: auras, birth effects — once per life)
         if (v) wiring.spawned(v);
@@ -1758,7 +1804,9 @@ export async function createFieldView(host, options = {}) {
       }
       // the skill slot an enemy ability casts (PR #275): the view swaps to that slot's clip (a multi-skill boss's Skill_01..04)
       // (and its official skill effects: render/vfx/skillfx.js cast — index v2 has the enemies' skills)
-      case 'cast': { const v = views.get(e[1]); if (v) { v.setSkillSlot?.(e[2] | 0); wiring.enemyCast(v, e[2] | 0, Number(e[3]) || 0); } break; }
+      // an attack-class skill cast in the attack's turn ['cast', id, slot, dur, clip] plays its clip in place of the attack
+      // (UnitView.onCast; DESIGN §35.57)
+      case 'cast': { const v = views.get(e[1]); if (v) { v.setSkillSlot?.(e[2] | 0); v.onCast?.(e[2] | 0, now, e.length > 4 ? Number(e[4]) || 0 : null); wiring.enemyCast(v, e[2] | 0, Number(e[3]) || 0); } break; }
       case 'die': {
         const v = views.get(e[1]);
         const used = consumedIds.delete(e[1]);
@@ -1777,6 +1825,12 @@ export async function createFieldView(host, options = {}) {
           v.dying = 0.25; v.dieDur = 0.25;
         }
         fx.leak();
+        break;
+      }
+      case 'rate': {
+        // the sim's own attack interval changed (a skill, an attack-speed buff): pace the clip over it from the next swing
+        const v = views.get(e[1]);
+        if (v && typeof v.setAtkInterval === 'function') v.setAtkInterval(Number(e[2]));
         break;
       }
       case 'status': { const v = views.get(e[1]); if (v) { v.onStatus?.(e[2], !!e[3]); wiring.status(v, e[2], !!e[3]); } break; }
@@ -1889,7 +1943,7 @@ export async function createFieldView(host, options = {}) {
       if (!v) v = battleView(id) || createUnknown(id, s);
       if (!v) continue;
       if (!v._seen) { v._seen = true; v.fadeIn = 0; }
-      syncView(v, s, renderT);
+      syncView(v, presentation.sample(s), renderT);
     }
     // knocked-out operators waiting to redeploy (b.snap `down`, user playtest #4 item 9): their view stays on the
     // field knocked down under a redeploy ring (UnitView.setDown) — made on the spot for one already down when this
@@ -2021,17 +2075,20 @@ export async function createFieldView(host, options = {}) {
         const renderT = interp.update(now / 1000);
         if (Number.isFinite(renderT)) {
           processEvents(renderT);
+          const justEnded = presentation.update(renderT, interp.newestT, dt);
           syncBattle(renderT);
-          windUpAttacks(renderT);
+          if (!presentation.ended) windUpAttacks(renderT);
           // the official effects run on the battle clock (render time of the snapshots: 1× / 2×, still while paused); the
           // skill effects' per-frame part reads the views' fresh sample (render/vfx/skillfx.js sync)
-          const gdt = ofxPrevT == null ? 0 : Math.min(opts.playbackTime ? Infinity : 0.25, Math.max(0, renderT - ofxPrevT));
+          const gdt = presentation.ended ? dt : ofxPrevT == null ? 0 : Math.min(opts.playbackTime ? Infinity : 0.25, Math.max(0, renderT - ofxPrevT));
           ofxPrevT = renderT;
+          if (justEnded) { wiring.clear(); ofx.finish(); pluginFx.finish(); }
           pluginFx.update(gdt);
-          pluginFx.sync(views.values());
-          wiring.sync(views.values());
+          if (!presentation.ended) { pluginFx.sync(views.values()); wiring.sync(views.values()); }
+          // [ASSUMED] Bound long-lived one-shots to two presentation seconds after completion.
+          if (presentation.ended && presentation.tail >= 2) { ofx.clear(); pluginFx.clear(); fx.clear(); }
           if (ofx.active) {
-            wiring.tick();
+            if (!presentation.ended) wiring.tick();
             if (opts.playbackTime) advanceEffectClock(ofx, gdt); else ofx.update(gdt);
           }
         }
@@ -2147,6 +2204,7 @@ export async function createFieldView(host, options = {}) {
     /** Enemy preview pen: a list in m.private.nextEnemies shape, or null to empty it (setPrep does this itself). */
     setPen(list) { if (destroyed) return false; setPenList(Array.isArray(list) ? list : null); return true; },
     enterBattle,
+    finishBattle() { if (!destroyed && mode === 'battle') presentation.finish(); },
     pushSnapshot,
     pushEvents,
     /**

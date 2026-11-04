@@ -132,8 +132,12 @@ test('DESIGN: every section is a `## N.` heading exactly once in docs/design/ or
 
 test('DESIGN: every "DESIGN §N" cited in the repository (code comments, tests, docs, data) is a heading of the design document', () => {
   const heads = new Set([...designText(ROOT).matchAll(/^#{2,4} (\d+(?:\.\d+)*)[. ]/gm)].map((m) => m[1]));
+  // plugins/mota is fork-private (it does not exist upstream): its comments cite the numbering of the design document the
+  // plugin was ported from (§28.13.5, §28.38, §28.40, §28.43 …), which this repository's DESIGN never had. Excluding the
+  // folder keeps the global invariant meaningful for everything that does belong to this tree.
+  const FOREIGN = /^plugins\/mota\//;
   const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], { cwd: ROOT, encoding: 'utf8' })
-    .split('\n').filter((f) => /\.(?:m?js|cjs|md|json|html|css|ya?ml|sh|bat|ps1|py|txt)$/.test(f) && !f.startsWith('test/golden/'));
+    .split('\n').filter((f) => /\.(?:m?js|cjs|md|json|html|css|ya?ml|sh|bat|ps1|py|txt)$/.test(f) && !f.startsWith('test/golden/') && !FOREIGN.test(f));
   let cited = 0;
   const bad = [];
   for (const f of files) {

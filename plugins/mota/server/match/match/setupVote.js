@@ -95,8 +95,11 @@ export class MatchSetupVote {
     }
     // All data-dependent work succeeds before any opening or player state changes.
     const { setup, stage, bans, pool, stocks } = prepared;
-    this.stageId = setup.stageId;
-    this.stage = stage;
+    // 业主 2026-10-27：随机地图关掉时，重抽只换阵容与禁用，**不换图**（此前会无条件把 stageId 换成新抽的那张）
+    if (this.randomStage === true || !this.stageId) {
+      this.stageId = setup.stageId;
+      this.stage = stage;
+    }
     this.factions = setup.factions;
     this.bossId = setup.bossId;
     this.hiddenBossId = setup.hiddenBossId;

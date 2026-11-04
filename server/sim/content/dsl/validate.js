@@ -7,10 +7,7 @@
 
 import { TICK } from '../../constants.js';
 import { dslLiteralProblem } from './bounds.js';
-import {
-  TRIGGERS, CONDITIONS, ACTIONS, TARGETS, META_TRIGGERS, META_ACTIONS, VALUE_OPS, SKILL_KINDS, STAT_NAMES,
-  PLUGIN_ID_RE,
-} from './vocab.js';
+import { TRIGGERS, CONDITIONS, ACTIONS, TARGETS, META_TRIGGERS, META_ACTIONS, VALUE_OPS, SKILL_KINDS, STAT_NAMES, PLUGIN_ID_RE } from './vocab.js';
 
 export const DSL_CODES = Object.freeze([
   'PLUGIN_DSL_SHAPE',

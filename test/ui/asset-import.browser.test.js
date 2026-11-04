@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { startServer } from '../../server/index.js';
+import { startServer } from '../../server/boot-main.js';
 import { hash16 } from '../../server/http/assetIndex.js';
 import { crc32 } from '../../public/js/assetPack.js';
 import { CHROME, hasChrome } from '../e2e/client.mjs';

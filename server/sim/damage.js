@@ -1,10 +1,12 @@
+import {eventHostile,eventTeam} from './eventTeams.js';
+import {bossBurstDamage,bossPlayerBurstDamage} from '../../shared/bossBurstGuard.js';
 // server/sim/damage.js — damage & heal pipeline, shields, dodge, element gauges (DESIGN §5.5).
 //
 // dealDamage order: (element → gauge path) | invulnerable? / 对地规避 (a ground enemy's damage to an airborne 起飞 ally —
 //   targeting.js evadesGround; not `ignoreSelect` damage: no selection, e.g. a debuff's tick) → 'hit' hook (mutable DamageInfo, may set cancel)
 //   → dodge (phys/arts, canDodge) → mitigation (phys: DEF, arts: RES, true: none)
 //   → × source dmgDealtMul (× phys/artsDealtMul) × target dmgTakenMul (not for 元素伤害) × type-taken mul × dmg.mul
-//   → 限伤 (leaders in boss / hidden battles: a hit of ceil(final) ≥ BOSS_HIT_LIMIT is cancelled, see leaderHitCancelled)
+//   → 限伤 (leaders in boss / hidden battles: final HP damage is clamped to BOSS_HIT_LIMIT, see leaderHitDamage)
 //   → shields (hit-negating barriers first, then HP shields; a typed one — buff `shieldType` — only its damage type)
 //   → 'hpDamage' hook (what passed the shields; handlers may only lower `amount`: the 伤判效果 that act after a
 //   barrier — 煌's 紧急除颤 HP floor, 左乐's 庇护 re-applied after his 行险 barrier) → HP loss (boss pool routing)
@@ -87,6 +89,7 @@ export function makeDamageInfo(d = {}) {
     tags: d.tags ?? [],
     cancel: false,
     noSp: !!d.noSp,
+    noHitLimit: !!d.noHitLimit,
     ignoreSleep: !!d.ignoreSleep,
     // no selection 无法选择 effects stop (an ability that "无视无法选择" such as PRTS 【污染秽蚀】, a direct pick, a flying
     // unit's blast credited to a ground leader, the tick of a debuff already on the unit): reaches an airborne 起飞 ally
@@ -204,24 +207,13 @@ export function mitigate(amount, type, target, ign = {}) {
   return amount;
 }
 
-/**
- * 限伤 — the official boss-hit limit (shared/constants.js BOSS_HIT_LIMIT, docs/research/11-limits-official.md §2;
- * client `AutoChessStepModeManager._OnBossEnemyTakeDamage`: `d = ceil(value); if (d >= 300000) modifier.Cancel()`).
- * True when the hit of `amount` HP about to land on `target` is cancelled: the target is a leader (`isBoss`: the
- * tag-'boss' units — data/bosses.json enemyKey, the official IsBossEnemy list — and their mirrored copies; never a part,
- * escort, drone or other minion), the battle is a boss / hidden one (the client's step mode: every boss battle outside
- * training) and ceil(amount) ≥ BOSS_HIT_LIMIT. The cancel is whole (no clamp): no HP / pool loss, no credit, no damage
- * number. A 'hitCap' fx event `{ id, n: ceil(amount) }` marks it for the client, which draws nothing — the official
- * shows no number [ASSUMED]. Every HP-damage kind is checked as the official `modifier.isDamage` (phys, arts, true,
- * 元素伤害 incl. element bursts, DoT ticks — they all come through dealDamage — and losses passed on to a leader through
- * Battle.loseHp, except the 胄 drone link's pool share: `noHitLimit`, DESIGN §25.13.4); element 损伤 (gauge fill,
- * 'element') removes no HP and is never checked. Deterministic (Math.ceil of the same double on every engine).
+/** Owner's boss cap: clamp final HP damage, never cancel the hit. Element gauges are not HP damage.
+ * Shared-pool credit, damage events and downstream hooks receive only the clamped amount.
  */
-export function leaderHitCancelled(battle, target, amount) {
-  if (!(BOSS_HIT_LIMIT > 0) || !target || !target.isBoss || (battle.kind !== 'boss' && battle.kind !== 'hidden')) return false;
-  if (!(Math.ceil(amount) >= BOSS_HIT_LIMIT)) return false;
-  battle.fx('hitCap', { x: target.x, y: target.y, id: target.id, n: Math.ceil(amount) });
-  return true;
+export function leaderHitDamage(battle, target, amount) {
+  if (!(BOSS_HIT_LIMIT > 0) || !target?.isBoss || !(amount > BOSS_HIT_LIMIT)) return amount;
+  battle.fx('hitCap', { x: target.x, y: target.y, id: target.id, n: BOSS_HIT_LIMIT });
+  return BOSS_HIT_LIMIT;
 }
 
 /**
@@ -322,6 +314,7 @@ function peekStats(unit) {
  * Full damage pipeline. Returns the HP actually removed (0 when dodged/cancelled/absorbed).
  */
 export function dealDamage(battle, source, target, dmgIn) {
+  if(source&&target&&(source.mods?.eventTeam||target.mods?.eventTeam)&&!eventHostile(source,target)&&source!==target)return 0;
   if (!target || !target.alive || target.removed || target.hidden || !target.deployed) return 0;
   const dmg = dmgIn && dmgIn._norm ? dmgIn : makeDamageInfo(dmgIn);
   if (dmg.type === 'element') return applyElement(battle, source, target, dmg);
@@ -358,6 +351,7 @@ export function dealDamage(battle, source, target, dmgIn) {
   // recognise their own (tagged) damage — never re-create such a loss with a fresh loseHp.
   // The red test compares that 1 (or 0) with the ordinary expected damage: 特殊生命值机制均不考虑 on the expected side.
   if (ts.flags.hitCount || ts.flags.hitCountArts) {
+    if(target.mem.fixedHitCount>0&&!(dmg.amount>0))return 0;
     const counts = !(ts.flags.hitCountArts && !ts.flags.hitCount && type === 'phys');
     const instance = counts ? 1 : 0;
     const mark = officialDamageMark(instance, officialExpectedAmount(dmg, type, ts, target));
@@ -369,9 +363,8 @@ export function dealDamage(battle, source, target, dmgIn) {
   // The 1.5× test uses this pre-shield total. The integer on the dmg event is whatever remains after shields and
   // hpDamage (PRTS can show a number that differs from the HP delta; [ASSUMED] the shown value stays that integer).
   const mark = officialDamageMark(final, officialExpectedAmount(dmg, type, ts, target));
-  // 限伤: a leader's hit of ≥ BOSS_HIT_LIMIT in a boss / hidden battle is cancelled before it reaches shields / HP — what
-  // ran before it (the attack, its SP, `hit` hook effects, separate element 损伤) stays; nothing after it happens
-  if (final > 0 && leaderHitCancelled(battle, target, final)) return 0;
+  // Clamp before shields; their absorption and subsequent HP-damage hooks may reduce this further.
+  final = leaderHitDamage(battle, target, final);
   final = absorbShields(battle, target, final, type);
   // 伤判效果 after the barriers (header): a handler may lower what reaches the HP — never raise it (a 流失 skips this)
   if (final > 0 && battle._hooks.hpDamage) {
@@ -382,19 +375,62 @@ export function dealDamage(battle, source, target, dmgIn) {
   return applyHpLoss(battle, source, target, final, dmg, mark);
 }
 
+/** Resolve credit from authoritative unit membership, never DamageInfo / a caller-supplied owner id.
+ * Dead/retreated units remain registered: their projectiles, DoTs and elemental bursts retain the same allowance.
+ * Summons resolve through the registered summoner, including nested summons; cycles/foreign objects are refused.
+ */
+export function bossDamagePlayer(battle, source) {
+  if (!source || eventTeam(source) !== 1) return null;
+  const seen = new Set();
+  let unit = source;
+  while (unit) {
+    if (seen.has(unit) || !battle.units.includes(unit)) return null;
+    seen.add(unit);
+    if (!unit.ownerUnit) break;
+    unit = unit.ownerUnit;
+  }
+  return battle.players.find(p => p.units.includes(unit))?.playerId ?? null;
+}
+
 /**
  * Remove HP (after mitigation) and run damaged/fatal/kill bookkeeping. Also used by `battle.loseHp` (流失).
  */
 export function applyHpLoss(battle, source, target, amount, dmg, mark) {
   if (!target.alive) return 0;
   let dealt = 0;
+  // Optional, source-bound receipt metadata only. Capture before HP loss; do not alter damage/fatal/kill order.
+  const observe = !!battle._hooks.elementContribution && dmg?.type === 'arts' && source?.def?.charId === 'char_4247_oxi' && target.side === 'enemy';
+  // peekStats deliberately avoids lazy recalculation/HP rescaling that a new target.s read could cause here.
+  const ep = observe ? peekStats(target) : null;
+  const hpReceipt = observe ? { source: dmg?.sourceless ? null : source, target, damage: dmg,
+    beforeHp: target.bossPool ? target.bossPool.hp : target.hp,
+    element: { threshold: target.gaugeMax, before: target.elem?.burn || 0,
+      intake: (ep?.elemTakenMul || 0) * Math.max(MIN_DAMAGE_RATIO, 1 - clamp01((Number(target.def?.epResistance) || 0) / 100)),
+      eligible: hasHp(target) && target.deployed && !target.removed && !target.hidden && target.elem && 'burn' in target.elem
+        && ep && !ep.flags.burstLock && !Object.values(target.burstPending || {}).some(Boolean)
+        && !ep.flags.invulnerable && !(ep.flags.sleep && !source.profile?.hitSleep)
+        && !target.buffs.some(b => b.flags?.burstLock || b.flags?.invulnerable || b.mods?.elemTakenMul === 0)
+        && !(target.mem?.candleOwner && target.mem.candleOwner !== source) } } : null;
   const hs = dmg && dmg.sourceless ? null : source; // the source hooks see (无来源: none; `credit` keeps it)
+  const bossPid = target.bossPool ? bossDamagePlayer(battle, source) : null;
+  if(!target.bossPool&&battle.round>12&&target.def?.raw?.miniBoss&&source&&eventTeam(source)===1&&!dmg?.noHitLimit){
+    const guard=bossBurstDamage(target._bountyBurstGuard||=({}),battle.time,target.s.maxHp,String(target.s.maxHp),amount,'bounty');
+    amount=guard.amount;if(guard.triggered)battle.fx('bossBurstGuard',{id:target.id,x:target.x,y:target.y,dur:guard.until-battle.time,r:1.2});
+  }
   if (target.bossPool) {
     const pool = target.bossPool;
+    if(battle.flags.bossBurstGuard&&target.isBoss&&!dmg?.noHitLimit&&(battle.round>12||!dmg?.tags?.includes('hpLoss'))){
+      const shared=pool.pool||pool,window=target.bossHpWindow,min=window?.min||0,max=window?.max??pool.maxHp,phaseMax=max-min;
+      // A forged allied source cannot consume another player's allowance or create an uncredited one.
+      const invalidSource = shared.burstGuard && source && eventTeam(source) === 1 && bossPid == null;
+      const result=invalidSource ? {amount:0,triggered:false} : bossPlayerBurstDamage(shared,bossPid,battle.time,phaseMax,min+':'+max,Math.min(amount,Math.max(0,pool.hp-min)),battle.round>12?'late':null);
+      amount=result.amount;if(result.triggered)battle.fx('bossBurstGuard',{id:target.id,x:target.x,y:target.y,dur:result.until-battle.time,r:1.5});
+    }
     const before = pool.hp;
-    const pid = source && source.side === 'ally' ? source.ownerId : null;
-    if (amount > 0) {
-      try { pool.damage(pid, amount); } catch (e) { battle._internalError('bossPool.damage', e); pool.hp = Math.max(0, pool.hp - amount); }
+    const pid = bossPid;
+    const loss = Math.min(amount, Math.max(0, pool.hp - (target.bossHpWindow?.min ?? 0)));
+    if (loss > 0) {
+      try { pool.damage(pid, loss); } catch (e) { battle._internalError('bossPool.damage', e); pool.hp = Math.max(0, pool.hp - loss); }
     }
     dealt = Math.max(0, before - pool.hp);
     if (!Number.isFinite(dealt)) dealt = 0; // a misbehaving pool (NaN hp) must not poison damage stats
@@ -415,9 +451,9 @@ export function applyHpLoss(battle, source, target, amount, dmg, mark) {
   }
   // damage dealt (unit stats, the results screen's 造成伤害) never counts a unit's own side — its own drain or 流失 (源石溶剂,
   // 史尔特尔 S3 …), friendly damage; `taken` and the kill credit do
-  if (source && source.side !== target.side) {
+  if (source && (source.side !== target.side || ((source.mods?.eventTeam||target.mods?.eventTeam)&&eventHostile(source,target)))) {
     source.stats.dmg += dealt;
-    if (source.side === 'ally' && source.ownerId != null) { const pp = battle._pp(source.ownerId); if (pp) pp.damageDealt += dealt; }
+    if (eventTeam(source)===1) { const pid = target.bossPool ? bossPid : source.ownerId; const pp = pid != null ? battle._pp(pid) : null; if (pp) pp.damageDealt += dealt; }
   }
   target.stats.taken += dealt;
   target.lastHitAt = battle.time;
@@ -428,7 +464,8 @@ export function applyHpLoss(battle, source, target, amount, dmg, mark) {
     if (mark === 'r') ev.push('r');
     battle._ev(ev);
   }
-  if (battle._hooks.damaged) battle.emit('damaged', { source: hs, target, amount, type: dmg ? dmg.type : 'true', dmg, credit: source });
+  if (hpReceipt) { hpReceipt.afterHp = target.bossPool ? target.bossPool.hp : target.hp; hpReceipt.dealt = dealt; }
+  if (battle._hooks.damaged) battle.emit('damaged', { source: hs, target, amount, type: dmg ? dmg.type : 'true', dmg, credit: source, ...(hpReceipt ? { hpReceipt } : {}) });
   if (target.side === 'ally' && target.skill && dmg && !dmg.noSp && dmg.type !== 'element') battle._skills.onDamaged(target);
   const dead = target.bossPool ? target.bossPool.hp <= 0 : target.hp <= 0;
   if (dead && target.alive) battle.kill(target, source);
@@ -508,7 +545,12 @@ export function applyElement(battle, source, target, dmg) {
   // 元素损伤倍率 × max(5 %, 1 − 损伤抵抗 %) — official EP_RESISTANCE = data epResistance
   let amt = dmg.amount * dmg.mul * elementIntake(target);
   if (!(amt > 0) || !Number.isFinite(amt)) return 0;
-  target.elem[el] = Math.min(max, target.elem[el] + amt);
+  const before = target.elem[el];
+  target.elem[el] = Math.min(max, before + amt);
+  // Accepted delta after every native immunity/modifier gate, before any burst or damaged callback can reset it.
+  if (battle._hooks.elementContribution && target.elem[el] > before) battle.emit('elementContribution', {
+    source, target, element: el, effective: target.elem[el] - before, threshold: max, kind: 'applied',
+  });
   battle._ev(['dmg', target.id, Math.round(amt), el]);
   if (source) source.stats.elem = (source.stats.elem ?? 0) + amt;
   if (battle._hooks.damaged) battle.emit('damaged', { source, target, amount: amt, type: 'element', dmg });
@@ -548,6 +590,15 @@ function resolveBurst(battle, source, target, el) {
       mods: { atkMul: 1 - cfg.atkDownPct }, interval: 1,
       onTick: () => battle.dealDamage(source, target, { amount: cfg.dps, type: 'true', canDodge: false, sourceless: true, tags: ['burst', 'necrosis'] }),
     });
+    return;
+  }
+  if(el==='frenzy'){
+    if(target.side==='enemy'){lock(cfg.duration);return;}
+    // Native 狂躁: 15s ASPD+50, 100 true DPS, +50 for each attack, capped at 600.
+    const state={damage:cfg.dps,castAt:-Infinity};let detach=[];
+    const stop=()=>{reset();for(const h of detach)battle.off(h);detach=[];};
+    const buff=lock(cfg.duration,{mods:{aspd:cfg.aspd},interval:1,onExpire:stop,onRemove:stop,onTick:()=>hit(state.damage,'true')});
+    if(buff){const add=()=>{state.damage=Math.min(cfg.maxDps,state.damage+cfg.perAttack);};detach=[battle.on('attack',c=>{if((c.unit===target||c.attacker===target)&&!(c.isSkill&&state.castAt===battle.time))add();}),battle.on('skillStart',c=>{if(c.unit===target){state.castAt=battle.time;add();}})];}
     return;
   }
   const enemy = target.side === 'enemy';
@@ -636,13 +687,15 @@ export function reduceElement(target, amount, el = null) {
  * Mon3tr(凯尔希的召唤物) "持有禁疗（可被凯尔希…无视）"; her heal selection takes it too, Battle.injuredAlliesInKeys).
  */
 export function heal(battle, source, target, amount, opts = {}) {
+  if(target?.side==='enemy'&&(target.mem.fixedHitCount>0||target.s.flags.hitCount||target.s.flags.hitCountArts))return 0;
+  if(source&&target&&(source.mods?.eventTeam||target.mods?.eventTeam)&&eventHostile(source,target))return 0;
   if (!target || !target.alive || target.removed || !target.deployed || target.bossPool) return 0;
   const self = source === target || !!opts.self;
   const through = !!(source && source.profile && typeof source.profile.healThrough === 'function' && source.profile.healThrough(source, target));
   if (!self && ((target.s.flags.noHeal && !through) || (target.profile && target.profile.noHeal))) return 0;
   const regen = !!opts.regen;
   if (target.s.flags.healFree && !regen && !opts.ignoreHealFree && !through) return 0;
-  let amt = regen ? amount : amount * (source && source.s ? source.s.healingDealtMul : 1) * target.s.healingTakenMul;
+  let amt = regen ? amount : amount * (source && source.s ? source.s.healingDealtMul : 1) * target.s.healingTakenMul * (target.side==='ally'?(battle.data?.contractHealMul??1):1);
   if (!(amt > 0) || !Number.isFinite(amt)) return 0;
   if (battle._hooks.heal) {
     const ctx = { source, target, amount: amt, opts };

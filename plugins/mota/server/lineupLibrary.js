@@ -50,6 +50,9 @@ const PER_KEY_KEEP = 6;
 /** Whole-file caps. A library past either one drops its oldest decile and rewrites the window in place. */
 const MAX_LINES = 4000;
 const MAX_BYTES = 3 * 1024 * 1024;
+/** 全服布阵数据容量（业主 2026-11-01：20G 是全服务器的量，不是每账号）。超了就停止追加，只记一次日志。 */
+const GLOBAL_MAX_BYTES = Number(process.env.SP_LINEUP_QUOTA_BYTES) || Number(process.env.SP_ACCOUNT_LINEUP_QUOTA_BYTES) || 20 * 1024 ** 3;
+let quotaWarnedAt = 0;
 /** How much of the file is read at startup: enough to fill the window even from an over-cap file. */
 const READ_LIMIT = MAX_BYTES * 2;
 /** Per-mode file prefix inside a library directory: <dir>/<LIBRARY_PREFIX><modeId>.jsonl. */
@@ -390,13 +393,47 @@ export function flushMatchLineups(m, outcome) {
   void m; // the match is the caller's anchor; the records carry their own stageId/difficulty/round
 }
 
+/** 全服布阵数据的真实占用：库目录下所有 *.jsonl（排除 outbox 传输队列）之和；单文件布局再补上那一个文件。 */
+export function globalLibraryBytes() {
+  const raw = String(process.env.SP_LINEUP_LIBRARY || '').trim();
+  if (!raw) return 0;
+  let total = 0;
+  const dir = lineupDir();
+  if (dir) {
+    let names = [];
+    try { names = readdirSync(dir); } catch { names = []; }
+    for (const name of names) {
+      if (!name.endsWith('.jsonl') || name.startsWith('outbox')) continue;
+      try { total += statSync(join(dir, name)).size; } catch { /* a file may vanish mid-scan */ }
+    }
+  }
+  try { if (!lineupIsSplit() && existsSync(raw)) total += statSync(raw).size; } catch { /* not a local file */ }
+  return total;
+}
+
+/** 全服额度（字节）。 */
+export function lineupQuotaBytes() { return GLOBAL_MAX_BYTES; }
+/** 还能不能再写 extraBytes：appendLine 的拒绝判定就是它。 */
+export function lineupQuotaOk(extraBytes = 0) {
+  return !(globalLibraryBytes() + Math.max(0, Number(extraBytes) || 0) > GLOBAL_MAX_BYTES);
+}
+
 async function appendLine(modeId, difficulty, rec) {
   const lib = library(modeId, difficulty);
   if (!lib) return;
   if (lib.seen.has(rec.sig)) return; // no duplicate lines for a lineup we already know
+  const line = JSON.stringify(rec) + '\n';
+  // 全服额度：库文件总量 + 本行 超过 GLOBAL_MAX_BYTES 就拒绝写入（只记一次/小时，绝不抛进结算链）。
+  if (!lineupQuotaOk(Buffer.byteLength(line))) {
+    const nowMs = Date.now();
+    if (nowMs - quotaWarnedAt > 3600_000) {
+      quotaWarnedAt = nowMs;
+      console.warn(`[lineupLibrary] 全服布阵库已达上限 ${(GLOBAL_MAX_BYTES / 1024 ** 3).toFixed(1)} GiB，本次不写入`);
+    }
+    return;
+  }
   lib.seen.add(rec.sig);
   index(lib, rec);
-  const line = JSON.stringify(rec) + '\n';
   const file = lib.file;
   try {
     await appendFile(file, line, 'utf8');

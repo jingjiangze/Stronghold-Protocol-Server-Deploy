@@ -120,7 +120,7 @@ test('discovery: a pack dropped into the folder shows on the next look (no resta
 
 test('the server: GET /packs/index.json lists the packs live, GET /packs/<id>/<file> serves only what a manifest names', async () => {
   const root = exampleRoot();
-  const { startServer } = await import('../server/index.js');
+  const { startServer } = await import('../server/boot-main.js');
   const srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true, publicDir: path.join(root, 'public'), packsDir: path.join(root, 'packs') });
   try {
     const get = (u) => fetch(srv.url + u);

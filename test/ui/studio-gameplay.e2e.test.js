@@ -14,7 +14,7 @@ async function waitForFile(file, ms = 15000) {
 
 test('operator wizard -> borrowed official kit -> saved attributes -> trial -> game-renderer replay and comparison', { skip: !enabled, timeout: 180000 }, async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-gameplay-e2e-'));
-  const { startServer } = await import('../../server/index.js');
+  const { startServer } = await import('../../server/boot-main.js');
   const srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true, pluginsDir: path.join(tmp, 'plugins'), assetIndex: false });
   const P = (await import('puppeteer-core')).default;
   let browser;
@@ -90,7 +90,7 @@ test('operator wizard -> borrowed official kit -> saved attributes -> trial -> g
 
 test('DSL wizard edits a compact operator, refuses failed validation, then runs and packs a real replay', { skip: !enabled, timeout: 180000 }, async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-dsl-e2e-'));
-  const { startServer } = await import('../../server/index.js');
+  const { startServer } = await import('../../server/boot-main.js');
   const srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true, pluginsDir: path.join(tmp, 'plugins'), assetIndex: false });
   let browser;
   try {

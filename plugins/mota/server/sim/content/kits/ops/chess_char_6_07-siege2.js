@@ -1,9 +1,7 @@
 // server/sim/content/kits/ops/chess_char_6_07-siege2.js — 维娜·维多利亚 (char_1019_siege2) kit, tier 6.
 // Conventions of the tier-6 kits: ../shared/tier6.js; kit contract and rules: ../README.md.
 
-import {
-  num, tbb, moduleBb, live, isElite, keyOf, onDefaultSkill, selectedSkill, batOf, skillGridOf, N4, freeTiles, aura,
-} from '../shared/tier6.js';
+import { num, tbb, moduleBb, live, isElite, keyOf, onDefaultSkill, selectedSkill, batOf, skillGridOf, N4, freeTiles, aura } from '../shared/tier6.js';
 
 // ------------------------------------------------------------------------------------------------------------------
 // 维娜·维多利亚 chess_char_6_07 (术战者) — S3 俱以我之名; 诸王的叹息; 无拘的锋芒; module 城主的冒险

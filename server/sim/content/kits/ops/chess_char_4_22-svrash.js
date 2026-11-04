@@ -1,9 +1,7 @@
 // server/sim/content/kits/ops/chess_char_4_22-svrash.js — 银灰 (char_172_svrash) kit, tier 4.
 // Conventions of the tier-4 kits: ../shared/tier4.js; kit contract and rules: ../README.md.
 
-import {
-  AURA, num, tbb, grid, enemiesOnRange, whileDeployed, reveal, alt, instantKind, withDefaults,
-} from '../shared/tier4.js';
+import { AURA, num, tbb, grid, enemiesOnRange, whileDeployed, reveal, alt, instantKind, withDefaults } from '../shared/tier4.js';
 
 export default withDefaults({
   // ===== 银灰 (lord) S3 真银斩 — DEF −70 %, ATK +125 %, wider range, ≤ 4 targets at melee scale; 领袖 / 鹰眼视觉; module

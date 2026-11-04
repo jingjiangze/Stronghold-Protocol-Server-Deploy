@@ -38,7 +38,7 @@ describe('the studio catalogue page', { skip: !ENABLED && 'set SP_E2E=1 (and hav
       assert.equal(url, 'https://example.invalid/demo-skin.zip');
       return new Response(zip, { status: 200 });
     };
-    const { startServer } = await import('../../server/index.js');
+    const { startServer } = await import('../../server/boot-main.js');
     let srv;
     let browser;
     const problems = [];
@@ -90,7 +90,7 @@ describe('the studio catalogue page', { skip: !ENABLED && 'set SP_E2E=1 (and hav
       if (url === zipUrl) return new Response(zip, { status: 200 });
       throw new Error(`unexpected fetch ${url}`);
     };
-    const { startServer } = await import('../../server/index.js');
+    const { startServer } = await import('../../server/boot-main.js');
     let srv;
     let browser;
     const problems = [];

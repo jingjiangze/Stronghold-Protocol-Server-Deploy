@@ -1,0 +1,470 @@
+{
+  "selfDesigned": true,
+  "notice": "自设计，非官方（D 类数值）。官方 roguelike_topic_table.json 不在机器上；层数、每层候选数、行动力、奖励、层名均为社区设计，不得对外宣称按官方。每层 3 个候选节点（choices:3），`tier` 指向 stages 里 rogue_ro4_<tier>-* 的一张图；t/b/d/ev 是肉鸽的精英/首领/补给/事件层级。",
+  "schema": 2,
+  "canvas": [
+    19,
+    21
+  ],
+  "rules": {
+    "startAp": 5,
+    "maxAp": 5,
+    "choices": 3,
+    "layers": 14,
+    "nodesPerLayer": 3
+  },
+  "nodeTypes": {
+    "battle": {
+      "name": "战斗",
+      "cost": 1,
+      "color": "#e85a1a"
+    },
+    "event": {
+      "name": "事件",
+      "cost": 1,
+      "color": "#f6c329"
+    },
+    "shop": {
+      "name": "商店",
+      "cost": 1,
+      "color": "#4aa8ff"
+    },
+    "rest": {
+      "name": "休整",
+      "cost": 1,
+      "color": "#5ad1a0"
+    },
+    "elite": {
+      "name": "精英",
+      "cost": 1,
+      "color": "#c431ff"
+    },
+    "boss": {
+      "name": "首领",
+      "cost": 1,
+      "color": "#ff2d2d"
+    }
+  },
+  "layers": [
+    {
+      "id": "R1",
+      "name": "第一层 · 荒废站台",
+      "nodes": [
+        {
+          "id": "R1-N1",
+          "type": "battle",
+          "name": "遭遇战",
+          "tier": "1",
+          "cost": 1,
+          "reward": { "funds": 2, "ap": 1 }
+        },
+        {
+          "id": "R1-N2",
+          "type": "battle",
+          "name": "巡逻队",
+          "tier": "2",
+          "cost": 1,
+          "reward": { "funds": 3, "ap": 1 }
+        },
+        {
+          "id": "R1-N3",
+          "type": "battle",
+          "name": "伏击点",
+          "tier": "3",
+          "cost": 2,
+          "reward": { "funds": 4, "ap": 2 }
+        }
+      ]
+    },
+    {
+      "id": "R2",
+      "name": "第二层 · 沉降回廊",
+      "nodes": [
+        {
+          "id": "R2-N1",
+          "type": "battle",
+          "name": "回廊伏击",
+          "tier": "1",
+          "cost": 1,
+          "reward": { "funds": 2, "ap": 1 }
+        },
+        {
+          "id": "R2-N2",
+          "type": "battle",
+          "name": "无灯长廊",
+          "tier": "2",
+          "cost": 1,
+          "reward": { "funds": 3, "ap": 1 }
+        },
+        {
+          "id": "R2-N3",
+          "type": "battle",
+          "name": "坍塌口",
+          "tier": "3",
+          "cost": 2,
+          "reward": { "funds": 5, "ap": 2 }
+        }
+      ]
+    },
+    {
+      "id": "R3",
+      "name": "第三层 · 锈蚀哨卡",
+      "nodes": [
+        {
+          "id": "R3-N1",
+          "type": "elite",
+          "name": "精英 · 锈蚀守卫",
+          "tier": "t",
+          "cost": 1,
+          "reward": { "funds": 4, "deployCap": 1 }
+        },
+        {
+          "id": "R3-N2",
+          "type": "elite",
+          "name": "精英 · 断电哨兵",
+          "tier": "t",
+          "cost": 1,
+          "reward": { "funds": 3, "lp": 1 }
+        },
+        {
+          "id": "R3-N3",
+          "type": "elite",
+          "name": "精英 · 双生守卫",
+          "tier": "t",
+          "cost": 2,
+          "reward": { "funds": 6, "ap": 1 }
+        }
+      ]
+    },
+    {
+      "id": "R4",
+      "name": "第四层 · 无灯的房间",
+      "nodes": [
+        {
+          "id": "R4-N1",
+          "type": "event",
+          "name": "不期而遇",
+          "tier": "ev",
+          "cost": 1,
+          "reward": { "funds": 1, "lp": 1 }
+        },
+        {
+          "id": "R4-N2",
+          "type": "event",
+          "name": "废弃补给箱",
+          "tier": "ev",
+          "cost": 1,
+          "reward": { "funds": 2, "ap": 1 }
+        },
+        {
+          "id": "R4-N3",
+          "type": "event",
+          "name": "无声的赌局",
+          "tier": "ev",
+          "cost": 1,
+          "reward": { "funds": 3, "lp": -1 }
+        }
+      ]
+    },
+    {
+      "id": "R5",
+      "name": "第五层 · 沿途集市",
+      "nodes": [
+        {
+          "id": "R5-N1",
+          "type": "shop",
+          "name": "流动摊贩",
+          "tier": "d",
+          "cost": 1,
+          "reward": { "funds": 3 }
+        },
+        {
+          "id": "R5-N2",
+          "type": "shop",
+          "name": "旧货铺",
+          "tier": "d",
+          "cost": 1,
+          "reward": { "funds": 1, "deployCap": 1 }
+        },
+        {
+          "id": "R5-N3",
+          "type": "shop",
+          "name": "免费补给点",
+          "tier": "d",
+          "cost": 0,
+          "reward": { "ap": 1 }
+        }
+      ]
+    },
+    {
+      "id": "R6",
+      "name": "第六层 · 断轨大厅",
+      "nodes": [
+        {
+          "id": "R6-N1",
+          "type": "battle",
+          "name": "断轨遭遇",
+          "tier": "4",
+          "cost": 1,
+          "reward": { "funds": 3, "ap": 1 }
+        },
+        {
+          "id": "R6-N2",
+          "type": "battle",
+          "name": "大厅封锁线",
+          "tier": "5",
+          "cost": 2,
+          "reward": { "funds": 5, "ap": 1 }
+        },
+        {
+          "id": "R6-N3",
+          "type": "battle",
+          "name": "侧廊巡逻",
+          "tier": "4",
+          "cost": 1,
+          "reward": { "funds": 2, "deployCap": 1 }
+        }
+      ]
+    },
+    {
+      "id": "R7",
+      "name": "第七层 · 积水隧道",
+      "nodes": [
+        {
+          "id": "R7-N1",
+          "type": "battle",
+          "name": "深水伏击",
+          "tier": "5",
+          "cost": 2,
+          "reward": { "funds": 5, "ap": 2 }
+        },
+        {
+          "id": "R7-N2",
+          "type": "battle",
+          "name": "隧道哨兵",
+          "tier": "4",
+          "cost": 1,
+          "reward": { "funds": 3, "ap": 1 }
+        },
+        {
+          "id": "R7-N3",
+          "type": "battle",
+          "name": "渗水闸口",
+          "tier": "5",
+          "cost": 1,
+          "reward": { "funds": 4, "lp": 1 }
+        }
+      ]
+    },
+    {
+      "id": "R8",
+      "name": "第八层 · 守卫营房",
+      "nodes": [
+        {
+          "id": "R8-N1",
+          "type": "elite",
+          "name": "精英 · 营房队长",
+          "tier": "t",
+          "cost": 1,
+          "reward": { "funds": 5, "deployCap": 1 }
+        },
+        {
+          "id": "R8-N2",
+          "type": "elite",
+          "name": "精英 · 重装卫兵",
+          "tier": "t",
+          "cost": 1,
+          "reward": { "funds": 4, "lp": 2 }
+        },
+        {
+          "id": "R8-N3",
+          "type": "elite",
+          "name": "精英 · 双人巡检",
+          "tier": "t",
+          "cost": 2,
+          "reward": { "funds": 7, "ap": 1 }
+        }
+      ]
+    },
+    {
+      "id": "R9",
+      "name": "第九层 · 旧日信标",
+      "nodes": [
+        {
+          "id": "R9-N1",
+          "type": "event",
+          "name": "旧日的信标",
+          "tier": "ev",
+          "cost": 1,
+          "reward": { "funds": 2, "lp": 1 }
+        },
+        {
+          "id": "R9-N2",
+          "type": "event",
+          "name": "检修井",
+          "tier": "ev",
+          "cost": 1,
+          "reward": { "ap": 2 }
+        },
+        {
+          "id": "R9-N3",
+          "type": "event",
+          "name": "封存的军械",
+          "tier": "ev",
+          "cost": 2,
+          "reward": { "funds": 5, "deployCap": 1 }
+        }
+      ]
+    },
+    {
+      "id": "R10",
+      "name": "第十层 · 临时营地",
+      "nodes": [
+        {
+          "id": "R10-N1",
+          "type": "rest",
+          "name": "临时营地",
+          "tier": "d",
+          "cost": 0,
+          "reward": { "ap": 2 }
+        },
+        {
+          "id": "R10-N2",
+          "type": "rest",
+          "name": "急救站",
+          "tier": "d",
+          "cost": 0,
+          "reward": { "lp": 2 }
+        },
+        {
+          "id": "R10-N3",
+          "type": "rest",
+          "name": "拾荒营地",
+          "tier": "d",
+          "cost": 0,
+          "reward": { "ap": 1, "funds": 2 }
+        }
+      ]
+    },
+    {
+      "id": "R11",
+      "name": "第十一层 · 核心外廊",
+      "nodes": [
+        {
+          "id": "R11-N1",
+          "type": "battle",
+          "name": "外廊守卫",
+          "tier": "6",
+          "cost": 1,
+          "reward": { "funds": 4, "ap": 1 }
+        },
+        {
+          "id": "R11-N2",
+          "type": "battle",
+          "name": "外廊死斗",
+          "tier": "7",
+          "cost": 2,
+          "reward": { "funds": 6, "ap": 2 }
+        },
+        {
+          "id": "R11-N3",
+          "type": "battle",
+          "name": "通风井",
+          "tier": "6",
+          "cost": 1,
+          "reward": { "funds": 3, "deployCap": 1 }
+        }
+      ]
+    },
+    {
+      "id": "R12",
+      "name": "第十二层 · 封锁线",
+      "nodes": [
+        {
+          "id": "R12-N1",
+          "type": "battle",
+          "name": "核心封锁线",
+          "tier": "7",
+          "cost": 2,
+          "reward": { "funds": 7, "ap": 2 }
+        },
+        {
+          "id": "R12-N2",
+          "type": "battle",
+          "name": "封锁缺口",
+          "tier": "6",
+          "cost": 1,
+          "reward": { "funds": 4, "ap": 1 }
+        },
+        {
+          "id": "R12-N3",
+          "type": "battle",
+          "name": "断后小队",
+          "tier": "7",
+          "cost": 1,
+          "reward": { "funds": 5, "lp": 1 }
+        }
+      ]
+    },
+    {
+      "id": "R13",
+      "name": "第十三层 · 最后集市",
+      "nodes": [
+        {
+          "id": "R13-N1",
+          "type": "shop",
+          "name": "最后一间铺子",
+          "tier": "d",
+          "cost": 1,
+          "reward": { "funds": 4 }
+        },
+        {
+          "id": "R13-N2",
+          "type": "shop",
+          "name": "军械掮客",
+          "tier": "d",
+          "cost": 1,
+          "reward": { "funds": 2, "deployCap": 1 }
+        },
+        {
+          "id": "R13-N3",
+          "type": "shop",
+          "name": "门前补给",
+          "tier": "d",
+          "cost": 0,
+          "reward": { "ap": 1, "lp": 1 }
+        }
+      ]
+    },
+    {
+      "id": "R14",
+      "name": "第十四层 · 核心前厅",
+      "nodes": [
+        {
+          "id": "R14-N1",
+          "type": "boss",
+          "name": "首领 · 核心",
+          "tier": "b",
+          "cost": 1,
+          "reward": { "funds": 6, "lp": 1 }
+        },
+        {
+          "id": "R14-N2",
+          "type": "boss",
+          "name": "首领 · 核心（强攻）",
+          "tier": "b",
+          "cost": 1,
+          "reward": { "funds": 8 }
+        },
+        {
+          "id": "R14-N3",
+          "type": "boss",
+          "name": "首领 · 核心（稳守）",
+          "tier": "b",
+          "cost": 1,
+          "reward": { "funds": 5, "lp": 2 }
+        }
+      ]
+    }
+  ]
+}

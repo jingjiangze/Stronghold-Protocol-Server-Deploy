@@ -3,10 +3,7 @@
 
 import { COLS } from '../../../constants.js';
 import { absoluteRangeKeys } from '../../../targeting.js';
-import {
-  HALF_HP, NEVER, AURA_IV, AURA_DUR, num, on, talent, traitBb, skillGrid, mods, selectedId, lazySkills, instantKind,
-  whileOn, lowHpHealUp, permBuff,
-} from '../shared/tier5.js';
+import { HALF_HP, NEVER, AURA_IV, AURA_DUR, num, on, talent, traitBb, skillGrid, mods, selectedId, lazySkills, instantKind, whileOn, lowHpHealUp, permBuff } from '../shared/tier5.js';
 
 /**
  * Activate the unit's skill whenever it is ready and `cond()` holds (NEVER-trigger skills). Consecutive casts of a

@@ -1,0 +1,101 @@
+.spchat[hidden], .spchat [hidden] { display: none !important; }
+.spchat { font: 12px/1.35 system-ui,sans-serif; color: #e4e4e7; }
+.spchat__panel {
+  position: fixed; z-index: 160; display: flex; flex-direction: column;
+  width: 230px; height: 220px; box-sizing: border-box;
+  background: #18181b; border: 1px solid #27272a; border-radius: 9px;
+  box-shadow: 0 8px 28px #0008; overflow: hidden; pointer-events: auto;
+}
+.spchat__header {
+  display: flex; align-items: center; justify-content: space-between;
+  flex: 0 0 30px; padding: 0 9px; color: #34d399;
+  cursor: grab; touch-action: none;
+}
+.spchat button {
+  font: inherit; border: 1px solid #27272a; border-radius: 5px;
+  background: #27272a; color: #e4e4e7; cursor: pointer; touch-action: manipulation;
+}
+.spchat button:disabled { opacity: .45; }
+.spchat__fold { width: 24px; height: 24px; padding: 0; }
+.spchat__log {
+  flex: 1 1 auto; min-height: 0; overflow: auto; padding: 6px 8px;
+  overscroll-behavior: contain; touch-action: pan-y;
+}
+.spchat__row {
+  display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 7px;
+}
+.spchat__row--mine { align-items: flex-end; }
+.spchat__name { font-size: 10px; color: #a1a1aa; margin-bottom: 2px; overflow-wrap: anywhere; }
+.spchat__bubble {
+  max-width: 94%; padding: 5px 7px; border-radius: 7px; background: #27272a;
+  white-space: pre-wrap; overflow-wrap: anywhere; box-sizing: border-box;
+}
+.spchat__row--mine .spchat__bubble {
+  background: #065f46; color: #ecfdf5; border: 1px solid #34d39966;
+}
+.spchat__hint { padding: 0 8px 3px; font-size: 10px; color: #a1a1aa; }
+.spchat__form {
+  display: flex; gap: 4px; padding: 5px; border-top: 1px solid #27272a; flex-shrink: 0;
+}
+.spchat__input {
+  min-width: 0; flex: 1; height: 28px; box-sizing: border-box; padding: 3px 6px;
+  background: #09090b; color: #fafafa; border: 1px solid #3f3f46; border-radius: 5px;
+  font: 12px system-ui,sans-serif; outline-color: #34d399;
+  -webkit-user-select: text !important; user-select: text !important;
+  touch-action: manipulation !important; pointer-events: auto !important;
+}
+.spchat__send { padding: 0 6px; }
+.spchat__toggle {
+  position: fixed; z-index: 161; width: 36px; height: 36px; padding: 0;
+  background: #18181b !important; border-color: #34d399 !important;
+  border-radius: 50% !important; box-shadow: 0 4px 16px #0008;
+}
+@media (pointer: coarse) { .spchat__input { font-size: 16px; } }
+
+/* SPCHAT_DRAGGABLE_TOGGLE_V1 */
+.spchat .spchat__toggle {
+  touch-action: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none;
+  cursor: grab;
+}
+.spchat .spchat__toggle:active { cursor: grabbing; }
+
+/* Visible circles follow the game's HUD scale; the invisible touch target remains 44px. */
+@media (orientation: landscape) and (max-height: 600px) and (any-pointer: coarse) {
+  .spvoice__fab, .spchat .spchat__toggle { width: max(.56rem, 24px) !important; height: max(.56rem, 24px) !important; }
+  .spvoice__fab svg, .spchat .spchat__toggle svg { width: max(.28rem, 14px) !important; height: max(.28rem, 14px) !important; }
+  .spvoice__fab::before, .spchat .spchat__toggle::before { content: ''; position: absolute; width: 44px; height: 44px; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+}
+
+/* Compact chat toggle, 2026-10-12b. */
+.spchat .spchat__toggle {
+  color:#6ee7b7;
+  background:radial-gradient(circle at 50% 28%, #24322d 0%, #0d1311 72%) !important;
+  border:1px solid rgba(52,211,153,.6) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.09), 0 4px 14px rgba(0,0,0,.55), 0 0 0 3px rgba(52,211,153,.08);
+  transition:border-color .15s, box-shadow .15s;
+}
+.spchat .spchat__toggle:hover, .spchat .spchat__toggle[aria-expanded="true"] {
+  border-color:#6ee7b7 !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 4px 14px rgba(0,0,0,.55), 0 0 12px rgba(52,211,153,.32);
+}
+.spchat__toggle-label { display:none; }
+
+/* Room chat messages can be selected and copied (the app shell sets user-select:none globally). */
+.spchat__log, .spchat__log * { -webkit-user-select:text; user-select:text; -webkit-touch-callout:default; }
+.spchat__log { cursor:text; }
+.spchat__log ::selection { background:#2f8f70; color:#fff; }
+
+/* DOM scroll anchors are preserved explicitly across history merges and pruning. */
+.spchat__log { overflow-anchor: none; scroll-behavior: auto; scroll-snap-type: none; }
+
+/* ---- 贴纸 / 局内头像气泡 / 交流面板里的贴纸区（照抄参考服 community-chat.css） ---- */
+.community-sticker{display:block;width:100px;height:90px;object-fit:contain}
+.community-stickers{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:6px;max-height:140px;overflow:auto;overscroll-behavior:contain}.community-stickers button{min-width:0;padding:2px!important}.community-stickers img{width:100%;height:48px;object-fit:contain}
+.spchat__stickers{max-height:105px;overflow:auto;flex-shrink:0}.spchat__bubble .community-sticker{width:88px;height:78px}.spchat__emoji{padding:0 5px;min-width:34px}
+.community-battle-bubble{position:fixed;z-index:175;background:#0c201cef;border:1px solid #52d4b0;border-radius:8px;padding:5px;pointer-events:none;box-shadow:0 3px 12px #0008}.community-battle-bubble .community-sticker{width:90px;height:82px}
+.community-chat .community-chat__picker .community-stickers { padding:4px 11px 6px; }
+.community-chat .community-chat__picker .community-stickers button { background:rgba(255,255,255,.03); border:1px solid rgba(62,75,69,.9); border-radius:0; }
+.community-chat .community-chat__picker .community-stickers button:hover { border-color:var(--mint-500, #4ed8af); background:rgba(78,216,175,.12); }

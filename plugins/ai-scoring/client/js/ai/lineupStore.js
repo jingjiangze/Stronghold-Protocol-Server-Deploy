@@ -76,7 +76,7 @@ export const lineupStore = {
     const fetchImpl = globalThis.fetch;
     if (typeof fetchImpl !== 'function') return;
     try {
-      void fetchImpl('/api/lineup-score', {
+      void fetchImpl('/x/ai-scoring/lineup-score', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         keepalive: true,

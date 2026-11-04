@@ -73,13 +73,35 @@ export class PlayerPieces {
    * in which the player can act on it, _tempDueNow). Returns 'hand' | 'temp' | null. A piece put into temp while a hand
    * slot is free (`toTemp`) moves into the hand at the next recompute (_fillHandFromTemp).
    */
+  /**
+   * 手牌容量（2026-11-03）：`hand`（空间碎片）是「待部署区 −4」——**不减数组长度**（下标对应 UI 槽位），
+   * 而是把第 cap 个之后的槽位视为不可用。
+   */
+  handCap() {
+    let cap = this.hand.length;
+    try {
+      const list = this.m && typeof this.m.relicEffectList === 'function' ? this.m.relicEffectList(this, 'hand') : [];
+      for (const v of list) cap += Math.trunc(Number(v) || 0);
+    } catch { /* 没这条藏品 */ }
+    return Math.max(0, Math.min(this.hand.length, cap));
+  }
+
+  /** 手牌里第一个**可用**的空槽（受 handCap 限制）；没有返回 -1。 */
+  freeHandSlot() {
+    const cap = this.handCap();
+    for (let i = 0; i < cap; i++) if (this.hand[i] == null) return i;
+    return -1;
+  }
+
   stow(piece, { allowTemp = true, toTemp = false, preferIdx = null } = {}) {
+    // 藏品 removeTemp（维度流质）「移除临时部署区」：手牌满了就是没地方放（溢出丢弃），不再往 temp 塞
+    if (this.relicNoTemp) allowTemp = false;
     if (!toTemp) {
       if (Number.isInteger(preferIdx) && preferIdx >= 0 && preferIdx < this.hand.length && this.hand[preferIdx] == null) {
         this.hand[preferIdx] = piece;
         return 'hand';
       }
-      const i = freeSlot(this.hand);
+      const i = this.freeHandSlot();
       if (i >= 0) { this.hand[i] = piece; return 'hand'; }
       if (!allowTemp) return null;
     }
@@ -110,7 +132,7 @@ export class PlayerPieces {
     for (const j of indices) {
       const p = this.temp[j];
       if (!p) continue;
-      const i = freeSlot(this.hand);
+      const i = this.freeHandSlot();
       if (i < 0) break;
       this._detach({ piece: p, area: 'temp', idx: j });
       this.hand[i] = p;

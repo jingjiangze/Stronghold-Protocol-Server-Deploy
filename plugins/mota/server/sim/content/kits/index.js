@@ -150,7 +150,19 @@ export const OPERATOR_KIT_FILES = Object.freeze([
   'op-necras.js',
   'op-kalts2.js',
   'op-monstr.js',
+  /* 克莱门莎 (0.2.3 上游 2e12287)—— 自选编队六星,本源近卫。 */
   'op-clemnt.js',
+  // Owner 2026-11-01: four temporary DIY-only choices (Alga is the explicit five-star exception).
+  'op-alga.js',
+  'op-oxi.js',
+  'op-tocka.js',
+  'op-dminon.js',
+  'op-oblvns.js',
+  /*
+   * ⚠ 结城理**不在这里** —— 他是商店常驻的卫戍棋子,不是自选干员。
+   * 放进 `OPERATOR_KIT_FILES` 会让他的 charId 进 `KITTED_CHARS`,从而出现在「自选编队」名单
+   * (这正是 MOD 自带注释要求避免的)。改由 `MOD_KIT_FILES` 注册,见那一组的说明。
+   */
 ]);
 
 /**
@@ -172,6 +184,9 @@ async function loadKitFile(file) {
 const MODULES = await Promise.all(KIT_FILES.map((group) => Promise.all(group.map(loadKitFile))));
 const STANDIN_MODULES = await Promise.all(STANDIN_KIT_FILES.map(loadKitFile));
 const OPERATOR_MODULES = await Promise.all(OPERATOR_KIT_FILES.map(loadKitFile));
+// Permanent owner-requested additions have char-key kits without entering the self-select pool.
+export const OWNER_KIT_FILES = Object.freeze(['owner-swllow.js', 'owner-buildr.js', 'owner-halo.js', 'owner-cuttle.js', 'owner-aosta.js', 'owner-kichi.js', 'owner-ju.js', 'owner-mitm.js', 'owner-fang2.js', 'owner-cammou.js', 'owner-liesel.js', 'owner-varkis.js']);
+const OWNER_MODULES = await Promise.all(OWNER_KIT_FILES.map(loadKitFile));
 const registryOf = (m) => (m && m.default && typeof m.default === 'object' ? m.default : {});
 
 /** The registry of each tier group (index 0 = tier 1): baseChessId → kit builder, in KIT_FILES order. */
@@ -182,16 +197,77 @@ export const STANDIN_KITS = Object.freeze(Object.assign({}, ...STANDIN_MODULES.m
 
 /** The 自选 operator kits: owned-6★ charId → kit builder, in OPERATOR_KIT_FILES order. */
 export const OPERATOR_KITS = Object.freeze(Object.assign({}, ...OPERATOR_MODULES.map(registryOf)));
+export const OWNER_KITS = Object.freeze(Object.assign({}, ...OWNER_MODULES.map(registryOf)));
+
+/**
+ * 自研 MOD 干员的 kit (owner:「目前结城理这个干员有bug 三技能不生效 被动不生效」)。
+ *
+ * ## 为什么需要这一组
+ *
+ * `kitOf(def, reg)`(content/index.js)对**普通干员**的查找顺序是
+ *   `reg[def.baseId]` → `reg[def.id]` → `reg[bare]`,其中 `bare` = `baseId` 去掉 `_a` / `_b` 后缀。
+ * 而 `data/chess.json` 里 **`baseId` 是带 `_a` 的完整 id**(实测 `chess_char_4217_makoto_a` 的
+ * `baseId` 就是 `chess_char_4217_makoto_a`,只有 `_b` 才指向 `_a`)。
+ *
+ * MOD 包按**上游 0.2.x 的约定**导出的却是**裸键**:
+ *   `export default { chess_char_4217_makoto: (bb, chess, def) => … }`
+ * 于是三条查找**全部落空** → 退回 generic kit → 结城理的三个技能、被动、天赋**一个都不生效**。
+ *
+ * 这里在**加载时把裸键规范化**成 `_a`(本 fork 的 `baseId` 约定),而不是去改 MOD 源文件 ——
+ * MOD 是别人维护的、会更新,改它等于把补丁埋进别人的代码里。
+ *
+ * ## 与 `OPERATOR_KIT_FILES` 的区别
+ *
+ * **不要**把 MOD 干员放进 `OPERATOR_KIT_FILES`:那会让它的 charId 进 `KITTED_CHARS`,
+ * 从而出现在「自选编队」名单里。结城理是**商店常驻**的卫戍棋子,不是自选干员。
+ * 单独一组既能命中 `baseId`,又不污染自选名单 —— 这也正是 MOD 自带注释所要求的
+ * (「因为她是卫戍棋子…**不**写进 OPERATOR_KIT_FILES」)。
+ */
+export const MOD_KIT_FILES = Object.freeze(['op-makoto.js']);
+
+/**
+ * MOD 导出键 → 本 fork 的查找键。
+ *
+ * MOD 按上游 0.2.x 约定导出**两种**键,本 fork 的 `kitOf` 都命中不了,各自补一份:
+ *
+ *   · `char_4217_makoto`(charId) → `chess_char_4217_makoto_a`
+ *     —— 普通干员走 `reg[def.baseId]`,而 `def.baseId` 是带 `_a` 的**棋子 id**。
+ *        实测 `data/chess.json` 里 `chess_char_4217_makoto_a` 的 `baseId` 就是它自己。
+ *        (`charId` 键本身**保留**:补位 / 自选走 `isOtherBody(def)` 那一条分支,按 `charId` 查。)
+ *   · `chess_xxx`(裸棋 id) → `chess_xxx_a`
+ *
+ * ⚠ 只给 `char_` 键**额外**补 `chess_…_a`,不是把它改名 —— 两条路都要留着。
+ */
+const modKeyAliases = (key) => {
+  const out = [];
+  if (/^char_/.test(key)) out.push(`chess_${key}_a`);            // char_4217_makoto → chess_char_4217_makoto_a
+  else if (key.startsWith('chess_') && !/_[ab]$/.test(key)) out.push(`${key}_a`);
+  return out;
+};
+
+const MOD_MODULES = await Promise.all(MOD_KIT_FILES.map(loadKitFile));
+export const MOD_KITS = Object.freeze(Object.assign({}, ...MOD_MODULES.map((m) => {
+  const reg = registryOf(m);
+  const out = {};
+  for (const [key, fn] of Object.entries(reg)) {
+    out[key] = fn;
+    /* 补上本 fork 的查找键(已有同名键时不覆盖,尊重 MOD 自己写的完整 id) */
+    for (const alias of modKeyAliases(key)) if (!(alias in reg) && !(alias in out)) out[alias] = fn;
+  }
+  return out;
+})));
 
 /**
  * The merged kit registry: baseChessId → (bb, chess, def) => Kit, tier 1 … tier 6, then the stand-ins' charIds, then
- * the 自选 operators' charIds.
+ * the 自选 operators' charIds, then the MOD operators' (last ⇒ a MOD may override a built-in id on purpose).
  */
-export const KITS = Object.freeze(Object.assign({}, ...TIER_KITS, STANDIN_KITS, OPERATOR_KITS));
+export const KITS = Object.freeze(Object.assign({}, ...TIER_KITS, STANDIN_KITS, OPERATOR_KITS, OWNER_KITS, MOD_KITS));
 
 /**
  * Every character a 自选 pick may field with a faithful kit: the 预备干员 (GENERIC_KIT_CHARS), the stand-ins with a kit
  * file and the operators of OPERATOR_KIT_FILES whose file loaded. The `kitted` option of shared/diy.js diyPool /
  * validateDiyPicks.
  */
-export const KITTED_CHARS = Object.freeze([...new Set([...GENERIC_KIT_CHARS, ...Object.keys(STANDIN_KITS), ...Object.keys(OPERATOR_KITS)])]);
+// Owner 2026-10-18 moves Makoto from permanent stock into DIY; retain its mod kit aliases for existing saves.
+export const KITTED_CHARS = Object.freeze([...new Set([...GENERIC_KIT_CHARS, ...Object.keys(STANDIN_KITS), ...Object.keys(OPERATOR_KITS),
+  ...Object.keys(MOD_KITS).filter(id => id === 'char_4217_makoto')])]);

@@ -2,13 +2,11 @@
 // Conventions of the tier-5 kits: ../shared/tier5.js; kit contract and rules: ../README.md.
 
 import { COLS } from '../../../constants.js';
+import { hypot } from '../../../detmath.js';
 import { sortEnemyTargets } from '../../../targeting.js';
 import { toLocal } from '../../../dir.js';
-import {
-  AURA_IV, AURA_DUR, RING1, num, on, talent, skillGrid, maxCharges, mods, dist, isOp, selectedId, lazySkills,
-  instantKind, whileOn, permBuff,
-} from '../shared/tier5.js';
-import { hypot } from '../../../detmath.js';
+import { AURA_IV, AURA_DUR, RING1, num, on, talent, skillGrid, maxCharges, mods, dist, isOp, selectedId, lazySkills, instantKind, whileOn, permBuff } from '../shared/tier5.js';
+
 
 /** Straight-road length through each tile (max of the horizontal and vertical runs of ground-passable tiles). */
 const ROAD_CACHE = new WeakMap();

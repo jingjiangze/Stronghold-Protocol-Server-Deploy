@@ -12,6 +12,11 @@ import { stampFear } from '../fear.js';
 export class BattleStatus {
   addBuff(unit, b) {
     if (!unit || (!unit.alive && !b.allowDead)) return null;
+    if (this._hooks.beforeBuff) {
+      const ctx = { target: unit, buff: b, cancel: false };
+      this.emit('beforeBuff', ctx);
+      if (ctx.cancel) return null;
+    }
     const buff = makeBuff(b);
     const list = unit.buffs;
     let idx = -1;

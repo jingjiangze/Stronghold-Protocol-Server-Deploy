@@ -397,7 +397,25 @@ function readUiFrame(dir, manifest, listed, { vanilla, hashCache }) {
   const problems = [];
   const warnings = [];
   const entry = manifest.entry?.client;
-  if (!entry) return { ui: null, problems: ['"entry.client" is required for a ui plugin (an .html file)'], warnings };
+  // 第二种形态：没有 frame 页，只贡献同源模块（manifest.code.client 里列出的 .js）。这些模块由
+  // public/js/ui/pluginSlots.js 挂进槽位；顶替下发仍走 clientOverlay，所以服务端没有 frame 文件要给。
+  const moduleRels = Array.isArray(manifest.code?.client) ? manifest.code.client.filter((x) => typeof x === 'string' && x) : [];
+  if (!entry) {
+    if (!moduleRels.length) return { ui: null, problems: ['"entry.client" (.html frame) or a non-empty "code.client" module is required for a ui plugin'], warnings };
+    const moduleSlots = [...(manifest.slots || [])];
+    const moduleComposition = {
+      id: manifest.id, version: manifest.version, files: {},
+      writes: createHash('sha256').update(canonicalJson({ entry: null, slots: moduleSlots, modules: moduleRels })).digest('hex'),
+    };
+    return {
+      ui: {
+        served: new Map(), composition: moduleComposition, bytes: 0, dir, entry: null, slots: moduleSlots, frameFiles: {},
+        vs: null,
+        hash: createHash('sha256').update(canonicalJson(moduleComposition)).digest('hex').slice(0, 16),
+      },
+      problems, warnings,
+    };
+  }
   const clientDir = entry.replace(/[^/]*$/, '');
   const frameRels = listed
     .filter((f) => !f.link)
@@ -861,8 +879,8 @@ export function packIndexOf(packs, { app = APP_VERSION } = {}) {
  * @param {Plugin[]} plugins
  * @param {{ app?: string, vanilla?: string | null }} [opts] vanilla: this server's vanilla content hash
  */
-export function pluginIndexOf(plugins, { app = APP_VERSION, vanilla = null } = {}) {
-  return buildPluginIndex(plugins, { app, vanilla });
+export function pluginIndexOf(plugins, { app = APP_VERSION, vanilla = null, skipped = [] } = {}) {
+  return buildPluginIndex(plugins, { app, vanilla, skipped });
 }
 
 /**
@@ -995,7 +1013,7 @@ export function createPluginRegistry(dirs, { log = { info: noop, warn: noop }, a
      * The catalogue body (GET /plugins/index.json).
      * @param {{ vanilla?: string | null }} [opts] vanilla: the server's vanilla content hash
      */
-    pluginIndex: ({ vanilla = null } = {}) => pluginIndexOf(refresh().plugins, { app, vanilla }),
+    pluginIndex: ({ vanilla = null } = {}) => { const s = refresh(); return pluginIndexOf(s.plugins, { app, vanilla, skipped: s.skipped }); },
     /** Packs and plugins that were not loaded and why, and the warnings of the loaded ones. */
     report: () => { const s = refresh(); return { skipped: s.skipped, warnings: s.warnings }; },
     /**

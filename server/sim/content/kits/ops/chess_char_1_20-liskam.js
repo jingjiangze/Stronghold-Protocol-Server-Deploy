@@ -1,10 +1,7 @@
 // server/sim/content/kits/ops/chess_char_1_20-liskam.js — 雷蛇 (char_107_liskam) kit, tier 1.
 // Conventions of the tier-1 kits: ../shared/tier1.js; kit contract and rules: ../README.md.
 
-import {
-  num, talentBb, talentGrid, moduleOn, up, hurtSpDamage, giveSp, onDamagedOn, alliesInGridOf, statBuff, installReveal,
-  skillBbOf,
-} from '../shared/tier1.js';
+import { num, talentBb, talentGrid, moduleOn, up, hurtSpDamage, giveSp, onDamagedOn, alliesInGridOf, statBuff, installReveal, skillBbOf } from '../shared/tier1.js';
 
 export default {
   // ---------------------------------------------------------------------------------------------------------------

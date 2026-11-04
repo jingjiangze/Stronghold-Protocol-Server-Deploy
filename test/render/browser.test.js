@@ -21,7 +21,7 @@ describe('render engine in headless Chrome', { skip }, () => {
   let srv, browser;
   before(async () => {
     const puppeteer = (await import('puppeteer-core')).default;
-    const { startServer } = await import('../../server/index.js');
+    const { startServer } = await import('../../server/boot-main.js');
     srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true });
     // the content-hash index first: every page then loads the served manifest's /assets/~<hash>/… URLs (ASSETS.md)
     await srv.assetIndex?.whenReady();
@@ -104,6 +104,58 @@ describe('render engine in headless Chrome', { skip }, () => {
       for (const sk of spine.filter((s) => s.path.endsWith('.skel'))) {
         assert.ok(spine.some((s) => s.path === sk.path.replace(/\.skel$/, '.atlas')), `${sk.path}: its atlas`);
       }
+      assert.deepEqual(problems, []);
+    } finally { await page.close(); }
+  });
+
+  test('parasite attachment blinks from block contact to the blocker tile centre', async () => {
+    const { makeBattle } = await import('../helpers/battleHarness.js');
+    const h = makeBattle({ autoFinish: false, units: [{ chessId: 'chess_char_1_01_a', row: 9, col: 5 }] });
+    h.step();
+    const e = h.spawn('enemy_9007_acelem', {
+      pos: [9, 7], route: { motion: 'WALK', start: [9, 7], end: [9, 2], checkpoints: [] },
+    });
+    const host = h.unit('chess_char_1_01_a');
+    let before;
+    for (let n = 0; n < 450 && !host.findBuff('ab:parasite'); n++) {
+      before = h.snapshot();
+      h.step();
+    }
+    assert.ok(host.findBuff('ab:parasite'), 'the approaching enemy attaches');
+    const after = h.snapshot();
+    const contactX = before.units.find((u) => u[0] === e.id)?.[1];
+    const blink = h.eventsOf('fx').find((fx) => fx[1] === 'teleport' && fx[4].id === e.id);
+    assert.ok(blink && contactX > host.tileC);
+    assert.equal(blink[4].kind, 'parasite');
+
+    const { page, problems } = await open('scene=prep&panel=0', 1600, 900);
+    try {
+      await page.evaluate(({ meta, before }) => {
+        window.__demo.pause();
+        const v = window.__demo.view;
+        v.enterBattle(meta);
+        v.pushSnapshot(before);
+      }, { meta: h.b.fieldMeta(), before });
+      await page.waitForFunction((id) => window.__demo.view.debug.views.has(id), {}, e.id);
+      await wait(350);
+      await page.screenshot({ path: path.join(OUT, 'parasite-before-blink.png') });
+
+      const sampled = await page.evaluate(({ after, blink, id }) => {
+        const v = window.__demo.view;
+        const accepted = v.pushSnapshot(after);
+        const events = v.pushEvents({ ev: [blink], gt: after.t });
+        const i = v.debug.interp;
+        const midpoint = i.sample((i.snaps[0].t + after.t) / 2).get(id)?.x;
+        const destination = i.sample(after.t).get(id)?.x;
+        i.renderT = after.t;
+        return { midpoint, destination, accepted, events };
+      }, { after, blink, id: e.id });
+      assert.equal(sampled.accepted, true);
+      assert.equal(sampled.events, 1);
+      assert.equal(sampled.midpoint, contactX, `the short blink is never drawn as a slide: ${JSON.stringify(sampled)}`);
+      assert.equal(sampled.destination, host.tileC, JSON.stringify(sampled));
+      await wait(350);
+      await page.screenshot({ path: path.join(OUT, 'parasite-after-blink.png') });
       assert.deepEqual(problems, []);
     } finally { await page.close(); }
   });

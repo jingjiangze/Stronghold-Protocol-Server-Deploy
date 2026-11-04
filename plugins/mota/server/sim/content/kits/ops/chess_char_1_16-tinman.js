@@ -38,6 +38,7 @@ export function tinmanKit(bb, chess, def) {
               if (e.isFlying || e.s.flags.untargetable) continue;
               if (wither > 1) b.addBuff(e, { key: witherKey, duration: 1.05, data: { mul: wither }, source: unit });
               b.dealDamage(unit, e, { amount: atk * dmgScale, type: 'arts', isSkill: true, canDodge: false, tags: ['dot', 'zone'] });
+              b.fx('skillPulse',{id:unit.id,target:e.id,x:e.x,y:e.y});
             }
             // pulses every second: the buff bridges to the next pulse (two ticks over), the last one ends with the unit
             if (healRatio > 0) {

@@ -10,8 +10,14 @@
 // while it is off. State lives on the Match: `econRequests`, `econRound`, `econDebts`, `econCover*`, `teamReserve`,
 // `teamProjects` (personal funds stay on PlayerState).
 
+// 2026-10-30：个人储备下线后 econSplitLeftover 不再按比例分流，splitLeftoverShares 暂无读者
+// （pureShares.js 与 test/match/coop-three-layer-funds.test.js 保留，供将来恢复分层时复用）。
 import { PHASE, ERR } from '../../../shared/constants.js';
 import { OK, fail } from './common.js';
+// 借钱优先取团队储备：纯分配逻辑（池子先垫多少、还剩多少问队友）
+import { splitPoolFill } from './poolFill.js';
+// 商店设施三项的效果（商店等级 / 协同资金获取 / 装备造价）
+import { teamIncomeCapOf } from './projectEffects.js';
 import { createRng, deriveSeed } from '../../sim/rng.js';
 import { buildNormalWave, buildBossWave } from '../waves.js';
 import { botEconRespond } from '../bot.js';
@@ -46,7 +52,7 @@ export const BOUNTY_MAX_SECONDS = 120;
 
 /**
  * 按座位数缩放房间级经济额度：4 人房 k=1（与旧行为逐字节一致）。
- * 个人额度（maxPerRequest / requestsPerRound / convertPerPlayerMax / perPlayerPerRound）不缩放。
+ * 个人额度（maxPerRequest / requestsPerRound / perPlayerPerRound）不缩放。
  */
 export function scaleTeamEcon(base, seats) {
   if (!base) return null;
@@ -78,6 +84,8 @@ export class MatchEconomy {
     this.econRound = { round: 0, spent: 0, byPlayer: new Map(), perfectGranted: 0, bounty: 0 };
     /** The ids this player has already been refused by this round (被拒后可换人再借, user decision 2026-10-08). */
     this.econDeniedBy = new Map();
+    /** 本回合已经主动存入过的席位（业主 2026-10-30：每人每回合最多存 1）；回合边界清空。 */
+    this.econDepositedBy = new Set();
     /**
      * 方案 B: what each borrower owes, paid out of the income of the next round — Map<borrowerId, { to, amount, round }[]>.
      * Funds still clear every round; only the debt rides on income. A borrower who is eliminated before paying voids
@@ -149,7 +157,9 @@ export class MatchEconomy {
    */
   econRequestsPerRound(ps = null) {
     if (!this.teamEcon) return 0;
-    const extra = this.teamProjects.logistics >= 3 ? this.teamEcon.projects.logistics.extraRequestsAtL3 || 0 : 0;
+    // 2026-10-30：`logistics` 项目已下线（升级项搬进商店）—— 老配置里若还留着就照旧吃它的加成，没有就是 0。
+    const logi = this.teamEcon.projects.logistics;
+    const extra = logi && (this.teamProjects.logistics || 0) >= 3 ? logi.extraRequestsAtL3 || 0 : 0;
     const base = this.teamEcon.transfer.requestsPerRound + extra;
     if (!ps) return base;
     return Math.max(0, Math.min(base, Math.trunc(this.gd.income(this.round + 1))));
@@ -174,21 +184,50 @@ export class MatchEconomy {
     this.econReliefByPlayer.clear();
     // 后勤项目的升级提案也是**回合内**的事：回合边界一到就作废。没有这一句，一条谁都不再表态的提案会永久挂住，
     // 把 `canPropose` 一直卡在 false，全队此后再也无法提案（业主 2026-10-12 的口径里提案只发生在休整期）。
+    // 主动存入（g.econ.deposit）也是**每回合每人最多 1**：边界一到就重新允许
+    this.econDepositedBy.clear();
     this.projectVote = null;
+  }
+
+  /**
+   * 主动存入（业主 2026-10-30）：把本回合 1 点资金放进团队储备。
+   *
+   * 结余不再自动进池之后，这是玩家补充团队池的**唯一主动手段**，所以有两条硬约束：每人每回合最多 1 次，
+   * 且只能在自己还没 Ready 的 PREP 里做（`econGate` 已经覆盖存活/阶段/ready 三条）。
+   */
+  econDeposit(ps) {
+    // 没有协同经济的房间（独立模拟 / 单人肉鸽的 econSolo / 未开 economy.team）根本没有团队储备：不拦的话这一句
+    // 会把个人资金扣进一个谁也看不见、也取不出来的池子（econGate 只管存活/阶段/ready）。与 econRequest /
+    // econBuyProject 同一道闸、同一个错误码。
+    if (!this.teamEcon) return fail(ERR.WRONG_PHASE, 'team economy disabled');
+    const gate = this.econGate(ps);
+    if (gate) return gate;
+    if (this.econDepositedBy.has(ps.playerId)) return fail(ERR.RATE, 'already deposited this round');
+    if (Math.floor(Number(ps.funds) || 0) < 1) return fail(ERR.NO_FUNDS);
+    ps.funds = Math.floor(Number(ps.funds) || 0) - 1;
+    this.teamReserve += 1;
+    this.econDepositedBy.add(ps.playerId);
+    ps.dirty();
+    this.markPublic();
+    for (const p of this.players.values()) this.toast(p, 'info', msg('{name} 存入协同资金 +1', { name: ps.name || '队友' }));
+    return OK;
   }
 
   /** Funds the team may still move this round (the base cap + 后勤调度). */
   teamTransferCap() {
     if (!this.teamEcon) return 0;
-    const lv = this.teamProjects.logistics;
-    const bonus = lv > 0 ? this.teamEcon.projects.logistics.teamCapBonus[lv - 1] || 0 : 0;
+    // 同上：`logistics` 下线后 `teamProjects.logistics` 是 undefined，必须按 0 处理（否则 NaN 会污染额度）
+    const logi = this.teamEcon.projects.logistics;
+    const lv = this.teamProjects.logistics || 0;
+    const bonus = logi && logi.teamCapBonus && lv > 0 ? logi.teamCapBonus[lv - 1] || 0 : 0;
     return this.teamEcon.transfer.teamCapPerRound + bonus;
   }
 
   /** Leftover funds a player keeps at the prep end (应急仓储). 坎诺特 bands keep everything and skip this reading. */
   teamKeepFor(ps) {
     void ps;
-    return this.teamEcon ? this.teamProjects.storehouse : 0;
+    // `storehouse`（应急仓储）已下线：不再有「结余保留」这一效果，恒 0（坎诺特例外走 leftoverKeptBands）
+    return this.teamEcon ? (this.teamProjects.storehouse || 0) : 0;
   }
 
   /**
@@ -201,8 +240,9 @@ export class MatchEconomy {
    */
   teamProjectRead(id, lv) {
     if (!this.teamEcon || !(lv > 0)) return 0;
-    if (id === 'storehouse') return lv;
-    if (id === 'logistics') return (this.teamEcon.projects.logistics.teamCapBonus || [])[lv - 1] || 0;
+    // 业主 2026-10-30「升级项搬进商店」：三项的 now/next 都是**级数**（客户端按 id 出文案），不再是百分点。
+    // 旧的两个百分点项目（storehouse/logistics）随个人储备一起下线。
+    if (id === 'shopLevel' || id === 'teamIncome' || id === 'equipCost') return Math.max(0, Math.floor(Number(lv) || 0));
     return 0;
   }
 
@@ -291,6 +331,7 @@ export class MatchEconomy {
       : null;
     return {
       funds: ps.funds,
+      reserve: Math.max(0, Math.floor(Number(ps.reserve) || 0)),
       // 借还牌把这两格当**单个对象**读（`public/js/ui/econBar.js`）：`requestIn` = 别人向我借的那一条、
       // `requestOut` = 我发出的那一条。⚠ 不能发数组：空数组在 JS 里 truthy，会把「主动借钱」那颗按钮顶掉。
       requestIn: inbound.length
@@ -306,6 +347,10 @@ export class MatchEconomy {
         lent: [...r.lent], answered: r.answers.size, targets: r.targets.length,
       })),
       requestLeft: Math.max(0, this.econRequestsPerRound(ps) - (this.econRound.byPlayer.get(ps.playerId) || 0)),
+      // 主动存入（业主 2026-10-30）：本回合还能不能存（1 点资金，每人每回合 1 次）——面板按它决定按钮死活
+      canDeposit: this.phase === PHASE.PREP && !ps.ready && Math.floor(Number(ps.funds) || 0) >= 1
+        && !this.econDepositedBy.has(ps.playerId),
+      deposited: this.econDepositedBy.has(ps.playerId),
       // the teammates who refused this player this round (被拒后可换人再借): the client drops them from the picker, so
       // the 已拒绝 refusal never has to be shown as an error (user report 2026-10-08). ⚠ 这里的元素必须是 **playerId**
       // —— econBar.js 用 `refused.has(p.playerId)` 过滤，发名字会把被拒的人重新放回选择器。
@@ -450,6 +495,31 @@ export class MatchEconomy {
     // 额度先判（原口径）：额度用完就报 budget，而不是笼统的「你还有一条在途」——两者同时成立时以前者为准
     if ((this.econRound.byPlayer.get(ps.playerId) || 0) >= this.econRequestsPerRound(ps)) return fail(ERR.ALREADY, 'budget');
     for (const req of this.econRequests.values()) if (req.from === ps.playerId) return fail(ERR.ALREADY, 'pending');
+    // 业主 2026-10-30「借钱优先取团队储备」：先由池子垫（团队自己的钱，**不产生债务**），池子不够的部分才问队友。
+    // 池子垫付同样计入本回合的团队资金流动额度 —— 否则一个人可以反复请求把池子抽干（teamTransferCap 就是为此设的）。
+    const capLeft = Math.max(0, this.teamTransferCap() - this.econRound.spent);
+    // 2026-11-01 P1（审计 findings §1.4-3）：池垫付只在借款人**落后于队伍中位数**时生效（救助语义），
+    // 其余请求走队友 —— 否则池子永远先把请求吃掉（amount=1 时 100% 短路），AI 出借永远看不到。
+    // `teamEconomy.transfer.poolFillBehindOnly: false` 恢复旧的全量垫付。
+    const poolBehindOnly = this.teamEcon.transfer.poolFillBehindOnly !== false;
+    const poolOk = !poolBehindOnly || this.econBorrowerBehind(ps.playerId) > 0;
+    const { fromPool, remaining } = splitPoolFill({ amount, teamReserve: poolOk ? this.teamReserve : 0, capLeft });
+    if (fromPool > 0) {
+      this.teamReserve -= fromPool;
+      ps.funds = Math.floor(Number(ps.funds) || 0) + fromPool;
+      this.econRound.spent += fromPool;
+      ps.dirty();
+      this.markPrivate(ps);
+      this.markPublic();
+    }
+    if (remaining === 0) {
+      // 池子一个人就够：不建借款单、不占「每人每回合借款次数」、也不惊动队友。
+      for (const p of this.players.values()) {
+        this.toast(p, 'info', msg('{name} 从协同资金取出 +{n}', { name: ps.name || '队友', n: fromPool }));
+      }
+      return OK;
+    }
+    amount = remaining;
     if (this.econRound.spent + amount > this.teamTransferCap()) return fail(ERR.BAD_TARGET, 'team cap');
     // 被拒过的人这一回合不再问（被拒后可换人再借, user decision 2026-10-08）；已 ready 的人类不能应答，也不问。
     const denied = this.econDeniedBy.get(ps.playerId) || new Set();
@@ -533,7 +603,10 @@ export class MatchEconomy {
     // keeps the ledger. `lag` is the 兜底率分红 snapshot: the borrower's board trailed the team's median when the loan
     // was made, so this debt earns the premium on repayment (the risk premium for carrying the under-developed).
     const interest = this.teamEcon.transfer.repayInterest;
-    if (interest > 0 || this.teamEcon.coverInterest.enabled) {
+    // 2026-11-01 P1（审计 findings §1.4-4）：债务账本独立开关（默认开）。以前只有「利息>0 或兜底利息开」
+    // 才记账，两者恒 0/false ⇒ 账本永不写入、还钱/催钱链路全死。`teamEconomy.debtLedger: false` 关回旧行为。
+    const ledger = this.teamEcon.debtLedger !== false;
+    if (ledger || interest > 0 || this.teamEcon.coverInterest.enabled) {
       const list = this.econDebts.get(sender.playerId) || [];
       list.push({ to: ps.playerId, amount: req.amount + interest, round: this.round, lag: this.econBorrowerBehind(sender.playerId) > 0 });
       this.econDebts.set(sender.playerId, list);
@@ -585,13 +658,22 @@ export class MatchEconomy {
     // 业主 2026-10-17：升级要广播给全队，并且弹窗里要写清「这一级现在是什么效果」。
     // 效果数字取 teamProjectRead（与客户端长按备注、面板读数同一来源，不另造一套说法）。
     const n = this.teamProjectRead(project, lv);
-    const text = project === 'storehouse'
-      ? msg('应急仓储 已升至 Lv{lv}：休整结束时最多保留 {n} 资金到下一回合', { lv, n })
-      : project === 'logistics'
-        ? msg('后勤调度 已升至 Lv{lv}：全队每回合可调拨上限 +{n}', { lv, n })
-        : msg('联合采购 已升至 Lv{lv}：每回合开始多 {n} 次免费刷新', { lv, n: n || lv });
+    const text = this.projectUpgradeText(project, lv, n);
     for (const p of this.players.values()) this.toast(p, 'info', text);
     return OK;
+  }
+
+  /**
+   * 升级广播的那句话。**别再落回「联合采购」那条老文案** —— 现行三个项目是商店等级 / 协同资金获取 / 装备造价，
+   * 老的 `storehouse` / `logistics` / `联合采购` 已不在配置里（只在老消息里兼容）。
+   */
+  projectUpgradeText(project, lv, n) {
+    if (project === 'shopLevel') return msg('商店等级 已升至 Lv{lv}：商店等级上限 +1', { lv });
+    if (project === 'teamIncome') return msg('协同资金获取 已升至 Lv{lv}：团队储备每回合收入上限 +1', { lv });
+    if (project === 'equipCost') return msg('装备造价 已升至 Lv{lv}：装备价格 -1（最低 2）', { lv });
+    if (project === 'storehouse') return msg('应急仓储 已升至 Lv{lv}：休整结束时最多保留 {n} 资金到下一回合', { lv, n });
+    if (project === 'logistics') return msg('后勤调度 已升至 Lv{lv}：全队每回合可调拨上限 +{n}', { lv, n });
+    return msg('联合采购 已升至 Lv{lv}：每回合开始多 {n} 次免费刷新', { lv, n: n || lv });
   }
 
   /**
@@ -653,11 +735,7 @@ export class MatchEconomy {
       // 旧提案路径（已不再产生，仅兼容在飞的消息）：与直购一样广播给全队并带效果
       const lv = v.level + 1;
       const n = this.teamProjectRead(v.project, lv);
-      const text = v.project === 'storehouse'
-        ? msg('应急仓储 已升至 Lv{lv}：休整结束时最多保留 {n} 资金到下一回合', { lv, n })
-        : v.project === 'logistics'
-          ? msg('后勤调度 已升至 Lv{lv}：全队每回合可调拨上限 +{n}', { lv, n })
-          : msg('联合采购 已升至 Lv{lv}：每回合开始多 {n} 次免费刷新', { lv, n: n || lv });
+      const text = this.projectUpgradeText(v.project, lv, n);
       for (const p of this.players.values()) this.toast(p, 'info', text);
     }
     for (const p of voters) this.markPrivate(p);
@@ -776,16 +854,40 @@ export class MatchEconomy {
 
   // ---- prep end, debts and the two PvE rewards -----------------------------------------------------
 
-  /** Prep end: leftover funds convert into the team reserve, capped (design §28). 坎诺特 bands keep everything. */
-  econConvertLeftover(ps) {
-    if (!this.teamEcon || this.teamEcon.borrowOnly) return;
-    if (this.gd.leftoverKeptBands.includes(ps.bandId)) return;
-    const conv = Math.min(Math.max(0, ps.funds - this.teamKeepFor(ps)), this.teamEcon.reserve.convertPerPlayerMax);
-    if (conv <= 0) return;
-    ps.funds -= conv;
-    this.teamReserve += conv;
+  /**
+   * 三层资金分配（业主 2026-10-26）：回合末把「每回合资金」拆进「个人储备」与「团队储备」。
+   *   · 个人储备：买装备用（熔毁商店），**必须多于团队储备**
+   *   · 团队储备：升级设施 / 复活队友用
+   *   · 应急仓储每级 +10% 个人份额；后勤调度每级 +10% 团队份额
+   * 团队份额另有硬约束：加完之后不允许超过该玩家的个人储备。
+   * @param {any} ps
+   */
+  econSplitLeftover(ps) {
+    if (!ps) return;
+    const keepAll = this.gd.leftoverKeptBands.includes(ps.bandId);
+    // 业主 2026-10-30「只保留团队储备」：回合末没花完的钱**不再**分流到个人储备/团队储备，直接清零。
+    //   · 个人储备这一层整体下线（仓储/后勤两个项目随之失效），`ps.reserve` 归零；
+    //   · 团队储备只由「防守奖励 + 主动存入（每回合最多 1）」获得，不再从结余里来；
+    //   · 坎诺特阵营（leftoverKeptBands）是唯一例外 —— 业主明确要求保留这个整额保留。
+    if (keepAll) return;
+    ps.funds = 0;
+    if (Number(ps.reserve) !== 0) ps.reserve = 0;
     ps.dirty();
     this.markPublic();
+  }
+
+  /**
+   * 已下线（业主 2026-10-30「只保留团队储备」）：个人储备不再存在，这条「最弱玩家个人储备」的钳制失去意义。
+   * 保留方法签名只为不改动调用方的历史引用；它恒返回 Infinity（= 不钳制）。
+   */
+  minPersonalReserve() {
+    return Infinity;
+  }
+
+  /** Prep end: leftover funds convert into the team reserve, capped (design §28). 坎诺特 bands keep everything. */
+  econConvertLeftover(ps) {
+    // 三层资金改造后统一走 econSplitLeftover（业主 2026-10-26）；保留入口供既有调用点使用。
+    if (typeof this.econSplitLeftover === 'function') return this.econSplitLeftover(ps);
   }
 
   /**
@@ -803,9 +905,14 @@ export class MatchEconomy {
     if (this.econRound.perfectGranted > 0) return 0;
     const cfg = this.teamEcon.reserve;
     const amount = full ? cfg.fullDefenceReward : cfg.perfectReward;
-    const left = cfg.perfectRewardCapPerRound - this.econRound.perfectGranted;
+    // 业主 2026-10-27：不再区分「归个人 / 归团队」——防守奖励恒进团队储备（个人储备只由回合末结余按比例补充）。
+    // 商店设施「协同资金获取」每级 +1 到**每回合收入上限**（业主 2026-10-30：升级项搬进商店，花协同资金）
+    const cap = teamIncomeCapOf(cfg.perfectRewardCapPerRound, this.teamProjects && this.teamProjects.teamIncome);
+    const left = cap - this.econRound.perfectGranted;
     const n = Math.min(amount, Math.max(0, left));
     if (!(n > 0)) return 0;
+    // 业主 2026-10-30：个人储备下线后，「团队池增长不得超过最弱玩家个人储备」这条钳制随之取消
+    // （否则团队池会被 0 钳住、永远长不起来）。团队储备每回合的收入上限改由 perfectRewardCapPerRound 单独把关。
     this.teamReserve += n;
     this.econRound.perfectGranted += n;
     this.markPublic();

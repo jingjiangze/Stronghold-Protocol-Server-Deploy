@@ -3,7 +3,8 @@
 // m.public.econ; while that key is absent the model is null and the bar renders nothing (the capability probe).
 import { N_ } from '../../../shared/i18n.js';
 
-const PROJECT_NAMES = Object.freeze({ procure: N_('联合采购'), storehouse: N_('应急仓储'), logistics: N_('后勤调度') });
+// 商店设施三项（业主 2026-10-30「升级项搬到商店」，花协同资金）
+const PROJECT_NAMES = Object.freeze({ shopLevel: N_('商店等级'), teamIncome: N_('协同资金获取'), equipCost: N_('装备造价') });
 
 /**
  * @param {{ priv?: any, pub?: any }} o the store's match slices (m.private / m.public)
@@ -47,6 +48,9 @@ export function econBarModel({ priv, pub } = {}) {
     borrowOnly: econ.borrowOnly === true,
     // the player's own fee count, shown on the borrow control (the 促融共竞-style 费用 readout)
     funds: Number(priv && priv.funds) || 0,
+    // 个人储备（三层资金的第二层，业主 2026-10-26）：买装备（熔毁商店）用，跨回合保留
+    // 复审计：服务端把个人储备放在 priv.econ.reserve（不是顶层 priv.reserve），旧写法恒为 0
+    personalReserve: Number(priv && ((priv.econ && priv.econ.reserve) || priv.reserve)) || 0,
     reserve,
     transferLeft: Number(econ.transferLeft) || 0,
     requestLeft: Number(mine.requestLeft) || 0,
@@ -70,7 +74,11 @@ export function econBarModel({ priv, pub } = {}) {
     })(),
     // 方案 B: what this player owes at the next income and what teammates owe them (server econDebtSummary)
     owe: mine.owe && mine.owe.total > 0 ? { total: mine.owe.total, next: mine.owe.next } : null,
-    due: mine.due && mine.due.total > 0 ? { total: mine.due.total, next: mine.due.next } : null,
+    // 2026-10-22 修「催钱按钮点亮着但点了没反应」：服务端 econDebtSummary 返回 { total, next, list }，
+    // 这里重建时把 list 丢了 ⇒ borrowPlate 的 `(due.list || [])` 恒空、一条 g.econ.nudge 都发不出去。list 必须透传。
+    due: mine.due && mine.due.total > 0
+      ? { total: mine.due.total, next: mine.due.next, list: Array.isArray(mine.due.list) ? mine.due.list : [] }
+      : null,
     // 兜底利息 (PvE): how much of the match's enemies this player has held for teammates, and the rate it buys
     cover: mine.cover && mine.cover.total > 0
       ? {
@@ -103,6 +111,9 @@ export function econBarModel({ priv, pub } = {}) {
       };
     })(),
     canPropose: mine.canPropose !== false,
+    // 主动存入（业主 2026-10-30）：每人每回合 1 点资金进团队储备。能否存由服务端算
+    // （PREP + 未 ready + 资金 ≥1 + 本回合没存过），这里只做展示与按钮死活。
+    deposit: mine.canDeposit === undefined ? null : { can: mine.canDeposit === true, done: mine.deposited === true },
     // 救济 (DESIGN §28, user decision 2026-10-09): the weakest teammate may draw one fund out of the reserve. The
     // server decides who may take (m.private.econ.relief.eligible) — the strip only renders the button on that flag, and
     // `teamLeft` is the public per-round allowance, shown so the pot's limit is visible.

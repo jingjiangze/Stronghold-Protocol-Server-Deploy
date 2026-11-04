@@ -1,3 +1,4 @@
+import { installWebTraits } from './webTraits20261101.js';
 // server/sim/content/garrisons/battle.js — IN_BATTLE 特质 (garrisons) of the operators on the field.
 //
 // Each operator carries `unit.def.raw.garrisonIds` (elite chess carry the `_b` garrisons); the IN_BATTLE ones are
@@ -43,6 +44,8 @@
 import * as S from '../support/index.js';
 import { mitigate } from '../../damage.js';
 import { frontOf } from '../../dir.js';
+import { installOwnerBattle } from './ownerBattle.js';
+import { ownerLayerCap } from '../support/ownerLayerCap.js';
 
 const ids = (s) => String(s ?? '').split(',').map((x) => x.trim()).filter(Boolean);
 const EMPTY = Object.freeze([]);
@@ -58,6 +61,8 @@ function garrisonIdsOf(u) {
 // install
 
 export function install(battle) {
+  installOwnerBattle(battle);
+  installWebTraits(battle);
   const all = [];
   const owned = new Map(); // unit → Set(garrisonId)
   const add = (unit, g, grantedBy = null) => {
@@ -195,11 +200,11 @@ export function fireGain(battle, it) {
   // granted a fresh 10 (PR #178 review). The base amount counts toward it (魔王's extra does not, as in gainLayers).
   const whole = it.bbStr.bond_type === 'bond_actived_maxstack' && Number.isFinite(it.cap);
   if (whole) {
-    n = Math.min(Math.floor(n), Math.max(0, Math.floor(it.cap) - (it.wholeUsed ?? 0)));
+    n = Math.min(Math.floor(n), Math.max(0, Math.floor(ownerLayerCap(battle, it.unit, it.cap)) - (it.wholeUsed ?? 0)));
     if (!(n > 0)) return 0;
   }
   const added = S.gainLayers(battle, {
-    playerId: it.unit.ownerId, bonds, n, requireActive: true, source: it.unit, reason: 'garrison',
+    playerId: it.unit.ownerId, bonds, n, requireActive: it.bbStr.require_active !== 'false', source: it.unit, reason: 'garrison',
     cap: whole ? Infinity : it.cap, capKey: whole ? null : it.capKey,
   });
   if (whole && added > 0) it.wholeUsed = (it.wholeUsed ?? 0) + n;
@@ -436,11 +441,13 @@ function installReaders(battle, by) {
   const recompute = () => { for (const it of list) applyReader(battle, it); };
   recompute();
   let pending = false;
-  battle.on('layerGain', () => {
+  const queueRecompute = () => {
     if (pending) return;
     pending = true;
     battle.after(0, () => { pending = false; recompute(); });
-  });
+  };
+  battle.on('layerGain', queueRecompute);
+  battle.on('layerLoss', queueRecompute);
   const onstart = by.get('act2autochess_gar_eff_attrByBond_add_onstart');
   if (onstart) {
     const m = byUnit(onstart);

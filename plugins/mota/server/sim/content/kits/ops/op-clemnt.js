@@ -1,14 +1,14 @@
 // 克莱门莎 (char_4231_clemnt), 本源近卫. Official CN tables 2026-10-08 (client 2.7.81),
 // PRTS 克莱门莎, 2026-10-09: all skills at ranks 4/7 and both potential-sensitive talents.
 // https://prts.wiki/w/克莱门莎 . No module was released with her.
-// PRTS still marks several launch-day details unknown: [ASSUMED] carriage's unresolved 放逐 combination =
-// cannot walk/attack/be blocked, but remains damageable;
+// PRTS still marks several launch-day details unknown: [ASSUMED] S2's ordinary splash radius 1.5;
+// carriage's unresolved 放逐 combination = cannot walk/attack/be blocked, but remains damageable;
 // its boundary clearance 0.4, carriage updates once per sim tick, vortex ends with the skill;
 // S3 first bombardment at 0.5 s, then twice at 1 s intervals, launched shots survive skill end.
 // These pending confirmations are listed in DESIGN §28.1; keep each assumption local to this kit.
 
 import { num, talentBb, skillRec, up } from '../shared/tier1.js';
-import { absoluteRangeKeys, canTargetEnemy } from '../../../targeting.js';
+import { canTargetEnemy } from '../../../targeting.js';
 import { bodyInKeys, hitRect } from '../../../body.js';
 import { dirVec } from '../../../dir.js';
 import { COLS } from '../../../constants.js';
@@ -163,7 +163,7 @@ export default {
                 .filter((e) => e !== target && canTargetEnemy(unit, e, GROUND))
                 .slice(0, Math.max(0, num(b2['attack@max_target'], 5) - 1));
               for (const e of near) battle.dealDamage(unit, e, {
-                amount: unit.s.atk * unit.s.atkScaleMul, type: 'phys',
+                amount: unit.s.atk * unit.s.atkScaleMul * num(b2['attack@aoe_atk_scale'], 1), type: 'phys',
                 isAttack: true, isSplash: true, isSkill: true, attackId, tags: ['skill', 'clemnt:splash'],
               });
             } },
@@ -212,15 +212,6 @@ export default {
         } },
       ],
       install(battle, unit) {
-        if (unit.skill?.id === S2) {
-          // Maintainer 2026-10-10 (#467): follow Chen S3 automation. The vortex hits air while normal attacks do not.
-          // [ASSUMED] No mode footage establishes a separate auto-cast shape for this new operator; use the expanded
-          // skill attack grid with permanent extensions, retaining shared operation cooldown/control checks.
-          unit.skill.addTriggerRange(() => [{
-            keys: absoluteRangeKeys(skillRec(raw, S2)?.rangeGrid, unit.tileR, unit.tileC, unit.dir, unit.s.baseRangeExtend || 0),
-            profile: AIR,
-          }]);
-        }
         battle.on('elementBurst', ({ target, element }) => {
           if (element !== 'erosion' || target?.side !== 'enemy' || !up(unit) || !unit.skill?.active || unit.skill.id !== S3
             || !canTargetEnemy(unit, target, GROUND)) return;

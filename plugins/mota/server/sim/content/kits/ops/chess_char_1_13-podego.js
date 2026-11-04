@@ -1,9 +1,7 @@
 // server/sim/content/kits/ops/chess_char_1_13-podego.js — 波登可 (char_258_podego) kit, tier 1.
 // Conventions of the tier-1 kits: ../shared/tier1.js; kit contract and rules: ../README.md.
 
-import {
-  num, talentBb, moduleBb, up, enemiesInGrid, enemyInRange, installAura, spTimeBonus, makeZone, skillBbOf,
-} from '../shared/tier1.js';
+import { num, talentBb, moduleBb, up, enemiesInGrid, enemyInRange, installAura, spTimeBonus, makeZone, skillBbOf } from '../shared/tier1.js';
 
 // =================================================================================================================
 // tier-local constants that exist nowhere in data

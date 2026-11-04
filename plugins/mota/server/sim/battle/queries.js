@@ -3,10 +3,12 @@
 // rebuild of an ally (current, base and extra range keys).
 // Installed on Battle.prototype by server/sim/Battle.js (a method container: never instantiated; `this` is the battle).
 
+import { hornWebModuleActive } from '../../../shared/hornWebModule20261101.js';
 import { ROWS, COLS, ENEMY_COLLIDER_RADIUS } from '../constants.js';
 import { absoluteRangeKeys, canTargetEnemy, extendedGrid, enemyStealthed } from '../targeting.js';
 import { bodyKeys, bodyInKeys, bodyInRadius, bodyInRange } from '../body.js';
 import { roundHalfEven } from '../detmath.js';
+import {eventOpponents,eventCompanions,eventTeam} from '../eventTeams.js';
 
 export class BattleQueries {
   /**
@@ -154,7 +156,7 @@ export class BattleQueries {
     const idx = unit && unit.profile && unit.profile.rangeTiles ? this._et : this._eb;
     for (let i = 0; i < keys.length; i++) {
       const b = idx[keys[i]];
-      if (b && b.length) for (const e of b) if (e.alive && e.deployed) return true;
+      if (b && b.length) for (const e of b) if (e.alive && e.deployed && eventTeam(e)!==1) return true;
     }
     return false;
   }
@@ -233,7 +235,7 @@ export class BattleQueries {
   enemiesInRadius(x, y, r, centre = false) {
     const out = [];
     const r2 = r * r + 1e-9;
-    for (const e of this.enemies) {
+    for (const e of eventCompanions(this)) {
       if (!e.alive || e.hidden) continue;
       if (e.hitArea && !centre) { if (bodyInRadius(e, x, y, r)) out.push(e); continue; }
       const dx = e.x - x, dy = e.y - y;
@@ -251,12 +253,12 @@ export class BattleQueries {
    * Player report #8 after 0.1.0 (the 逐火 余烬): until 0.1.1 profession splash and skill circles still reached an
    * unblocked 隐匿 enemy.
    */
-  foesInRadius(x, y, r, centre = false) {
+  foesInRadius(x, y, r, centre = false, attacker = null) {
     const out = this.enemiesInRadius(x, y, r, centre);
     let n = 0;
     for (const e of out) {
       const f = e.s.flags;
-      if (f.untargetable || (f.stealth && enemyStealthed(e))) continue;
+      if (eventTeam(e)===1 || f.untargetable || (f.stealth && enemyStealthed(e) && !hornWebModuleActive(attacker?.def))) continue;
       out[n++] = e;
     }
     out.length = n;
@@ -284,7 +286,7 @@ export class BattleQueries {
   alliesInRadius(x, y, r, ownerId = null, { includeDevices = false } = {}) {
     const out = [];
     const r2 = r * r + 1e-9;
-    for (const a of this.allyUnits) {
+    for (const a of eventOpponents(this)) {
       if (!a.alive || !a.deployed || a.hidden) continue;
       if (!includeDevices && a.kind === 'device') continue;
       if (ownerId != null && a.ownerId !== ownerId) continue;
@@ -296,7 +298,7 @@ export class BattleQueries {
 
   /** Alive deployed allies (ops + tokens), optionally of one player. */
   allies(ownerId = null) {
-    return this.allyUnits.filter((a) => a.alive && a.deployed && a.kind !== 'device' && (ownerId == null || a.ownerId === ownerId));
+    return eventOpponents(this).filter((a) => a.alive && a.deployed && a.kind !== 'device' && (ownerId == null || a.ownerId === ownerId));
   }
 
   aliveEnemies() { return this.enemies.filter((e) => e.alive); }

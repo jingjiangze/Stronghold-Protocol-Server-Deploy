@@ -13,6 +13,30 @@ import { onHumanEmote } from '../botEmotes.js';
 export class MatchIntents {
   _handle(ps, msg) {
     switch (msg.t) {
+      // 对抗模式（2V2 / 4V4）：狩猎期目标 / 布阵 / 悬赏提取、事件期选择
+      case 'g.confrontTarget': return this.submitConfrontTarget(ps, msg);
+      case 'g.confront': return this.submitConfront(ps, msg);
+      case 'g.hex': return this.hexPick(ps, msg.hexId);
+      case 'g.hexReroll': return this.hexReroll(ps, msg.slot);
+      case 'g.meltOpen': return this.meltdownRequest(ps);
+      case 'g.meltPick': return this.meltPick(ps, msg.slot);
+      case 'g.meltBuy': return this.meltBuy(ps, msg.itemId);
+      case 'g.meltBuyRelic': return this.meltBuyRelic(ps, msg.relicId);
+      case 'g.relicPick': return this.relicPick(ps, msg.relicId);
+      case 'g.roguePick':
+        // 肉鸽的不期而遇由独立插件 `rogue` 提供（code.matchMixin）；插件停用时这条意图直接拒绝，不崩。
+        if (typeof this.roguePick !== 'function') return fail(ERR.BAD_TARGET, 'no rogue plugin');
+        return this.roguePick(ps, msg.choiceId);
+      case 'g.rogueNode': {
+        // 肉鸽节点三选一（2026-11-04）：rogue-core 插件的 mixin 提供；插件停用时直接拒绝，不崩。
+        if (typeof this.rogueNodePick !== 'function') return fail(ERR.BAD_TARGET, 'no rogue plugin');
+        const res = this.rogueNodePick(ps, msg.nodeId);
+        if (res && res.error) return fail(ERR.BAD_TARGET, 'bad rogue node');
+        return OK;
+      }
+      case 'g.meltClose': return this.meltClose(ps);
+      case 'g.confront.withdraw': return this.withdrawBounty(ps, msg);
+      case 'g.event.pick': return this.pickEvent(ps, msg.target);
       case 'g.infoReady':
         if (this.phase !== PHASE.INFO_CHECK) return fail(ERR.WRONG_PHASE);
         if (this.setupVote) return fail(ERR.WRONG_PHASE, 'setup reroll vote in progress');
@@ -36,9 +60,16 @@ export class MatchIntents {
       case 'g.destroy': return ps.destroy(msg.uid);
       case 'g.unequip': return ps.unequip(msg.itemUid);
       case 'g.reward': return ps.pickReward(msg.idx);
-      case 'g.choice': return msg.choiceId !== undefined
-        ? this.pickPersonalChoice(ps, msg.idx, msg.choiceId)
-        : this.pickCard(ps, msg.idx);
+      case 'g.choice': {
+        const res = msg.choiceId !== undefined
+          ? this.pickPersonalChoice(ps, msg.idx, msg.choiceId)
+          : this.pickCard(ps, msg.idx);
+        // rule 藏品：choiceFunds（笞心魔宝宝）「选择决策时资金额外 +8」——只在选择成功时发
+        if (res && res.error === undefined && typeof this.applyRelicChoiceFunds === 'function') {
+          try { this.applyRelicChoiceFunds(ps); } catch { /* noop */ }
+        }
+        return res;
+      }
       case 'g.ready': {
         const ready = ps.setReady(!!msg.ready);
         // 协同经济 (DESIGN §28): a human readying up withdraws its own pending requests (the ready gate)
@@ -53,6 +84,8 @@ export class MatchIntents {
       case 'g.econ.vote': return this.econVote(ps, msg.id, msg.approve);
       // 救援 (DESIGN §29, 促融共竞): the settle window's rescue — see MatchRevival.reviveConsent
       case 'g.revive': return this.reviveConsent(ps, msg.playerId, { round: msg.round });
+      // 主动存入（业主 2026-10-30）：把本回合 1 点资金放进团队储备，每人每回合最多 1 次
+      case 'g.econ.deposit': return this.econDeposit(ps);
       // 救济 (DESIGN §28): the weakest teammate takes one fund out of the reserve — see MatchEconomy.econRelief
       case 'g.econ.relief': return this.econRelief(ps);
       // 赏金加时 (业主 2026-10-18): 花钱买时间 —— see MatchEconomy.econBuyTime
@@ -151,7 +184,7 @@ export class MatchIntents {
     const b = this.newBattle({
       seed: deriveSeed(this.seed, `preview:${this.round}:${ps.seat}`), kind: 'normal', modeId: this.modeId, round: this.round,
       stageId: this.stageId, rect: { ...this.layout.battle.normal }, timeLimit: 60, players, spawns: [], routes: this.wave ? this.wave.routes : [],
-      sharedBoss: null, flags: { layerGainsEnabled: !bossRound, ...this.gd.dp }, fieldId: `n:${ps.playerId}`, recordEvents: false,
+      sharedBoss: null, flags: { layerGainsEnabled: !bossRound, ...this.dpFlags() }, fieldId: `n:${ps.playerId}`, recordEvents: false,
     });
     try {
       if (typeof b.start === 'function') b.start();

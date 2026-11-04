@@ -26,7 +26,7 @@
 
 import { PHASE, BOND_LAYER_CAP } from '../../shared/constants.js';
 import { morphSlotPolicy, ruleOption } from '../../shared/plugins/rules.js';
-import { FIELD, canPlace, placeClass, positionClass, parseKey } from './board.js';
+import { inField, rectOfMap, canPlace, placeClass, positionClass, parseKey } from './board.js';
 import { computeBonds } from './bondsMeta.js';
 
 const PHASES = new Set(Object.values(PHASE));
@@ -135,7 +135,8 @@ export function collectViolations(m, { limit = 25 } = {}) {
     const dmap = typeof m.deployMapFor === 'function' ? m.deployMapFor(ps) : ps.deployMap();
     for (const [k, p] of ps.board) {
       const [r, c] = parseKey(k);
-      if (!(r >= FIELD.r0 && r <= FIELD.r1 && c >= FIELD.c0 && c <= FIELD.c1)) fail(`${id}: piece outside the board at ${k}`);
+      // the boundary is the field this player deploys on (a rogue stage's own frame; FIELD on the classic board)
+      if (!inField(r, c, rectOfMap(dmap))) fail(`${id}: piece outside the board at ${k}`);
       if (p.kind === 'item') { fail(`${id}: item ${p.id} stands on the board`); continue; }
       const rec = p.kind === 'token' ? pgd.token(p.id) : pgd.chess(p.id);
       const cls = p.kind === 'chess' ? placeClass(ps, rec) : positionClass(rec);

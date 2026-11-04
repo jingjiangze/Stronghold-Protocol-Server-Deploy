@@ -351,7 +351,9 @@ export class GameData {
 
   // ---- mode -----------------------------------------------------------------------------------------
 
-  get isSolo() { return this.mode.type === 'SINGLE' || /^mode_single_/.test(this.modeId || ''); }
+  // 单人语义：SINGLE 的 mode 记录，或 mode_single_* 的 id；训练模式（入门协议）是 type LOCAL —— 官方把它当作
+  // 单机教学，池子/计时/奖励口径都按单人算（results.js 另外把训练局的奖励清零）。
+  get isSolo() { return this.mode.type === 'SINGLE' || this.mode.type === 'LOCAL' || /^mode_single_/.test(this.modeId || ''); }
   get difficulty() { return this.mode.difficulty || (this.modeId ? String(this.modeId).split('_').pop().toUpperCase() : 'NORMAL'); }
   get lastRound() {
     if (Number.isInteger(this.mode.lastRound) && this.mode.lastRound > 0) return this.mode.lastRound;
@@ -403,7 +405,12 @@ export class GameData {
     const v = rc ? rc.combatTimeLimit : undefined;
     if (typeof v === 'number' && Number.isFinite(v) && v > 0) return v;
     const m = this.mode.combatTimeLimit && this.mode.combatTimeLimit[String(r)];
-    return typeof m === 'number' && Number.isFinite(m) && m > 0 ? m : 60;
+    if (typeof m === 'number' && Number.isFinite(m) && m > 0) return m;
+    // R14 / R15 are the boss levels: the data leaves `combatTimeLimit` null there because that level's own
+    // `levelMaxPlayTime` (120) is the countdown — read it before the 60 s generic fallback, or the boss battle gets
+    // a limit 60 s shorter than its level. Rounds that declare a `combatTimeLimit` never reach this line.
+    const lv = rc ? rc.levelMaxPlayTime : undefined;
+    return typeof lv === 'number' && Number.isFinite(lv) && lv > 0 ? lv : 60;
   }
 
   /**

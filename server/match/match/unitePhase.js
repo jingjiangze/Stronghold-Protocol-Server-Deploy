@@ -66,6 +66,11 @@ export class MatchUnite {
       // leaked enemies re-enter with the stats they had: the round template's stat overrides apply again
       enemyOverrides: this.wave && this.wave.overrides ? this.wave.overrides : {},
       waveId: wave.templateId,
+      // 危机合约 (shared/contractEffects.js): the room-wide battle modifiers, exactly as a normal field's (_normalOpts).
+      // These options are also the client-side 联防 field's BattleSpec (clientCombat._ccField → sim/spec.js), so a
+      // browser-simulated 联防 ran without the contract's operator stats / healing / bond-layer cap without them. Last
+      // in the object, so no key above can shadow them (nothing here names those three).
+      ...this._contractOpts(),
     };
   }
 

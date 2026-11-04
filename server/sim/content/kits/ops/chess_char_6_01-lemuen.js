@@ -18,6 +18,15 @@ const LEMUEN_SHELL_WINDOW = 10;
  */
 const LEMUEN_SHELL_FLIGHT = 0.3;
 
+/**
+ * S3 锁定阶段的**超时上限**(owner:「如果15秒内还没有消耗完弹药 已定位的锁定会直接轰炸其余弹药消失并重新回复技能」)。
+ *
+ * 原来锁定阶段**没有时间上限** —— 弹药打不完技能就一直开着(注释见 `skill.onTick` 下方那段:
+ * "an ammo skill has no time limit"),场上没目标时她能挂着一辈子。超时规则把这种情况收口:
+ * 15 秒到点 → 已锁定的标记**直接落地轰炸** → 剩余弹药作废 → `skill.end()` 让 SP 开始回复。
+ */
+const LEMUEN_LOCK_TIMEOUT = 15;
+
 function ensureWanted(battle) {
   const S = bstate(battle);
   if (S.wanted) return S.wanted;
@@ -106,11 +115,37 @@ function lemuen(bb, chess, def) {
     for (const e of battle.foesInColliderRadius(x, y, d2)) {
       if (e.s.flags.untargetable) continue;
       const d = bodyDist(e, x, y);
-      battle.dealDamage(unit, e, { amount: atk * (d <= d1 + 1e-9 ? s1 : s2), type: 'phys', isSkill: true, isSplash: true, tags: ['skill', 'bombard'] });
+      /*
+       * ⚠ `noHitLimit: true` —— **对首领有效** (owner:「蕾缪安技能修改对boss有效」)。
+       *
+       * 首领战有条官方「限伤」规则:对领袖的**单次伤害 ≥ 300000 整次作废**(0 伤害、不计入血池)。
+       * 而她这一发是「缓存攻击力」的**单发高倍率**,在低难度首领上必然越线 ——
+       * 于是技能对首领**完全无效**(不是伤害太高,是整发被吃掉)。实测首领血量:
+       * FUNNY 20~30 万、NORMAL 39~70 万 —— 连 FUNNY 的血量都不到那条线,可见阈值和她的单发量级不匹配。
+       *
+       * 豁免只开给这一发轰炸(`server/sim/damage.js` 的 `dmg.noHitLimit`),不动那条规则本身。
+       */
+      battle.dealDamage(unit, e, { amount: atk * (d <= d1 + 1e-9 ? s1 : s2), type: 'phys', isSkill: true, isSplash: true, noHitLimit: true, tags: ['skill', 'bombard'] });
     }
     // (the 铁钳号 too, like an enemy — its kit cancels the hit)
     for (const a of battle.allyTargetsInRadius(x, y, d2, unit)) {
       battle.dealDamage(unit, a, { amount: atk * s2, type: 'phys', isSkill: true, isSplash: true, tags: ['skill', 'bombard'] });
+    }
+  };
+  /**
+   * 锁定**超时**时的收尾:已锁定的标记**原地各炸一发**(不飞、延迟为 0),剩余弹药随之作废。
+   *
+   * 与 `bombard` 的区别:`bombard` 是"打完了"之后按 0.3 s 间隔、最多 33 发的礼炮;
+   * 这里超时意味着**多半是场上没目标了**(所以弹药没打完),再按 0.3 s 慢慢放等于让技能白挂 10 秒 ——
+   * 所以改成**立即全部引爆**,然后马上结束技能、开始回复 SP。
+   */
+  const boomLocks = (battle, unit, locks) => {
+    if (!locks.length) return;
+    const atk = unit.s.atk;
+    for (const L of locks) {
+      const m = markOf(L);
+      const [oy, ox] = rotateOffset(battle.rng.range(-spread, spread), battle.rng.range(-spread, spread), unit.dir);
+      blast(battle, unit, atk, m.x + ox, m.y + oy);
     }
   };
   const bombard = (battle, unit, locks) => {
@@ -192,10 +227,22 @@ function lemuen(bb, chess, def) {
       ammo: Math.max(1, Math.floor(num(bb['attack@trigger_time'], 5))),
       attack: { noAttack: true },
       allyTargets: true,   // its locks take 白铁's 铁钳号 too (pickLock) — skills.js allyTargetsOk
-      onStart({ unit }) { unit.mem.lemLocks = []; unit.mem.lemAcc = aim; },
+      onStart({ unit }) { unit.mem.lemLocks = []; unit.mem.lemAcc = aim; unit.mem.lemBoom = false; unit.mem.lemLockT = 0; },
       onTick({ battle, unit, skill, dt }) {
         const m = unit.mem;
         if (!m.lemLocks) return;
+        /*
+         * 锁定**超时** (owner:「如果15秒内还没有消耗完弹药 已定位的锁定会直接轰炸其余弹药消失并重新回复技能」)。
+         *
+         * ⚠ 放在 `canAct` 检查**之前**:超时是"这一发技能开了太久"的收口,不该因为她被晕/冰冻(暂时不能行动)
+         * 就一直拖着 —— 那会把 15 秒变成"能行动的时间累计",与"15 秒"的字面意思不符。
+         */
+        m.lemLockT = (m.lemLockT || 0) + dt;
+        if (m.lemLockT + 1e-9 >= LEMUEN_LOCK_TIMEOUT) {
+          m.lemBoom = true;                 // 让 onEnd 走"立刻全部引爆"那条路
+          if (skill.active) skill.end('timeout');
+          return;
+        }
         for (const L of m.lemLocks) markOf(L);
         if (!unit.canAct) return;
         m.lemAcc += dt;
@@ -210,10 +257,19 @@ function lemuen(bb, chess, def) {
         if (skill.active && skill.ammoLeft <= 0) skill.end('ammo');
       },
       onEnd({ battle, unit, reason }) {
-        // the shells follow one by one after the end (bombard); knocked out / withdrawn mid-lock ('death'): none
         const locks = unit.mem.lemLocks || [];
+        const timedOut = !!unit.mem.lemBoom;
         unit.mem.lemLocks = null;
-        if (reason !== 'death' && unit.alive) bombard(battle, unit, locks);
+        unit.mem.lemBoom = false;
+        unit.mem.lemLockT = 0;
+        if (reason === 'death' || !unit.alive) return;
+        /*
+         * 超时:已锁定的标记**立刻各炸一发**,剩余弹药随 `skill.end()` 一起作废(它在 onEnd 之前就把 ammoLeft 清零了),
+         * 之后 SP 正常回复。**不走 `bombard`** —— 那是"打完了"的礼炮,按 0.3 s 间隔放 33 发;
+         * 超时说明场上多半已经没目标,再慢慢放等于让技能白挂 10 秒。
+         */
+        if (timedOut) boomLocks(battle, unit, locks);
+        else bombard(battle, unit, locks);
       },
     },
     // elite module: "攻击的敌人未被击倒时自身额外获得1点技力"

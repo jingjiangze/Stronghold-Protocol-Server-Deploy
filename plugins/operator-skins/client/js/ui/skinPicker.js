@@ -2,7 +2,7 @@
 import { useState } from '../../vendor/hooks.module.js';
 import { useStore } from '../store.js';
 import { useData, data } from '../data.js';
-import { skinsStore, setSkins, SKINS_KEY } from './skins.js';
+import { skinsStore, setSkins, SKINS_KEY, SKINS_SYNC_KEY } from './skins.js';
 import { html, Button, Icon, MicroLabel, Modal, Fragment } from './components.js';
 import { Img } from './gameComponents.js';
 import { chessPortraitUrl } from './assetUrls.js';
@@ -21,7 +21,9 @@ export function SkinPicker({ m, charId, record, choices = {}, sync = 'idle', onC
   const [dynamic, setDynamic] = useState(true);
   const skins = skinsFor(charId);
   const selected = skinIdFor(choices, charId);
-  const defaultArt = chessPortraitUrl(m, { ...record, skinId: null });
+  // 默认外观：chars 记录本身就是立绘（record.portrait），而 chessPortraitUrl 只认 chess.assets.portrait /
+  // chess.charId，对 chars 记录返回 null —— 皮肤列表第一格因此一直是「暂无预览」。
+  const defaultArt = record?.portrait || record?.portraitE2 || chessPortraitUrl(m, { charId, skinId: null });
   return html`<${Fragment}>
     <section class="lo-sec lo-sec--skins" aria-label=${t('干员外观')} data-testid="skin-picker">
       <header class="lo-sec__head">
@@ -36,10 +38,12 @@ export function SkinPicker({ m, charId, record, choices = {}, sync = 'idle', onC
           return html`<button key=${s.id || 'default'} type="button" role="radio" aria-checked=${on ? 'true' : 'false'} data-skin=${s.id || 'default'}
               class=${`lo-skin${on ? ' is-on' : ''}`} disabled=${!available} onClick=${() => onChange(setSkinChoice(choices, charId, s.id))}>
             <span class="lo-skin__art"><${Img} src=${s.art} fallbackSrc=${defaultArt} fallback=${html`<span class="t-dim">${t('暂无预览')}</span>`} /></span>
-            <span class="lo-skin__name">${t(s.name)}</span>
-            <span class="lo-skin__brand">${available ? t(s.brand) : t('素材未安装')}</span>
-            ${artEntry?.dynamic ? html`<span class="lo-skin__dynamic">${t('动态立绘')}</span>` : artEntry?.dynamicDeclared ? html`<span class="lo-skin__dynamic">${t('动态立绘待补 · 静态预览')}</span>` : null}
-            ${artEntry?.backUnavailable ? html`<span class="lo-skin__brand">${artEntry.battleModelKind === 'unified' ? t('统一战斗模型，正背面共用') : t('背面模型暂缺，使用本套正面')}</span>` : null}
+            <span class="lo-skin__text">
+              <span class="lo-skin__name">${t(s.name)}</span>
+              <span class="lo-skin__brand">${available ? t(s.brand) : t('素材未安装')}</span>
+              ${artEntry?.dynamic ? html`<span class="lo-skin__dynamic">${t('动态立绘')}</span>` : artEntry?.dynamicDeclared ? html`<span class="lo-skin__dynamic">${t('动态立绘待补 · 静态预览')}</span>` : null}
+              ${artEntry?.backUnavailable ? html`<span class="lo-skin__brand">${artEntry.battleModelKind === 'unified' ? t('统一战斗模型，正背面共用') : t('背面模型暂缺，使用本套正面')}</span>` : null}
+            </span>
             ${on ? html`<span class="lo-skin__mark"><${Icon} name="check" />${t('已选择')}</span>` : null}
           </button>`;
         })}
@@ -73,7 +77,7 @@ export function SkinSection({ charId, chess }) {
   if (!m) return null;
   const choices = (store && store[SKINS_KEY]) || {};
   return html`<${SkinPicker} m=${m} charId=${id} record=${(m.chars && m.chars[id]) || {}} choices=${choices}
-    sync="idle" onChange=${(next) => { try { setSkins(next); } catch { /* 存储不可用时不阻断渲染 */ } }} />`;
+    sync=${(store && store[SKINS_SYNC_KEY]) || 'idle'} onChange=${(next) => { try { setSkins(next); } catch { /* 存储不可用时不阻断渲染 */ } }} />`;
 }
 
 /** /studio 的皮肤编辑器静态 import 这个名字（public/studio/js/editors/skins.js）；本插件覆盖了整份文件，

@@ -1,3 +1,4 @@
+import { gateAboveTiles } from '../../../shared/mapCharSpot.js';
 // server/sim/content/tokens.js — summons / tokens (data/tokens.json), the 炎 bond summon “炎佑” and band map characters.
 //
 // Kits: `kits[tokenId] = (bb, raw, def) => Kit` (content/index.js resolves token kits here). bb = the token's skill
@@ -89,17 +90,18 @@
 // kits/ops/standin-acmedc.js).
 
 import { COLS, ROWS, MOVE_SCALE, FORCED_EXIT } from '../constants.js';
+import { hypot } from '../detmath.js';
 import { absoluteRangeKeys, sortEnemyTargets, canTargetEnemy } from '../targeting.js';
 import { bodyOnTile, bodyInRange } from '../body.js';
 import { hasHp } from '../damage.js';
-import { textCount } from '../../../shared/plugins/textNumber.js';
+import { textCount, textFinite } from '../../../shared/plugins/textNumber.js';
 import { genericKit } from './generic.js';
 import { bardRegen } from '../professions.js';
 import { normDir, localOrder } from '../dir.js';
 import { SKILL_SUMMON_START_DEPLOY } from '../../../shared/constants.js';
-import { hypot } from '../detmath.js';
+
 import { atPotential } from '../../../shared/potential.js';
-import { textFinite } from '../../../shared/plugins/textNumber.js';
+
 
 const num = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : (typeof v === 'string' && v.trim() !== '' && Number.isFinite(+v) ? +v : d));
 const GRID_3X3 = Object.freeze([[1, -1], [1, 0], [1, 1], [0, -1], [0, 0], [0, 1], [-1, -1], [-1, 0], [-1, 1]]);
@@ -1364,6 +1366,7 @@ function yanyouKit(bb, raw) {
  * Touch of 外勤医疗, hidden until a player holds the strategy), as tile keys.
  */
 function mapCharKeys(battle) {
+  const stage = battle.stage?.raw || battle.stage;
   const list = battle.stage?.raw?.mapChars ?? battle.stage?.mapChars ?? [];
   const out = new Set();
   for (const m of Array.isArray(list) ? list : []) if (m && Array.isArray(m.pos)) out.add(m.pos[0] * COLS + m.pos[1]);
@@ -1575,6 +1578,7 @@ function touchKit(bb, raw, def) {
  * or null.
  */
 export function spawnMapChar(battle, playerId, tokenId, { alias = null, preBattleAggroSeq = null } = {}) {
+  const stage = battle.stage?.raw || battle.stage;
   const list = battle.stage?.raw?.mapChars ?? battle.stage?.mapChars ?? [];
   const ps = battle.getPlayer(playerId);
   const multi = battle.players.length > 1;
@@ -1586,15 +1590,72 @@ export function spawnMapChar(battle, playerId, tokenId, { alias = null, preBattl
     const a = battle.mapTile(ps, 9, 2)[1], b = battle.mapTile(ps, 9, 10)[1];
     span = [Math.min(a, b), Math.max(a, b)];
   }
-  const halfOk = (m) => !ps || battle.players.length < 2 || (span ? m.pos[1] >= span[0] && m.pos[1] <= span[1] : (ps.half === 'R' ? m.pos[1] >= 11 : m.pos[1] <= 10));
+  const halfOk = (m) => !ps || (span ? m.pos[1] >= span[0] && m.pos[1] <= span[1] : (ps.half === 'R' ? m.pos[1] >= 11 : m.pos[1] <= 10));
   cands.sort((a, b) => (halfOk(b) ? 1 : 0) - (halfOk(a) ? 1 : 0) || (/multi_only/.test(String(a.alias)) ? 1 : 0) - (/multi_only/.test(String(b.alias)) ? 1 : 0));
+  /** 朝向:官方固定格那一份(左半场 RIGHT / 右半场 LEFT);都没有时默认 RIGHT —— 朝敌人来的方向站。 */
+  const dir = (battle.kind === 'boss' || battle.kind === 'hidden') && ps?.half === 'R' ? 'LEFT' : 'RIGHT';
+
+  // 1. 蓝门上一格 —— 联防图只有这一条能命中
+  /*
+   * ⚠ 这一步**不要求**"不可通行":owner 的规则是"固定在蓝门上方格子",而联防图
+   * (act1autochess_escaped_*) 那一格是马路(`r`)。它照样安全 —— 敌人的路线走的是蓝门所在的
+   * 那一行(第 9 行),上一格(第 10 行)不在路线上,所以不会替玩家挡路;近战地面敌人的射程是
+   * 自己站的格子(以及被它挡住的单位),够不到旁边这一格 —— 正好是 owner 说的
+   * 「只有远程和大范围攻击敌人才打得到」。普通 / 首领图上这一格本来就是 `#`(HIGH、地面走不到)。
+   */
+  for (const [r, c] of gateAboveTiles(stage, ([rr, cc]) => halfOk({ pos: [rr, cc] }))) {
+    if (!halfOk({ pos: [r, c] }) || !battle.grid.inRect(r, c) || !tileFree(battle, r, c)) continue;
+    const u = battle.spawnToken(playerId, tokenId, r, c, { dir, preBattleAggroSeq });
+    if (u) return u;
+  }
+  // 2. 官方固定格
   for (const m of cands) {
-    if (!tileFree(battle, m.pos[0], m.pos[1])) continue;
+    if (!halfOk(m) || !tileFree(battle, m.pos[0], m.pos[1])) continue;
     // stage positions are field tiles: their direction is taken as it is (default RIGHT)
-    const u = battle.spawnToken(playerId, tokenId, m.pos[0], m.pos[1], { dir: normDir(m.dir), preBattleAggroSeq });
+    const u = battle.spawnToken(playerId, tokenId, m.pos[0], m.pos[1], { dir, preBattleAggroSeq });
+    if (u) return u;
+  }
+  /*
+   * 3. 固定格与蓝门上一格都被占住时的兜底(见 mapCharFallbackTiles):退到旁边同类的格子上,
+   *    而不是静默不出现。
+   */
+  const want = cands.find(halfOk) || cands[0] || null;
+  for (const t of mapCharFallbackTiles(battle, want ? want.pos : null)) {
+    if (!halfOk({ pos: [t.r, t.c] })) continue;
+    const u = battle.spawnToken(playerId, tokenId, t.r, t.c, { dir, preBattleAggroSeq });
     if (u) return u;
   }
   return null;
+}
+
+/**
+ * 地图角色固定格被占住时的兜底落点 —— 与官方固定格(`tile_forbidden`)**同一类**的格子:地面敌人走不到
+ * (`!groundPassable`)、玩家也部署不了(`build === 'NONE'`)。
+ *
+ * 为什么需要:`data/stages.json` 给每只地图角色 2~4 个固定格,而**正常场地上落在战斗矩形里的只有一个**
+ * (`#1`,首领场地是 `#3`;`_multi_only` 那两个只在联机时参与)。那一格一旦被别的东西占了 —— 召唤物
+ * (社区反馈过:炎盟约的炎佑占掉了医疗干员的格)、装置、飞过去的敌人 —— 老代码就 `return null`
+ * **静默什么都不发生**:玩家选了策略却看不到任何表现,服务端连一行日志都没有。
+ *
+ * 排序:**由近及远一圈圈找**(曼哈顿距离),同一圈里先"谁也部署不了"的格子(与官方固定格同类),
+ * 最后按行列 —— 全确定性,不掷骰,便于测试与复现。所以它只会退到固定格旁边,
+ * 不会跑到战场另一头;而**绝不用地面敌人走的格子**(那会替玩家挡路、改变敌人寻路)。
+ */
+function mapCharFallbackTiles(battle, anchor) {
+  const R = battle.grid.rect;
+  const out = [];
+  for (let r = R.r0; r <= R.r1; r++) {
+    for (let c = R.c0; c <= R.c1; c++) {
+      if (!tileFree(battle, r, c)) continue;
+      if (battle.grid.groundPassable(r, c, true)) continue;
+      out.push({
+        r, c,
+        rank: battle.grid.tile(r, c).build === 'NONE' ? 0 : 1,
+        d: anchor ? Math.abs(r - anchor[0]) + Math.abs(c - anchor[1]) : 0,
+      });
+    }
+  }
+  return out.sort((a, b) => a.d - b.d || a.rank - b.rank || a.r - b.r || a.c - b.c);
 }
 
 // ---------------------------------------------------------------------------------------------------------------

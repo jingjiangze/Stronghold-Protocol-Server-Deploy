@@ -1,9 +1,7 @@
 // server/sim/content/kits/ops/chess_char_3_02-ayer.js — 断崖 (char_294_ayer) kit, tier 3.
 // Conventions of the tier-3 kits: ../shared/tier3.js; kit contract and rules: ../README.md.
 
-import {
-  num, defOf, talentBb, traitBb, altSkills, instantKindOf, alive, gridKeys, fx, copyGrid, NINE, aura,
-} from '../shared/tier3.js';
+import { num, defOf, talentBb, traitBb, altSkills, instantKindOf, alive, gridKeys, fx, copyGrid, NINE, aura } from '../shared/tier3.js';
 
 export default {
   // ---- 3_02 断崖 · 领主 — S2 浮游刃启动: arts, wider range, each attack hits every enemy blocked by allies around her

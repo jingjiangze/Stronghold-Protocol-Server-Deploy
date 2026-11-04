@@ -12,6 +12,8 @@ import { moduleTypeIconUrl } from '../../public/js/ui/assetUrls.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const LOCAL = path.join(ROOT, 'data/local-assets.json');
+/** The extracted art itself: the manifest is committed, the files under public/assets/ never are (`.gitignore`). */
+const EXTRACTED = path.join(ROOT, 'public/assets/local/module');
 
 const entry = (k) => ({ path: `/assets/local/module/${k}.png`, w: 50, h: 50, kind: 'Sprite' });
 const manifest = {
@@ -58,7 +60,7 @@ describe('module type icons (local-client art, optional)', () => {
     assert.equal(moduleTypeIconUrl(broken, 'MAR-Y'), '/assets/local/module/mar-y.png', 'an empty exact entry falls through to a valid one');
   });
 
-  test('the real manifest (when extracted on this machine) covers every module type of chess.json, with on-disk files', { skip: !existsSync(LOCAL) && 'no data/local-assets.json (optional)' }, () => {
+  test('the real manifest (when extracted on this machine) covers every module type of chess.json, with on-disk files', { skip: (!existsSync(LOCAL) || !existsSync(EXTRACTED)) && 'no local client extracted (data/local-assets.json + public/assets/local/module)' }, () => {
     const local = JSON.parse(readFileSync(LOCAL, 'utf8'));
     if (!local?.groups?.module) return; // an older extraction without the module group: the UI falls back
     const chess = JSON.parse(readFileSync(path.join(ROOT, 'data/chess.json'), 'utf8'));

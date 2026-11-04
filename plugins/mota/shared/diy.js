@@ -29,6 +29,8 @@ import { composeUnitRecord, unitForm, statusKey } from './standIn.js';
 import { atPotential } from './potential.js';
 
 /** The tiers that have 自选 slots. */
+// Owner 2026-10-20: five normal-equivalent copies per personal slot, never scaled by player count.
+export const DIY_COPIES = 5;
 export const DIY_TIERS = Object.freeze([5, 6]);
 
 /**

@@ -134,7 +134,9 @@ import { isStepKey } from '../../shared/plugins/limits.js';
 import { FORGE_SHIM_TEXT, forgeDisplaySlot, forgePanelPage, planForgePanel } from './forgePanels.js';
 import { readForgeBehaviour } from '../../shared/plugins/rules.js';
 
-const APP_RANGE = '>=0.3.0 <0.4.0';
+// Generated plugins target this build's own app line. 0.4.3 is the current APP_VERSION, so the old
+// `>=0.3.0 <0.4.0` range made every fresh import fail its own PLUGIN_INVALID check.
+const APP_RANGE = '>=0.3.0 <0.5.0';
 const DANGER_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 /** Raw zip bytes, headers included, before any entry is inflated. [ASSUMED] 64 KiB of central-directory room on top of the unpacked cap. */
 const ZIP_RAW_MAX = PLUGIN_LIMITS.pluginBytes + 64 * 1024;
@@ -384,14 +386,9 @@ function openValidationView({ root, dataDir, pluginsDir, stage }) {
       try { st = fs.statSync(abs); } catch { return; }
       if (!st.isDirectory()) return;
       if (!fs.existsSync(path.join(abs, PLUGIN_MANIFEST))) return;
-      try {
-        fs.symlinkSync(abs, dest);
-      } catch (e) {
-        // Windows without Developer Mode (or a privileged account) cannot create a symlink: EPERM. The view is a
-        // read-only validation registry, so a copy is equivalent — slower, and only of the packs this import adds.
-        if (!['EPERM', 'EACCES', 'ENOSYS', 'UNKNOWN'].includes(e?.code)) throw e;
-        fs.cpSync(abs, dest, { recursive: true, dereference: true });
-      }
+      // Windows without Developer Mode refuses symlinks (EPERM); a copy of the plugin folder is equivalent for the
+      // read-only validation registry and keeps the import working on a stock account.
+      try { fs.symlinkSync(abs, dest); } catch { fs.cpSync(abs, dest, { recursive: true }); }
     };
     if (pluginsDir && fs.existsSync(pluginsDir)) {
       for (const name of fs.readdirSync(pluginsDir)) take(name, path.join(pluginsDir, name));
@@ -3317,7 +3314,6 @@ export async function importForge(source, opts = {}) {
       issues.push({ code: e.code, detail: e.detail });
       return empty({ check: `${e.code}: ${e.detail}`, markdown: `# 导入报告 IMPORT-REPORT\n\n没有写入。\n\n- ${e.code}：${e.detail}\n` });
     }
-    console.error('[debug]', e && e.stack, e && e.code);
     if (typeof e?.code === 'string' && /^E[A-Z0-9]+$/.test(e.code)) {
       const detail = `the import could not be written (${e.code})`;
       issues.push({ code: 'PLUGIN_FORGE_ZIP', detail });

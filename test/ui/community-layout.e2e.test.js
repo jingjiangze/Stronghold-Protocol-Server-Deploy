@@ -9,7 +9,7 @@ const results = JSON.parse(readFileSync(new URL('../fixtures/stats-results.json'
 describe('settlement return control under enlarged text (#458)', { skip: !ENABLED }, () => {
   let srv, browser;
   before(async () => {
-    const { startServer } = await import('../../server/index.js');
+    const { startServer } = await import('../../server/boot-main.js');
     srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true });
     const P = (await import('puppeteer-core')).default;
     browser = await P.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox'] });

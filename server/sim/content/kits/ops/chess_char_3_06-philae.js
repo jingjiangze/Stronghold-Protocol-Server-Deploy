@@ -84,7 +84,7 @@ export default {
           if (ctx.target !== unit || !unit.alive) return;
           const sk = unit.skill;
           if (ctx.type === 'element') {
-            if (isS2 && sk && sk.active && !unit.findBuff('skill:philae_rage')) battle.addBuff(unit, { key: 'skill:philae_rage', mods: { atkPct: num(bb.atk) }, visible: true });
+            if (isS2 && sk && sk.active && !unit.findBuff('skill:philae_rage')) {battle.addBuff(unit, { key: 'skill:philae_rage', mods: { atkPct: num(bb.atk) }, visible: true });fx(battle,'philaeRage',unit);}
             return;
           }
           // the official philae_s_2 (buff_template_data) fires on ON_TAKE_DAMAGE with no filter: any damage instance — an

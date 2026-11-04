@@ -1,3 +1,4 @@
+import { queueCosmeticSkillHit } from '../../../cosmeticSkillHits20261102.js';
 // server/sim/content/kits/ops/chess_char_4_17-hsguma.js — 星熊 (char_136_hsguma) kit, tier 4.
 // Conventions of the tier-4 kits: ../shared/tier4.js; kit contract and rules: ../README.md.
 
@@ -19,6 +20,10 @@ export default withDefaults({
           kind: 'duration',
           mods: { atkPct: num(bb.atk), defPct: num(bb.def) },
           targeting: { allInRange: true },
+          attack: { onEachHit({ battle, unit, target, dealt, attackId }) {
+            // Existing authoritative onEachHit reports actual HP/pool loss, including fatal/phase-floor prevention.
+            if (dealt > 0 && target?.side === 'enemy') queueCosmeticSkillHit(battle, unit, target, 'skchr_hsguma_3', attackId);
+          } },
           onStart({ battle, unit }) { battle.fx('overclock', { x: unit.x, y: unit.y, id: unit.id }); },
         }),
       }),

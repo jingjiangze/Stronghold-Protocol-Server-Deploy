@@ -1,3 +1,4 @@
+import {withEventActor} from '../eventTeams.js';
 // server/sim/battle/hooks.js — Battle methods: the hook bus (on / off / offOwner / emit, the MAX_HOOK_DEPTH guard and
 // its chain diagnostics), the timers (after / every, run at the start of each tick) and the isolation of content
 // callbacks (_safe, _handlerError: a failing handler is skipped and counted; repeated engine errors end the battle as a
@@ -71,7 +72,7 @@ export class BattleHooks {
         if (h.removed) continue;
         this._frameName[d] = name;
         this._frameOwner[d] = h.owner;
-        try { h.fn(ctx, this); } catch (e) { this._handlerError(`hook:${name}`, h.owner, e); }
+        try { withEventActor(this,h.owner,()=>h.fn(ctx, this)); } catch (e) { this._handlerError(`hook:${name}`, h.owner, e); }
         if (h.once) this.off(h);
         if (ctx && ctx.stopPropagation) break;
       }
@@ -161,7 +162,7 @@ export class BattleHooks {
     this._frameName[d] = label;
     this._frameOwner[d] = owner;
     this._frameCtx[d] = null;
-    try { return fn(); } catch (e) { this._handlerError(label, owner, e); return undefined; } finally { this._emitDepth--; }
+    try { return withEventActor(this,owner,fn); } catch (e) { this._handlerError(label, owner, e); return undefined; } finally { this._emitDepth--; }
   }
 
   _handlerError(label, owner, e, internal = false) {

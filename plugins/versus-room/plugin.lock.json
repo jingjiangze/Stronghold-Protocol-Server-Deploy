@@ -1,0 +1,21 @@
+{
+  "lock": 1,
+  "id": "versus-room",
+  "version": "0.1.0",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "host/noop.js": {
+      "sha256": "c0d8c6f3097182af01cbdc252b8faec356845f3a0ddb5772239d8cd6a42a0fd1",
+      "bytes": 194
+    },
+    "plugin.json": {
+      "sha256": "43630e592fe4c060e591ae47e188f0579e3c53784dd26f04c9f7606f267d1411",
+      "bytes": 846
+    },
+    "server/versusLobby.js": {
+      "sha256": "16aa68f6d430a416ddb29e3f6ce58e5ad9da95a9b23d80c8341f3de0783a4b0c",
+      "bytes": 4006
+    }
+  },
+  "spine": {}
+}

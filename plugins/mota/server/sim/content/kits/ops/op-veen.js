@@ -41,8 +41,9 @@
 //   attack@bounce_atk_scale × the cached ATK arts. The skill ends when the bullets run out.
 
 import { num, talentBb, moduleBb, traitBb, skillRec, batMod, toggleBuff } from '../shared/tier1.js';
-import { canTargetEnemy, sortEnemyTargets } from '../../../targeting.js';
 import { hypot } from '../../../detmath.js';
+import { canTargetEnemy, sortEnemyTargets } from '../../../targeting.js';
+
 
 const S1 = 'skchr_veen_1';
 const S2 = 'skchr_veen_2';

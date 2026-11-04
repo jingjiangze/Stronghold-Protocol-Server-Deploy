@@ -31,7 +31,7 @@
 
 import { PHASE, BOND_LAYER_CAP } from '../../shared/constants.js';
 import { morphSlotPolicy, ruleOption } from '../../shared/plugins/rules.js';
-import { FIELD, canPlace, placeClass, positionClass, parseKey } from './board.js';
+import { inField, rectOfMap, canPlace, placeClass, positionClass, parseKey } from './board.js';
 import { computeBonds } from './bondsMeta.js';
 import { matchSlotPolicy } from '../../shared/morph.js';   // 协同共竞: 装备位策略（mod 层 shared 文件已随树携带）
 // 装备位语义（第 7 段）：不变量里「占几格 / 最多几件 / 最多一件变形同构体」读这一局的策略（缺省档 = 官方那条算术）。
@@ -72,6 +72,9 @@ export function collectViolations(m, { limit = 25 } = {}) {
   // either while the rule set is off, and never a request that outlived its prep.
   if (m.teamEcon) {
     if (!Number.isInteger(m.teamReserve) || m.teamReserve < 0) fail(`team reserve ${m.teamReserve}`);
+    // 个人储备这一层已于 2026-10-30 下线（业主「只保留团队储备」）：回合末 `econSplitLeftover` 会把 `ps.reserve`
+    // 强制归零，于是旧三层资金的不变量「每个活人的个人储备 >= 团队储备」在新模型下**恒假** —— 只要团队池里有
+    // 一分钱就会误报。这条检查已删；团队储备本身的非负仍由上面那行守着。
     const outs = new Map();
     for (const req of m.econRequests.values()) {
       if (m.phase !== PHASE.PREP) fail(`request ${req.id} outside PREP (${m.phase})`);
@@ -216,7 +219,8 @@ export function collectViolations(m, { limit = 25 } = {}) {
     const dmap = typeof m.deployMapFor === 'function' ? m.deployMapFor(ps) : ps.deployMap();
     for (const [k, p] of ps.board) {
       const [r, c] = parseKey(k);
-      if (!(r >= FIELD.r0 && r <= FIELD.r1 && c >= FIELD.c0 && c <= FIELD.c1)) fail(`${id}: piece outside the board at ${k}`);
+      // the boundary is the field this player deploys on (a rogue stage's own frame; FIELD on the classic board)
+      if (!inField(r, c, rectOfMap(dmap))) fail(`${id}: piece outside the board at ${k}`);
       if (p.kind === 'item') { fail(`${id}: item ${p.id} stands on the board`); continue; }
       const rec = p.kind === 'token' ? pgd.token(p.id) : pgd.chess(p.id);
       const cls = p.kind === 'chess' ? placeClass(ps, rec) : positionClass(rec);

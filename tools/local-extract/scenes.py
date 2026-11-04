@@ -1,6 +1,9 @@
 """The official battlefield scenes of 卫戍协议 (DESIGN §15): every battlefield is a prebuilt Unity scene
 (scenes/activities/<season>/level_<stage>/level_<stage>.ab, with …/lightingdata.ab beside it) whose tile models are
 baked into "Combined Mesh (root: scene)" objects, plus loose meshes for the parts the game shows and hides.
+The roguelike (整合战略) battlefields are scenes of the same shape under scenes/obt/roguelike/ro<N>/level_rogue<N>_<code>/
+(scene_bundle maps `rogue_ro4_1-1` to level_rogue4_1-1); they are not in SCENES — tools/local-extract/
+extract_rogue_scene.py extracts one at a time.
 
 The scene bundles ship only while the season runs (the hot-update list of an off-season client has none), so they are
 read from the client's AB root when it has them and else from a directory of bundles kept from an in-season version
@@ -79,6 +82,9 @@ ENV_RGBM = 5.0
 # bytes of one 4 × 4 block of the cubemap formats the scenes use
 ENV_BLOCK_BYTES = {'ETC2_RGBA8': 16}
 HIDDEN_NAME = re.compile(r'^[A-Z_]+@\d+$')
+# Roguelike (整合战略) battlefields are scenes of the same shape, under scenes/obt/roguelike/ro<N>/: the stage id
+# `rogue_ro4_1-1` is the bundle level_rogue4_1-1.ab (the chapter's `ro` is folded into the bundle's `rogue<N>`).
+ROGUE_SCENE_ID = re.compile(r'^rogue_ro(\d+)_(.+)$')
 WATER_SHADERS = ('StylizedWater', 'StandardWater', 'DynamicWaterTile')
 # [ASSUMED] Maintainer decision, 2026-10-17 (#684, DESIGN §34.24): correct exact source-scene duplicates,
 # keeping the normal bake. This is an art correction, not an official visibility rule. In the official Android
@@ -175,7 +181,12 @@ def drop_duplicate_renderers(renderers, log):
 
 
 def scene_bundle(stage_id):
-    """Bundle path of a stage's scene, relative to an AB root (act1autochess_m01 → scenes/activities/act1autochess/…)."""
+    """Bundle path of a stage's scene, relative to an AB root: act1autochess_m01 → scenes/activities/act1autochess/…,
+    rogue_ro4_1-1 → scenes/obt/roguelike/ro4/level_rogue4_1-1/level_rogue4_1-1.ab."""
+    m = ROGUE_SCENE_ID.match(stage_id)
+    if m:
+        level = f'level_rogue{m.group(1)}_{m.group(2)}'
+        return f'scenes/obt/roguelike/ro{m.group(1)}/{level}/{level}.ab'
     season = stage_id.rsplit('_', 1)[0]
     return f'scenes/activities/{season}/level_{stage_id}/level_{stage_id}.ab'
 

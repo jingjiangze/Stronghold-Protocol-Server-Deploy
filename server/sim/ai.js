@@ -1,3 +1,5 @@
+import {eventHostile} from './eventTeams.js';
+import {cricketPursuit} from './cricket.js';
 // server/sim/ai.js — operator attack loop and enemy AI (route following, blocking, attacks) (DESIGN §5.5).
 //
 // Operators/tokens: attack cooldown counts down while able to act; when ready and a valid target exists the
@@ -31,18 +33,18 @@
 // (PRTS 状态机: an enemy's COMBAT state ends with its attack, not with its blocker); the candidates pass the
 // enemy's own rule (`e.profile.canTarget`) and are ordered
 // blocker → taunt → latest deployed (targeting.js sortAllyTargets). An enemy's damage type is its data's unless content
-// arms it (`e.profile.dmgType`: 转译基底's forms, whose data never attacks). Reaching the final leg's end = leak — on a
-// portal entrance it is a teleport to the far exit and a walk to that side's blue door instead (portalPickup). A `fear`
-// (恐惧) status suspends the route: the enemy runs between random checkpoints away from the fear's source (fear.js
-// moveFeared; a self-inflicted fear flutters inside its own tile); an `attract` (诱导) status walks it to the status
-// point instead (moveAttracted); both re-plan the route when released (恐惧 outranks 诱导).
+// arms it (`e.profile.dmgType`: 转译基底's forms, whose data never attacks). Reaching the final leg's end = leak. A `fear` (恐惧) status suspends the route: the
+// enemy runs between random checkpoints away from the fear's source (fear.js moveFeared; a self-inflicted fear
+// flutters inside its own tile); an `attract` (诱导) status walks it to the status point instead (moveAttracted);
+// both re-plan the route when released (恐惧 outranks 诱导).
 
 import { ATTACK_PAUSE, ALLY_COLLIDER_RADIUS, MOVE_SCALE, PROJECTILE_SPEEDS, PROJECTILE_SPEED, BOOMERANG_RETURN_SPEED, COLS, CHAIN_RADIUS } from './constants.js';
+import { hypot, powi } from './detmath.js';
 import { sortEnemyTargets, sortAllyTargets, canTargetEnemy, canTargetAlly, tileKeyOf } from './targeting.js';
 import { reduceElement } from './damage.js';
 import { straightClear } from './grid.js';
 import { moveFeared, endFear } from './fear.js';
-import { hypot, powi } from './detmath.js';
+
 import { PLUGIN_TIMES_MAX } from '../../shared/plugins/limits.js';
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -105,8 +107,12 @@ export function updateAlly(b, u, dt) {
   // (a 秘术师's `canAttack` is its own target rule: false = no valid target — 深靛's bound enemies, 维伊's marked ones)
   if (prof.canAttack && !prof.canAttack(b, u)) { if (prof.storeEnergy) { u.trait.hadTarget = false; storeEnergy(b, u, prof); } return; }
   let targets = acquireTargets(b, u, prof);
-  // A DEFAULT charged heal can replace this attack with an eligible ally even when no enemy exists.
-  // Run after cooldown/control checks so silence, disarm and the exact attack cadence still apply (#406).
+  /*
+   * 0.2.3 上游 e86c7c8(官方 #406):**守护者的 DEFAULT 充能治疗可以在场上没有敌人时触发** ——
+   * 只要射程里有够格的友军,它就顶替这次普通攻击。
+   *
+   * 放在冷却 / 控制判定**之后**:沉默、缴械、以及"严格按攻击间隔"这三条照旧成立。
+   */
   if (!targets.length && sk?.triggerAllies && sk.onAboutToAttack()) {
     prof = effectiveProfile(u);
     if (prof.noAttack || !u.alive) return;
@@ -271,6 +277,7 @@ export function performAttack(b, u, prof, targets, opts = null) {
   u.lastAttackAt = b.time;
   u.stats.attacks++;
   const attackId = ++b._attackSeq; // every damage instance of this attack (all targets, splash, chain) carries it
+  const attackAction = { id: attackId, unit: u };
   const isHeal = !!(prof.heal && prof.dmgType === 'heal');
   // 首次接敌 (official voice type ENCOUNTER_ENEMY, ≥ 3 s between two such lines): one event the first time a unit
   // attacks an enemy, whatever the attack is — the client answers with that operator's 行动开始 line (audio.js voice).
@@ -300,7 +307,7 @@ export function performAttack(b, u, prof, targets, opts = null) {
       resolveHit(b, u, prof, t, info, t.x, t.y);
     }
   }
-  if (b._hooks.attack) b.emit('attack', { attacker: u, targets, isSkill });
+  if (b._hooks.attack) b.emit('attack', { attacker: u, targets, isSkill, attackId, action: attackAction });
   if (u.skill) u.skill.onAttackPerformed(targets, isSkill, !!(opts && opts.noAmmo));
   if (prof.afterAttack) b._safe(() => prof.afterAttack(b, u, targets), 'profile.afterAttack', u);
 }
@@ -406,7 +413,7 @@ export function resolveHit(b, u, prof, target, info, x, y) {
   if (prof.splashRadius > 0 && (!info.fortressMelee || prof.fortressMeleeSplash)) {
     const r = prof.splashRadius;
     const sc = prof.splashScale ?? 1;
-    for (const e of b.foesInRadius(x, y, r, true)) {
+    for (const e of b.foesInRadius(x, y, r, true, u)) {
       if (e === target) continue;
       if (prof.groundOnly && e.isFlying) continue;
       if (!prof.canHitFly && e.isFlying && !prof.splashHitsFly) continue;
@@ -522,15 +529,17 @@ export function compileRoute(route, rect = null) {
 }
 
 /**
- * Flow field of a WALK leg target usable from tile key `k`: the live field, else the obstacle-free one (the goal is
- * walled off by hard blocks), else null.
+ * Flow field of a WALK leg target usable from tile key `k`. An unreachable/raised destination waits for a re-plan;
+ * it never authorises walking straight through hard blocks or terrain.
  */
 function legField(b, r, c, k) {
   const g = b.grid;
+  // Routes may end at a moving leader's fractional position. Use the nearest
+  // tile consistently with tileKey before validating and planning the leg.
+  r=Math.round(r);c=Math.round(c);
+  if (!g.walkable(r,c)) return null;
   const f = g.flowField(r, c);
   if (k >= 0 && f.dist[k] >= 0) return f;
-  const f2 = g.flowField(r, c, { ignoreObstacles: true });
-  if (k >= 0 && f2.dist[k] >= 0) return f2;
   return null;
 }
 
@@ -541,12 +550,13 @@ const tileKey = (b, e) => {
 
 /**
  * Build the waypoint list (world points) for the current move leg. Ground legs: the smoothed flow-field chain from
- * the enemy's tile (next[tile], next[next[tile]], …, the target) — straight to the target when no field reaches it.
+ * the enemy's tile (next[tile], next[next[tile]], …, the target). No reachable chain means a stationary move leg.
  */
-function planLeg(b, e, leg) {
+export function planLeg(b, e, leg) {
   const R = e.route;
   let pts;
-  if (e.motion === 'FLY') {
+  const custom = e.profile?.routePlanner?.(b, e, leg);
+  if (custom) { pts = custom; } else if (e.motion === 'FLY') {
     pts = [{ x: leg.c, y: leg.r }];
   } else {
     const k = tileKey(b, e);
@@ -562,7 +572,7 @@ function planLeg(b, e, leg) {
       }
     }
     const last = pts[pts.length - 1];
-    if (!last || last.x !== leg.c || last.y !== leg.r) pts.push({ x: leg.c, y: leg.r });
+    if (f && (!last || last.x !== leg.c || last.y !== leg.r)) pts.push({ x: leg.c, y: leg.r });
     // The smoothed chain is line-of-sight clear from the tile CENTRE only. An enemy re-planning off-centre (pushed,
     // released by 诱导, an obstacle change mid-segment) first steps back to its tile centre when the straight line to
     // the first waypoint would cut a tile it cannot walk (a fence corner, a crate) — else it would walk inside it.
@@ -570,6 +580,10 @@ function planLeg(b, e, leg) {
       pts.unshift({ x: k % COLS, y: (k / COLS) | 0 });
     }
   }
+  // Custom planners also rejoin the tile centre after a displacement; never cut an off-centre corner.
+  const k = tileKey(b, e);
+  if (custom && pts.length && k >= 0 && !straightClear(b.grid,e.x,e.y,pts[0])) pts.unshift({x:k%COLS,y:(k/COLS)|0});
+  R.stalled = !pts.length && (Math.abs(e.x-leg.c)>1e-6 || Math.abs(e.y-leg.r)>1e-6);
   R.pts = pts;
   R.ptIdx = 0;
   R.version = b.grid.version;
@@ -577,6 +591,30 @@ function planLeg(b, e, leg) {
   const suf = new Float64Array(pts.length);
   for (let i = pts.length - 2; i >= 0; i--) suf[i] = suf[i + 1] + hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y);
   R.suffix = suf;
+}
+
+/** Visual route preview uses the exact same flow-field planner as a moving enemy. */
+export function predictRouteLegs(b,source,legs){
+ const e={x:source.x,y:source.y,motion:source.motion,profile:source.profile||{},route:{}},segments=[],jumps=[],waits=[];
+ let blocked=false,hidden=false,disappeared=null;
+ let points=[{x:e.x,y:e.y}];
+ const flush=()=>{if(points.length>1)segments.push(points);points=[];};
+ for(const leg of legs){
+  if(leg.t==='wait'){waits.push({x:e.x,y:e.y,time:leg.time});continue;}
+  if(leg.t==='disappear'){disappeared={x:e.x,y:e.y};hidden=true;flush();continue;}
+  if(leg.t==='appear'){if(disappeared)jumps.push({from:disappeared,to:{x:leg.c,y:leg.r},kind:'portal'});hidden=false;e.x=leg.c;e.y=leg.r;points=[{x:e.x,y:e.y}];continue;}
+  if(leg.t!=='move')continue;
+  planLeg(b,e,leg);
+  if(e.route.stalled){blocked=true;break;}
+  if(hidden){e.x=leg.c;e.y=leg.r;continue;}
+  for(const p of e.route.pts){const last=points[points.length-1];if(!last||last.x!==p.x||last.y!==p.y)points.push({x:p.x,y:p.y});}
+  e.x=leg.c;e.y=leg.r;
+ }
+ flush();return {segments,jumps,waits,blocked};
+}
+export function incomingRoutePoints(b,route){
+ if(!route?.start)return [];
+ return predictRouteLegs(b,{x:route.start[1],y:route.start[0],motion:route.motion},compileRoute(route,b.rect)).segments;
 }
 
 /** Estimated length of legs after index `idx` (cached per grid version). */
@@ -630,6 +668,7 @@ export function remainingDistance(b, e) {
 // enemy update
 
 export function updateEnemy(b, e, dt) {
+  cricketPursuit(b,e);
   const R = e.route;
   if (!e.alive) return;
   // Carried (§32.14.4): pinned by the carrier, route and attacks frozen. A hidden teleport still advances its
@@ -637,11 +676,16 @@ export function updateEnemy(b, e, dt) {
   if (e.mem.carrier) { e.moving = false; return; }
   // hidden (teleporting) enemies only advance wait legs
   const stunned = e.s.flags.stun;
+  // 眩晕 / 藏匿 / 恐惧 会切断攻击恢复:记给客户端(snapshot `standCut`),仿真侧随后各自清 atkStandUntil
   if (stunned || e.hidden || e.s.flags.fear) b._cutAttackStand(e);
-  // 失衡 (UNBALANCE, battle/displacement.js _unbalance): a state machine, not a status — 浮空 ends it (PRTS 术语释义 浮空
-  // 「触发浮空时清除受到的推/拉力…无法陷入失衡」); while it lasts the enemy neither walks nor starts a normal attack
+  /*
+   * 失衡 (UNBALANCE, battle/displacement.js _unbalance): a state machine, not a status — 浮空 ends it (PRTS 术语释义 浮空
+   * 「触发浮空时清除受到的推/拉力…无法陷入失衡」); while it lasts the enemy neither walks nor starts a normal attack.
+   *
+   * `- 1e-9`:失衡结束时刻是浮点累加出来的(如 35/30 s),不减这个容差会让它提前一帧结束、吃掉本帧的攻击判定。
+   */
   if (e.s.flags.levitate && e.unbalanceUntil > b.time) e.unbalanceUntil = -Infinity;
-  const unbalanced = b.time < e.unbalanceUntil - 1e-9;   // (the 1e-9: a float-summed end such as 35/30 s keeps its frame)
+  const unbalanced = b.time < e.unbalanceUntil - 1e-9;
   const prevCd = e.atkCd;
   if (e.atkCd > 0 && !stunned && !e.hidden) e.atkCd = attackCountdown(e.atkCd, dt);
   // a stun / freeze / sleep / 浮空 / 失衡 — or leaving the field — takes the enemy out of its attack: a swing short of its
@@ -687,6 +731,24 @@ export function updateEnemy(b, e, dt) {
   if (e.mem.fearMove) endFear(e);
   // 诱导 (ba.attract "无法被阻挡并向目标位置移动"): walks to the attract point instead of following its route
   if (e.s.flags.attract) { if (standing) e.moving = false; else moveAttracted(b, e, dt); return; }
+  if(typeof e.profile?.pursuit==='function'){
+    const target=e.profile.pursuit(b,e);
+    if(!target||standing||(target.x-e.x)*(target.x-e.x)+(target.y-e.y)*(target.y-e.y)<=e.base.rangeRadius*e.base.rangeRadius){e.moving=false;return;}
+    const r=Math.round(target.y),c=Math.round(target.x);let point=e.mem.pursuitMove;
+    if(!point||point.targetR!==r||point.targetC!==c||point.ver!==b.grid.version){
+      // Chase a reachable attack tile beside raised targets; pursuit never ignores terrain.
+      const goals=[];
+      for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+        if(dr*dr+dc*dc>e.base.rangeRadius*e.base.rangeRadius||!b.grid.walkable(r+dr,c+dc))continue;
+        const route=b.grid.waypoints(Math.round(e.y),Math.round(e.x),r+dr,c+dc);
+        if(route)goals.push({r:r+dr,c:c+dc,dist:(e.x-c-dc)*(e.x-c-dc)+(e.y-r-dr)*(e.y-r-dr)});
+      }
+      goals.sort((a,z)=>a.dist-z.dist||a.r-z.r||a.c-z.c);
+      if(!goals.length){e.moving=false;return;}
+      point=e.mem.pursuitMove={...goals[0],targetR:r,targetC:c,strict:true};
+    }
+    moveAttracted(b,e,dt,point);return;
+  }
   advanceRoute(b, e, dt, R, standing);
 }
 
@@ -697,25 +759,28 @@ export function updateEnemy(b, e, dt) {
  * a stale path would walk through walls. Its route re-plans from wherever it stands once the status ends (route.pts
  * is reset whenever it moved).
  */
-function moveAttracted(b, e, dt) {
-  let A = null;
-  for (const x of e.buffs) if (x.status === 'attract' && x.data && x.data.attract) { A = x.data.attract; break; }
+function moveAttracted(b, e, dt, external = null) {
+  let A = external;
+  if(!A)for (const x of e.buffs) if (x.status === 'attract' && x.data && x.data.attract) { A = x.data.attract; break; }
   if (!A) { e.moving = false; return; }
   if (!A.pts || A.ver !== b.grid.version || e.x !== A.px || e.y !== A.py) {
-    const sr = Math.round(e.y), sc = Math.round(e.x);
-    let pts = null;
-    if (e.motion !== 'FLY') { // (a hovering 近地悬浮 enemy is an air unit but walks the ground: motion decides the path)
-      const path = b.grid.waypoints(sr, sc, A.r, A.c) || b.grid.waypoints(sr, sc, A.r, A.c, { ignoreObstacles: true });
-      if (path) {
-        pts = [];
-        for (let i = 0; i < path.length; i++) {
-          const [r, c] = path[i];
-          if (i === 0 && Math.abs(e.x - c) < 1e-6 && Math.abs(e.y - r) < 1e-6) continue;
-          pts.push({ x: c, y: r });
-        }
+    let pts = e.motion === 'FLY' ? [{x:A.c,y:A.r}] : null;
+    if (e.motion !== 'FLY') {
+      // A raised/unreachable lure cannot grant ground units flight. Use the closest reachable ground point.
+      // The unit's own planner also enforces the Black Snake's assigned half.
+      const z=e.profile.zoneBounds||b.rect,candidates=[];
+      for(let r=z.r0;r<=z.r1;r++)for(let c=z.c0;c<=z.c1;c++){
+        if(!b.grid.groundPassable(r,c)||(A.strict&&(r!==A.r||c!==A.c)))continue;
+        candidates.push({r,c,d:(r-A.r)*(r-A.r)+(c-A.c)*(c-A.c)});
+      }
+      candidates.sort((a,z)=>a.d-z.d||a.r-z.r||a.c-z.c);
+      for(const p of candidates){
+        const probe={x:e.x,y:e.y,motion:e.motion,profile:e.profile,route:{}};
+        planLeg(b,probe,{t:'move',r:p.r,c:p.c});
+        if(!probe.route.stalled){pts=probe.route.pts;break;}
       }
     }
-    A.pts = pts || [{ x: A.c, y: A.r }];
+    A.pts = pts || [];
     A.i = 0;
     A.ver = b.grid.version;
   }
@@ -741,10 +806,7 @@ function advanceRoute(b, e, dt, R, standing = false) {
   let guard = 16;
   while (budget > 1e-9 && guard-- > 0 && e.alive) { // loop-cap: route guard
     const leg = R.legs[R.legIdx];
-    if (!leg) {
-      if (!portalPickup(b, e)) { b.leak(e); return; }
-      continue;
-    }
+    if (!leg) { b.leak(e); return; }
     if (leg.t === 'wait') {
       if (R.waitLeft == null) R.waitLeft = leg.time;
       const use = Math.min(budget, R.waitLeft);
@@ -755,8 +817,8 @@ function advanceRoute(b, e, dt, R, standing = false) {
       continue;
     }
     if (leg.t === 'disappear') {
-      b._cutAttackStand(e);
       b._setHidden(e, true);
+      b._cutAttackStand(e);                            // 离场也切断攻击恢复:记给客户端(snapshot `standCut`)
       e.atkStandUntil = -Infinity; standing = false;   // off the field: its attack clip is over
       R.legIdx++; R.pts = null;
       continue;
@@ -764,14 +826,13 @@ function advanceRoute(b, e, dt, R, standing = false) {
     if (leg.t === 'appear') {
       e.x = leg.c; e.y = leg.r;
       b._setHidden(e, false);
-      // a relocation is a forced state switch: it ends a 失衡 (PRTS 失衡位移机制 「被强制切换至其他状态机」)
-      e.unbalanceUntil = -Infinity;
       R.legIdx++; R.pts = null;
       continue;
     }
     // move
     if (standing) { e.moving = false; return; }   // the walking waits for the attack clip
     if (!R.pts || R.version !== b.grid.version) planLeg(b, e, leg);
+    if (R.stalled) { e.moving = false; return; }
     const speed = e.s.moveSpeed * MOVE_SCALE;
     if (speed <= 0) { e.moving = false; return; }
     let dist = speed * budget;
@@ -796,46 +857,11 @@ function advanceRoute(b, e, dt, R, standing = false) {
     }
     budget = dist / speed;
     if (R.pts && R.ptIdx >= R.pts.length) {
-      if (leg.final) {
-        if (!portalPickup(b, e)) { b.leak(e); return; }
-      }
+      if (leg.final) { b.leak(e); return; }
       R.legIdx++;
       R.pts = null;
     }
   }
-}
-
-/**
- * Boss-field portal pickup (tile_telin / tile_telout; GitHub #336, PR #337 by @2321Robin, both with a recording of the
- * official game): a route that ENDS on a portal entrance does not leak there — the enemy is teleported out of the far
- * exit and walks on to the blue door on the entrance's side, where it leaks. The boss / Hidden Core circuits end on
- * an entrance ([1,3] / [1,17]; 137 routes of data/waves.json); their mid-route crossings are the routes' own DISAPPEAR /
- * WAIT / APPEAR steps, every MOVE onto an entrance being followed by a DISAPPEAR, so only the route's end needs this.
- * Appends vanish → wait → reappear → walk-to-door legs to the live route and returns true (false: not on an entrance,
- * or no exit in the field). The exit is the telout farthest from the entrance, the door the end tile nearest to it:
- * every explicit pair of the data (95, routes and extra routes) reads [1,3] / [1,17] → [5,10] — the farther of the two
- * telouts [5,10] / [2,10] of the battle stages — and the doors [2,2] / [2,18] stand beside the entrances. Inside the
- * portal the enemy stays hidden PORTAL_WAIT s, the wait of the explicit crossings of the same tiles (WAIT 3 s in 85 of
- * the 95; 5 s in 9, 1 s in 1). [ASSUMED] the pairing (no tile carries a link) and the 3 s (no source times this one).
- */
-const PORTAL_WAIT = 3;
-function portalPickup(b, e) {
-  const r = Math.round(e.y), c = Math.round(e.x);
-  if (!b.grid.inBounds(r, c) || b.grid.tile(r, c).special !== 'telin') return false;
-  const outs = b.grid.specialTiles('telout');
-  if (!outs.length) return false;
-  const dist = (p) => hypot(p[0] - r, p[1] - c);
-  const out = outs.reduce((a, x) => (dist(x) > dist(a) ? x : a));
-  const R = e.route;
-  R.legs.splice(R.legIdx + 1, 0, { t: 'disappear' }, { t: 'wait', time: PORTAL_WAIT }, { t: 'appear', r: out[0], c: out[1] });
-  const ends = b.grid.specialTiles('end');
-  if (ends.length) {
-    const door = ends.reduce((a, x) => (dist(x) < dist(a) ? x : a));
-    R.legs.push({ t: 'move', r: door[0], c: door[1], final: true });
-  }
-  R.pts = null;
-  R.tailVersion = -1;   // the appended tail invalidates the cached remaining-distance suffixes
-  return true;
 }
 
 /**
@@ -870,7 +896,10 @@ const STAND = { wind: 0, rest: 0 };
 /** The attack clip's strike frame (s into the clip); half the clip when the manifest names none. */
 const clipHit = (a) => (Number.isFinite(a.hit) ? Math.min(a.dur, Math.max(0, a.hit)) : a.dur / 2);
 /** The clip plays faster when the attacks come quicker than it. */
-const clipSpeed = (e, a) => { const iv = e.s.interval; return iv > 0 && iv < a.dur ? a.dur / iv : 1; };
+const clipSpeed = (e, a) => {
+  if (e.profile?.attackAnimationRate > 0) return 1 / e.profile.attackAnimationRate;
+  const iv = e.s.interval; return iv > 0 && iv < a.dur ? a.dur / iv : 1;
+};
 
 /**
  * The damage frame of an enemy's normal attack: seconds from the start of its swing to the strike — its attack clip's
@@ -896,9 +925,13 @@ function attackTargets(b, e, radius, reach, own) {
       if (!targets.includes(bl) && bl.alive) targets.push(bl);
     } else if (bl.alive && bl.deployed) targets = [bl];
   } else if (radius > 0) {
-    targets = b.alliesInRadius(e.x, e.y, reach, null).filter((a) => canTargetAlly(e, a, true));
+    const eventContact=b._eventUnits?.size&&(e.profile?.melee??e.def.applyWay==='MELEE');
+    targets = b.alliesInRadius(e.x, e.y, reach, null).filter((a) => (!eventContact||a.side==='enemy'&&eventHostile(e,a))&&canTargetAlly(e, a, true));
+  } else if(b._eventUnits?.size){
+    targets=b.alliesInRadius(e.x,e.y,.85).filter(a=>a.side==='enemy'&&eventHostile(e,a)&&canTargetAlly(e,a,false));
   }
   if (own && targets.length) targets = targets.filter((a) => own(a));
+  if(b.flags.cricket&&!e.blockedBy){const army=targets.filter(a=>a.side==='enemy'&&eventHostile(e,a));if(army.length)targets=army;}
   return targets;
 }
 
@@ -931,7 +964,7 @@ function enemyAttack(b, e, prevCd) {
   // 宿主士兵 2.5, 深池伙友卫队 1.4 … — that radius belongs to their abilities/splash, handled by content).
   // Content may flip it with `e.profile.melee = false`.
   const melee = e.profile?.melee ?? def.applyWay === 'MELEE';
-  const radius = melee ? 0 : e.base.rangeRadius;
+  const radius = melee ? (b._eventUnits?.size ? .6 : 0) : e.base.rangeRadius;
   // the range circle takes an ally whose 0.25 collider touches it (PRTS 作战机制 §碰撞体积: 索敌 uses the colliders)
   const reach = radius > 0 ? radius + ALLY_COLLIDER_RADIUS : 0;
   // `e.profile.canTarget(ally)`: the enemy's own target rule (只攻击地面单位, 不会攻击飞行单位 …; content/enemies/*.js),
@@ -950,6 +983,8 @@ function enemyAttack(b, e, prevCd) {
     e.swingTargets = targets.slice();
     // ready before this tick (it walked with its cooldown over, or its swing was cut): the whole wind-up from now
     if (prevCd < wind) e.atkCd = wind;
+    if (e.profile?.attackWindupFx) b.fx(e.profile.attackWindupFx, { id: e.id, x: e.x, y: e.y,
+      to: targets[0].id, dur: e.atkCd, interval: e.s.interval, kind: e.profile.attackWindupFx });
   }
   // the wind-up (GitHub #58): an unblocked ranged enemy stands through it (a 「不停止移动」 one walks on)
   if (e.atkCd > 0) return !e.blockedBy && radius > 0 && !(e.profile?.attackMoves ?? def.attackMoves);
@@ -1003,13 +1038,11 @@ function enemyAttack(b, e, prevCd) {
   e.stats.attacks++;
   const attackId = ++b._attackSeq;
   const type = dmgType === 'heal' ? 'arts' : dmgType;
-  const rangedShot = radius > 0 && !(e.blockedBy && targets[0] === e.blockedBy && radius < 1);
+  const rangedShot = radius > 0 && !e.profile?.noProjectile && !(e.blockedBy && targets[0] === e.blockedBy && radius < 1);
   // content-resolved attacks (`e.profile.deferHit`: 帝国炮火先兆者's shell landing 3 s later): the attack itself happens
   // — the 'atk' event (kind `e.profile.shot`, drawn by the content's own fx), cooldown, pause, the 'attack' hook — and
   // the content's 'attack' handler deals its damage
   const deferred = !!(e.profile && e.profile.deferHit);
-  // A lethal strike may immediately redeploy its target. Post-attack effects still belong to the struck deployment.
-  const targetDeployments = new Map(targets.map((t) => [t, t.deploySeq]));
   for (const t of targets) {
     b._ev(['atk', e.id, t.id, deferred ? (e.profile.shot || 'none') : rangedShot ? 'enemy' : 'none']);
     if (deferred) continue;
@@ -1023,7 +1056,7 @@ function enemyAttack(b, e, prevCd) {
       b.addProjectile({ from: e, target: t, speed: PROJECTILE_SPEEDS.enemy, visual: 'enemy', source: e, onHit: (c) => hit(c.target, true) });
     } else hit(t);
   }
-  if (b._hooks.attack) b.emit('attack', { attacker: e, targets, targetDeployments, isSkill: false });
+  if (b._hooks.attack) b.emit('attack', { attacker: e, targets, isSkill: false });
   e.atkCd = e.s.interval;
   // stands for the rest of its attack clip (attackStand; the wind-up was stood before the strike) — every enemy, blocked
   // or not: PRTS 状态机, an enemy's ATTACK / COMBAT state "攻击结束后回退到MOVE状态" and checks only 异常状态 every frame

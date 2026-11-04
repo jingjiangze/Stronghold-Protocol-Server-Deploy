@@ -2,11 +2,9 @@
 // Conventions of the tier-4 kits: ../shared/tier4.js; kit contract and rules: ../README.md.
 
 import { bodyDist } from '../../../body.js';
-import {
-  AURA, num, tbb, moduleBb, grid, batFlat, enemyHasTag, targetsInRange, whileDeployed, pulse, alt, instantKind,
-  pullToFront, withDefaults,
-} from '../shared/tier4.js';
 import { hypot } from '../../../detmath.js';
+import { AURA, num, tbb, moduleBb, grid, batFlat, enemyHasTag, targetsInRange, whileDeployed, pulse, alt, instantKind, pullToFront, withDefaults } from '../shared/tier4.js';
+
 
 const ABYSSAL = new Set(['char_143_ghost', 'char_263_skadi', 'char_474_glady', 'char_4145_ulpia', 'char_1023_ghost2']);
 const isAbyssal = (u) => u?.def?.raw?.groupId === 'abyssal' || ABYSSAL.has(u?.def?.charId ?? u?.def?.raw?.charId);

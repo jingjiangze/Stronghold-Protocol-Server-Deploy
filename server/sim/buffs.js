@@ -7,7 +7,7 @@
 // their own timers, at most maxStacks alive — the oldest is dropped), 'keep' (ignore when already present).
 // Additive mod keys scale with stacks (value × stacks); *Mul keys multiply (value ^ stacks).
 
-import { COLD_ASPD, COLD_FREEZE_DURATION, FREEZE_RES_DOWN, RESIST_DEFAULT, RESIST_PALSY_DECAY } from './constants.js';
+import { COLD_ASPD, FREEZE_RES_DOWN, RESIST_DEFAULT, RESIST_PALSY_DECAY } from './constants.js';
 import { powi } from './detmath.js';
 
 /** 抵抗: "麻痹等状态每5秒流失1层" — tick of the resist buff. */
@@ -17,37 +17,6 @@ function resistPalsyDecay({ battle, unit }) {
   if (--p.stacks <= 0) battle.removeBuff(unit, p); else unit.markDirty();
 }
 
-/** Additive mod keys (summed; × stacks). `atkFinal` = 最终加算: added after the percentages (units.js _recalc). */
-export const ADD_KEYS = Object.freeze([
-  'atkFlat', 'atkPct', 'atkFinal', 'defFlat', 'defPct', 'hpFlat', 'hpPct', 'resFlat', 'aspd', 'batPct', 'blockCnt',
-  'rangeExtend', 'defIgnoreFlat', 'defIgnorePct', 'resIgnoreFlat', 'resIgnorePct', 'dodgePhys', 'dodgeArts',
-  'spRecoveryFlat', 'maxTargets', 'taunt', 'hpRegen', 'hpRegenRatio', 'spCostFlat', 'moveFlat', 'massFlat',
-  // 阻挡半径倍率 (PRTS 数值范围 BLOCK_RADIUS_SCALE, default 1): the air-block radius 0.8944 × (1 + Σ) — Battle._checkBlock
-  'blockRadiusScale',
-]);
-/** Multiplicative mod keys (product; ^ stacks). */
-export const MUL_KEYS = Object.freeze([
-  'atkMul', 'defMul', 'hpMul', 'resMul', 'moveMul', 'dmgDealtMul', 'dmgTakenMul', 'physTakenMul', 'artsTakenMul',
-  'trueTakenMul', 'elemTakenMul', 'elementalTakenMul', 'healingDealtMul', 'healingTakenMul', 'spRecoveryMul', 'redeployMul',
-  'atkScaleMul', 'physDealtMul', 'artsDealtMul',
-]);
-/**
- * Boolean flag keys (OR). `taunt` is also accepted as a numeric mod. `liftoff` = 起飞 of an ally (蒂比's skills): blocks
- * no ground enemy (Battle._blockerFor), 对地规避 against ground enemies (targeting.js evadesGround); it stays a ground
- * unit on its tile (`unit.ground` unchanged). `noHeal` = no heal from another unit (and no heal pick of one); `healFree`
- * = 禁疗 that also stops the unit's own heals (damage.js heal: only an HP-regen attribute and a heal that "无视禁疗" pass —
- * 史尔特尔's 余烬, which sets both). `stealthOff` = an enemy 隐匿 source switched off after a block (Battle._stealthSwitch).
- */
-export const FLAG_KEYS = Object.freeze([
-  'stun', 'freeze', 'sleep', 'silence', 'disarm', 'stealth', 'invulnerable', 'unblockable', 'levitate', 'fear',
-  'cold', 'reveal', 'bind', 'noHeal', 'untargetable', 'blockFly', 'noMove', 'noSp', 'burstLock', 'hidden',
-  'noBlock', 'tremble', 'hitCount', 'hitCountArts', 'attract', 'float', 'noDisplace', 'isolated', 'camou', 'liftoff',
-  // 自缚 (the unit's own immobility: 守墓石像's 转换模式, the 自缚 leaders) beside its `noMove` — 束缚 sets noMove too, and
-  // only 自缚 makes a unit "不视为可达目标" for 余 S2's teleport (PRTS 余 S2 备注)
-  'selfBound', 'healFree', 'stealthOff',
-  // 缚地 (status `groundbind`): an enemy air unit counts as a ground unit meanwhile (Unit.isFlying)
-  'groundbind',
-]);
 
 /**
  * Status catalogue: key → template. `value` semantics per status are documented inline. Effects follow the official
@@ -129,6 +98,7 @@ export const STATUS = Object.freeze({
   necrosisBurst: { flags: { burstLock: true } },
   apoptosisBurst: { flags: { burstLock: true } },
   erosionBurst: { flags: { burstLock: true } },
+  frenzyBurst: { flags: { burstLock: true } },
 });
 
 /**
@@ -139,8 +109,6 @@ export const STATUS = Object.freeze({
 export const RESIST_STATUSES = Object.freeze(new Set(['stun', 'freeze', 'cold', 'sleep', 'fear', 'tremble', 'attract', 'levitate',
   'bind', 'silence', 'disarm', 'sluggish', 'slow', 'groundbind']));
 
-/** Statuses that should be reported to clients as `['status', id, key, on]`. */
-export const VISIBLE_STATUS = new Set(Object.keys(STATUS));
 
 function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
 
@@ -222,3 +190,14 @@ export function aggregateMods(buffs) {
   }
   return { add, mul, flags, shield, permRangeExtend };
 }
+
+export const FLAG_KEYS = Object.freeze([
+  'stun', 'freeze', 'sleep', 'silence', 'disarm', 'stealth', 'invulnerable', 'unblockable', 'levitate', 'fear',
+  'cold', 'reveal', 'bind', 'noHeal', 'untargetable', 'blockFly', 'noMove', 'noSp', 'burstLock', 'hidden',
+  'noBlock', 'tremble', 'hitCount', 'hitCountArts', 'attract', 'float', 'noDisplace', 'isolated', 'camou', 'liftoff',
+  // 自缚 (the unit's own immobility: 守墓石像's 转换模式, the 自缚 leaders) beside its `noMove` — 束缚 sets noMove too, and
+  // only 自缚 makes a unit "不视为可达目标" for 余 S2's teleport (PRTS 余 S2 备注)
+  'selfBound', 'healFree', 'stealthOff',
+  // 缚地 (status `groundbind`): an enemy air unit counts as a ground unit meanwhile (Unit.isFlying)
+  'groundbind',
+]);

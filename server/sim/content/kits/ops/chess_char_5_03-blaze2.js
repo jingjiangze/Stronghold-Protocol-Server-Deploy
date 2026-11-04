@@ -3,10 +3,7 @@
 
 import { COLS } from '../../../constants.js';
 import { bodyInKeys } from '../../../body.js';
-import {
-  AURA_IV, AURA_DUR, num, on, talent, traitBb, skillGrid, batPct, mods, isOp, selectedId, lazySkills, instantKind,
-  skillRange, burstSpUp, elementHit, whileOn, burstDamageUp,
-} from '../shared/tier5.js';
+import { AURA_IV, AURA_DUR, num, on, talent, traitBb, skillGrid, batPct, mods, isOp, selectedId, lazySkills, instantKind, skillRange, burstSpUp, elementHit, whileOn, burstDamageUp } from '../shared/tier5.js';
 
 /** 烛煌 绝处重燃 "使附近的敌人晕眩" radius (tiles). PRTS 备注: 1.7. */
 const NEARBY_RADIUS = 1.7;

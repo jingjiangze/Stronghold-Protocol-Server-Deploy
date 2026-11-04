@@ -1,0 +1,1735 @@
+{
+  "version": "3.0.0",
+  "count": 87,
+  "relics": [
+    {
+      "id": "n01",
+      "kind": "negative",
+      "tier": "red",
+      "no": "179",
+      "set": "刻俄柏的灰蕈迷境",
+      "name": "鬼血",
+      "desc": "所有敌方单位的 攻击力、防御力、生命值+20%",
+      "icon": "/assets/relics/n01.png",
+      "effect": {
+        "enemy": {
+          "atk": 0.2,
+          "def": 0.2,
+          "hp": 0.2
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n02",
+      "kind": "negative",
+      "tier": "red",
+      "no": "180",
+      "set": "刻俄柏的灰蕈迷境",
+      "name": "冰封的异爪",
+      "desc": "所有敌方单位的攻击力、防御力、生命值+12%，且所有BOSS单位还会攻击力、防御力+16%，生命值+36%",
+      "icon": "/assets/relics/n02.png",
+      "effect": {
+        "enemy": {
+          "atk": 0.12,
+          "def": 0.12,
+          "hp": 0.12
+        },
+        "enemyRank": {
+          "BOSS": {
+            "atk": 0.16,
+            "def": 0.16,
+            "hp": 0.36
+          }
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n03",
+      "kind": "negative",
+      "tier": "red",
+      "no": "181",
+      "set": "刻俄柏的灰蕈迷境",
+      "name": "巫王旋角",
+      "desc": "所有敌方单位的攻击力、防御力、生命值+12%，且每进入一个新回合后，失去1点初始资金（最多失去5点）",
+      "icon": "/assets/relics/n03.png",
+      "effect": {
+        "enemy": {
+          "atk": 0.12,
+          "def": 0.12,
+          "hp": 0.12
+        },
+        "rule": {
+          "id": "fundsDrain",
+          "perRound": 1,
+          "max": 5
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n04",
+      "kind": "negative",
+      "tier": "red",
+      "no": "178",
+      "set": "傀影与猩红孤钻",
+      "name": "乌萨斯弯刀（重铸）",
+      "desc": "所有敌方单位的攻击力、防御力、生命+35%，每进入新回合额外+10%，完成悬赏和完美作战时-5%（最低35%）",
+      "icon": "/assets/relics/n04.png",
+      "effect": {
+        "enemy": {
+          "atk": 0.35,
+          "def": 0.35,
+          "hp": 0.35
+        },
+        "rule": {
+          "id": "ussuri",
+          "step": 0.1,
+          "drop": 0.05,
+          "min": 0.35
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n05",
+      "kind": "negative",
+      "tier": "red",
+      "no": "180",
+      "set": "傀影与猩红孤钻",
+      "name": "维多利亚王冠（重铸）",
+      "desc": "所有敌方单位的攻击力、防御力、生命+35%，所有领袖单位还会攻击力、防御力+20%，生命+50%，激活4个及以上盟约时领袖加成减半",
+      "icon": "/assets/relics/n05.png",
+      "effect": {
+        "enemy": {
+          "atk": 0.35,
+          "def": 0.35,
+          "hp": 0.35
+        },
+        "enemyRank": {
+          "BOSS": {
+            "atk": 0.2,
+            "def": 0.2,
+            "hp": 0.5
+          }
+        },
+        "rule": {
+          "id": "leaderHalve",
+          "bonds": 4
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n06",
+      "kind": "negative",
+      "tier": "red",
+      "no": "182",
+      "set": "傀影与猩红孤钻",
+      "name": "莱塔尼亚权杖（重铸）",
+      "desc": "所有敌方单位的攻击力、防御力、生命+35%，进入休整期时目标生命-1（最低降至1），关卡生命低于10时我方技力回复速度-20%",
+      "icon": "/assets/relics/n06.png",
+      "effect": {
+        "enemy": {
+          "atk": 0.35,
+          "def": 0.35,
+          "hp": 0.35
+        },
+        "rule": {
+          "id": "lpDrainRest",
+          "n": 1,
+          "spLowLp": {
+            "lp": 10,
+            "pct": -0.2
+          }
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n07",
+      "kind": "negative",
+      "tier": "red",
+      "no": "184",
+      "set": "傀影与猩红孤钻",
+      "name": "高卢长袍（重铸）",
+      "desc": "所有敌方单位的攻击力、防御力、生命+30%，在奇数回合购买4阶以上干员时资金消耗+2，偶数层购买装备资金消耗+2",
+      "icon": "/assets/relics/n07.png",
+      "effect": {
+        "enemy": {
+          "atk": 0.3,
+          "def": 0.3,
+          "hp": 0.3
+        },
+        "price": {
+          "oddRoundTier4": 2,
+          "evenRoundItem": 2
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n08",
+      "kind": "negative",
+      "tier": "red",
+      "no": "186",
+      "set": "傀影与猩红孤钻",
+      "name": "半洗孤钻（重铸）",
+      "desc": "所有敌方单位的攻击力、防御力、生命+30%升级调度中心所需资金+1；悬赏中获得的资金奖励翻倍",
+      "icon": "/assets/relics/n08.png",
+      "effect": {
+        "enemy": {
+          "atk": 0.3,
+          "def": 0.3,
+          "hp": 0.3
+        },
+        "price": {
+          "upgrade": 1
+        },
+        "rule": {
+          "id": "bountyMul",
+          "mul": 2
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n09",
+      "kind": "negative",
+      "tier": "red",
+      "no": "188",
+      "set": "傀影与猩红孤钻",
+      "name": "酒神的印记（重铸）",
+      "desc": "所有敌方单位的攻击力、防御力、生命+35%，初始部署人数-3，每次击杀悬赏目标后部署人数+1（鸭爵、杜宾、联防阶段不计入）",
+      "icon": "/assets/relics/n09.png",
+      "effect": {
+        "enemy": {
+          "atk": 0.35,
+          "def": 0.35,
+          "hp": 0.35
+        },
+        "deployCap": -3,
+        "rule": {
+          "id": "bountyKillDeploy",
+          "n": 1
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n10",
+      "kind": "negative",
+      "tier": "blue",
+      "no": "215",
+      "set": "水月与深蓝之树",
+      "name": "布雷奥甘肖像",
+      "desc": "所有干员部署时失去15点技力",
+      "icon": "/assets/relics/n10.png",
+      "effect": {
+        "rule": {
+          "id": "spOnDeploy",
+          "n": -15
+        }
+      },
+      "tierNum": 2,
+      "price": 4
+    },
+    {
+      "id": "n11",
+      "kind": "negative",
+      "tier": "blue",
+      "no": "216",
+      "set": "水月与深蓝之树",
+      "name": "海神的代谢",
+      "desc": "所有敌人生命值+25%",
+      "icon": "/assets/relics/n11.png",
+      "effect": {
+        "enemy": {
+          "hp": 0.25
+        }
+      },
+      "tierNum": 2,
+      "price": 4
+    },
+    {
+      "id": "n12",
+      "kind": "negative",
+      "tier": "blue",
+      "no": "217",
+      "set": "水月与深蓝之树",
+      "name": "失败的标本",
+      "desc": "有敌方单位的攻击力、防御力、生命值+8%，且购买4阶以上干员时资金消耗+3",
+      "icon": "/assets/relics/n12.png",
+      "effect": {
+        "enemy": {
+          "atk": 0.08,
+          "def": 0.08,
+          "hp": 0.08
+        },
+        "price": {
+          "chessTier4": 3
+        }
+      },
+      "tierNum": 2,
+      "price": 4
+    },
+    {
+      "id": "n13",
+      "kind": "negative",
+      "tier": "blue",
+      "no": "218",
+      "set": "水月与深蓝之树",
+      "name": "“应急灯”",
+      "desc": "休整期间购买的第一个干员资金额外+2",
+      "icon": "/assets/relics/n13.png",
+      "effect": {
+        "price": {
+          "firstChessBuy": 2
+        }
+      },
+      "tierNum": 2,
+      "price": 4
+    },
+    {
+      "id": "n14",
+      "kind": "negative",
+      "tier": "blue",
+      "no": "219",
+      "set": "水月与深蓝之树",
+      "name": "“光明之躯”",
+      "desc": "休整期间购买的前三个干员资金额外+1",
+      "icon": "/assets/relics/n14.png",
+      "effect": {
+        "price": {
+          "firstChessBuys": 3,
+          "n": 1
+        }
+      },
+      "tierNum": 2,
+      "price": 4
+    },
+    {
+      "id": "n15",
+      "kind": "negative",
+      "tier": "red",
+      "no": "220",
+      "set": "水月与深蓝之树",
+      "name": "主教的研究",
+      "desc": "休整期间最多刷新商店5次（不计入奇迹和干员特质给的免费刷新）",
+      "icon": "/assets/relics/n15.png",
+      "effect": {
+        "refreshLimit": 5
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n16",
+      "kind": "negative",
+      "tier": "red",
+      "no": "221",
+      "set": "水月与深蓝之树",
+      "name": "深蓝之心",
+      "desc": "战斗开始时立即使随机干员中负面效果（晕眩10秒、冰冻10秒、受到神经损伤爆发、受到侵蚀损伤爆发）最多5名",
+      "icon": "/assets/relics/n16.png",
+      "effect": {
+        "rule": {
+          "id": "openingDebuff",
+          "count": 5
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n17",
+      "kind": "negative",
+      "tier": "red",
+      "no": "222",
+      "set": "水月与深蓝之树",
+      "name": "海潮的气息",
+      "desc": "战斗开始时全体干员每秒受到10点神经损伤持续至战斗结束",
+      "icon": "/assets/relics/n17.png",
+      "effect": {
+        "rule": {
+          "id": "neuralDps",
+          "n": 10
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n18",
+      "kind": "negative",
+      "tier": "blue",
+      "no": "223",
+      "set": "水月与深蓝之树",
+      "name": "退行的罗辛南特",
+      "desc": "战斗开始时我方攻击力-20%、攻击速度-20、技力回复速度-20%持续10秒",
+      "icon": "/assets/relics/n18.png",
+      "effect": {
+        "rule": {
+          "id": "startDebuff",
+          "atkPct": -0.2,
+          "aspd": -20,
+          "spRegen": -0.2,
+          "dur": 10
+        }
+      },
+      "tierNum": 2,
+      "price": 4
+    },
+    {
+      "id": "n19",
+      "kind": "negative",
+      "tier": "blue",
+      "no": "191",
+      "set": "水月与深蓝之树",
+      "name": "“未尽的生命”",
+      "desc": "我方随机一名干员部署时晕眩10s且每过一个回合使晕眩的人数+1，最多+3名",
+      "icon": "/assets/relics/n19.png",
+      "effect": {
+        "rule": {
+          "id": "stunOnDeploy",
+          "count": 1,
+          "perRound": 1,
+          "max": 4,
+          "dur": 10
+        }
+      },
+      "tierNum": 2,
+      "price": 4
+    },
+    {
+      "id": "n20",
+      "kind": "negative",
+      "tier": "red",
+      "no": "239",
+      "set": "探索者的银凇止境",
+      "name": "坍缩之种",
+      "desc": "所有我方单位的攻击力和生命值-30%",
+      "icon": "/assets/relics/n20.png",
+      "effect": {
+        "ally": {
+          "atk": -0.3,
+          "hp": -0.3
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n21",
+      "kind": "negative",
+      "tier": "red",
+      "no": "240",
+      "set": "探索者的银凇止境",
+      "name": "空间碎片",
+      "desc": "待部署区-4",
+      "icon": "/assets/relics/n21.png",
+      "effect": {
+        "hand": -4
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n22",
+      "kind": "negative",
+      "tier": "red",
+      "no": "241",
+      "set": "探索者的银凇止境",
+      "name": "深度灼痕",
+      "desc": "目标生命上限-12，最多减至1",
+      "icon": "/assets/relics/n22.png",
+      "effect": {
+        "lpCap": -12
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n23",
+      "kind": "negative",
+      "tier": "red",
+      "no": "238",
+      "set": "探索者的银凇止境",
+      "name": "维度流质",
+      "desc": "所有敌方单位攻击、生命+30%，移除临时部署区",
+      "icon": "/assets/relics/n23.png",
+      "effect": {
+        "enemy": {
+          "atk": 0.3,
+          "hp": 0.3
+        },
+        "rule": {
+          "id": "removeTemp"
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n24",
+      "kind": "negative",
+      "tier": "red",
+      "no": "232",
+      "set": "萨卡兹的无终奇语",
+      "name": "滚动先祖",
+      "desc": "所有敌方单位的攻击速度+30，移动速度+30%，最大生命值+30%",
+      "icon": "/assets/relics/n24.png",
+      "effect": {
+        "enemy": {
+          "hp": 0.3
+        },
+        "enemyAspd": 30,
+        "enemyMove": 0.3
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n25",
+      "kind": "negative",
+      "tier": "red",
+      "no": "252",
+      "set": "萨卡兹的无终奇语",
+      "name": "阿纳萨羯磨",
+      "desc": "所有敌方单位攻击、生命+20%，领袖与精英敌人最大生命值+50%",
+      "icon": "/assets/relics/n25.png",
+      "effect": {
+        "enemy": {
+          "atk": 0.2,
+          "hp": 0.2
+        },
+        "enemyRank": {
+          "ELITE": {
+            "hp": 0.5
+          },
+          "BOSS": {
+            "hp": 0.5
+          }
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n26",
+      "kind": "negative",
+      "tier": "red",
+      "no": "257",
+      "set": "萨卡兹的无终奇语",
+      "name": "终结的实相",
+      "desc": "所有干员的购买消耗的资金+1，所有敌人受到的物理与法术伤害降低20%，所有敌人攻击力+20%",
+      "icon": "/assets/relics/n26.png",
+      "effect": {
+        "enemy": {
+          "atk": 0.2
+        },
+        "price": {
+          "chessAll": 1
+        },
+        "rule": {
+          "id": "enemyDmgTaken",
+          "phys": 0.2,
+          "arts": 0.2
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n27",
+      "kind": "negative",
+      "tier": "blue",
+      "no": "271",
+      "set": "萨卡兹的无终奇语",
+      "name": "戈渎不语",
+      "desc": "所有敌方单位防御力+3000，但每次受到伤害时防御力下降100（最多下降30次）",
+      "icon": "/assets/relics/n27.png",
+      "effect": {
+        "rule": {
+          "id": "enemyDefShred",
+          "flat": 3000,
+          "perHit": -100,
+          "max": 30
+        }
+      },
+      "tierNum": 2,
+      "price": 4
+    },
+    {
+      "id": "n28",
+      "kind": "negative",
+      "tier": "blue",
+      "no": "272",
+      "set": "萨卡兹的无终奇语",
+      "name": "奎萨图什塔允诺",
+      "desc": "购买装备和5阶及以上干员的所需要的资金+1",
+      "icon": "/assets/relics/n28.png",
+      "effect": {
+        "price": {
+          "item": 1,
+          "chessTier5": 1
+        }
+      },
+      "tierNum": 2,
+      "price": 4
+    },
+    {
+      "id": "n29",
+      "kind": "negative",
+      "tier": "blue",
+      "no": "273",
+      "set": "萨卡兹的无终奇语",
+      "name": "霸迩萨狂言",
+      "desc": "精英及领袖敌人的生命值、防御力、攻击力+20%",
+      "icon": "/assets/relics/n29.png",
+      "effect": {
+        "enemyRank": {
+          "ELITE": {
+            "atk": 0.2,
+            "def": 0.2,
+            "hp": 0.2
+          },
+          "BOSS": {
+            "atk": 0.2,
+            "def": 0.2,
+            "hp": 0.2
+          }
+        }
+      },
+      "tierNum": 2,
+      "price": 4
+    },
+    {
+      "id": "n30",
+      "kind": "negative",
+      "tier": "blue",
+      "no": "274",
+      "set": "萨卡兹的无终奇语",
+      "name": "以勒什呓语",
+      "desc": "所有干员的初始技力-10，技力回复速度+10%",
+      "icon": "/assets/relics/n30.png",
+      "effect": {
+        "rule": {
+          "id": "spInit",
+          "n": -10
+        },
+        "ally": {
+          "spRegen": 0.1
+        }
+      },
+      "tierNum": 2,
+      "price": 4
+    },
+    {
+      "id": "n31",
+      "kind": "negative",
+      "tier": "blue",
+      "no": "275",
+      "set": "萨卡兹的无终奇语",
+      "name": "未叙魔王残片",
+      "desc": "精锐干员的攻击力-30%",
+      "icon": "/assets/relics/n31.png",
+      "effect": {
+        "allyElite": {
+          "atk": -0.3
+        }
+      },
+      "tierNum": 2,
+      "price": 4
+    },
+    {
+      "id": "n32",
+      "kind": "negative",
+      "tier": "red",
+      "no": "251",
+      "set": "岁的界园志异",
+      "name": "云与漆",
+      "desc": "干员部署后60s内，每秒受到最大生命值2%的真实伤害",
+      "icon": "/assets/relics/n32.png",
+      "effect": {
+        "rule": {
+          "id": "fogOnDeploy",
+          "dur": 60,
+          "ratio": 0.02
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n33",
+      "kind": "negative",
+      "tier": "red",
+      "no": "217",
+      "set": "岁的界园志异",
+      "name": "无封长盒",
+      "desc": "领袖与精英敌人防御力+30%，攻击速度+20",
+      "icon": "/assets/relics/n33.png",
+      "effect": {
+        "enemyRank": {
+          "ELITE": {
+            "def": 0.3,
+            "aspd": 20
+          },
+          "BOSS": {
+            "def": 0.3,
+            "aspd": 20
+          }
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n34",
+      "kind": "negative",
+      "tier": "red",
+      "no": "219",
+      "set": "岁的界园志异",
+      "name": "追忆仪",
+      "desc": "获得时，本次休整期失去所有的资金并使悬赏获得的资金减半",
+      "icon": "/assets/relics/n34.png",
+      "effect": {
+        "rule": {
+          "id": "loseAllFunds",
+          "bountyMul": 0.5
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n35",
+      "kind": "negative",
+      "tier": "red",
+      "no": "221",
+      "set": "岁的界园志异",
+      "name": "不赦",
+      "desc": "所有敌方单位的生命值、防御力+50％，敌人数量+50%",
+      "icon": "/assets/relics/n35.png",
+      "effect": {
+        "enemy": {
+          "hp": 0.5,
+          "def": 0.5
+        },
+        "rule": {
+          "id": "enemyCount",
+          "mul": 0.5
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n36",
+      "kind": "negative",
+      "tier": "red",
+      "no": "222",
+      "set": "岁的界园志异",
+      "name": "不息",
+      "desc": "所有敌方单位的攻击力+30％，我方精锐干员攻击力每回合-10%，最多-50%",
+      "icon": "/assets/relics/n36.png",
+      "effect": {
+        "enemy": {
+          "atk": 0.3
+        },
+        "rule": {
+          "id": "eliteAtkPerRound",
+          "per": -0.1,
+          "max": -0.5
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n37",
+      "kind": "negative",
+      "tier": "blue",
+      "no": "137",
+      "set": "沉沦者的黑流树海",
+      "name": "猎犬咖啡",
+      "desc": "敌人所有敌方单位生命+20%，有3%概率生命额外+99%",
+      "icon": "/assets/relics/n37.png",
+      "effect": {
+        "enemy": {
+          "hp": 0.2
+        },
+        "rule": {
+          "id": "spawnHpChance",
+          "p": 0.03,
+          "extra": 0.99
+        }
+      },
+      "tierNum": 2,
+      "price": 4
+    },
+    {
+      "id": "n38",
+      "kind": "negative",
+      "tier": "blue",
+      "no": "142",
+      "set": "沉沦者的黑流树海",
+      "name": "探测先锋",
+      "desc": "获得时下次休整期资金-1，同时每过2个回合所有敌方单位的生命攻击力提升10%",
+      "icon": "/assets/relics/n38.png",
+      "effect": {
+        "rule": {
+          "id": "probe",
+          "n": -1,
+          "every": 2,
+          "atk": 0.1,
+          "hp": 0.1
+        }
+      },
+      "tierNum": 2,
+      "price": 4
+    },
+    {
+      "id": "n39",
+      "kind": "negative",
+      "tier": "red",
+      "no": "235",
+      "set": "沉沦者的黑流树海",
+      "name": "怦然信标",
+      "desc": "所有敌人的生命+20%，我方单位的生命-40%，",
+      "icon": "/assets/relics/n39.png",
+      "effect": {
+        "enemy": {
+          "hp": 0.2
+        },
+        "ally": {
+          "hp": -0.4
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n40",
+      "kind": "negative",
+      "tier": "red",
+      "no": "239",
+      "set": "沉沦者的黑流树海",
+      "name": "谒日之祈",
+      "desc": "战斗开始时所有敌方单位的攻击力、生命、防御、法抗+10％ 每过10秒额外+10%，最多+50%",
+      "icon": "/assets/relics/n40.png",
+      "effect": {
+        "rule": {
+          "id": "enemyRamp",
+          "every": 10,
+          "step": 0.1,
+          "max": 0.5
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n41",
+      "kind": "negative",
+      "tier": "red",
+      "no": "240",
+      "set": "沉沦者的黑流树海",
+      "name": "祭日之契",
+      "desc": "所有敌方单位的生命+30％，我方精锐干员生命每回合-10%，最多-50%",
+      "icon": "/assets/relics/n41.png",
+      "effect": {
+        "enemy": {
+          "hp": 0.3
+        },
+        "rule": {
+          "id": "eliteHpPerRound",
+          "per": -0.1,
+          "max": -0.5
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "n42",
+      "kind": "negative",
+      "tier": "red",
+      "no": "242",
+      "set": "沉沦者的黑流树海",
+      "name": "生命蓝图",
+      "desc": "敌方单位攻击、移速+30%，最大生命值+50%，精英和领袖敌人登场30秒内受到的物理和法术伤害-50%",
+      "icon": "/assets/relics/n42.png",
+      "effect": {
+        "enemy": {
+          "atk": 0.3,
+          "hp": 0.5
+        },
+        "enemyMove": 0.3,
+        "rule": {
+          "id": "eliteDmgReduce",
+          "mul": 0.5,
+          "dur": 30
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p01",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "刻俄柏的灰蕈迷境",
+      "name": "无限续杯瓶",
+      "desc": "进入休整期时资金额外+1且购买的干员所需资金-1",
+      "icon": "/assets/relics/p01.png",
+      "effect": {
+        "income": 1,
+        "price": {
+          "chessAll": -1
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p02",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "刻俄柏的灰蕈迷境",
+      "name": "“坏家伙”来了！",
+      "desc": "所有我方单位的攻击力和防御力+35%，生命值+45%",
+      "icon": "/assets/relics/p02.png",
+      "effect": {
+        "ally": {
+          "atk": 0.35,
+          "def": 0.35,
+          "hp": 0.45
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p03",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "刻俄柏的灰蕈迷境",
+      "name": "染血的传单",
+      "desc": "立即获得22点资金",
+      "icon": "/assets/relics/p03.png",
+      "effect": {
+        "immediate": {
+          "funds": 22
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p04",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "刻俄柏的灰蕈迷境",
+      "name": "迷幻的藏宝图",
+      "desc": "进入休整期时资金额外+2且购买的装备所需资金-1",
+      "icon": "/assets/relics/p04.png",
+      "effect": {
+        "income": 2,
+        "price": {
+          "item": -1
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p05",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "傀影与猩红孤钻",
+      "name": "长生者之证",
+      "desc": "立即获得目标生命+10",
+      "icon": "/assets/relics/p05.png",
+      "effect": {
+        "immediate": {
+          "lp": 10
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p06",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "傀影与猩红孤钻",
+      "name": "古旧铸物",
+      "desc": "获得3个精锐博士投影",
+      "icon": "/assets/relics/p06.png",
+      "effect": {
+        "immediate": {
+          "items": [
+            "chess_item_5_06_e_b",
+            "chess_item_5_06_e_b",
+            "chess_item_5_06_e_b"
+          ],
+          "n": 3
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p07",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "傀影与猩红孤钻",
+      "name": "至宝指环",
+      "desc": "战斗结束（包括联防）额外获得1点资金，且悬赏获得的资金+50%",
+      "icon": "/assets/relics/p07.png",
+      "effect": {
+        "rule": {
+          "id": "postBattleFunds",
+          "n": 1
+        },
+        "postBountyMul": 1.5
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p08",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "傀影与猩红孤钻",
+      "name": "未知仪器",
+      "desc": "所有我方单位的生命+50%",
+      "icon": "/assets/relics/p08.png",
+      "effect": {
+        "ally": {
+          "hp": 0.5
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p09",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "傀影与猩红孤钻",
+      "name": "金酒之杯",
+      "desc": "每消耗3点资金获得7点攻速",
+      "icon": "/assets/relics/p09.png",
+      "effect": {
+        "rule": {
+          "id": "aspdPerSpend",
+          "per": 7,
+          "each": 3
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p10",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "傀影与猩红孤钻",
+      "name": "《刀光剑影》",
+      "desc": "每拥有一个负面藏品，所有友方单位攻击速度+35",
+      "icon": "/assets/relics/p10.png",
+      "effect": {
+        "rule": {
+          "id": "aspdPerNegative",
+          "per": 35
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p11",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "水月与深蓝之树",
+      "name": "佣兵保单",
+      "desc": "所有我方单位获得10%的庇护，生命低于初始50%时额外获得35%的庇护",
+      "icon": "/assets/relics/p11.png",
+      "effect": {
+        "rule": {
+          "id": "shelter",
+          "base": 0.1,
+          "low": 0.35,
+          "threshold": 0.5
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p12",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "水月与深蓝之树",
+      "name": "生还者合约",
+      "desc": "战斗开始时，使攻击力最高一名干员攻击力和防御力+20%，且每次战斗结束后（不包括联防）额外+20%",
+      "icon": "/assets/relics/p12.png",
+      "effect": {
+        "rule": {
+          "id": "survivor",
+          "per": 0.2
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p13",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "水月与深蓝之树",
+      "name": "养育者基因种",
+      "desc": "有干员陷入负面状态后所有友方单位获得35%的庇护，攻击无视目标35%的法术抗性和防御力持续至战斗结束",
+      "icon": "/assets/relics/p13.png",
+      "effect": {
+        "rule": {
+          "id": "shelterOnDebuff",
+          "mul": 0.35,
+          "ignore": 0.35
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p14",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "水月与深蓝之树",
+      "name": "捕鳞蓑",
+      "desc": "远程干员获得【迷彩】，攻击力提升50%",
+      "icon": "/assets/relics/p14.png",
+      "effect": {
+        "ally": {
+          "atk": 0.5
+        },
+        "rule": {
+          "id": "camoRanged"
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p15",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "探索者的银凇止境",
+      "name": "《大静谧》",
+      "desc": "所有敌方单位的生命-30%",
+      "icon": "/assets/relics/p15.png",
+      "effect": {
+        "enemy": {
+          "hp": -0.3
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p16",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "探索者的银凇止境",
+      "name": "老蒲扇",
+      "desc": "每有一个激活的盟约，所有干员的攻击力+10%",
+      "icon": "/assets/relics/p16.png",
+      "effect": {
+        "rule": {
+          "id": "atkPerBond",
+          "per": 0.1
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p17",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "探索者的银凇止境",
+      "name": "不灭的火炬",
+      "desc": "所有干员周围4格每有一名干员，攻击速度+30",
+      "icon": "/assets/relics/p17.png",
+      "effect": {
+        "rule": {
+          "id": "aspdPerNeighbor",
+          "per": 30
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p18",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "探索者的银凇止境",
+      "name": "岩角号",
+      "desc": "所有干员周围4格每有一名干员，攻击力+20%",
+      "icon": "/assets/relics/p18.png",
+      "effect": {
+        "rule": {
+          "id": "atkPerNeighbor",
+          "per": 0.2
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p19",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "探索者的银凇止境",
+      "name": "琥珀伤痕",
+      "desc": "待部署区每有一名干员，所有我方单位生命+16%、攻击+16%（最多+160%）",
+      "icon": "/assets/relics/p19.png",
+      "effect": {
+        "allyPerBench": {
+          "hp": 0.16,
+          "atk": 0.16,
+          "max": 1.6
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p20",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "探索者的银凇止境",
+      "name": "黑洞协议",
+      "desc": "部署费用达到50以上时，所有干员的生命值+150%",
+      "icon": "/assets/relics/p20.png",
+      "effect": {
+        "rule": {
+          "id": "hpIfDp",
+          "dp": 50,
+          "hp": 0.5,
+          "shelterMul": 1
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p21",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "探索者的银凇止境",
+      "name": "“国王的水晶”",
+      "desc": "战斗结束后使目标生命-2（目标生命不会低于1），休整期资金+5且购买的干员所消耗的资金-1",
+      "icon": "/assets/relics/p21.png",
+      "effect": {
+        "rule": {
+          "id": "kingCrystal",
+          "lp": -2,
+          "income": 5,
+          "priceChess": -1
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p22",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "萨卡兹的无终奇语",
+      "name": "迷迭香之拥",
+      "desc": "所有敌方单位的生命-15%，防御力-30%",
+      "icon": "/assets/relics/p22.png",
+      "effect": {
+        "enemy": {
+          "hp": -0.15,
+          "def": -0.3
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p23",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "萨卡兹的无终奇语",
+      "name": "文学的开端",
+      "desc": "对敌人造成的物理与法术伤害提升50%",
+      "icon": "/assets/relics/p23.png",
+      "effect": {
+        "rule": {
+          "id": "dmgDealt",
+          "phys": 0.5,
+          "arts": 0.5
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p24",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "萨卡兹的无终奇语",
+      "name": "“知识之桥”",
+      "desc": "每购买4阶以上干员时，所有友方干员的最大生命值+5%（最多叠加10层）",
+      "icon": "/assets/relics/p24.png",
+      "effect": {
+        "rule": {
+          "id": "hpPerTier4Buy",
+          "per": 0.05,
+          "max": 10
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p25",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "萨卡兹的无终奇语",
+      "name": "生命熔炉之薪",
+      "desc": "每花费5点资金，所有干员攻击力+5%",
+      "icon": "/assets/relics/p25.png",
+      "effect": {
+        "rule": {
+          "id": "atkPerSpend",
+          "per": 0.05,
+          "each": 5
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p26",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "萨卡兹的无终奇语",
+      "name": "青涩眷恋",
+      "desc": "每花费3资金，所有干员最大生命值+3%，防御力+3%",
+      "icon": "/assets/relics/p26.png",
+      "effect": {
+        "rule": {
+          "id": "hpdefPerSpend",
+          "per": 0.03,
+          "each": 3
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p27",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "萨卡兹的无终奇语",
+      "name": "魔王的祭器",
+      "desc": "上一个回合没有损失目标生命时，所有干员的最大生命值+80%，连3个回合没有损失目标生命时变为+200%",
+      "icon": "/assets/relics/p27.png",
+      "effect": {
+        "rule": {
+          "id": "kingVessel"
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p28",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "萨卡兹的无终奇语",
+      "name": "笞心魔宝宝",
+      "desc": "资金+3，在选择决策、完成悬赏时资金额外+8",
+      "icon": "/assets/relics/p28.png",
+      "effect": {
+        "immediate": {
+          "funds": 3
+        },
+        "rule": {
+          "id": "choiceFunds",
+          "n": 8
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p29",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "岁的界园志异",
+      "name": "精神治疗录像带",
+      "desc": "敌人受到的一次性晕眩、寒冷、冻结等异常效果影响时间提高150%",
+      "icon": "/assets/relics/p29.png",
+      "effect": {
+        "rule": {
+          "id": "statusDuration",
+          "pct": 1.5
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p30",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "岁的界园志异",
+      "name": "修习雷针",
+      "desc": "干员每使用过一次技能，自身的技力自然回复速度+0.4/秒，最多叠加5层",
+      "icon": "/assets/relics/p30.png",
+      "effect": {
+        "rule": {
+          "id": "spRegenStack",
+          "per": 0.4,
+          "max": 5
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p31",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "岁的界园志异",
+      "name": "家常小炒",
+      "desc": "所有干员的生命值+20%，攻击力+20%；每通过一场完美作战，效果额外提升10%",
+      "icon": "/assets/relics/p31.png",
+      "effect": {
+        "ally": {
+          "hp": 0.2,
+          "atk": 0.2
+        },
+        "rule": {
+          "id": "homeCooked",
+          "per": 0.1
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p32",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "岁的界园志异",
+      "name": "飞驮客运",
+      "desc": "本场游戏中每有一名精锐干员，所有精锐干员攻击速度+10（最大叠加10层）",
+      "icon": "/assets/relics/p32.png",
+      "effect": {
+        "rule": {
+          "id": "eliteAspdPerElite",
+          "per": 10,
+          "max": 10
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p33",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "岁的界园志异",
+      "name": "酿山河",
+      "desc": "干员每装备了一个装备，所有干员获得+10%攻击力，+20%生命值",
+      "icon": "/assets/relics/p33.png",
+      "effect": {
+        "rule": {
+          "id": "atkPerEquip",
+          "atk": 0.1,
+          "hp": 0.2
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p34",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "岁的界园志异",
+      "name": "铿金征鼓",
+      "desc": "回合结束后，所有干员攻击力+15％（最多叠加10次），若完成悬赏，则额外获得1次叠加次数",
+      "icon": "/assets/relics/p34.png",
+      "effect": {
+        "rule": {
+          "id": "atkPerRound",
+          "per": 0.15,
+          "max": 10
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p35",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "岁的界园志异",
+      "name": "“岁花”",
+      "desc": "资金+3，场上每有一名精锐干员，则精锐干员的生命值、攻击力、防御力+10%",
+      "icon": "/assets/relics/p35.png",
+      "effect": {
+        "immediate": {
+          "funds": 3
+        },
+        "rule": {
+          "id": "eliteStatsPerElite",
+          "per": 0.1,
+          "onField": true
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p36",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "岁的界园志异",
+      "name": "契心聆铃",
+      "desc": "每当有4阶以上干员通过调度中心购买干员成为精锐干员，所有精锐干员攻击力+40%（最多4层）",
+      "icon": "/assets/relics/p36.png",
+      "effect": {
+        "rule": {
+          "id": "eliteAtkPerMerge",
+          "per": 0.4,
+          "max": 4
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p37",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "岁的界园志异",
+      "name": "兵锋",
+      "desc": "待部署区每有一件装备，所有我方干员攻击力+10％（最多+150％）",
+      "icon": "/assets/relics/p37.png",
+      "effect": {
+        "rule": {
+          "id": "atkPerBenchItem",
+          "per": 0.1,
+          "max": 1.5
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p38",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "岁的界园志异",
+      "name": "叙拉古人的愤怒",
+      "desc": "所有干员技能触发后1秒内攻击力+100%",
+      "icon": "/assets/relics/p38.png",
+      "effect": {
+        "rule": {
+          "id": "atkAfterSkill",
+          "window": 1,
+          "mul": 2
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p39",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "岁的界园志异",
+      "name": "仇名录",
+      "desc": "我方干员的攻击力+20%，完成一次悬赏永久额外+20%（最高+200%）",
+      "icon": "/assets/relics/p39.png",
+      "effect": {
+        "rule": {
+          "id": "atkPerBounty",
+          "base": 0.2,
+          "per": 0.2,
+          "max": 10
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p40",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "沉沦者的黑流树海",
+      "name": "犬植浆",
+      "desc": "干员攻击范围内的其他干员获得迷彩，攻击力+10%（可叠加）",
+      "icon": "/assets/relics/p40.png",
+      "effect": {
+        "rule": {
+          "id": "camoAura",
+          "atk": 0.1
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p41",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "沉沦者的黑流树海",
+      "name": "似曾相识棋盒",
+      "desc": "可同时部署人数+1；进入下一回合时，随机获得一名当前盟约层数最高的干员",
+      "icon": "/assets/relics/p41.png",
+      "effect": {
+        "deployCap": 1,
+        "rule": {
+          "id": "recruitTopBond"
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p42",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "沉沦者的黑流树海",
+      "name": "树海贵宾套餐",
+      "desc": "待部署区每有一名干员，所有我方单位生命+15%（最多+150%）",
+      "icon": "/assets/relics/p42.png",
+      "effect": {
+        "allyPerBench": {
+          "hp": 0.15,
+          "max": 1.5
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p43",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "沉沦者的黑流树海",
+      "name": "复得之轮",
+      "desc": "一次性装备道具使用后，获得一个一次性装备道具，每回合最多3次",
+      "icon": "/assets/relics/p43.png",
+      "effect": {
+        "rule": {
+          "id": "consumableRefund"
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p44",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "沉沦者的黑流树海",
+      "name": "果腹",
+      "desc": "一次性装备道具免费（使用后返还购买价格）",
+      "icon": "/assets/relics/p44.png",
+      "effect": {
+        "rule": {
+          "id": "consumableFree"
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    },
+    {
+      "id": "p45",
+      "kind": "positive",
+      "tier": "red",
+      "no": null,
+      "set": "沉沦者的黑流树海",
+      "name": "悲伤的红",
+      "desc": "每有一个部署位和待部署区，所有干员的生命和攻击力+8%（最多+80%）",
+      "icon": "/assets/relics/p45.png",
+      "effect": {
+        "allyPerBench": {
+          "atk": 0.08,
+          "hp": 0.08,
+          "max": 0.8
+        }
+      },
+      "tierNum": 4,
+      "price": 8
+    }
+  ]
+}

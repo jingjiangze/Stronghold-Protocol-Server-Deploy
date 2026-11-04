@@ -37,6 +37,7 @@
 
 import { createRng, deriveSeed } from '../sim/rng.js';
 import { PLUGIN_ACTION_UNITS } from '../../shared/plugins/limits.js';
+import { stagesWithScene } from './sceneStages.js';
 
 const ACLOON = 'enemy_9012_acloon';
 const DEFAULT_PLACEHOLDERS = Object.freeze({
@@ -185,9 +186,15 @@ function scheduleRng(rng) {
  *   that keep only the factions array (Match: buildNormalWave(gd, rng, this.factions, r)) get the official rounds.
  */
 export function setupMatchWaves(gd, rng) {
-  // stage
+  // stage — 「包含无场景地图」 (opts.incompleteMaps → gd.allowIncompleteMaps; off by default): off, only the stages with an
+  // official scene package are drawn (server/match/sceneStages.js). This engine reads the cached manifest directly unless
+  // Match already put the Set on the gd; narrowing to nothing (no manifest, a mode whose stages all lack a scene) falls
+  // back to the full pool, so a match never starts without a stage.
   const stageIds = Array.isArray(gd.mode.stages) ? gd.mode.stages : [];
-  const stagePairs = stageIds.map((id) => [id, gd.stage(id)]).filter(([, s]) => s && s.active !== false && Number(s.weight) > 0).map(([id, s]) => [id, s.weight]);
+  const sceneStages = gd.sceneStages instanceof Set ? gd.sceneStages : stagesWithScene();
+  const eligible = gd.allowIncompleteMaps === true ? stageIds : stageIds.filter((id) => sceneStages.has(id));
+  const pool = eligible.length ? eligible : stageIds;
+  const stagePairs = pool.map((id) => [id, gd.stage(id)]).filter(([, s]) => s && s.active !== false && Number(s.weight) > 0).map(([id, s]) => [id, s.weight]);
   let stageId = stagePairs.length ? weightedPick(rng, stagePairs) : null;
   if (!stageId) {
     const any = Object.keys(gd.raw.stages || {}).filter((id) => gd.stage(id) && gd.stage(id).active);

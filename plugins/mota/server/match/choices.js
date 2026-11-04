@@ -98,10 +98,35 @@ export function bountyText(text, c) {
     .replace(/(?:之后的|后续的?)每场作战/g, `接下来${battles}`);
 }
 
+/**
+ * The schedule entry of one 机变 round (choices.json `schedule[modeId].rounds[r]`), or null.
+ *
+ * A room variant names a runtime mode id the official table does not carry — 协同共竞 is `mode_xie_<difficulty>`, while
+ * `data/choices.json` is generated from the official modes (`mode_single_*` / `mode_multi_*`). Looking only at the exact
+ * id made every co-op 机变 fall through to the supply-only fallback, so 悬赏决策 never appeared in a 协同共竞 room at
+ * all (measured 2026-10-22: no `mode_xie_*` key in the generated table). A variant takes its multiplayer base's
+ * schedule (same difficulty) instead; a genuinely unknown id still gets the fallback.
+ * @param {{schedule?: object}} choices @param {string} modeId @param {number} round
+ * @returns {object|null}
+ */
+export function scheduleRoundFor(choices, modeId, round) {
+  const all = choices && choices.schedule;
+  if (!all || !modeId) return null;
+  const pick = (id) => {
+    const sch = all[id];
+    const r = sch && sch.rounds && sch.rounds[String(round)];
+    return r && typeof r === 'object' ? r : null;
+  };
+  const direct = pick(modeId);
+  if (direct) return direct;
+  const m = /^mode_[a-z]+_([a-z0-9]+)$/i.exec(String(modeId));
+  if (!m) return null;
+  return pick(`mode_multi_${m[1]}`) || pick(`mode_single_${m[1]}`);
+}
+
 function scheduleFor(gd, round) {
-  const sch = gd.choices.schedule && gd.choices.schedule[gd.modeId];
-  const r = sch && sch.rounds && sch.rounds[String(round)];
-  if (r && typeof r === 'object') return r;
+  const r = scheduleRoundFor(gd.choices, gd.modeId, round);
+  if (r) return r;
   // fallback: a supply draft
   return { families: [{ family: 'supply', weight: 1 }], cards: gd.isSolo ? 3 : 6, supplyTiers: [1, Math.min(6, 1 + Math.floor(round / 3))] };
 }

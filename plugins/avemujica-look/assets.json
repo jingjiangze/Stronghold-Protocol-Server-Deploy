@@ -1,0 +1,317 @@
+{
+  "chars": {
+    "char_x_ave_mujica_char_5_30": {
+      "avatar": "files/assets/char/avatar/char_4184_dolris.png",
+      "avatarE2": "files/assets/char/avatar/char_4184_dolris_2.png",
+      "portrait": "files/assets/char/portrait/char_4184_dolris.png",
+      "portraitE2": "files/assets/char/portrait/char_4184_dolris_2.png",
+      "spine": {
+        "front": {
+          "skel": "files/assets/spine/op/char_4184_dolris/front/char_4184_dolris.skel",
+          "atlas": "files/assets/spine/op/char_4184_dolris/front/char_4184_dolris.atlas",
+          "textures": [
+            "files/assets/spine/op/char_4184_dolris/front/char_4184_dolris.png"
+          ]
+        },
+        "back": {
+          "skel": "files/assets/spine/op/char_4184_dolris/front/char_4184_dolris.skel",
+          "atlas": "files/assets/spine/op/char_4184_dolris/front/char_4184_dolris.atlas",
+          "textures": [
+            "files/assets/spine/op/char_4184_dolris/front/char_4184_dolris.png"
+          ]
+        }
+      },
+      "skins": {
+        "avemujica-dolris": {
+          "name": "笼中歌者",
+          "avatar": "files/assets/skin/op/char_4184_dolris/avatar.png",
+          "portrait": "files/assets/skin/op/char_4184_dolris/portrait.png",
+          "spine": {
+            "front": {
+              "skel": "files/assets/skin/op/char_4184_dolris/front/char_4184_dolris_avemujica_1.skel",
+              "atlas": "files/assets/skin/op/char_4184_dolris/front/char_4184_dolris_avemujica_1.atlas",
+              "textures": [
+                "files/assets/skin/op/char_4184_dolris/front/char_4184_dolris_avemujica_1.png"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "char_x_ave_mujica_char_5_31": {
+      "avatar": "files/assets/char/avatar/char_4185_amoris.png",
+      "avatarE2": "files/assets/char/avatar/char_4185_amoris_2.png",
+      "portrait": "files/assets/char/portrait/char_4185_amoris.png",
+      "portraitE2": "files/assets/char/portrait/char_4185_amoris_2.png",
+      "spine": {
+        "front": {
+          "skel": "files/assets/spine/op/char_4185_amoris/front/char_4185_amoris.skel",
+          "atlas": "files/assets/spine/op/char_4185_amoris/front/char_4185_amoris.atlas",
+          "textures": [
+            "files/assets/spine/op/char_4185_amoris/front/char_4185_amoris.png"
+          ]
+        },
+        "back": {
+          "skel": "files/assets/spine/op/char_4185_amoris/back/char_4185_amoris.skel",
+          "atlas": "files/assets/spine/op/char_4185_amoris/back/char_4185_amoris.atlas",
+          "textures": [
+            "files/assets/spine/op/char_4185_amoris/back/char_4185_amoris.png"
+          ]
+        }
+      },
+      "skins": {
+        "avemujica-amoris": {
+          "name": "情热魔术师",
+          "avatar": "files/assets/skin/op/char_4185_amoris/avatar.png",
+          "portrait": "files/assets/skin/op/char_4185_amoris/portrait.png",
+          "spine": {
+            "front": {
+              "skel": "files/assets/skin/op/char_4185_amoris/front/char_4185_amoris_avemujica_1.skel",
+              "atlas": "files/assets/skin/op/char_4185_amoris/front/char_4185_amoris_avemujica_1.atlas",
+              "textures": [
+                "files/assets/skin/op/char_4185_amoris/front/char_4185_amoris_avemujica_1.png"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "char_x_ave_mujica_char_5_32": {
+      "avatar": "files/assets/char/avatar/char_4186_tmoris.png",
+      "avatarE2": "files/assets/char/avatar/char_4186_tmoris_2.png",
+      "portrait": "files/assets/char/portrait/char_4186_tmoris.png",
+      "portraitE2": "files/assets/char/portrait/char_4186_tmoris_2.png",
+      "spine": {
+        "front": {
+          "skel": "files/assets/spine/op/char_4186_tmoris/front/char_4186_tmoris.skel",
+          "atlas": "files/assets/spine/op/char_4186_tmoris/front/char_4186_tmoris.atlas",
+          "textures": [
+            "files/assets/spine/op/char_4186_tmoris/front/char_4186_tmoris.png"
+          ]
+        },
+        "back": {
+          "skel": "files/assets/spine/op/char_4186_tmoris/back/char_4186_tmoris.skel",
+          "atlas": "files/assets/spine/op/char_4186_tmoris/back/char_4186_tmoris.atlas",
+          "textures": [
+            "files/assets/spine/op/char_4186_tmoris/back/char_4186_tmoris.png"
+          ]
+        }
+      },
+      "skins": {
+        "avemujica-tmoris": {
+          "name": "月下执行者",
+          "avatar": "files/assets/skin/op/char_4186_tmoris/avatar.png",
+          "portrait": "files/assets/skin/op/char_4186_tmoris/portrait.png",
+          "spine": {
+            "front": {
+              "skel": "files/assets/skin/op/char_4186_tmoris/front/char_4186_tmoris_avemujica_1.skel",
+              "atlas": "files/assets/skin/op/char_4186_tmoris/front/char_4186_tmoris_avemujica_1.atlas",
+              "textures": [
+                "files/assets/skin/op/char_4186_tmoris/front/char_4186_tmoris_avemujica_1.png"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "char_x_ave_mujica_char_6_30": {
+      "avatar": "files/assets/char/avatar/char_4182_oblvns.png",
+      "avatarE2": "files/assets/char/avatar/char_4182_oblvns_2.png",
+      "portrait": "files/assets/char/portrait/char_4182_oblvns.png",
+      "portraitE2": "files/assets/char/portrait/char_4182_oblvns_2.png",
+      "spine": {
+        "front": {
+          "skel": "files/assets/spine/op/char_4182_oblvns/front/char_4182_oblvns.skel",
+          "atlas": "files/assets/spine/op/char_4182_oblvns/front/char_4182_oblvns.atlas",
+          "textures": [
+            "files/assets/spine/op/char_4182_oblvns/front/char_4182_oblvns.png"
+          ]
+        },
+        "back": {
+          "skel": "files/assets/spine/op/char_4182_oblvns/back/char_4182_oblvns.skel",
+          "atlas": "files/assets/spine/op/char_4182_oblvns/back/char_4182_oblvns.atlas",
+          "textures": [
+            "files/assets/spine/op/char_4182_oblvns/back/char_4182_oblvns.png"
+          ]
+        }
+      },
+      "skins": {
+        "avemujica-oblvns": {
+          "name": "旋律的主人",
+          "avatar": "files/assets/skin/op/char_4182_oblvns/avatar.png",
+          "portrait": "files/assets/skin/op/char_4182_oblvns/portrait.png",
+          "spine": {
+            "front": {
+              "skel": "files/assets/skin/op/char_4182_oblvns/front/char_4182_oblvns_avemujica_1.skel",
+              "atlas": "files/assets/skin/op/char_4182_oblvns/front/char_4182_oblvns_avemujica_1.atlas",
+              "textures": [
+                "files/assets/skin/op/char_4182_oblvns/front/char_4182_oblvns_avemujica_1.png"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "char_x_ave_mujica_char_5_25": {
+      "avatar": "files/assets/char/avatar/char_4183_mortis.png",
+      "avatarE2": "files/assets/char/avatar/char_4183_mortis_2.png",
+      "portrait": "files/assets/char/portrait/char_4183_mortis_1.png",
+      "portraitE2": "files/assets/char/portrait/char_4183_mortis_2.png",
+      "spine": {
+        "front": {
+          "skel": "files/assets/spine/op/char_4183_mortis/front/char_4183_mortis.skel",
+          "atlas": "files/assets/spine/op/char_4183_mortis/front/char_4183_mortis.atlas",
+          "textures": [
+            "files/assets/spine/op/char_4183_mortis/front/char_4183_mortis.png"
+          ]
+        },
+        "back": {
+          "skel": "files/assets/spine/op/char_4183_mortis/back/char_4183_mortis.skel",
+          "atlas": "files/assets/spine/op/char_4183_mortis/back/char_4183_mortis.atlas",
+          "textures": [
+            "files/assets/spine/op/char_4183_mortis/back/char_4183_mortis.png"
+          ]
+        }
+      },
+      "skins": {
+        "avemujica-mortis": {
+          "name": "提线的本我",
+          "avatar": "files/assets/skin/op/char_4183_mortis/avatar.png",
+          "portrait": "files/assets/skin/op/char_4183_mortis/portrait.png",
+          "spine": {
+            "front": {
+              "skel": "files/assets/skin/op/char_4183_mortis/front/char_4183_mortis_avemujica_1.skel",
+              "atlas": "files/assets/skin/op/char_4183_mortis/front/char_4183_mortis_avemujica_1.atlas",
+              "textures": [
+                "files/assets/skin/op/char_4183_mortis/front/char_4183_mortis_avemujica_1.png"
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "skills": {
+    "skchr_am_doloris_1": "files/assets/skill/skchr_am_doloris_1.png",
+    "skchr_am_doloris_2": "files/assets/skill/skchr_am_doloris_2.png",
+    "skchr_am_timoris_1": "files/assets/skill/skchr_am_timoris_1.png",
+    "skchr_am_timoris_2": "files/assets/skill/skchr_am_timoris_2.png",
+    "skchr_am_amoris_1": "files/assets/skill/skchr_am_amoris_1.png",
+    "skchr_am_amoris_2": "files/assets/skill/skchr_am_amoris_2.png",
+    "skchr_am_oblivionis_1": "files/assets/skill/skchr_am_oblivionis_1.png",
+    "skchr_am_oblivionis_2": "files/assets/skill/skchr_am_oblivionis_2.png",
+    "skchr_am_oblivionis_3": "files/assets/skill/skchr_am_oblivionis_3.png",
+    "skx_ave_mujica_skchr_mortis_1": "files/assets/skill/skchr_mortis_1.png",
+    "skx_ave_mujica_skchr_mortis_2": "files/assets/skill/skchr_mortis_2.png"
+  },
+  "bonds": {
+    "bond_x_ave_mujica_avemujica": "files/assets/bond/icon_aveMujica.png"
+  },
+  "bands": {
+    "band_wuyouyoumeng": "files/assets/band/band_wuyouyoumeng.png"
+  },
+  "audio": {
+    "voiceJp": {
+      "char_x_ave_mujica_char_5_30": {
+        "start": "files/assets/voice/jp/char_4184_dolris/cn_019.mp3",
+        "faceEnemy": "files/assets/voice/jp/char_4184_dolris/cn_020.mp3",
+        "select": [
+          "files/assets/voice/jp/char_4184_dolris/cn_021.mp3",
+          "files/assets/voice/jp/char_4184_dolris/cn_022.mp3"
+        ],
+        "place": [
+          "files/assets/voice/jp/char_4184_dolris/cn_023.mp3",
+          "files/assets/voice/jp/char_4184_dolris/cn_024.mp3"
+        ],
+        "skill1": "files/assets/voice/jp/char_4184_dolris/cn_025.mp3",
+        "skill2": "files/assets/voice/jp/char_4184_dolris/cn_026.mp3",
+        "skill3": "files/assets/voice/jp/char_4184_dolris/cn_027.mp3",
+        "skill4": "files/assets/voice/jp/char_4184_dolris/cn_028.mp3",
+        "resultFour": "files/assets/voice/jp/char_4184_dolris/cn_029.mp3",
+        "resultThree": "files/assets/voice/jp/char_4184_dolris/cn_030.mp3",
+        "resultTwo": "files/assets/voice/jp/char_4184_dolris/cn_031.mp3",
+        "resultLose": "files/assets/voice/jp/char_4184_dolris/cn_032.mp3"
+      },
+      "char_x_ave_mujica_char_5_31": {
+        "start": "files/assets/voice/jp/char_4185_amoris/cn_019.mp3",
+        "faceEnemy": "files/assets/voice/jp/char_4185_amoris/cn_020.mp3",
+        "select": [
+          "files/assets/voice/jp/char_4185_amoris/cn_021.mp3",
+          "files/assets/voice/jp/char_4185_amoris/cn_022.mp3"
+        ],
+        "place": [
+          "files/assets/voice/jp/char_4185_amoris/cn_023.mp3",
+          "files/assets/voice/jp/char_4185_amoris/cn_024.mp3"
+        ],
+        "skill1": "files/assets/voice/jp/char_4185_amoris/cn_025.mp3",
+        "skill2": "files/assets/voice/jp/char_4185_amoris/cn_026.mp3",
+        "skill3": "files/assets/voice/jp/char_4185_amoris/cn_027.mp3",
+        "skill4": "files/assets/voice/jp/char_4185_amoris/cn_028.mp3",
+        "resultFour": "files/assets/voice/jp/char_4185_amoris/cn_029.mp3",
+        "resultThree": "files/assets/voice/jp/char_4185_amoris/cn_030.mp3",
+        "resultTwo": "files/assets/voice/jp/char_4185_amoris/cn_031.mp3",
+        "resultLose": "files/assets/voice/jp/char_4185_amoris/cn_032.mp3"
+      },
+      "char_x_ave_mujica_char_5_32": {
+        "start": "files/assets/voice/jp/char_4186_tmoris/cn_019.mp3",
+        "faceEnemy": "files/assets/voice/jp/char_4186_tmoris/cn_020.mp3",
+        "select": [
+          "files/assets/voice/jp/char_4186_tmoris/cn_021.mp3",
+          "files/assets/voice/jp/char_4186_tmoris/cn_022.mp3"
+        ],
+        "place": [
+          "files/assets/voice/jp/char_4186_tmoris/cn_023.mp3",
+          "files/assets/voice/jp/char_4186_tmoris/cn_024.mp3"
+        ],
+        "skill1": "files/assets/voice/jp/char_4186_tmoris/cn_025.mp3",
+        "skill2": "files/assets/voice/jp/char_4186_tmoris/cn_026.mp3",
+        "skill3": "files/assets/voice/jp/char_4186_tmoris/cn_027.mp3",
+        "skill4": "files/assets/voice/jp/char_4186_tmoris/cn_028.mp3",
+        "resultFour": "files/assets/voice/jp/char_4186_tmoris/cn_029.mp3",
+        "resultThree": "files/assets/voice/jp/char_4186_tmoris/cn_030.mp3",
+        "resultTwo": "files/assets/voice/jp/char_4186_tmoris/cn_031.mp3",
+        "resultLose": "files/assets/voice/jp/char_4186_tmoris/cn_032.mp3"
+      },
+      "char_x_ave_mujica_char_6_30": {
+        "start": "files/assets/voice/jp/char_4182_oblvns/cn_019.mp3",
+        "faceEnemy": "files/assets/voice/jp/char_4182_oblvns/cn_020.mp3",
+        "select": [
+          "files/assets/voice/jp/char_4182_oblvns/cn_021.mp3",
+          "files/assets/voice/jp/char_4182_oblvns/cn_022.mp3"
+        ],
+        "place": [
+          "files/assets/voice/jp/char_4182_oblvns/cn_023.mp3",
+          "files/assets/voice/jp/char_4182_oblvns/cn_024.mp3"
+        ],
+        "skill1": "files/assets/voice/jp/char_4182_oblvns/cn_025.mp3",
+        "skill2": "files/assets/voice/jp/char_4182_oblvns/cn_026.mp3",
+        "skill3": "files/assets/voice/jp/char_4182_oblvns/cn_027.mp3",
+        "skill4": "files/assets/voice/jp/char_4182_oblvns/cn_028.mp3",
+        "resultFour": "files/assets/voice/jp/char_4182_oblvns/cn_029.mp3",
+        "resultThree": "files/assets/voice/jp/char_4182_oblvns/cn_030.mp3",
+        "resultTwo": "files/assets/voice/jp/char_4182_oblvns/cn_031.mp3",
+        "resultLose": "files/assets/voice/jp/char_4182_oblvns/cn_032.mp3"
+      },
+      "char_x_ave_mujica_char_5_25": {
+        "start": "files/assets/voice/jp/char_4183_mortis/cn_019.mp3",
+        "faceEnemy": "files/assets/voice/jp/char_4183_mortis/cn_020.mp3",
+        "select": [
+          "files/assets/voice/jp/char_4183_mortis/cn_021.mp3",
+          "files/assets/voice/jp/char_4183_mortis/cn_022.mp3"
+        ],
+        "place": [
+          "files/assets/voice/jp/char_4183_mortis/cn_023.mp3",
+          "files/assets/voice/jp/char_4183_mortis/cn_024.mp3"
+        ],
+        "skill1": "files/assets/voice/jp/char_4183_mortis/cn_025.mp3",
+        "skill2": "files/assets/voice/jp/char_4183_mortis/cn_026.mp3",
+        "skill3": "files/assets/voice/jp/char_4183_mortis/cn_027.mp3",
+        "skill4": "files/assets/voice/jp/char_4183_mortis/cn_028.mp3",
+        "resultFour": "files/assets/voice/jp/char_4183_mortis/cn_029.mp3",
+        "resultThree": "files/assets/voice/jp/char_4183_mortis/cn_030.mp3",
+        "resultTwo": "files/assets/voice/jp/char_4183_mortis/cn_031.mp3",
+        "resultLose": "files/assets/voice/jp/char_4183_mortis/cn_032.mp3"
+      }
+    }
+  }
+}

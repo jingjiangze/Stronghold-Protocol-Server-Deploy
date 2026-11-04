@@ -31,7 +31,7 @@
 // are built; switching back (WebGL context lost, art missing) rebuilds the 2D board.
 
 import { tileAtlas, fxAtlas, rng, groundTexture } from './textures.js';
-import { GLYPH, TILEKEY_GLYPH, TILE_H, COLORS, ORIGINIUM } from './style.js';
+import { GLYPH, GLYPH_PINNED, TILEKEY_GLYPH, TILE_H, COLORS, ORIGINIUM } from './style.js';
 import { parsePenRect, PEN_RECT } from './pen.js';
 
 /**
@@ -44,7 +44,12 @@ export const ROW_KEY = Object.freeze({ blocks: 0, devices: 0.01, surface: 0.02 }
 /** Gate / objective boxes (low tiles) of row `row`: after the row's blocks, before units standing in the box. */
 export const boxDepthKey = (cam, row) => -cam.depthOf(0, row + 0.45, 0) * 100;
 
-const ROWS = 19, COLS = 21;
+const DEF_ROWS = 19, DEF_COLS = 21;
+/**
+ * 当前正在画的场地尺寸（2026-11-03）：肉鸽官方关卡是 5×12 / 7×9 这类小图，不能按 19×21 画。
+ * 渲染器一次只画一张图 ⇒ 这里记当前场地尺寸；`parseStage` 从 `stage.size` 更新它。
+ */
+let ROWS = DEF_ROWS, COLS = DEF_COLS;
 const PLAYABLE_DIST = 2;         // margin tiles farther than this from a playable tile are not drawn
 const CLIFF_DEPTH = 0.62;        // how far the island's edge faces go down to the ground plane (tiles)
 /** Brightness of the board meshes (vertex colour above 1 lifts the mid-grey board art a little). */
@@ -98,8 +103,14 @@ const SIDE_MAT = {
  * `field` = [f0, f1] rows of the active field — drawn rows outside it are dim, non-playable scenery (e.g. the enemy
  * preview pen behind the normal field, or the normal field behind the boss field).
  */
-export function parseStage(stage, band = [0, ROWS - 1], field = [0, 13]) {
+export function parseStage(stage, band = null, field = null) {
   const rows = Array.isArray(stage?.rows) ? stage.rows : [];
+  // 场地尺寸：显式 stage.size 优先；没有 size 时保持 19×21（junk/旧数据不改变画布）
+  const sz = Array.isArray(stage?.size) && stage.size.length >= 2 ? stage.size : null;
+  ROWS = Math.max(1, Number(sz ? sz[0] : DEF_ROWS) || DEF_ROWS);
+  COLS = Math.max(1, Number(sz ? sz[1] : DEF_COLS) || DEF_COLS);
+  band = Array.isArray(band) ? [Math.max(0, band[0] | 0), Math.min(ROWS - 1, band[1] | 0)] : [0, ROWS - 1];
+  field = Array.isArray(field) ? [field[0] | 0, Math.min(ROWS - 1, field[1] | 0)] : [0, Math.min(ROWS - 1, 13)];
   const legend = stage && typeof stage.tiles === 'object' && stage.tiles ? stage.tiles : {};
   const grid = [];
   for (let r = 0; r < ROWS; r++) {
@@ -107,7 +118,10 @@ export function parseStage(stage, band = [0, ROWS - 1], field = [0, 13]) {
     const row = [];
     for (let c = 0; c < COLS; c++) {
       let g = line[c] || '#';
-      if (!GLYPH[g]) g = TILEKEY_GLYPH[legend[g]?.tileKey] || (legend[g]?.height === 'HIGH' ? '#' : 'R');
+      const lk = legend[g]?.tileKey;
+      const mapped = lk ? (TILEKEY_GLYPH[lk + ':' + legend[g]?.height] || TILEKEY_GLYPH[lk]) : null;
+      if (mapped && (!GLYPH[g] || !GLYPH_PINNED.has(g))) g = mapped;
+      else if (!GLYPH[g]) g = legend[g]?.height === 'HIGH' ? '#' : 'R';
       const def = GLYPH[g];
       const inBand = r >= band[0] && r <= band[1];
       const scenery = r < field[0] || r > field[1];

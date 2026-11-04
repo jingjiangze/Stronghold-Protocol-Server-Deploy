@@ -1,10 +1,11 @@
+import { hypot } from '../../../detmath.js';
 // server/sim/content/kits/ops/op-weedy.js — 温蒂 (char_400_weedy) 自选 operator kit: 6★ 推击手 (特种), an owned-6★ pick of the
 // tier-5 and tier-6 自选 slots; every skill, both talents, the trait, both modules (PUS-X 仿生海龙改型, PUS-Y 新型仿生原型) at
 // every form, and the kit of her summon 工程蓄水炮 (token_10009_weedy_cannon). Kit contract and the 自选 rules: ../README.md
 // ("How to add an operator (自选)").
 //
 // Forms (data/backups.json units.char_400_weedy, the DIY slot statuses): normal = E2 Lv1, skills at rank 4, no module;
-// elite = E2 Lv60, rank 7, the picked module at stage 1 (tier 5) or 3 (tier 6). Full potential (the owner's decision of 2026-10-07).
+// elite = E2 Lv60, rank 7, the picked module at stage 1 (tier 5) or 3 (tier 6). Potential 0 [ASSUMED: no account].
 // Sources: character_table / skill_table / battle_equip_table / token_table (zh_CN, as built into backups.json; the cannon's
 // owner-form / module variants) and PRTS 温蒂 (蓄水炮强化 备注 "天赋文本后半段效果（及模组效果）的作用对象为温蒂自身"; S2 "攻击间隔增大
 // (+220%)", 备注 "溅射范围为0.9半径"; S3 备注 "蓄水炮以温蒂的攻击力进行发射…技能范围内没有敌人时温蒂/蓄水炮不会对应发射出液氮炮 /
@@ -50,7 +51,6 @@ import { stepOf, STEP_PER_TICK } from '../../../../../shared/plugins/steps.js';
 import { absoluteRangeKeys } from '../../../targeting.js';
 import { bodyInRange } from '../../../body.js';
 import { startCountdown } from '../../tokens.js';
-import { hypot } from '../../../detmath.js';
 
 const S1 = 'skchr_weedy_1';
 const S2 = 'skchr_weedy_2';

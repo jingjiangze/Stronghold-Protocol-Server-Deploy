@@ -29,8 +29,7 @@
 // - S3 碎颅击 (MANUAL, 18 / 21 s): attack interval +base_attack_time s (a flat +1.0 on her 1.05 s), each attack at
 //   attack@atk_scale × ATK with attack@buff_prob to stun the target attack@stun s.
 
-import { num, talentBb, talentGrid, moduleBb, traitBb, moduleOn, skillRec, statBuff, toggleBuff, installAura, batMod,
-  up, skillBusy, giveSp } from '../shared/tier1.js';
+import { num, talentBb, talentGrid, moduleBb, traitBb, moduleOn, skillRec, statBuff, toggleBuff, installAura, batMod, up, skillBusy, giveSp } from '../shared/tier1.js';
 import { absoluteRangeKeys } from '../../../targeting.js';
 import { bodyInRange } from '../../../body.js';
 

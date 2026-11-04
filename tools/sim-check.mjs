@@ -108,7 +108,7 @@ async function main(argv) {
 
   const engines = opt('--engines');
   if (!engines) return 0;
-  const { startServer } = await import('../server/index.js');
+  const { startServer } = await import('../server/boot-main.js');
   const srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true });
   try {
     const q = new URLSearchParams({ auto: '1', subset: opt('--subset') || 'all' });

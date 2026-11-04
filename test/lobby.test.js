@@ -11,15 +11,16 @@ import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 
-import { startServer, parseRange, acceptsGzip, pickEncoding, parseTrustProxy } from '../server/index.js';
+import { startServer, parseRange, acceptsGzip, pickEncoding, parseTrustProxy } from '../server/boot-main.js';
 import { loadData, lookup, getChess, getBond, getBand, getMode, getConfig, INDEXED_FILES } from '../server/data.js';
 import * as dataModule from '../server/data.js';
-import { CODE_ALPHABET, BOT_NAMES } from '../server/lobby.js';
+import { CODE_ALPHABET, BOT_NAMES, DEFAULT_DIFFICULTY } from '../server/lobby.js';
 import { sanitizeName, TokenBucket, SessionRegistry, clientAddress, normalizeIp, isLocalIp, limitKeyOf } from '../server/net.js';
 import { StubMatch as Match } from '../server/match/StubMatch.js';
 import { Match as RealMatch } from '../server/match/Match.js';
 import { TestClient } from './helpers/wsClient.js';
 import { ERR, MAX_SEATS, MAX_SPECTATORS, PHASE, EMOTES } from '../shared/constants.js';
+import { DEFAULT_VERSION, VERSIONS } from '../shared/versions.js';
 
 const CODE_RE = new RegExp(`^[${CODE_ALPHABET}]{4}$`);
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
@@ -539,7 +540,17 @@ describe('websocket lobby', () => {
   const cap = captureLog();
 
   before(async () => {
-    srv = await startServer({ port: 0, host: '127.0.0.1', log: cap.log, MatchClass: Match });
+    // The healthz case below pins the unset default (every official version). Read that, then put the environment back.
+    const saved = ['SP_VERSIONS', 'SP_VERSION_DEFAULT', 'SP_MAX_VERSION_HOSTS'].map((k) => [k, process.env[k]]);
+    for (const [k] of saved) delete process.env[k];
+    try {
+      srv = await startServer({ port: 0, host: '127.0.0.1', log: cap.log, MatchClass: Match });
+    } finally {
+      for (const [k, v] of saved) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    }
     pool = clientPool(() => `ws://127.0.0.1:${srv.port}/ws`);
   });
   afterEach(async () => { await pool.closeAll(); });
@@ -597,11 +608,12 @@ describe('websocket lobby', () => {
     }
     await expectError(c, { t: 'room.create', mode: 'pvp', difficulty: 'NORMAL' }, ERR.BAD_MSG);
     await expectError(c, { t: 'room.create', mode: 'coop', difficulty: 'EASY' }, ERR.BAD_MSG);
-    await expectError(c, { t: 'room.create', mode: 'coop' }, ERR.BAD_MSG);
+    await expectError(c, { t: 'room.create', mode: 'coop', difficulty: null }, ERR.BAD_MSG);
+    await expectError(c, { t: 'room.create', difficulty: 'NORMAL' }, ERR.BAD_MSG);
     await expectError(c, { t: 'room.join', code: 'AB CD' }, ERR.BAD_MSG);
     await expectError(c, { t: 'room.join', code: { $gt: '' } }, ERR.BAD_MSG);
     await expectError(c, { t: 'room.ready', ready: 'yes' }, ERR.BAD_MSG);
-    await expectError(c, { t: 'room.removeBot', seat: 9 }, ERR.BAD_MSG);
+    await expectError(c, { t: 'room.removeBot', seat: MAX_SEATS }, ERR.BAD_MSG);
     await expectError(c, { t: 'g.buy', slot: -1 }, ERR.BAD_MSG);
     await expectError(c, { t: 'g.move', uid: 1, to: { area: 'moon' } }, ERR.BAD_MSG);
     await expectError(c, { t: 'ping', c: 'x' }, ERR.BAD_MSG);
@@ -654,15 +666,21 @@ describe('websocket lobby', () => {
     assert.ok(c.isOpen);
   });
 
-  test('flooding far beyond the limit closes the socket (1008)', { timeout: 10000 }, async (t) => {
+  test('flooding far beyond the limit closes the socket (1008)', { timeout: 60000 }, async (t) => {
     const now = Date.now();
     t.mock.method(srv.network, 'now', () => now);
     const c = await pool.player('Flood');
     // Keep one rate window and await replies instead of building a compressed send queue ahead of the close frame.
-    for (let i = 0; i < 39; i++) assert.equal((await c.request({ t: 'ping', c: i })).t, 'pong');
-    for (let i = 0; i < 400; i++) await expectError(c, { t: 'ping', c: i }, ERR.RATE);
-    assert.ok(c.isOpen, '400 drops do not close the socket');
-    c.send({ t: 'ping', c: 400, rid: null });
+    // A slow runner (Windows, Node 24) took more than the client's 2 s default for one of the ~430 round trips, so each
+    // waits up to 10 s; and the drops stop short of the 400 budget so a frame more or less cannot move the boundary.
+    for (let i = 0; i < 39; i++) assert.equal((await c.request({ t: 'ping', c: i }, 10_000)).t, 'pong');
+    for (let i = 0; i < 390; i++) {
+      const r = await c.request({ t: 'ping', c: i }, 10_000);
+      assert.equal(r.t, 'error'); assert.equal(r.code, ERR.RATE);
+    }
+    assert.ok(c.isOpen, '390 drops do not close the socket');
+    // past the budget (400 drops a second) the server closes the socket instead of answering
+    for (let i = 0; i < 40 && c.isOpen; i++) c.send({ t: 'ping', c: 400 + i, rid: null });
     const info = await c.closed;
     assert.equal(info.code, 1008);
     assert.equal(info.reason, 'rate limit');
@@ -677,7 +695,7 @@ describe('websocket lobby', () => {
     assert.equal(st.inMatch, false);
     assert.equal(st.seats.length, MAX_SEATS);
     assert.deepEqual(st.seats[0], { seat: 0, playerId: host.id, name: 'Host', isBot: false, ready: false, connected: true });
-    assert.deepEqual(st.seats.slice(1), [null, null, null]);
+    assert.deepEqual(st.seats.slice(1), new Array(MAX_SEATS - 1).fill(null));
 
     const guest = await pool.player('Guest');
     const joined = await joinRoom(guest, st.code.toLowerCase());
@@ -717,6 +735,30 @@ describe('websocket lobby', () => {
     await expectError(host, { t: 'room.join', code: own.code }, ERR.ROOM_NOT_FOUND);
   });
 
+  test('room.create without a difficulty: the room starts at the default (标准 [ASSUMED]), the host changes it in the room', async () => {
+    // the event's 联合模拟 creates the room first and its creator changes the difficulty there (research 06 §3.2)
+    const host = await pool.player('Host');
+    const r = await host.request({ t: 'room.create', mode: 'coop' });
+    assert.equal(r.t, 'ok', JSON.stringify(r));
+    const st = await host.waitFor('room.state', (s) => s.hostId === host.id && s.mode === 'coop');
+    assert.equal(st.difficulty, DEFAULT_DIFFICULTY);
+    assert.equal(DEFAULT_DIFFICULTY, 'FUNNY');
+    const guest = await pool.player('Guest');
+    await joinRoom(guest, st.code);
+    await expectOk(guest, { t: 'room.ready', ready: true });
+    await host.waitFor('room.state', (s) => seatOf(s, guest.id)?.ready === true);
+    await expectError(guest, { t: 'room.setDifficulty', difficulty: 'HARD' }, ERR.NOT_HOST);
+    await expectOk(host, { t: 'room.setDifficulty', difficulty: 'HARD' });
+    const changed = await guest.waitFor('room.state', (s) => s.difficulty === 'HARD');
+    assert.equal(seatOf(changed, guest.id).ready, false, 'the change un-readies the guest');
+    const solo = await pool.player('Solo');
+    assert.equal((await solo.request({ t: 'room.create', mode: 'solo' })).t, 'ok');
+    assert.equal((await solo.waitFor('room.state', (s) => s.hostId === solo.id)).difficulty, DEFAULT_DIFFICULTY);
+    await expectOk(guest, { t: 'room.leave' });
+    await expectOk(host, { t: 'room.leave' });
+    await expectOk(solo, { t: 'room.leave' });
+  });
+
   test('room full, solo rooms admit one human and no AI', async () => {
     const host = await pool.player('H');
     const st = await createRoom(host);
@@ -726,7 +768,8 @@ describe('websocket lobby', () => {
       await joinRoom(g, st.code);
       guests.push(g);
     }
-    await expectOk(host, { t: 'room.addBot' });
+    // Every room allocates MAX_SEATS slots and any free one takes a player, so three humans need MAX_SEATS - 3 bots to fill it.
+    for (let i = 3; i < MAX_SEATS; i++) await expectOk(host, { t: 'room.addBot' });
     await host.waitFor('room.state', (s) => s.seats.every(Boolean));
     const late = await pool.player('Late');
     await expectError(late, { t: 'room.join', code: st.code }, ERR.ROOM_FULL);
@@ -767,7 +810,7 @@ describe('websocket lobby', () => {
     const s3 = await pool.player('Watcher3');
     await expectError(s3, { t: 'room.spectate', code: st.code }, ERR.ROOM_FULL);
     await joinRoom(s3, st.code);
-    await expectOk(host, { t: 'room.addBot' });
+    for (let i = 3; i < MAX_SEATS; i++) await expectOk(host, { t: 'room.addBot' });
     const full = await host.waitFor('room.state', (s) => s.seats.every(Boolean));
     assert.equal(full.spectators.length, 2);
     await expectOk(s3, { t: 'room.ready', ready: true });
@@ -1103,7 +1146,7 @@ describe('websocket lobby', () => {
     const clients = [];
     for (let i = 0; i < 5; i++) clients.push(await pool.player(`F${i}`));
     const codes = () => [...srv.lobby.rooms.keys()];
-    const gTypes = ['g.infoReady', 'g.band', 'g.bandSkip', 'g.buy', 'g.refresh', 'g.freeze', 'g.levelUp', 'g.sell', 'g.move', 'g.equip', 'g.art', 'g.destroy', 'g.reward', 'g.choice', 'g.ready', 'g.emote', 'g.watch', 'g.autoplay', 'g.leave'];
+    const gTypes = ['g.infoReady', 'g.band', 'g.bandSkip', 'g.buy', 'g.refresh', 'g.freeze', 'g.levelUp', 'g.sell', 'g.move', 'g.equip', 'g.unequip', 'g.art', 'g.destroy', 'g.reward', 'g.choice', 'g.ready', 'g.emote', 'g.watch', 'g.autoplay', 'g.leave'];
     const junk = [1, -1, 1.5, 'x', '', null, true, [], {}, { area: 'board', row: 1, col: 1 }, 'A'.repeat(70), 2 ** 40];
     const gen = () => {
       const r = rnd();
@@ -1148,6 +1191,15 @@ describe('websocket lobby', () => {
       if (reply.t === 'error') assert.ok(Object.hasOwn(ERR, reply.code), reply.code);
       if (i % 50 === 0) await delay(30); // stay well under the rate limit
     }
+    // `g.infoReady` only lands while a match sits in INFO_CHECK and only from that match's own player: the random stream
+    // cannot guarantee that window, so the prep intent is exercised deterministically (the shape lobby-integration uses).
+    const prepper = await pool.player('InfoReady');
+    await createRoom(prepper);
+    await expectOk(prepper, { t: 'room.start' });
+    await prepper.waitFor('m.public', (p) => p.phase === 'INFO_CHECK');
+    await expectOk(prepper, { t: 'g.infoReady' });
+    okCounts['g.infoReady'] = 1;
+    await expectOk(prepper, { t: 'room.leave' });
     for (const t of ['room.create', 'room.join', 'room.start', 'room.addBot', 'g.infoReady']) assert.ok(okCounts[t] > 0, `fuzz never succeeded at ${t}`);
     // invariants
     const seen = new Set();
@@ -1243,6 +1295,11 @@ describe('websocket lobby', () => {
     assert.ok(h.rooms >= 1);
     assert.ok(h.sockets >= 1);
     assert.ok(h.sessions >= 1);
+    assert.deepEqual(h.versions.enabled, VERSIONS.map((v) => v.id), 'nothing set enables every version (DESIGN §35.23.11)');
+    assert.equal(h.versions.default, DEFAULT_VERSION);
+    assert.equal(h.versions.hosts.workers, 0, 'an idle server has forked no version match host');
+    assert.equal(h.versions.hosts.matches, 0);
+    assert.equal(srv.versionHosts.stats().workers, 0);
   });
 });
 

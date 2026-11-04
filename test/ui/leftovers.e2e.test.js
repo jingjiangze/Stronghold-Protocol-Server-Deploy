@@ -39,7 +39,7 @@ describe('client leftovers — mock harness', { skip: !ENABLED && 'set SP_E2E=1 
   let browser;
   let base;
   before(async () => {
-    const { startServer } = await import('../../server/index.js');
+    const { startServer } = await import('../../server/boot-main.js');
     const puppeteer = (await import('puppeteer-core')).default;
     srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true });
     base = `http://127.0.0.1:${srv.port}`;
@@ -244,6 +244,8 @@ describe('client leftovers — real server', { skip: !ENABLED && 'set SP_E2E=1 (
       await c.click('.dband', null, { nth: 1 });
       await c.click('.draft-detail__btns .btn--primary', '确认选择');
       await c.waitFor((s) => s.phase === 'PREP' && !s.ready && s.hand >= 4, 'prep with the starter kit', 60000);
+      // the held 已选定策略 and 协议启动！ (screens/game.js DRAFT_HOLD_MS + BOOT_MIN_MS, inside BATTLE_CHECK) cover the board first
+      await c.page.waitForFunction(() => !document.querySelector('.screen.draft, [data-testid="protocol-boot"]'), { timeout: 15000 });
       await sleep(1800);
       await c.hookRequests();
 

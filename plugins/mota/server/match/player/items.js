@@ -6,7 +6,7 @@
 
 import { ERR, GEO } from '../../../shared/constants.js';
 import { morphSlotPolicy, ruleOption } from '../../../shared/plugins/rules.js';
-import { tileKey, inField, parseDir, freeSlot } from '../board.js';
+import { tileKey, inField, rectOfMap, parseDir, freeSlot } from '../board.js';
 import { offsetTile } from '../../sim/dir.js';
 import { itemKey } from '../gamedata.js';
 import { OK, fail } from './common.js';
@@ -73,6 +73,7 @@ export class PlayerItems {
       // !ev.keep, or the carrier is gone: the consumed item left play. A kept item is on the carrier.
       if (!this.find(item.uid)) this.releaseItemStock(item);
       this.stats.itemsEquipped++;
+      this._afterConsumableUsed(item.id);
       this.checkItemMerges();
       this.recompute();
       return OK;
@@ -142,7 +143,7 @@ export class PlayerItems {
     if (!loc || loc.piece.kind !== 'item' || (loc.area !== 'hand' && loc.area !== 'temp')) return fail(ERR.BAD_TARGET);
     const rec = this.gd.item(loc.piece.id);
     if (!rec || rec.itemType !== 'MAGIC') return fail(ERR.BAD_TARGET, 'not an art');
-    if (!inField(row, col)) return fail(ERR.BAD_TILE);
+    if (!inField(row, col, rectOfMap(this.deployMap()))) return fail(ERR.BAD_TILE);
     if (this.round.arts >= this.gd.maxArtsPerRound) return fail(ERR.BAD_TARGET, 'art limit');
     const key = 'item:' + itemKey(loc.piece.id);
     if (!this.m.registry.has(key)) return fail(ERR.BAD_TARGET, 'effect not available');
@@ -161,9 +162,18 @@ export class PlayerItems {
       if (again) this._detach(again);
       this.releaseItemStock(loc.piece);
       this.round.arts++;
+      this._afterConsumableUsed(loc.piece.id);
     }
     this.recompute();
     return OK;
+  }
+
+  /**
+   * 肉鸽 rule 藏品钩子（consume 类道具被用掉之后）：`consumableFree` 退款 / `consumableRefund` 再发一件。
+   * 规则聚合在 match 侧（`meltdown.js` 的 `relicConsumableUsed`），这里只负责通知。
+   */
+  _afterConsumableUsed(itemId) {
+    try { if (this.m && typeof this.m.relicConsumableUsed === 'function') this.m.relicConsumableUsed(this, itemId); } catch { /* 尽力而为 */ }
   }
 
   /**
@@ -193,7 +203,7 @@ export class PlayerItems {
     if (ruleOption(this.m?.rules, 'unequip') !== 'allow') return fail(ERR.BAD_TARGET, 'equipped items are locked');
     const loc = this.find(itemUid);
     if (!loc || loc.piece.kind !== 'item' || loc.area !== 'equipped') return fail(ERR.BAD_TARGET);
-    const handAt = freeSlot(this.hand);
+    const handAt = this.freeHandSlot();
     const tempAt = freeSlot(this.temp.slice(0, GEO.TEMP_SIZE));
     if (handAt < 0 && tempAt < 0) return fail(ERR.HAND_FULL);
     const piece = loc.piece;

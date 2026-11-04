@@ -149,11 +149,11 @@ export function TeamPanel({ pub, myId, watching, bubbles, onWatch, compact = fal
     setOpenPid((cur) => (cur === p.playerId ? null : p.playerId));
   };
   const dblClick = (e, p, self) => {
+    // 2026-10-30：双击直接「看队友战场」这条快捷方式去掉了 —— 战斗中它本来就不生效（observeTarget 返回
+    // reason: null，只弹一句废话），留着只会让人以为功能坏了。单机的点击（弹名片 / 战前战后查看）不变。
     if (!prepDblClickWatches({ phase: pub?.phase, self, observe, watching, player: p, askedRecently: askedRecently(p) })) return;
     e.preventDefault();
     setOpenPid(null);
-    noteAsked(p);
-    onWatch(p);
   };
   return html`<aside class=${cx('team', compact && 'team--compact')} aria-label=${t('同盟成员')}>
     ${players.map((p) => {

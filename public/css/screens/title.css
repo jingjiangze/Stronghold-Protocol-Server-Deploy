@@ -230,6 +230,110 @@
   background: linear-gradient(90deg, var(--mint-500), transparent 60%);
 }
 .title-login .btn--xl { letter-spacing: .6em; padding-left: calc(.48rem + .3em); }
+/* 账号条（ui 插件 accounts 的 title.login 槽位；业主 2026-11-02：入口显眼、外观跟站点一致） */
+.title-account-bar-row { display: flex; flex-wrap: wrap; gap: .1rem; align-items: stretch; }
+.title-account-bar {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .1rem;
+  height: .56rem;
+  padding: 0 .16rem;
+  border: 1px solid var(--line-2);
+  background: rgba(10, 13, 12, .72);
+  color: var(--text-hi);
+  font: inherit;
+  font-size: calc(.18 * var(--t));
+  letter-spacing: .04em;
+  cursor: pointer;
+  transition: border-color var(--t-fast), color var(--t-fast);
+}
+.title-account-bar:hover, .title-account-bar:focus-visible { border-color: var(--mint-500); color: var(--text-hi); }
+.title-account-bar--ann { flex: 0 0 auto; padding: 0 .18rem; font-size: calc(.16 * var(--t)); color: var(--text-lo); }
+.title-account-bar__icon { width: .2rem; height: .2rem; opacity: .8; }
+/* 已登录的首页门面（业主 2026-11-02，照 sp.bbsmc.cn 的做法）：一张名片卡 —— 卡面图当卡片背景层
+   （复用 UI 包既有的 .has-nc + .nc-layer/--nc 契约），左边头像、中间「已登录账号 · 以此名字进入」+ 名字#代号。
+   游客那套（博士代号输入框 + 「不登录也能直接开始」）在 body.sp-account 下整块不出现。 */
+body.sp-account .title-plugin-slot { order: -1; }
+body.sp-account .title-login .field { display: none; }
+.acct-title-card {
+  flex: 1 1 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: .12rem;
+  padding: .1rem .12rem;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border: 1px solid rgba(78, 216, 175, .45);
+  background: linear-gradient(180deg, rgba(14, 28, 23, .7), rgba(7, 14, 12, .78));
+  transition: border-color 140ms;
+}
+.acct-title-card:hover, .acct-title-card:focus-visible { border-color: var(--mint-500); }
+.acct-title-card.has-nc {
+  --nc-shade: linear-gradient(90deg, rgba(8, 11, 11, .84), rgba(8, 11, 11, .5) 55%, rgba(8, 11, 11, .2));
+  border-color: rgba(255, 255, 255, .22);
+}
+.acct-title-card.has-nc:hover, .acct-title-card.has-nc:focus-visible { border-color: rgba(255, 255, 255, .5); }
+.acct-title-card__pic {
+  flex: none;
+  width: .48rem;
+  height: .48rem;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-size: calc(.22 * var(--t));
+  font-weight: 700;
+  line-height: 1;
+  color: #8bdfb0;
+  background: #173a2f;
+  border: 1px solid rgba(78, 216, 175, .45);
+}
+.acct-title-card__pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.acct-title-card__who { flex: 1; min-width: 0; display: grid; gap: .02rem; }
+.acct-title-card__who small { font-size: max(calc(.13 * var(--t)), 10px); letter-spacing: .06em; color: var(--text-lo); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-title-card.has-nc .acct-title-card__who small { color: #d6dedb; }
+.acct-title-card__who b { font-size: calc(.18 * var(--t)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-title-card__who .acct-tag { margin-left: .04rem; color: var(--text-lo); font-weight: 500; font-size: .86em; }
+/* 面板里那张卡面大图本身就是「换卡面」的入口（按钮化了，保持图片原样） */
+.acc-hero__art-btn { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; }
+.acc-hero__art-btn:hover .acc-hero__art, .acc-hero__art-btn:focus-visible .acc-hero__art { opacity: .86; }
+.acc-hero__art-btn:focus-visible { outline: 2px solid var(--mint-500); outline-offset: -2px; }
+/* 条下的小字（游客提示）：站点没有等价类，只有这一条留在页面样式里 */
+.acc-hint { flex: 0 0 100%; margin: 0; color: var(--text-lo); font-size: calc(.12 * var(--t)); text-align: center; }
+/* 账号面板内部排版：一律吃主题变量，颜色/字号随「文字大小」缩放 */
+.acc-form { display: flex; flex-direction: column; gap: .14rem; margin-top: .14rem; }
+.acc-color { gap: .12rem; }
+.acc-color__input { width: .5rem; flex: none; padding: 0; background: none; border: 0; }
+.acc-color__preview { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.acc-err, .acc-ok { margin: .12rem 0 0; font-size: calc(.15 * var(--t)); }
+/* 名片：顶部大图 + 卡面画廊（素材在 /assets/local/sp-namecards-*，本机没有时由 cdn-local 302 到 CDN） */
+.acc-hero { position: relative; margin: -.02rem 0 .14rem; border: 1px solid var(--line); background: rgba(0, 0, 0, .32); overflow: hidden; }
+.acc-hero__art { display: block; width: 100%; height: auto; max-height: 2.4rem; object-fit: cover; }
+.acc-hero__empty { display: grid; place-items: center; min-height: 1.2rem; color: var(--text-dim); font-size: calc(.14 * var(--t)); }
+.acc-hero__id { display: flex; align-items: center; gap: .12rem; padding: .12rem .14rem; border-top: 1px solid var(--line); background: rgba(8, 10, 9, .72); }
+.acc-hero__id > div { flex: 1; min-width: 0; }
+.acc-hero__avatar { width: .44rem; height: .44rem; border-radius: 50%; flex: none; object-fit: cover; }
+
+/* 卡面画廊：左侧大图预览 + 右侧网格 */
+.nc-gallery { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: .14rem; align-items: start; }
+.nc-gallery__preview { border: 1px solid var(--line-2); background: rgba(0, 0, 0, .4); aspect-ratio: 600 / 186; display: grid; place-items: center; overflow: hidden; }
+.nc-gallery__preview img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.nc-gallery__empty { color: var(--text-dim); font-size: calc(.14 * var(--t)); }
+.nc-gallery__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(.96rem, 1fr)); gap: .07rem; max-height: 3.2rem; overflow: auto; padding: .02rem; }
+.nc-tile { padding: 0; border: 1px solid var(--line-2); background: rgba(5, 7, 6, .7); cursor: pointer; aspect-ratio: 600 / 186; overflow: hidden; }
+.nc-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.nc-tile.is-on { border-color: var(--mint-500); box-shadow: 0 0 0 1px var(--mint-500); }
+.nc-tile:focus-visible { outline: 2px solid var(--mint-500); outline-offset: 1px; }
+.nc-tile__none { display: grid; place-items: center; width: 100%; height: 100%; color: var(--text-lo); font: inherit; font-size: calc(.13 * var(--t)); }
+@media (max-width: 720px) {
+  .nc-gallery { grid-template-columns: minmax(0, 1fr); }
+  .nc-gallery__grid { max-height: 1.8rem; }
+}
 /* 下载完整素材 and 导入素材包 side by side under the login box (ui/assetDownload.js, ui/assetImport.js), each with its hint line;
    a label too long for its half (a larger 文字大小) wraps inside its button instead of spilling over the other one */
 .title-assets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .12rem; width: 4.9rem; margin-top: .12rem; text-align: center; }

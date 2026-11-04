@@ -288,7 +288,7 @@ export default {
             const every = num(b2.interval, 0.5);
             battle.every(every, (b, sc) => {
               if (!unit.skill.active || unit.skill.activations !== seq || unit.skill.id !== S2) { sc.cancel(); return; }
-              for (const l of links) if (!l.done && !broken(l)) b.dealDamage(unit, l.e, { amount: unit.s.atk * scale, type: 'arts', isSkill: true, ignoreSleep: true, tags: ['skill', 'necras:s2'] });
+              for (const l of links) if (!l.done && !broken(l)){b.dealDamage(unit, l.e, { amount: unit.s.atk * scale, type: 'arts', isSkill: true, ignoreSleep: true, tags: ['skill', 'necras:s2'] });b.fx('skillPulse',{id:unit.id,target:l.e.id,x:l.e.x,y:l.e.y});}
             }, { owner: unit });
             // the links: a broken one releases its target; none left (or her 晕眩 / 冰冻 / 沉默) ends the skill
             battle.every(0.05, (b, sc) => {

@@ -17,6 +17,10 @@ import { creditedKillsOf } from '../../sim/spec.js';
 export class MatchSettle {
   settle(plan, uniteResult) {
     this.phase = PHASE.SETTLE;
+    // rule 藏品：每场战斗结束的资金奖励（至宝指环 postBattleFunds）
+    try { if (typeof this.applyRelicPostBattle === 'function') this.applyRelicPostBattle(); } catch (e) { this.reportError?.('relic post battle', e); }
+    // rule 藏品：kingCrystal「战斗结束后使目标生命 −2（不会低于 1）」
+    try { if (typeof this.applyRelicLpDrain === 'function') this.applyRelicLpDrain('battle'); } catch (e) { this.reportError?.('relic lp drain', e); }
     this.runner = null;
     this._stopClientCombat();
     // the pending in-battle gains the views showed become persistent below (alive players) or lapse (DESIGN §20.15)
@@ -47,8 +51,16 @@ export class MatchSettle {
       const r = this.lastResults.get(ps.playerId) || { leaked: [], perfect: true, coins: 0, layerGains: {}, killed: 0, damageDealt: 0 };
       const counted = (r.leaked || []).filter((l) => l && l.counted !== false).length;
       const loss = uniteRan && plan.leakers.includes(ps) ? Math.min(cap, survivors.get(ps.playerId) || 0) : Math.min(cap, counted);
+      // 肉鸽 rule 藏品 homeCooked：本回合零损失 = 一场完美作战（计数用于 +10%/场）
+      if (loss === 0) { ps.relicPerfectBattles = (Number(ps.relicPerfectBattles) || 0) + 1; }
+      // 肉鸽 rule 藏品 kingVessel：零损失**连续**回合数（上一回合没掉目标生命 ⇒ 下一战生命 +80%，连 3 回合 +200%）
+      ps.relicNoLossStreak = loss === 0 ? (Number(ps.relicNoLossStreak) || 0) + 1 : 0;
+      // 肉鸽 rule 藏品 survivor：打完的场数（desc 明写「不包括联防」）⇒ 每场再 +20%
+      if (!uniteRan) ps.relicBattles = (Number(ps.relicBattles) || 0) + 1;
       if (this.uniteResultView) this.uniteResultView.losses[ps.playerId] = loss;
-      ps.lp -= loss;
+      // 对抗模式：扣的是**整队共享池**（队友的漏怪一起算），队员的 ps.lp 由 _syncVersusTeamLp 拆分回写。
+      if (this.isVersus && this.teamLps) this._versusTeamLpLoss(this.teamIdOf(ps), loss);
+      else ps.lp -= loss;
       ps.stats.lpLost += loss;
       ps.stats.leaks += counted;
       ps.stats.kills += Number(r.killed) || 0;
@@ -81,7 +93,18 @@ export class MatchSettle {
       ps.creditedKills += creditedKillsOf(r) + creditedKillsOf(up);
       // perfect-payout bounties (战术特训): own phase perfect
       for (const b of ps.bounties) if (b.card.payout === 'perfect' && counted === 0 && r.perfect !== false) coins += b.card.coin;
+      // rule 藏品：赏金倍率（bountyMul ×2 / loseAllFunds ×0.5 / postBountyMul ×1.5）—— 照 desc 连乘
+      if (coins > 0 && typeof this.relicBountyMul === 'function') {
+        const bm = this.relicBountyMul();
+        if (Number.isFinite(bm) && bm !== 1) coins = Math.max(0, Math.round(coins * bm));
+      }
       if (coins > 0) { ps.pendingFunds += coins; ps.stats.fundsGained += coins; }
+      // rule 藏品：完成悬赏计数（atkPerBounty 每完成一次永久 +20%）
+      if (coins > 0) { ps.relicBountiesDone = (Number(ps.relicBountiesDone) || 0) + 1; }
+      // rule 藏品：完成悬赏（本回合拿到赏金）时的额外资金（choiceFunds「完成悬赏时资金额外 +8」）
+      if (coins > 0 && typeof this.applyRelicChoiceFunds === 'function') {
+        try { this.applyRelicChoiceFunds(ps); } catch { /* noop */ }
+      }
       for (const b of ps.bounties) b.roundsLeft--;
       ps.bounties = ps.bounties.filter((b) => b.roundsLeft > 0);
       // IN_BATTLE layer gains (normal battles only), at most the room left under BOND_LAYER_CAP (999, as the battle's
@@ -107,6 +130,7 @@ export class MatchSettle {
       });
       const through = this.uniteResultView ? this.uniteResultView.through : 0;
       const uniteRanWithLeakers = !!(uniteRan && plan && Array.isArray(plan.leakers) && plan.leakers.length);
+      // 业主 2026-10-27：不再有「归个人 / 归团队」两种归属——防线奖励恒进团队储备，判据只看漏怪与联防穿透。
       if (!ownLeak && through === 0) this.econDefenceReward({ full: true });
       else if (uniteRanWithLeakers && through === 0) this.econDefenceReward({ full: false });
     }
@@ -163,6 +187,19 @@ export class MatchSettle {
    * written back into a new prep. The LP command itself stays a raw write.
    */
   eliminateBroken() {
+    // 对抗模式：整队同生共死 —— 池归零时该队全员淘汰（ps.lp 已按池拆分，逐个判会拆散队伍）。
+    if (this.isVersus && this.teamLps) {
+      for (const t of this.matchTeamIds()) {
+        if ((this.teamLps.get(t) ?? 0) > 0) continue;
+        for (const ps of this.order) {
+          if (!ps.alive || this.teamIdOf(ps) !== t) continue;
+          ps.lp = 0;
+          ps.eliminate(this.round);
+          this.toast(ps, 'error', '队伍的目标生命值耗尽，已被淘汰');
+        }
+      }
+      return;
+    }
     for (const ps of this.alivePlayers()) {
       if (ps.lp <= 0) {
         // 促融共竞 / 救援 (revival.js): 只有开启复活的玩法（魔塔/协同）才会 defer；其余玩法与上游一致直接淘汰。
@@ -193,6 +230,11 @@ export class MatchSettle {
     }
     // 到点还挂着的人（没人投票、池子付不起、或票没凑齐）在这里真正淘汰，原因由 revivalFinalizeAll 细化到人。
     if (this.revivalEnabled) this.revivalFinalizeAll();
+    // 对抗模式：一队全灭即结束（只剩一队存活 ⇒ 该队胜）；两队都有人则继续。
+    if (this.isVersus && this.teamLps) {
+      const aliveTeams = this.matchTeamIds().filter((t) => this.order.some((p) => p.alive && this.teamIdOf(p) === t));
+      if (aliveTeams.length <= 1) { this.finish({ victory: aliveTeams.length === 1, reason: 'versus' }); return; }
+    }
     if (!this.alivePlayers().length) { this.finish({ victory: false, reason: 'eliminated' }); return; }
     resetRoundCounters(this); // AI bot merge-counter resets each round (server/match/botEmotes.js)
     this.startRound(this.round + 1);

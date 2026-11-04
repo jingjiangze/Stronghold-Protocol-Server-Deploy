@@ -25,8 +25,9 @@ function blkkgt(bb, chess, def) {
   };
   const slash = (battle, unit, scale) => {
     const v = victims(battle, unit);
-    if (v.length) battle.fx('slash', { x: unit.x, y: unit.y, id: unit.id, n: v.length });
+    if (v.length) battle.fx('slash', { x: unit.x, y: unit.y, id: unit.id, n: v.length, skillId: 'skchr_blkkgt_3', phase: unit.mem.dgbFinale ? 'final' : 'slash', cueId: unit.skill?.activations });
     for (const e of v) battle.dealDamage(unit, e, { amount: unit.s.atk * scale, type: 'phys', isSkill: true, tags: ['skill', 'slash'] });
+    if (v.length) battle._ev(['nativeSkillSfx', unit.id, unit.mem.dgbFinale ? 'degenS3FinalHit' : 'degenS3Hit', unit.skill?.activations, unit.mem.dgb?.n ?? 0]);
   };
   // "持续将敌人中等力度地拖拽至自身中心，之后…较大力地拖拽至自身": the official 力度 − 重量 pulls (PRTS 推与拉: the last one
   // aims at her own tile centre, the others at the usual 拉力起点 half a tile ahead; 急停 0.6708 around her)
@@ -53,11 +54,12 @@ function blkkgt(bb, chess, def) {
         sortEnemyTargets(battle, unit, c, null);
         const v = c.slice(0, Math.max(1, Math.floor(num(bb.max_target, 5))));
         const nFree = Math.floor(num(bb['blkkgt_s_2[not_blocked].trig_cnt'], 2)), nBlocked = Math.floor(num(bb['blkkgt_s_2[blocked].trig_cnt'], 3));
-        if (v.length) battle.fx('slash', { x: unit.x, y: unit.y, id: unit.id, n: v.length });
+        if (v.length) battle.fx('slash', { x: unit.x, y: unit.y, id: unit.id, n: v.length, skillId: 'skchr_blkkgt_2', cueId: unit.skill?.activations });
         for (const e of v) {
           const n = e.blockedBy ? nBlocked : nFree;
           for (let i = 0; i < n && e.alive; i++) battle.dealDamage(unit, e, { amount: unit.s.atk * num(bb.dot_scale, 1), type: 'phys', isSkill: true, tags: ['skill', 'slash'] });
         }
+        if (v.length) battle._ev(['nativeSkillSfx', unit.id, 'degenS2Hit', unit.skill?.activations, 0]);
       },
     },
   };
@@ -107,7 +109,7 @@ function blkkgt(bb, chess, def) {
         unit.mem.dgb = null;
         battle.removeBuff(unit, 'blkkgt:slashes');
         if (reason === 'death' || !unit.alive) return;
-        battle.fx('finale', { x: unit.x, y: unit.y, id: unit.id });
+        battle.fx('finale', { x: unit.x, y: unit.y, id: unit.id, skillId: 'skchr_blkkgt_3', cueId: unit.skill?.activations });
         unit.mem.dgbFinale = true; // the finisher is part of the skill (talent at 100 %, module +10 %)
         try { slash(battle, unit, num(bb.e_atk_scale_end, 1)); } finally { unit.mem.dgbFinale = false; }
         pull(battle, unit, num(bb.e_force), true);
