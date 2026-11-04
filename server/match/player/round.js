@@ -175,6 +175,15 @@ export class PlayerRound {
       units,
       bonds: bondSnapshot(reached ? this.bondsView() : this.bonds),
       bandId: this.bandId,
+      // 危机合约 (shared/contractEffects.js): this player's own share of the room's modifiers —
+      // `contractOpStatMul` (the operator stat multipliers: sim players.js `_makeAlly` reads it off the player input,
+      // which is why it rides here and not on a unit), `contractSupports` (the support protocols a 支援 contract
+      // grants: sim contractSupport.js) and `contractRedeployMul` (units.js). Each key is omitted while neutral, so a
+      // match without contracts sends exactly the input it always sent.
+      ...(this.m?.fx && (this.m.fx.opStatMul.atk !== 1 || this.m.fx.opStatMul.def !== 1 || this.m.fx.opStatMul.hp !== 1)
+        ? { contractOpStatMul: this.m.fx.opStatMul } : {}),
+      ...(this.m?.fx?.supportProtocols?.length ? { contractSupports: this.m.fx.supportProtocols } : {}),
+      ...(this.m?.fx?.opRedeployMul != null && this.m.fx.opRedeployMul !== 1 ? { contractRedeployMul: this.m.fx.opRedeployMul } : {}),
       playerEffects: this.effects.filter((e) => e.battle !== false).map((e) => ({
         id: e.id, key: e.key ?? null, source: e.iconKind ?? null, params: e.params ?? null, counter: e.counter ?? null, data: e.data ?? null,
       })),

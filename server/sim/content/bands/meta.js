@@ -39,6 +39,9 @@ import { burstLimit } from '../../../../shared/plugins/steps.js';
 import { buffsOf, num, bandRecord, bandEffectId, gameData } from '../support/index.js';
 import { metaBonds } from '../support/meta.js';
 import * as garrisons from '../garrisons.js';
+import { SHU_BAND_KEYS } from './mod-shu.js';
+import {OWNER_STRATEGY_KEYS} from './owner-strategies.js';
+import {boostedStrategy} from '../../../../shared/strategyBoost.js';
 
 const int = (v, d = 0) => Math.trunc(num(v, d));
 // [ASSUMED] DESIGN §32.5: bb.count grant and slot loops share the official `count` cap. Read at call time.
@@ -93,7 +96,9 @@ function rollBond(ctx, bond, { anyTier = false } = {}) {
 // ---------------------------------------------------------------------------------------------------------------
 // buff key → (params[], bandId) → hooks
 
-const K = {};
+const K = { ...SHU_BAND_KEYS, ...OWNER_STRATEGY_KEYS };
+
+K.band_credit_line = () => ({});
 
 K.prep_finish_char_bond_add_layer = (ps) => ({
   onPrepEnd(ctx) {
@@ -116,7 +121,7 @@ K.prep_finish_char_bond_add_layer = (ps) => ({
 K.band_first_self_refresh_present_char = (ps) => ({
   onRefresh(ctx) {
     const p = ps[0];
-    if ((ctx.roundStats().refreshes || 0) > 2) return;
+    if ((ctx.roundStats().refreshes || 0) > (p.refresh_limit||2)) return;
     const need = timesOf(p.count, 1);
     const idx = chessSlots(ctx);
     const slots = ctx.shopSlots();
@@ -223,6 +228,9 @@ K.up_shop_next_refresh_must_present_bond_char = (ps) => ({
       if (!id) break;
       ctx.setShopSlot(i, { kind: 'chess', id });
     }
+    if(ps[0].discount>0)for(const i of chessSlots(ctx)){
+      const slot=ctx.shopSlots()[i];if(hasBond(ctx,slot.id,bond))ctx.setShopSlot(i,{kind:'chess',id:slot.id,frozen:slot.frozen,price:Math.max(0,ctx.gd.chessPrice(slot.id)-ps[0].discount)});
+    }
   },
 });
 
@@ -256,8 +264,9 @@ K.band_cost_coin_reach_cnt_gain_chess_from_pool = (ps) => ({
     if (ctx.counter('band:paganini:done') > 0) return;
     const spent = ctx.incCounter('band:paganini:spent', Math.max(0, int(ev.amount, 0)));
     if (spent < int(p.coin_cnt, 0)) return;
-    const r = ctx.rollPool(p.pool);
-    if (r && grant(ctx, r.id, { source: 'band' })) ctx.setCounter('band:paganini:done', 1);
+    const id=p.min_tier?ctx.rollChess({bond:'lateranoShip',filter:id=>ctx.gd.tierOf(id)>=p.min_tier}):null;
+    const r=p.min_tier?(id?{id,kind:'chess'}:null):ctx.rollPool(p.pool);
+    if (r && (p.min_tier?ctx.grantChess(r.id,{source:'band',golden:true}):grant(ctx, r.id, { source: 'band' }))) ctx.setCounter('band:paganini:done', 1);
   },
 });
 
@@ -341,7 +350,8 @@ K.round_start_gain_char_chess_in_shop_every_n_round = (ps) => ({
     const p = ps[0];
     const n = int(p.round, 0);
     if (n <= 0 || ctx.round % n !== 0) return;
-    for (let k = 0; k < timesOf(p.count, 1); k++) {
+    const bonus=int(p.bonus_round,0)>0&&ctx.round%int(p.bonus_round)===0?int(p.bonus_count,0):0;
+    for (let k = 0; k < timesOf(int(p.count,1)+bonus, 1); k++) {
       const idx = chessSlots(ctx);
       if (!idx.length) return;
       const i = ctx.rng.pick(idx);
@@ -416,8 +426,8 @@ const DUCK_KINDS = new Set(['normal', 'boss', 'hidden']);
 /** Boss-field column between the left ('L') and the right ('R') player's half (the goals are at cols 2–3 / 17). */
 const BOSS_MID_COL = (GEO.BOSS_RECT.c0 + GEO.BOSS_RECT.c1) / 2;
 
-function duckParams(bandId = DUCK_BAND) {
-  for (const b of buffsOf(bandRecord(bandId))) if (b.key === 'round_start_all_player_change_enemy_2') return b.p;
+function duckParams(bandId = DUCK_BAND, record = bandRecord(bandId)) {
+  for (const b of buffsOf(record)) if (b.key === 'round_start_all_player_change_enemy_2') return b.p;
   return null;
 }
 
@@ -496,8 +506,8 @@ const duckGlobal = {
     if (!ev || !DUCK_KINDS.has(ev.kind) || !Array.isArray(ev.spawns)) return;
     const holder = [ctx, ...ctx.teammates()].find(t => (t.gd.band(t.bandId())?.effectRef ?? t.bandId()) === DUCK_BAND);
     if (!holder) return;
-    const p = duckParams(holder.bandId());
-    if (!p || ctx.round < int(p.round, 1)) return;
+    const p = duckParams(holder.bandId(),holder.gd.band(holder.bandId()));
+    if (!p || ctx.round < int(ctx.playerId!==holder.playerId?p.teammate_round??p.round:p.round, 1)) return;
     duckReplace(ctx, ev.spawns, p, ctx.playerId, { routes: ev.routes, side: ev.side });
   },
 };
@@ -518,9 +528,9 @@ function merge(parts) {
 }
 
 /** Hooks of one band (null when it has no prep effect). */
-export function bandMetaHandler(bandId) {
+export function bandMetaHandler(bandId, record=bandRecord(bandId)) {
   const groups = new Map();
-  for (const b of buffsOf(bandRecord(bandId))) {
+  for (const b of buffsOf(record)) {
     if (!b.key || !K[b.key]) continue;
     if (!groups.has(b.key)) groups.set(b.key, []);
     groups.get(b.key).push(b.p);
@@ -531,8 +541,9 @@ export function bandMetaHandler(bandId) {
 
 export function registerMeta(registry) {
   for (const id of Object.keys(gameData().bands || {})) {
-    const h = bandMetaHandler(id);
-    if (h) registry.band(id, h);
+    const base = bandMetaHandler(id),strong=bandMetaHandler(id,boostedStrategy(bandRecord(id),true));
+    const h={};for(const name of new Set([...Object.keys(base||{}),...Object.keys(strong||{})]))h[name]=(ctx,ev)=>(ctx.gd.strategyBoost?strong:base)?.[name]?.(ctx,ev);
+    if (base||strong) registry.band(id, h);
   }
   registry.global('bands_ducklord', duckGlobal);
 }

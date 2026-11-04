@@ -6,7 +6,7 @@
 // the player state).
 
 import { hasTraitFor } from '../operatorTraits.js';
-import { pieceDir, parseDir, mergeTile } from '../board.js';
+import { pieceDir, parseDir, mergeTile, rectOfMap } from '../board.js';
 import { MAX_OFFER_SLOTS } from './common.js';
 import { onMerge } from '../botEmotes.js';
 
@@ -106,7 +106,8 @@ export class PlayerAcquire {
     for (const l of consumed) if (l.area !== 'new') l.piece.mergedInto = elite.uid;
     const deployed = consumed.filter((l) => l.key && !this.board.has(l.key)).map((l) => ({ key: l.key, dir: pieceDir(l.piece) }));
     const toTile = (t) => { elite.dir = parseDir(t.dir) || 'RIGHT'; this.board.set(t.key, elite); return 'board'; };
-    const tile = mergeTile(deployed, (r, c) => this._legal(elite, r, c));
+    // the copies' tiles are board tiles of this player's deploy field (a rogue stage's own frame lies off the window)
+    const tile = mergeTile(deployed, (r, c) => this._legal(elite, r, c), rectOfMap(this.deployMap()));
     const where = tile ? toTile(tile) : this.stow(elite, { allowTemp: true });
     for (const it of items) this.stow(it, { allowTemp: true });
     // the returned equipment follows the auto-merge rule like any other gain ("已拥有2件同一初始装备时…自动合并")
@@ -121,6 +122,11 @@ export class PlayerAcquire {
     const shown = rec ? this.fieldRecord(rec) || rec : null;
     this.m.tickerFor('GOLDEN_CHAR', [this.name, shown ? shown.name : goldenId], { playerId: this.playerId });
     this.m.dispatch(this, 'onMerge', { kind: 'chess', piece: elite, baseId, consumed: consumed.map((l) => l.piece.uid), area: where });
+    // 肉鸽 rule 藏品 eliteAtkPerMerge「4 阶以上干员合成成精锐」计数（每 4 层封顶，见 relicEliteRules）
+    try {
+      const tier = this.gd && typeof this.gd.tierOf === 'function' ? this.gd.tierOf(elite.id) : 0;
+      if (Number(tier) >= 4) this.relicEliteMerges = (Number(this.relicEliteMerges) || 0) + 1;
+    } catch { /* 取不到阶数就不计 */ }
     onMerge(this.m, this, { kind: 'chess' }); // AI bot says "害怕" on its 3rd chess merge of a round (enabled by default; SP_BOT_EMOTES=0 silences it)
     return elite;
   }

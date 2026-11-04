@@ -444,53 +444,6 @@ function normCpType(t) {
   return 'MOVE';
 }
 
-/**
- * Convert a wave template (research roundLevels entry or data/waves.json entry) into `{ routes, spawns }`.
- * Research actions: `{ key, n, pre, int, route }` inside waves[].fragments[].actions (times are cumulative:
- * wave.preDelay + fragment.preDelay + action.pre).
- */
-export function spawnsFromTemplate(tpl, { mods = null, tag = undefined } = {}) {
-  if (!tpl) return { routes: [], spawns: [] };
-  const routes = (tpl.routes ?? []).map(normalizeRoute);
-  const spawns = [];
-  if (Array.isArray(tpl.spawns)) {
-    for (const s of tpl.spawns) {
-      if (s.action && String(s.action).toUpperCase() !== 'SPAWN') continue; // non-spawn actions are content's job
-      const key = s.enemyKey ?? s.key;
-      if (!key) continue;
-      const sp = {
-        time: num(s.time ?? s.t, 0), enemyKey: key, routeIndex: num(s.routeIndex ?? s.route, 0),
-        count: Math.max(1, num(s.count ?? s.n, 1)), interval: num(s.interval ?? s.int, 0),
-        mods: s.mods ?? mods ?? undefined, tag: s.tag ?? tag, bounty: s.bounty, sourcePlayerId: s.sourcePlayerId,
-      };
-      if (s.unharmful || sp.tag === 'part') sp.countInTotal = false;
-      if (s.hidden) sp.hidden = true;
-      if (s.group != null) sp.group = s.group;
-      spawns.push(sp);
-    }
-  } else {
-    let waveT = 0;
-    for (const w of tpl.waves ?? []) {
-      waveT += num(w.preDelay, 0);
-      let fragT = waveT;
-      let fragEnd = fragT;
-      for (const f of w.fragments ?? []) {
-        fragT += num(f.preDelay, 0);
-        for (const a of f.actions ?? []) {
-          const key = a.key ?? a.enemyKey;
-          if (!key || !String(key).startsWith('enemy_')) continue;
-          const n = Math.max(1, num(a.n ?? a.count, 1));
-          const t0 = fragT + num(a.pre ?? a.preDelay, 0);
-          const iv = num(a.int ?? a.interval, 0);
-          spawns.push({ time: t0, enemyKey: key, routeIndex: num(a.route ?? a.routeIndex, 0), count: n, interval: iv, mods: mods ?? undefined, tag });
-          fragEnd = Math.max(fragEnd, t0 + iv * (n - 1));
-        }
-      }
-      waveT = Math.max(waveT, fragEnd) + num(w.postDelay, 0);
-    }
-  }
-  return { routes, spawns, maxPlayTime: tpl.maxPlayTime ?? tpl.timeLimit ?? null, overrides: tpl.overrides ?? null, extraRoutes: (tpl.extraRoutes ?? []).map(normalizeRoute) };
-}
 
 // ---------------------------------------------------------------------------------------------------------------
 // data sources
@@ -583,22 +536,29 @@ export class DataSource {
   rawToken(id) { return this.raw.tokens[id] ?? this.fallback?.rawToken(id) ?? this.rawBackups()?.tokens?.[id] ?? null; }
   rawStage(id) { return this.raw.stages[id] ?? this.fallback?.rawStage(id) ?? null; }
   rawWave(id) { return this.raw.waves[id] ?? this.fallback?.rawWave(id) ?? null; }
+  /** A data/effects.json record by effectId (练度 的 `char_attribute_mul` 来源), or null. */
+  rawEffect(id) { return this.raw.effects[id] ?? this.fallback?.rawEffect(id) ?? null; }
   /** data/backups.json (`{ units, diy }`) of this source or its fallback, or null. */
   rawBackups() { return this.raw.backups ?? (typeof this.fallback?.rawBackups === 'function' ? this.fallback.rawBackups() : null); }
   /** A data/effects.json record of this source, its fallback, or the default game data (Node / the injected data). */
-  rawEffect(id) {
-    const own = this.raw.effects && Object.prototype.hasOwnProperty.call(this.raw.effects, id) ? this.raw.effects[id] : null;
-    if (own) return own;
-    if (typeof this.fallback?.rawEffect === 'function') return this.fallback.rawEffect(id);
-    const fx = generatedCache && generatedCache.effects;
-    return fx && Object.prototype.hasOwnProperty.call(fx, id) ? fx[id] : null;
-  }
+  
   /**
    * The 练度 (自持有) multipliers of tier `cultivate` (0–3): ATK / DEF / max HP from the effects.json CHAR_MAP record's
    * char_attribute_mul (shared/potential.js cultivateMul), or null.
    * @param {number} cultivate
    */
   cultivateMul(cultivate) { return cultivateMul((id) => this.rawEffect(id), cultivate); }
+
+  /**
+   * The 练度 (自持有) multipliers of tier `cultivate` (0–3): ATK / DEF / max HP from the effects.json CHAR_MAP record's
+   * `char_attribute_mul` (shared/potential.js cultivateMul), or null for an unknown tier / absent data.
+   *
+   * ⚠ null 表示"不改任何属性"。调用方(battle/players.js)只在拿到非 null 时才装 `u.cultMul`,所以数据缺失时
+   * 行为与改动前完全一致 —— 这一点由本文件顶部的 effects 缺省值 `{}` 保证。
+   * @param {number} cultivate
+   * @returns {{ atk: number, def: number, hp: number } | null}
+   */
+  
 
   /**
    * Chess def for the default loadout, or for `loadout` `{ skillIndex, moduleId }` (DESIGN §16; resolved with
@@ -687,7 +647,8 @@ export class DataSource {
   getEnemy(key) {
     if (this._enemy.has(key)) return this._enemy.get(key);
     const r = this.rawEnemy(key);
-    const k = String(key).startsWith('enemy_') ? key : 'enemy_' + key;
+    // Registered native traps/scene actors already have canonical public IDs used by snapshots and views.
+    const k = r?.nativeBountySummonV4 && typeof r.key==='string' ? r.key : String(key).startsWith('enemy_') ? key : 'enemy_' + key;
     const d = r ? freezeDef(normalizeEnemy(k, r)) : null;
     this._enemy.set(key, d);
     return d;
@@ -894,4 +855,52 @@ export function withUnitLoadouts(ds, players) {
 /** Whether `ds` is a per-battle loadout view (withUnitLoadouts). */
 export function isLoadoutView(ds) {
   return !!ds && typeof ds === 'object' && Object.prototype.hasOwnProperty.call(ds, 'loadoutConflicts');
+}
+
+/**
+ * Convert a wave template (research roundLevels entry or data/waves.json entry) into `{ routes, spawns }`.
+ * Research actions: `{ key, n, pre, int, route }` inside waves[].fragments[].actions (times are cumulative:
+ * wave.preDelay + fragment.preDelay + action.pre).
+ */
+export function spawnsFromTemplate(tpl, { mods = null, tag = undefined } = {}) {
+  if (!tpl) return { routes: [], spawns: [] };
+  const routes = (tpl.routes ?? []).map(normalizeRoute);
+  const spawns = [];
+  if (Array.isArray(tpl.spawns)) {
+    for (const s of tpl.spawns) {
+      if (s.action && String(s.action).toUpperCase() !== 'SPAWN') continue; // non-spawn actions are content's job
+      const key = s.enemyKey ?? s.key;
+      if (!key) continue;
+      const sp = {
+        time: num(s.time ?? s.t, 0), enemyKey: key, routeIndex: num(s.routeIndex ?? s.route, 0),
+        count: Math.max(1, num(s.count ?? s.n, 1)), interval: num(s.interval ?? s.int, 0),
+        mods: s.mods ?? mods ?? undefined, tag: s.tag ?? tag, bounty: s.bounty, sourcePlayerId: s.sourcePlayerId,
+      };
+      if (s.unharmful || sp.tag === 'part') sp.countInTotal = false;
+      if (s.hidden) sp.hidden = true;
+      if (s.group != null) sp.group = s.group;
+      spawns.push(sp);
+    }
+  } else {
+    let waveT = 0;
+    for (const w of tpl.waves ?? []) {
+      waveT += num(w.preDelay, 0);
+      let fragT = waveT;
+      let fragEnd = fragT;
+      for (const f of w.fragments ?? []) {
+        fragT += num(f.preDelay, 0);
+        for (const a of f.actions ?? []) {
+          const key = a.key ?? a.enemyKey;
+          if (!key || !String(key).startsWith('enemy_')) continue;
+          const n = Math.max(1, num(a.n ?? a.count, 1));
+          const t0 = fragT + num(a.pre ?? a.preDelay, 0);
+          const iv = num(a.int ?? a.interval, 0);
+          spawns.push({ time: t0, enemyKey: key, routeIndex: num(a.route ?? a.routeIndex, 0), count: n, interval: iv, mods: mods ?? undefined, tag });
+          fragEnd = Math.max(fragEnd, t0 + iv * (n - 1));
+        }
+      }
+      waveT = Math.max(waveT, fragEnd) + num(w.postDelay, 0);
+    }
+  }
+  return { routes, spawns, maxPlayTime: tpl.maxPlayTime ?? tpl.timeLimit ?? null, overrides: tpl.overrides ?? null, extraRoutes: (tpl.extraRoutes ?? []).map(normalizeRoute) };
 }

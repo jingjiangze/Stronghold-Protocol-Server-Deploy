@@ -64,10 +64,11 @@
 //   operation (no automatic stop).
 
 import { num, talentBb, moduleBb, traitBb, skillRec, batMod, up, toggleBuff } from '../shared/tier1.js';
+import { hypot } from '../../../detmath.js';
 import { canTargetEnemy, sortEnemyTargets } from '../../../targeting.js';
 import { hasHp } from '../../../damage.js';
 import { COLS } from '../../../constants.js';
-import { hypot } from '../../../detmath.js';
+
 
 const S1 = 'skchr_ebnhlz_1';
 const S2 = 'skchr_ebnhlz_2';

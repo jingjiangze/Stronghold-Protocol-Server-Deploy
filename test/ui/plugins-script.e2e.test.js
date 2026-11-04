@@ -3,7 +3,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {Client,hasChrome,sleep} from '../e2e/client.mjs';
 import {scriptFixture} from '../helpers/scriptFixtures.js';
-import {startServer} from '../../server/index.js';
+import {startServer} from '../../server/boot-main.js';
 const enabled=process.env.SP_E2E==='1' && hasChrome();
 test('two pages consent separately, refusal gates start, accepted script battles verify', {skip:!enabled,timeout:300000},async t=>{
  const f=scriptFixture(t);f.put('training',`export default sp => sp.content.register({install(b){b.on('battleStart',()=>{for(const u of b.allyUnits)b.addBuff(u,{key:'training',mods:{atkFlat:2}});});}});`);
@@ -18,9 +18,8 @@ test('two pages consent separately, refusal gates start, accepted script battles
  const P=(await import('puppeteer-core')).default;
  const host=new Client(P,srv.url,'host',{prefix:'plugins-script',w:1600,h:900}), guest=new Client(P,srv.url,'guest',{prefix:'plugins-script',w:1600,h:900});
  t.after(async()=>{await host.close();await guest.close();});
- await host.open();await host.enter('凯尔希');await host.click('.mode-card','同盟模拟');await host.click('.diff-card','标准模拟');await host.click('.create-box button','创建同盟');
- const code=(await host.waitFor(s=>!!s.room?.code,'room created')).room.code;
- await guest.open();await guest.enter('阿米娅');await guest.click('.join-row input');await guest.page.keyboard.type(code);await guest.click('.join-row button','加入同盟');await guest.page.waitForSelector('.room-screen');
+ await host.open();await host.enter('凯尔希');const {code}=await host.createCoop();
+ await guest.open();await guest.enter('阿米娅');await guest.click('.mode-card','同盟模拟');await guest.click('.join-row input');await guest.page.keyboard.type(code);await guest.click('.join-row button','加入同盟');await guest.page.waitForSelector('.room-screen');
  await host.page.evaluate(()=>globalThis.__SP__.net.request('room.setPlugins',{plugins:[{id:'training'},{id:'page-code'}]}));
  for(const c of [host,guest]){await c.page.waitForFunction(()=>document.querySelector('[role="dialog"]')?.textContent.includes('它可以完全控制你的游戏页面'));assert.match(await c.page.$eval('[role="dialog"]',e=>e.textContent),/training/);}
  await guest.click('.modal__actions button','拒绝');

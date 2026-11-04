@@ -1,6 +1,9 @@
 // server/mods/page.js — the /mod page. One self-contained HTML document (no build step, no external assets, a strict
 // CSP-friendly inline script): upload a zip, or let the server fetch one from an https address, then show what the
 // import wrote. Reads need no key; both writes send the owner's key (plugins/.studio-key) in X-SP-Mod.
+//
+// (i18n-ignore-file: the page is bilingual by design, 中文 · English — the same rule server/http/common.js carries,
+// docs/I18N.md.)
 
 /**
  * @param {{ inbox: string, keyHint: string }} opts
@@ -41,8 +44,9 @@ export function modPage({ inbox, keyHint }) {
 <body>
 <main>
   <h1>模组管理 · Mods</h1>
-  <p class="sub">只在运行服务器的这台机器或局域网可用。导入只**安装**，不会自动在任何房间启用 —— 房间仍需自己选中。
-  · Local / LAN only. An import installs; a room still has to switch it on.</p>
+  <p class="sub">只在运行服务器的这台机器或局域网可用。导入只**安装**；用「已安装」里的开关把它加进新房间的默认插件集
+  （<code>plugins/config.json</code> 的 <code>default</code>）。已开的房间仍按自己的选择。
+  · Local / LAN only. An import installs; the switch in "Installed" puts it in the default set a new room starts with.</p>
 
   <section>
     <h2>钥匙 · Key</h2>
@@ -83,8 +87,7 @@ export function modPage({ inbox, keyHint }) {
       <span class="dim">收件目录 · inbox: <code>${esc(inbox)}</code>（把 zip 丢进去即安装 · drop a zip in to install）</span>
     </div>
     <div class="row" style="margin-bottom:10px"><span id="platform" class="dim"></span></div>
-    <table><thead><tr><th>id</th><th>名称</th><th>版本</th><th>类别</th><th>状态</th><th>房间默认</th></tr></thead><tbody id="rows"></tbody></table>
-    <p class="dim">「房间默认」= 新建房间开局带上的插件（plugins/config.json 的 default）。改完对**新房间**生效，已开房间保持原集合。</p>
+    <table><thead><tr><th>id</th><th>名称</th><th>版本</th><th>类别</th><th>状态</th><th>启用 · on</th></tr></thead><tbody id="rows"></tbody></table>
   </section>
 
   <section>
@@ -92,88 +95,7 @@ export function modPage({ inbox, keyHint }) {
     <pre id="out" class="dim">（还没有操作 · nothing yet）</pre>
   </section>
 </main>
-<script>
-(() => {
-  const $ = (id) => document.getElementById(id);
-  const out = $('out');
-  const show = (v) => { out.textContent = typeof v === 'string' ? v : JSON.stringify(v, null, 2); out.className = ''; };
-  const key = () => $('key').value.trim();
-  $('key').value = localStorage.getItem('sp-mod-key') || '';
-  $('saveKey').onclick = () => { localStorage.setItem('sp-mod-key', key()); show('已记住钥匙 · key saved'); };
-  const busy = (b) => { for (const id of ['upload', 'fetch', 'reload']) $(id).disabled = b; };
-
-  async function status() {
-    const r = await fetch('/mod/status.json', { cache: 'no-store' });
-    const j = await r.json();
-    const pf = j.platform || { enabled: false };
-    $('platform').textContent = pf.enabled
-      ? '握手平台 · platform: ' + pf.mode + ' · ' + (pf.rooms || 0) + ' 个邀请链接' + (pf.lastError ? ' · 最近错误 ' + pf.lastError : '')
-      : '握手平台 · platform: 未启用';
-    const rows = (j.plugins || []).map((p) => {
-      const state = p.status === 'loaded' ? '<span class="ok">loaded</span>'
-        : p.status === 'disabled' ? '<span class="bad">disabled</span>'
-        : '<span class="dim">' + (p.status || 'skipped') + '</span>';
-      const toggle = p.required
-        ? '<span class="dim">必需</span>'
-        : '<button class="alt" data-toggle="' + p.id + '" data-on="' + (p.enabled ? '0' : '1') + '">' + (p.enabled ? '停用' : '启用') + '</button>';
-      return '<tr><td><code>' + p.id + '</code></td><td>' + p.name + '</td><td>' + p.version + '</td><td>' + (p.class || '') + '</td><td>' + state + '</td><td>' + toggle + '</td></tr>';
-    });
-    $('rows').innerHTML = rows.join('') || '<tr><td colspan="6" class="dim">（没有插件 · none）</td></tr>';
-    return j;
-  }
-
-  $('reload').onclick = async () => { try { const j = await status(); show({ installed: (j.plugins || []).length, inbox: j.inbox }); } catch (e) { show(String(e)); } };
-
-  // 启用 / 停用（房间开局集合）。写操作同样要钥匙。
-  $('rows').onclick = async (e) => {
-    const btn = e.target.closest('[data-toggle]');
-    if (!btn) return;
-    if (!key()) return show('先填钥匙 · enter the key first');
-    btn.disabled = true;
-    try {
-      const r = await fetch('/mod/enable', {
-        method: 'POST', headers: { 'X-SP-Mod': key(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: btn.dataset.toggle, on: btn.dataset.on === '1' }),
-      });
-      const j = await r.json();
-      show(j);
-      await status();
-    } catch (err) { show(String(err)); } finally { btn.disabled = false; }
-  };
-
-  $('upload').onclick = async () => {
-    const f = $('file').files[0];
-    if (!f) return show('先选一个 zip · pick a zip first');
-    if (!key()) return show('先填钥匙 · enter the key first');
-    busy(true);
-    try {
-      const r = await fetch('/mod/upload' + ($('force').checked ? '?force=1' : ''), {
-        method: 'POST', headers: { 'X-SP-Mod': key(), 'Content-Type': 'application/zip' }, body: f,
-      });
-      show(await r.json());
-      await status();
-    } catch (e) { show(String(e)); } finally { busy(false); }
-  };
-
-  $('fetch').onclick = async () => {
-    const url = $('url').value.trim();
-    if (!url) return show('先填 URL · enter a URL');
-    if (!key()) return show('先填钥匙 · enter the key first');
-    busy(true);
-    try {
-      const body = { url };
-      const sha = $('sha').value.trim();
-      if (sha) body.sha256 = sha;
-      if ($('force').checked) body.force = true;
-      const r = await fetch('/mod/fetch', { method: 'POST', headers: { 'X-SP-Mod': key(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      show(await r.json());
-      await status();
-    } catch (e) { show(String(e)); } finally { busy(false); }
-  };
-
-  status().catch((e) => { $('rows').innerHTML = '<tr><td colspan="5" class="bad">' + String(e) + '</td></tr>'; });
-})();
-</script>
+<script src="/mod/page.js"></script>
 </body>
 </html>`;
 }

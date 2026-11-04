@@ -4,10 +4,7 @@
 import { COLS } from '../../../constants.js';
 import { frontOf } from '../../../dir.js';
 import { isHpLoss } from '../../../damage.js';
-import {
-  RING1, num, on, inRange, talent, traitBb, skillGrid, mods, dist, isAbyssal, isOp, selectedId, lazySkills, instantKind,
-  permBuff, enemiesInGrid,
-} from '../shared/tier5.js';
+import { RING1, num, on, inRange, talent, traitBb, skillGrid, mods, dist, isAbyssal, isOp, selectedId, lazySkills, instantKind, permBuff, enemiesInGrid } from '../shared/tier5.js';
 
 export default {
   // ---------------------------------------------------------------------------------------------------------------
@@ -95,10 +92,9 @@ export default {
           if (stop === 0 || !unit.alive) return;
           // PRTS 备注: landing tile > the tile one beyond it > his own tile (a deployable, free, unreserved melee tile).
           // "可部署" is a tile his player may deploy on: his own board (Battle.onOwnBoard) — never the other half of a 联防 or
-          // boss field nor a boss field's hand / 临时整备区 rows; a teammate's half stays closed to him even where the 突袭
-          // landing may take it (Battle.onFieldBoard, DESIGN §26.1). Community report of 2026-10-06 (item 27) 「乌尔比安使用3技能会在
-          // 联防阶段跳到红门后」: in a one-helper 联防 (escaped_single's enemies come out of the middle gate at col 10) an anchor
-          // that met no enemy flew on to the right half, where no enemy ever walks, and he moved there for the whole skill
+          // boss field nor a boss field's hand / 临时整备区 rows. Community report of 2026-10-06 (item 27) 「乌尔比安使用3技能会在
+          // 联防阶段跳到红门后」: on the one-helper 联防 map (escaped_single, enemies from the middle gate at col 10) an anchor that
+          // met no enemy flew on to the right half, where no enemy ever walks, and he moved there for the whole skill
           const ok = ([r, c]) => (r !== unit.tileR || c !== unit.tileC) && battle.grid.inRect(r, c) && battle.onOwnBoard(unit.player, r, c) && battle.grid.canStand(r, c) && !battle.grid.isObstacle(r, c) && !battle.isReservedTile(r, c);
           const dest = [[sr, sc], frontOf(unit.tileR, unit.tileC, unit.dir, stop + 1)].find(ok);
           if (dest == null) return;
@@ -143,10 +139,14 @@ export default {
         } },
         { install(battle, unit) { // 血脉的哺养
           battle.on('kill', (c) => {
-            // CRU-Y stages 2/3: kills credited to any 深海猎人 count while Ulpianus is on the field.
+            /*
+             * 乌尔比安 模组「前路」(CRU-Y 2/3 阶,0.2.3 上游 2e12287):
+             * 层数不再只认**他自己**的击杀 —— 只要他在场,任何**深海猎人**的击杀都算。
+             */
             const hunterKill = num(t1.add_block_cnt_stack_cnt) > 0 && isOp(c.killer) && isAbyssal(c.killer);
             if ((c.killer !== unit && !hunterKill) || c.victim.side !== 'enemy' || !on(unit)) return;
             battle.addBuff(unit, { key: 'ulpia:blood', refresh: 'stack', maxStacks: Math.max(1, num(t1.max_stack_cnt, 9)), mods: mods({ hpFlat: num(t1.max_hp), atkFlat: num(t1.atk) }) });
+            /* 层数到阈值 → 额外阻挡数(模组给的) */
             const threshold = num(t1.add_block_cnt_stack_cnt);
             if (threshold > 0 && unit.findBuff('ulpia:blood')?.stacks >= threshold) {
               battle.addBuff(unit, { key: 'ulpia:bloodBlock', mods: { blockCnt: num(t1.block_cnt) }, tags: ['talent'] });
@@ -160,7 +160,7 @@ export default {
         } },
       ],
       install(battle, unit) {
-        // CRU-Y: all his damage against a blocked enemy is scaled, including anchor hits.
+        /* 乌尔比安 模组「前路」(CRU-Y):对被自己阻挡的敌人的**全部**伤害都乘一个系数,锚击也算。 */
         const blockedScale = num(tb.damage_scale, 1);
         if (blockedScale !== 1) battle.on('hit', (c) => {
           if (c.source === unit && c.target?.side === 'enemy' && c.target.blockedBy) c.dmg.mul *= blockedScale;

@@ -26,11 +26,13 @@ export function registerSupportMeta(registry) {
       const hand = ctx.hand();
       const rs = ctx.roundStats();
       const mates = ctx.teammates();
-      const matchBands = [ctx.bandId(), ...mates.map(t => t.bandId())].filter(Boolean);
+      const medicGranted = !!ctx.teamMedicGranted?.();
+      const matchBands = [ctx.bandId(), ...mates.map(t => t.bandId())].filter(id => id && (id !== 'band_amedic' || medicGranted));
       // [ASSUMED] 外勤医疗 is a team grant for this match, not an aura revoked when its holder is eliminated.
       // Other team strategies and the teammate contexts still require a living player.
       if (ctx.teamMedicGranted?.() && !matchBands.includes('band_amedic')) matchBands.push('band_amedic');
       ev.input.contentInfo = {
+        strategyBoost: !!ctx.gd.strategyBoost,
         round: ctx.round,
         kind: ev.kind ?? null,
         shopLevel: ctx.shopLevel(),
@@ -42,7 +44,20 @@ export function registerSupportMeta(registry) {
           gainedChess: rs.gainedChess | 0, arts: rs.arts | 0,
         },
         matchBands,
+        mapMedicGranted: medicGranted,
         teammates: mates.map((t) => ({ playerId: t.playerId, bandId: t.bandId() })),
+        /*
+         * The SHOP POOL each alive player draws from (server/match/pool.js createPoolGroups, 1-based group id).
+         *
+         * A pool group is the room's real "us" — it is what decides who shares a shop, and below
+         * GROUPED_POOL_MIN_PLAYERS it is one group for everyone, exactly as the original game behaved. Effects that
+         * reach one shop squad can key on it rather than on the teammate list,
+         * which is every other alive player in the room and therefore reaches opponents too.
+         */
+        poolIds: [
+          { playerId: ctx.playerId, poolId: ctx.poolId() },
+          ...mates.map((t) => ({ playerId: t.playerId, poolId: t.poolId() })),
+        ],
       };
     },
   });

@@ -442,7 +442,7 @@ export async function createFieldView(host, options = {}) {
   const impostors = new ImpostorAtlas(app.renderer);
   setupCleanup.push(() => impostors.destroy());
   ctx.impostors = impostors;
-  tiles.setView(bandFor('prep'), camRect(), fieldRows('prep'));
+  tiles.setView(viewBand(bandFor('prep')), camRect(), viewField(fieldRows('prep')));
   // the real board art of the local client (optional): wait briefly so the first frame already uses it; a late
   // arrival swaps the atlas in place
   const artPromise = loadBoardArt(assets).then((art) => {
@@ -459,6 +459,7 @@ export async function createFieldView(host, options = {}) {
   setupCleanup.push(() => { clearTimeout(recover.timer); disable3d(); });
   /** The stage's official scene, once loaded (the procedural board shows meanwhile and when there is none). */
   function useOfficialScene(st) {
+    // 肉鸽小图也加载官方场景，几何由 board3d/scene.js 按 rogueFrame 裁剪
     const id = st && typeof st.id === 'string' ? st.id : '';
     if (!id || !board3d) return;
     loadScenePack(assets, id).then((scene) => {
@@ -467,6 +468,9 @@ export async function createFieldView(host, options = {}) {
   }
   function enable3d(THREE, pack) {
     if (destroyed || board3d || !THREE || !pack) return false;
+    // 肉鸽官方小图有 stage.rogueFrame：3D 层只建画框那一块（rogueArea），可以和 2D 层对齐；
+    // 没有 frame 的非标准图仍是 19×21 语义（board3d/layout.js），套在小图上会错位，继续走 2D 棋盘
+    if (stageRec && !stdField() && !stageRec.rogueFrame) return false;
     recover.THREE = THREE; recover.pack = pack;
     try {
       try { if (getComputedStyle(host).position === 'static') host.style.position = 'relative'; } catch { /* ignore */ }
@@ -483,7 +487,7 @@ export async function createFieldView(host, options = {}) {
       board3d = b;
       tiles.setExternal(true);
       backdrop.visible = false;
-      b.setArea(boardArea(viewKind(camKind, camOpts)));
+      b.setArea(rogueArea() || boardArea(viewKind(camKind, camOpts)));
       if (stageRec) { b.setStage(stageRec); useOfficialScene(stageRec); }
       b.setFocus(camRect());
       b.setBattleRect(mode === 'battle' && battleMeta ? battleMeta.rect : null);
@@ -591,6 +595,13 @@ export async function createFieldView(host, options = {}) {
     return { top: h * 0.13, bottom: h * 0.12, left: Math.min(170, w * 0.09), right: w * 0.05 };
   }
 
+  // 肉鸽官方小图 (stage.rogueFrame)：官方 1280×720 战斗半场 ≈ 102.5 px/格（0.14231 × 视口高），小图按它的 0.9 倍
+  // 显示（≈92 px/格）——取景只拟合棋盘四角，再用这个专用的小 padding 把棋盘放进 HUD 之间。
+  const ROGUE_TILE_PX = 0.9 * 0.14231;
+  function roguePadding(sz) {
+    return { top: sz.height * 0.08, bottom: sz.height * 0.06, left: sz.width * 0.02, right: sz.width * 0.02 };
+  }
+
   // the HUD bands the prep cameras keep the bench / field clear of (projection.js clearHud; user playtest #5 item 9):
   // `opts.hud` = (kind, size, { shop }) => { top, bottom } | null, or a fixed object; none → the plain official framing.
   // `shop: false` asks for the folded shop's band (the camera request's `shop: false`, public issue #5)
@@ -600,7 +611,52 @@ export async function createFieldView(host, options = {}) {
     return opts.hud && typeof opts.hud === 'object' ? opts.hud : null;
   }
 
+  /**
+   * 当前场地的尺寸与「是否标准 19×21」（2026-11-03，肉鸽官方地图接入）：
+   * 肉鸽关卡是 5×12 / 7×9 这类小图，官方那套按 19×21 分半场（HAND_ROW / bossLeft / bossRight）的取景与行带都不适用，
+   * 非标准图一律：整张图就是取景 + 全部行都画 + 相机走 fitCamera。
+   */
+  function mapSize() {
+    const s = stageRec && Array.isArray(stageRec.size) ? stageRec.size : null;
+    return s && s.length >= 2 ? [Number(s[0]) || 19, Number(s[1]) || 21] : [19, 21];
+  }
+  function stdField() { const [h, w] = mapSize(); return h === 19 && w === 21 && !(stageRec && stageRec.rogueFrame); }
+  function fullBand() { return [0, mapSize()[0] - 1]; }
+  // 2026-11-03：函数声明会提升 —— 本文件 :445 在初始化期间就调用 viewBand/viewField，
+  // 原来的 const 箭头函数会 TDZ（Cannot access 'viewBand' before initialization → 引擎整体回退）。
+  function viewBand(b) { return stdField() ? b : fullBand(); }
+  function viewField(f) { return stdField() ? f : fullBand(); }
+
+  /**
+   * 肉鸽官方小图在 19×21 画框里的位置（`stage.rogueFrame` = { row, col, h, w }，clamp 到画框），非肉鸽图 null。
+   * 取景（camRect）与 3D 层的构建区域（rogueArea）都从这里来，保证两边一致。
+   */
+  function rogueFrameRect() {
+    const f = stageRec && stageRec.rogueFrame;
+    if (!f || typeof f !== 'object') return null;
+    const [h, w] = mapSize();
+    const row = Math.max(0, Math.min(h - 1, Number(f.row) || 0));
+    const col = Math.max(0, Math.min(w - 1, Number(f.col) || 0));
+    return {
+      r0: row, r1: Math.min(h - 1, row + Math.max(1, Number(f.h) || 1) - 1),
+      c0: col, c1: Math.min(w - 1, col + Math.max(1, Number(f.w) || 1) - 1),
+    };
+  }
+
+  /**
+   * 3D 层要建的棋盘块：肉鸽官方小图只建画框那一块（场景几何按小图 (0,0) 起算，scene.js 平移到画框）；
+   * 非肉鸽图返回 null，由各处的 `boardArea` / `restView` 决定。
+   */
+  function rogueArea() { const r = rogueFrameRect(); return r ? [r] : null; }
+
   function camRect() {
+    // 肉鸽官方小图嵌在 19×21 画框里：取景用 stageRec.rogueFrame（clamp 到画框），没有 frame 才退回整张 mapSize
+    if (!stdField()) {
+      const frame = rogueFrameRect();
+      if (frame) return frame;
+      const [h, w] = mapSize();
+      return { r0: 0, r1: h - 1, c0: 0, c1: w - 1 };
+    }
     const k = viewKind(camKind, camOpts);
     if (k === 'pen') return { r0: 14, r1: 18, c0: 7, c1: 13 };
     // prep lights the bench (hand row 7 / temp row 8) with the field, like the official prep view
@@ -613,16 +669,20 @@ export async function createFieldView(host, options = {}) {
   function targetCamera(kind, o) {
     const sz = size();
     const k = kind === 'hidden' ? 'boss' : (['prep', 'normal', 'unite', 'boss', 'bossPrep', 'pen'].includes(kind) ? kind : 'normal');
-    let rect = o.rect ? normRect(o.rect) : null;
-    if (k === 'prep') rect = rect ? { ...rect, r0: Math.min(rect.r0, GEO.HAND_ROW) } : null;
+    // 肉鸽官方地图嵌在 19×21 画框里：不管服务端给的 normal/boss rect，整张画框就是取景
+    const rogue = !!(stageRec && stageRec.rogueFrame);
+    let rect = rogue ? camRect() : (o.rect ? normRect(o.rect) : (stdField() ? null : camRect()));
+    if (k === 'prep' && stdField()) rect = rect ? { ...rect, r0: Math.min(rect.r0, GEO.HAND_ROW) } : null;
     // official configBlackBoard framing (render/projection.js presetCamera); the padding only matters for the
     // fitted fallback (custom rects, portrait viewports); a prep camera keeps the bench and the field clear of the HUD
     // — `shop: false` (the folded shop, public issue #5) = the official shop-collapsed camera, clear of the folded
     // shop's HUD band (re-evaluated on resize: camOpts keep the flag)
     const vk = viewKind(kind, o); // (a 'prep' camera on the boss rows = the Final Assault prep)
-    return presetCamera(k, { width: sz.width, height: sz.height, padding: o.padding || defaultPadding(k, sz) }, {
-      rect, side: o.side, half: !!o.half, shop: o.shop, fit: !!o.fit, config: stageRec?.config || null,
+    return presetCamera(k, { width: sz.width, height: sz.height, padding: o.padding || (rogue ? roguePadding(sz) : defaultPadding(k, sz)) }, {
+      rect, side: o.side, half: !!o.half, shop: o.shop, fit: !!o.fit || !stdField(), config: stageRec?.config || null,
       hud: hudBands(vk, sz, { shop: o.shop !== false }),
+      // 肉鸽官方小图：只拟合棋盘四角（不留 margin / headroom），缩放上限 = 官方半场 px/格 × 0.9
+      ...(rogue ? { boardOnly: true, targetTilePx: ROGUE_TILE_PX * sz.height } : null),
     });
   }
 
@@ -650,13 +710,15 @@ export async function createFieldView(host, options = {}) {
     else if (vk === 'bossPrep') setPrepField(bossPrepField(camOpts.side === 'R' ? 'R' : 'L'));
     const target = targetCamera(camKind, camOpts);
     const rest = restView(vk);
+    // 肉鸽官方小图：3D 层只有画框那一块可建（取景也停在画框上），寻常场地按视图决定区域
+    const area3d = rogueArea();
     const focus = camRect();
     board3d?.setFocus(focus);
     camMs = Number.isFinite(o.ms) && o.ms >= 0 ? o.ms : (vk === 'pen' || prevView === 'pen' ? PEN_CAMERA_MS : CAMERA_MS);
     if (o.instant || camMs === 0 || mode === 'idle' && !camTo) {
-      board3d?.setArea(rest.area);
+      board3d?.setArea(area3d || rest.area);
       cam = target; camFrom = camTo = null;
-      tiles.setView(rest.band, focus, rest.field);
+      tiles.setView(viewBand(rest.band), focus, viewField(rest.field));
       setPenHidden(!rest.pen);
       setLeaderHidden(!rest.leader);
       pendingView = null;
@@ -667,11 +729,11 @@ export async function createFieldView(host, options = {}) {
       // keep both fields drawn (and lit) while the camera flies between them; the pen as flightView says (a flight from
       // the prep camera into a battle drops it at once)
       const fly = flightView(prevView, vk);
-      tiles.setView(fly.band, focus, fly.field);
-      board3d?.setArea(fly.area);
+      tiles.setView(viewBand(fly.band), focus, viewField(fly.field));
+      board3d?.setArea(area3d || fly.area);
       setPenHidden(!fly.pen);
       setLeaderHidden(!fly.leader);
-      pendingView = { ...rest, focus };
+      pendingView = { ...rest, area: area3d || rest.area, focus };
     }
     return true;
   }
@@ -704,7 +766,7 @@ export async function createFieldView(host, options = {}) {
     if (k >= 1) {
       cam = camTo; camFrom = camTo = null;
       if (pendingView) {
-        tiles.setView(pendingView.band, pendingView.focus, pendingView.field);
+        tiles.setView(viewBand(pendingView.band), pendingView.focus, viewField(pendingView.field));
         board3d?.setArea(pendingView.area);
         setPenHidden(!pendingView.pen);
         setLeaderHidden(!pendingView.leader);
@@ -741,6 +803,9 @@ export async function createFieldView(host, options = {}) {
   function setStage(st) {
     if (!st || typeof st !== 'object' || !Array.isArray(st.rows)) return false;
     stageRec = st;
+    // 换到非标准尺寸、又没有官方画框（rogueFrame）的场地时，把已开的 3D 棋盘关掉，交给 2D 层画整张图；
+    // 肉鸽官方小图有画框，3D 层只建画框那一块，留着
+    if (board3d && !stdField() && !(st && st.rogueFrame)) disable3d();
     tiles.setStage(st);
     tiles.setBattleRect(mode === 'battle' && battleMeta ? battleMeta.rect : null);
     if (board3d) { board3d.setStage(st); board3d.setBattleRect(mode === 'battle' && battleMeta ? battleMeta.rect : null); useOfficialScene(st); }

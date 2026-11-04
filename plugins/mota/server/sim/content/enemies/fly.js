@@ -246,6 +246,12 @@ function kitShell() {
 // this family's part of KITS (content/enemies.js spreads the parts in this order)
 
 export const FLY_KITS = Object.freeze({
+  // Owner adaptation: one ice bomb per body, after the native opening delay; then fly onward without more bombs.
+  enemy_1070_iced:ab=>[{spawn(_b,e){e.profile.noAttack=true;}},skill(ab.sk.bomb,(b,e)=>{
+    const u=targetsNear(b,e,e.base.rangeRadius).sort((a,z)=>hypot(a.x-e.x,a.y-e.y)-hypot(z.x-e.x,z.y-e.y)||a.id-z.id)[0];if(!u)return;
+    e.mem.iceBombUsed=true;const x=u.x,y=u.y;b.fx('bombardShell',{id:e.id,src:e.id,x,y,t:.45,r:1});
+    b.after(.45,()=>{if(!e.alive)return;b.fx('explode',{x,y,r:1,kind:'iceBomb'});for(const target of areaAllies(b,e,x,y,1)){hurt(b,e,target,e.s.atk,'arts',{isSkill:true,isSplash:true});if(target.alive)b.applyStatus(target,'cold',{duration:ab.sk.bomb?.bb.freeze??10,source:e});}},{owner:e});
+  },{cd:5,icd:5,cond:(b,e)=>!e.mem.iceBombUsed&&targetsNear(b,e,e.base.rangeRadius).length>0})],
   // --- FLY 飞行 (motion is engine; abilities)
   enemy_1017_defdrn: (ab) => [enemyAura(T(ab, 'defup.range_radius') ?? 2.5, 'ab:defdrn', { defFlat: T(ab, 'defup.def') ?? 0 })],        // 御4 · DEF aura
   enemy_1355_mrfly: (ab, e) => [enemyAura(e.base.rangeRadius || 2.5, 'ab:mrfly', { resFlat: T(ab, 'magdef_add.magic_resistance') ?? 0 })], // 护障 · RES aura

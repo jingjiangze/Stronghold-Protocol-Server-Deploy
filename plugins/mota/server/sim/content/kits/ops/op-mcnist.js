@@ -56,9 +56,10 @@
 //   (atk_interval / interval), gone at 0 or when the skill ends.
 
 import { num, skillRec, batMod, up } from '../shared/tier1.js';
+import { hypot } from '../../../detmath.js';
 import { COLS } from '../../../constants.js';
 import { dirVec } from '../../../dir.js';
-import { hypot } from '../../../detmath.js';
+
 import { atPotential } from '../../../../../shared/potential.js';
 
 const S1 = 'skchr_mcnist_1';

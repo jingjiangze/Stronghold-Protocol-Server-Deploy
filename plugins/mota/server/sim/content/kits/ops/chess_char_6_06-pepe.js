@@ -1,9 +1,7 @@
 // server/sim/content/kits/ops/chess_char_6_06-pepe.js — 佩佩 (char_4058_pepe) kit, tier 6.
 // Conventions of the tier-6 kits: ../shared/tier6.js; kit contract and rules: ../README.md.
 
-import {
-  num, tbb, live, selectedSkill, batOf, skillGridOf, hasAbnormal, cleanseAbnormal, aura,
-} from '../shared/tier6.js';
+import { num, tbb, live, selectedSkill, batOf, skillGridOf, hasAbnormal, cleanseAbnormal, aura } from '../shared/tier6.js';
 
 // ------------------------------------------------------------------------------------------------------------------
 // 佩佩 chess_char_6_06 (撼地者) — S3 时光震荡; 往昔传承; 弥漫莲香; module 晴雨

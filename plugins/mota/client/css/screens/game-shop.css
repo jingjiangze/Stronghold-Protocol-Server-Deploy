@@ -430,3 +430,12 @@
 .borrow__act b { color: var(--gold); font-weight: 700; }
 .borrow__act.is-live { border-color: rgba(255, 198, 0, .7); background: rgba(255, 198, 0, .12); }
 .borrow__act:disabled { opacity: .5; cursor: default; }
+
+
+/* 协同资金条 = 商店入口（业主 2026-10-26）：外观保持资金条，只加可点感 */
+.econbar__shop { cursor: pointer; background: none; border: 0; padding: 0; font: inherit; color: inherit; }
+.econbar__shop:hover .econbar__micro { color: var(--mint-400); text-decoration: underline; }
+.econbar__shop:active { transform: translateY(1px); }
+
+/* 装备出处（业主 2026-10-27）：商店卡面注明这件装备来自哪个类目 */
+.melt__source { margin-top: .04rem; font-size: max(.13rem, 9.5px); letter-spacing: .04em; color: #7f8583; }

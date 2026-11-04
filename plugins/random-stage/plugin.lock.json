@@ -1,0 +1,21 @@
+{
+  "lock": 1,
+  "id": "random-stage",
+  "version": "0.1.0",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "host/noop.js": {
+      "sha256": "9750e84cad485f12c8c4c8a62056ad84b02a3e4c844a52aa520c1b384fce4d54",
+      "bytes": 195
+    },
+    "plugin.json": {
+      "sha256": "2991ab957b2a71f52c3af6070a068cd41286051a77c2842ccb92fd6314953960",
+      "bytes": 861
+    },
+    "server/lobby.js": {
+      "sha256": "8f6d35491d29e6f837853d64738f0978b42658d5976d53542fcbdcc693686890",
+      "bytes": 2020
+    }
+  },
+  "spine": {}
+}

@@ -18,7 +18,7 @@ describe('Forge import in the studio page', { skip: !ENABLED && 'set SP_E2E=1 (a
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-forge-e2e-'));
     const plugins = path.join(tmp, 'plugins');
     fs.mkdirSync(plugins);
-    const { startServer } = await import('../../server/index.js');
+    const { startServer } = await import('../../server/boot-main.js');
     const srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true, pluginsDir: plugins, assetIndex: false });
     const P = (await import('puppeteer-core')).default;
     const browser = await P.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox', '--no-first-run'] });
@@ -63,7 +63,7 @@ describe('Forge import in the studio page', { skip: !ENABLED && 'set SP_E2E=1 (a
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-forge-e2e-kit-'));
     const plugins = path.join(tmp, 'plugins');
     fs.mkdirSync(plugins);
-    const { startServer } = await import('../../server/index.js');
+    const { startServer } = await import('../../server/boot-main.js');
     const srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true, pluginsDir: plugins, assetIndex: false });
     const P = (await import('puppeteer-core')).default;
     const browser = await P.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox', '--no-first-run'] });
@@ -114,7 +114,7 @@ describe('Forge import in the studio page', { skip: !ENABLED && 'set SP_E2E=1 (a
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-forge-e2e-race-'));
     const plugins = path.join(tmp, 'plugins');
     fs.mkdirSync(plugins);
-    const { startServer } = await import('../../server/index.js');
+    const { startServer } = await import('../../server/boot-main.js');
     const srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true, pluginsDir: plugins, assetIndex: false });
     const P = (await import('puppeteer-core')).default;
     const browser = await P.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox', '--no-first-run'] });

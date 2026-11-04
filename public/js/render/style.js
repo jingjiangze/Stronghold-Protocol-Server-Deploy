@@ -32,12 +32,69 @@ export const GLYPH = Object.freeze({
   i: { mat: 'infection', h: null },
 });
 
-/** tileKey (when a stage uses glyphs outside the legend) → glyph. */
+/**
+ * tileKey (the stage legend's own tile id) → glyph, used by tiles.js `parseStage` and board3d/layout.js
+ * `classifyStage` to pick the material of a legend entry.
+ *
+ * Every tileKey of data/stages.json must appear here: an unmapped one falls back on the tile's height
+ * (`HIGH` → '#' forbid, else 'R' roadN), which paints lava / poison / teleport ground as a raised block or a
+ * striped road. The 2026-11-04 rogue set added 23 keys; each is mapped to the existing material whose
+ * height/buildable/passable combination matches the tile's own legend entry (data/stages.json `tiles{}`), so the
+ * renderer needs no new material.
+ *
+ * Resolution order (tiles.js / board3d/layout.js, must stay identical in the two boards):
+ *   1. `'<tileKey>:<HEIGHT>'` first — a key of the same tile can need another material per height (tile_empty /
+ *      tile_defup are LOW ground as 'r' but a HIGH RANGED-only plate as 'h'),
+ *   2. then the bare tileKey,
+ *   3. and the table wins over the legend letter itself, because the rogue set reuses the letters 'a' / 'b' / 'd' /
+ *      'g' for volcano, poison, fly-start and dugmny ground — the letter's own material would hide the tile.
+ *      `GLYPH_PINNED` lists the letters exempt from (3).
+ */
 export const TILEKEY_GLYPH = Object.freeze({
   tile_forbidden: '#', tile_road: 'r', tile_floor: 'f', tile_wall: 'h', tile_fence_bound: 'b', tile_fence: 'b',
   tile_achand: 'a', tile_start: 'S', tile_end: 'E', tile_telin: 'I', tile_telout: 'O', tile_mire: 'm',
-  tile_smog: 'g', tile_deepsea: 'd', tile_infection: 'i', tile_grass: 'r', tile_hole: '#',
+  tile_smog: 'g', tile_deepsea: 'd', tile_infection: 'i', tile_grass: 'r',
+  // 2026-11-03：官方肉鸽的坑洞是「低洼、不可站、可飞越」，此前映射到 '#'（抬升 0.3 的禁区块）画出来像一堵墙
+  tile_hole: 'd',
+  // ---- 肉鸽地形（2026-11-04 全量肉鸽图）-------------------------------------------------------------
+  // 地面路（LOW + groundPassable + buildable MELEE/ALL）：与 tile_road 同属性，用 'r'（普通低平地面），
+  // 不用 'R'（roadN 是条纹路）也不给 '#'（会抬升 0.3 并被当成禁区）
+  tile_toxicroad: 'r', tile_yinyang_road: 'r', tile_defbreak: 'r', tile_pollution_road: 'r', tile_creep: 'r',
+  tile_dygmny_1: 'r', tile_defup: 'r', tile_empty: 'r',
+  // 高度变体：同一 tileKey 的 LOW 格是地面、HIGH 格是抬升台（data: tile_empty / tile_defup 的 HIGH 是
+  // FLY_ONLY + buildable NONE/RANGED + groundPassable=false，与 tile_wall 同属性）。查找先试 `tileKey:HEIGHT`，
+  // 没有变体键再回落 tileKey，所以 LOW 仍走上面的 'r'
+  'tile_empty:HIGH': 'h', 'tile_defup:HIGH': 'h',
+  // tile_volcano：LOW / MELEE / passable ALL —— 可走可部署，所以是地面而不是 forbid；'#' 会抬升 0.3 并让它
+  // 在渲染网格里变成不可部署的禁区块（playable=false），与数据相反
+  tile_volcano: 'r',
+  // 地面但不可部署（LOW + buildable NONE + groundPassable）：与 tile_floor 同属性，用 'f'
+  tile_dygmny_2: 'f', tile_creepf: 'f', tile_healing: 'f',
+  // tile_pollution_roadf 的数据是 LOW + buildable NONE，和上一组同属性；按指定归入路面 'r'
+  tile_pollution_roadf: 'r',
+  // 腐蚀 / 剧毒地面：mire 是既有材质里唯一的「损伤性地表」（tiles.js 给它画冒泡动画），比 forbid/road 更贴
+  tile_toxic: 'm', tile_corrosion: 'm',
+  // 高台（HIGH + FLY_ONLY + buildable RANGED）：与 tile_wall 完全同属性，用 'h'
+  tile_toxicwall: 'h', tile_yinyang_wall: 'h', tile_dygmny_3: 'h', tile_pollution_wall: 'h', tile_gazebo: 'h',
+  // 传送 / 飞行起点：用 start 的材质（'S' 不抬升，飞越格没有地面单位站立，不需要 HIGH 的台面）
+  tile_flystart: 'S', tile_ftstart: 'S',
+  // tile_bigforce 按指定归入 forbid
+  tile_bigforce: '#',
 });
+
+/**
+ * Legend letters that keep their own `GLYPH` material even when the legend entry points at another tileKey.
+ *
+ * `TILEKEY_GLYPH` normally wins over the letter (a rogue stage writes volcano / poison / fly-start ground with the
+ * letters 'a' / 'b' / 'd' / 'g'), but these four have rendering meaning beyond the material — the board draws them
+ * specially, so repainting them would drop that:
+ *   X  separator wall: non-playable (playable / content = false), REST AREA / EVACUATION side panels
+ *   p  enemy preview pen: glass hatch sent to its own bucket (penGlass / `glass` in board3d)
+ *   A  temp bench slot: bench pad + railing (`padEquip`), excluded from device zones
+ *   R  hazard-striped road: the `concreteStripe` surface, not plain road
+ * Read-only by convention: nothing mutates it (`Object.freeze` does not lock a Set's contents).
+ */
+export const GLYPH_PINNED = Object.freeze(new Set(['X', 'p', 'A', 'R']));
 
 export const COLORS = Object.freeze({
   bgTop: '#0b0f0e',

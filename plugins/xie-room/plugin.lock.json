@@ -1,0 +1,21 @@
+{
+  "lock": 1,
+  "id": "xie-room",
+  "version": "0.1.0",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "host/noop.js": {
+      "sha256": "b44d0efa8f9ec2613260e00b14b467b2cb7885204e63c4cca4c65bda5c4bdc63",
+      "bytes": 69
+    },
+    "plugin.json": {
+      "sha256": "d2ad0dd246c42597186a5665630959309b402f1767cce2c230cdcd772a1917bb",
+      "bytes": 822
+    },
+    "server/xieLobby.js": {
+      "sha256": "a0b9d0152439ffbaa6c6069f26186bc5627b4fa731b9c992c2137f714b70e2c3",
+      "bytes": 1683
+    }
+  },
+  "spine": {}
+}

@@ -20,6 +20,7 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { MAX_SEATS } from '../shared/constants.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC = path.join(ROOT, 'public');
@@ -436,7 +437,16 @@ describe('net.js', () => {
     assert.ok(ws().last('ping'), 'latency probe before hello');
     net.setName('  凯尔希  ');
     const hello = ws().last('hello');
-    assert.deepEqual({ ...hello, rid: 0 }, { t: 'hello', rid: 0, name: '凯尔希', version: PROTOCOL_VERSION, token: 'tok-1' });
+    // hello names the state-delta version it understands; a server that does not know the field ignores it.
+    const { STATE_DELTA_VERSION } = await import(pathToFileURL(path.join(ROOT, 'shared/stateDelta.js')).href);
+    assert.deepEqual({ ...hello, rid: 0 }, {
+      t: 'hello',
+      rid: 0,
+      name: '凯尔希',
+      version: PROTOCOL_VERSION,
+      delta: STATE_DELTA_VERSION,
+      token: 'tok-1',
+    });
     assert.equal(net.status, 'handshaking');
     ws().recv({ t: 'welcome', rid: hello.rid, playerId: 'p_1', token: 't', name: '凯尔希', serverNow: Date.now() });
     assert.equal(net.status, 'online');
@@ -1110,14 +1120,18 @@ describe('screen helpers', () => {
         { seat: 3, playerId: 'ai_1', name: 'AI·华法琳', isBot: true, ready: true, connected: true },
       ],
     };
-    assert.equal(normalizeSeats(room).length, 4);
+    // The server allocates MAX_SEATS slots for every room and any free one takes a player (server/lobby.js:411,469), and
+    // the lobby's own co-op text advertises MAX_SEATS doctors — so a co-op room pads to MAX_SEATS, not to four.
+    assert.equal(normalizeSeats(room).length, MAX_SEATS);
     assert.equal(normalizeSeats({ mode: 'solo', seats: [room.seats[0], null, null, null] }).length, 1);
-    assert.deepEqual(normalizeSeats({ mode: 'coop', seats: 'bad' }), [null, null, null, null]);
+    assert.deepEqual(normalizeSeats({ mode: 'coop', seats: 'bad' }), new Array(MAX_SEATS).fill(null));
+    assert.deepEqual(normalizeSeats({ mode: 'solo', seatCap: 4, seats: [] }).length, 1, 'solo wins over seatCap');
+    assert.equal(normalizeSeats({ mode: 'versus', seatCap: 3, seats: [] }).length, 3, 'the room seatCap wins over MAX_SEATS');
     let f = roomFacts(room, 'h');
     assert.equal(f.isHost, true);
     assert.equal(f.canStart, false, 'guest not ready');
     assert.equal(f.humans.length, 2);
-    assert.equal(f.emptySeats, 1);
+    assert.equal(f.emptySeats, MAX_SEATS - 3);
     assert.equal(f.readyHumans, 1, 'host counts as ready (start = host ready)');
     room.seats[1].ready = true;
     f = roomFacts(room, 'h');
@@ -1146,7 +1160,7 @@ describe('screen helpers', () => {
     assert.equal(f.spectating, true);
     assert.equal(f.mine, null);
     assert.equal(f.humans.length, 1, 'never a player');
-    assert.equal(f.emptySeats, 3, 'a free player seat stays free (入座)');
+    assert.equal(f.emptySeats, MAX_SEATS - 1, 'a free player seat stays free (入座)');
     assert.deepEqual(f.spectators.map((x) => x.playerId), ['s']);
     const hf = roomFacts(room, 'h');
     assert.equal(hf.canStart, true, 'a spectator never blocks the start');
@@ -1436,4 +1450,28 @@ describe('explicit local match recovery (#431)', () => {
       local.setItem('sp.matches', bad); assert.deepEqual(a.recoverable(), []);
     }
   });
+});
+
+test('the hud slot stays above the hand, plugin frames declare a dark scheme, and the test-console command row wraps', () => {
+  const css = readFileSync(path.join(PUBLIC, 'css/components.css'), 'utf8');
+  assert.match(css, /\.ui-slot__frame \{[^}]*color-scheme: dark/);
+  assert.match(css, /\.gm__ui-slot \{[^}]*right: \.92rem; bottom: calc\(4\.76rem \+ \.12rem\)/);
+  assert.match(css, /\.gm__ui-slot \{[^}]*max-height: calc\(100% - 4\.88rem - 1\.7rem\)/);
+  assert.match(css, /\.ui-slot__tabs \{[^}]*flex-wrap: wrap/);
+  const game = readFileSync(path.join(PUBLIC, 'css/screens/game.css'), 'utf8');
+  assert.match(game, /\.testconsole__run \{ flex: 0 0 auto; \}/);
+  assert.match(game, /\.testconsole__row \.testconsole__field \{ flex: 1 1 8em; \}/);
+  const consoleSrc = readFileSync(path.join(PUBLIC, 'js/ui/testConsole.js'), 'utf8');
+  const at = consoleSrc.lastIndexOf("cmd === 'choice'");
+  const open = consoleSrc.lastIndexOf('class="testconsole__row"', at);
+  const run = consoleSrc.indexOf('testconsole__run', at);
+  const close = consoleSrc.indexOf('</div>', at);
+  assert.ok(open >= 0 && run > at && run < close, 'the 机变 fields and 执行 share one wrapping row');
+  const frame = readFileSync(path.join(PUBLIC, 'js/ui/pluginFrame.js'), 'utf8');
+  assert.match(frame, /ui-slot__tab/);
+  assert.match(frame, /chosenSlot/);
+  const skeleton = readFileSync(path.join(ROOT, 'server/plugins/forgeImport.js'), 'utf8');
+  assert.match(skeleton, /color-scheme:dark/);
+  const template = readFileSync(path.join(ROOT, 'plugins/_template/ui/ui/index.html'), 'utf8');
+  assert.match(template, /color-scheme: dark/);
 });

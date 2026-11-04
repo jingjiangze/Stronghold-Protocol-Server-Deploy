@@ -9,6 +9,7 @@ import { html, AvatarFrame, MicroLabel, Icon, Modal, Button } from './components
 import { useEffect, useState } from '../../vendor/hooks.module.js';
 import { render } from '../../vendor/preact.module.js';
 import { store } from '../store.js';
+import { NameCardLayer } from './namecards.js';
 
 /** This module keeps the account in the browser (other modules may check it to word their notes). */
 export const LOCAL_ACCOUNT = true;
@@ -34,7 +35,10 @@ globalThis.addEventListener?.('storage', (e) => { if (e.key === KEY) { profile =
 export function currentAccount() {
   const p = load();
   const name = store.get().me?.name || p.name || '博士';
-  return { id: `local-${p.tag}`, name, tag: p.tag, avatar: typeof p.avatar === 'string' ? p.avatar : null, card: null, local: true };
+  // 业主 2026-11-02：代号以 sp.tag 为准（就是 hello 里发给服务端的那个），保证 chip 与座位卡显示同一个 #代号
+  const spTag = (() => { try { const t = globalThis.localStorage?.getItem('sp.tag') || ''; return /^[0-9]{4}$/.test(t) ? t : ''; } catch { return ''; } })();
+  const tag = spTag || p.tag;
+  return { id: `local-${tag}`, name, tag, avatar: typeof p.avatar === 'string' ? p.avatar : null, card: null, local: true };
 }
 export function onAccountChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 export async function refreshAccount() { return currentAccount(); }
@@ -147,9 +151,27 @@ export function AccountMeChip({ player, onStats }) {
   const { me } = useCurrentAccount();
   useEffect(ensureStyle, []);
   const name = player?.name || me.name || '博士';
-  return html`<button type="button" class="me-chip me-chip--btn stats-entry" onClick=${() => openAccountPanel({ onStats })} title="本机账号 · 统计数据" aria-label="本机账号">
+  // 名片卡面：走 UI 包既有的 .has-nc + .nc-layer（本机卡面 id 存在 sp.cardSkin）
+  const skin = (() => { try { return globalThis.localStorage?.getItem('sp.cardSkin') || ''; } catch { return ''; } })();
+  // 服务器账号：只有存在 sp.accountToken 且 /api/account/me 认的时候才叫「账号」，否则仍是本机账号。
+  // （业主 2026-11-02：照 sp.bbsmc.cn 的两态文案 —— ACCOUNT · 账号 / LOCAL · 本机账号）
+  const [linked, setLinked] = useState(false);
+  useEffect(() => {
+    let live = true;
+    let token = '';
+    try { token = globalThis.localStorage?.getItem('sp.accountToken') || ''; } catch { return undefined; }
+    if (!token) return undefined;
+    fetch('/api/account/me', { headers: { authorization: `Bearer ${token}` } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (live && j?.ok && j.account) setLinked(true); })
+      .catch(() => { /* offline / server without accounts: keep the local wording */ });
+    return () => { live = false; };
+  }, []);
+
+  return html`<button type="button" class=${`me-chip me-chip--btn stats-entry${skin ? ' has-nc' : ''}`} onClick=${() => openAccountPanel({ onStats })} title=${linked ? '账号 · 统计数据' : '本机账号 · 统计数据'} aria-label=${linked ? '账号' : '本机账号'}>
+    <${NameCardLayer} card=${skin ? { skin } : null} />
     <${AvatarFrame} size="sm" name=${name} seat=${0} self=${true} src=${me.avatar || undefined} />
-    <span class="me-chip__text"><span class="me-chip__name">${name}<span class="acct-tag">#${me.tag}</span></span><${MicroLabel}>LOCAL · 本机账号<//></span>
+    <span class="me-chip__text"><span class="me-chip__name">${name}<span class="acct-tag">#${me.tag}</span></span><${MicroLabel}>${linked ? 'ACCOUNT · 账号' : 'LOCAL · 本机账号'}<//></span>
     <${Icon} name="user" class="me-chip__stats" />
   </button>`;
 }

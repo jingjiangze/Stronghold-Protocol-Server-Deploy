@@ -1186,3 +1186,18 @@
 /* the enlarged view: the 立绘 (whole, not the cropped tile), as large as the modal allows */
 .lo-skin-preview { display: flex; align-items: center; justify-content: center; }
 .lo-skin-preview img { display: block; max-width: 100%; max-height: 65dvh; object-fit: contain; }
+
+
+/* 立绘大图弹窗里的动态立绘（2026-10-27）：这套类名此前**没有任何 CSS**，
+   canvas 以自身尺寸参与排版、把 .modal__body 撑高，于是弹窗右边出现滚动条并随呼吸动画不停滚。
+   这里把舞台固定成视口比例、canvas 绝对定位铺满，内容不再影响布局。 */
+.lo-dynamic { display: flex; flex-direction: column; gap: .1rem; width: 100%; }
+.lo-dynamic__stage { position: relative; width: 100%; height: min(62vh, 7.4rem); overflow: hidden;
+  background: radial-gradient(60% 60% at 50% 45%, rgba(24, 34, 40, .55), rgba(8, 12, 14, .9)); }
+.lo-dynamic__canvas { position: absolute; inset: 0; }
+.lo-dynamic__canvas canvas { display: block; width: 100% !important; height: 100% !important; }
+.lo-dynamic__fallback { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: .85; }
+.lo-dynamic__controls { display: flex; align-items: center; gap: .12rem; flex-wrap: wrap; font-size: max(.14rem, 10px); color: #9aa5a3; }
+.lo-dynamic__controls select { height: max(.36rem, 22px); font: inherit; color: #e6eae9; background: #1b1d1e; border: 1px solid rgba(255, 255, 255, .18); }
+.lo-skin-preview { display: grid; place-items: center; max-height: min(62vh, 7.4rem); overflow: hidden; }
+.lo-skin-preview img { max-width: 100%; max-height: min(62vh, 7.4rem); object-fit: contain; }

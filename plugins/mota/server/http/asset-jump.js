@@ -19,15 +19,16 @@ import { createMirrorProbe } from '../mirrorProbe.js';
  * 排名端点。**多个 URL 是同一个对象的不同门牌**，按序回退：
  *   1. 魔搭数据集门牌 —— 同一份 rank.json 镜像进 `jingjiangze/Stronghold-Protocol-Assets` 数据集，
  *      容器侧实测 0.16 s（本机 curl）/ 67 ms（容器视角）可达，是「容器自己就能稳定读到」的那一个；
- *   2. weishucdn —— 同桶主域，作为最后兜底（speedcdn 门牌已于 2026-10-14 停止分发玩家素材，移除）。
+ *   2. speedcdn —— CF 边缘 302 到上面同一棵数据集（2026-10-22 实测 /cdn/v1/rank.json 200 / 3,201 B）。
+ *      旧兑底 weishucdn 已随 R2 订阅停用变 403（2026-10-22），从候选里摘除；R2 恢复后可加回。
  *
  * 2026-10-14 实测容器里 weishucdn/speedcdn 两个门牌拿 rank.json 都要 4.7~20 s，旧代码的 4 s 超时
  * 让这三条**全部**读失败 —— 排名于是永远取不到，`ranked ?? config.order` 一路退化成静态 order。
  * 所以镜像进数据集（快门牌）+ 抬高超时（容忍慢门牌）两件事都要做。
  */
 export const DEFAULT_RANK_URLS = [
-  'https://modelscope.cn/api/v1/datasets/jingjiangze/Stronghold-Protocol-Assets/repo?Revision=master&FilePath=cdn%2Fv1%2Frank.json',
-  'https://weishucdn.jiangjiangze.icu/cdn/v1/rank.json',
+  'https://www.modelscope.cn/api/v1/datasets/jingjiangze/Stronghold-Protocol-Assets/repo?Revision=master&FilePath=cdn%2Fv1%2Frank.json',
+  'https://speedcdn.jiangjiangze.icu/cdn/v1/rank.json',
 ];
 /** 旧名保留：SP_RANK_URL 仍可作为「首选 URL」。 */
 export const DEFAULT_RANK_URL = DEFAULT_RANK_URLS[0];
@@ -48,11 +49,13 @@ export const RANK_TIMEOUT_MS = 15_000;
 // （ms-dataset / ms-edge，实测均 measured:true usable:true）会被全部丢弃，applyRank 只剩 r2，
 // 逆序白做——排名又退化成「R2 优先」，$7.59/月 一分不省。这是本次改动最容易踩空的一处。
 // ms-edge 仍是**本容器自己**，必须继续映射成 null（否则边缘 302 到自己，客户端无限跳）。
-// speedcdn 与 r2 同桶同字节（R2 私有桶的两个门牌）⇒ 映射成 r2，避免门牌下线后排名条目被静默丢弃。
+// 2026-10-22：**speedcdn 已不再指向 R2**（R2 订阅停用，它改为 CF Redirect Rule 全路径 302 到数据集）。
+// 它现在与 ms-dataset 同字节（same resolve），所以映射成 modelscope；继续映射到 r2 会让「数据集的速度」
+// 顶替 weishucdn 进 rank 头部 —— 而 weishucdn 现在 403，玩家会被顺延到一个打不开的源。
 export const RANK_ID_MAP = {
   'r2': 'r2',
   'r2-alt': 'r2',
-  'speedcdn': 'r2',
+  'speedcdn': 'modelscope',
   'ms-dataset': 'modelscope',
   'ms-edge': null,
 };
@@ -169,6 +172,13 @@ export function createAssetJump({ sourcesPath = process.env.SP_EDGE_SOURCES || D
       }
     }
     if (!head.length) return { empty: true, unmapped, skipped };
+    // 与 server/http/asset-jump.js 同一契约（2026-10-19 口径）：静态 order 说了算，rank 只作信息与
+    // 合格集证据，默认不重排；需要按测速重排时显式 SP_RANK_ORDER=on。容器 env 当前就开着 on，
+    // 所以这条守卫不改变线上行为——它防的是私有态下 rank.json 还列着 ms-dataset #1 时
+    // 插件侧无条件的重排把玩家导向匿名 404（主树早有这道闸，插件一直缺）。
+    if (String(process.env.SP_RANK_ORDER || 'off') !== 'on') {
+      return { head, order: config.order.slice(), unmapped, skipped, informational: true };
+    }
     const tail = config.order.filter((id) => !head.includes(id));
     return { head, order: [...head, ...tail], unmapped, skipped };
   }

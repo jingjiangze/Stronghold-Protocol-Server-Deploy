@@ -1,3 +1,37 @@
+import {BLACKFLOW_ELITE_KITS} from './enemies/blackflow-elites-20261102.js';
+import {ARK_UPDATE_URSUS_KITS} from './enemies/ark-update-ursus-20261101.js';
+import {URSUS_WAR_CASTER_KITS} from './enemies/ursus-war-caster.js';
+import {installEnemyPressure} from './enemies/pressure.js';
+import {BOLIVAR_KITS} from './enemies/bolivar.js';
+import {PRISONER_KITS} from './enemies/prisoners.js';
+import {ORCHESTRA_KITS} from './enemies/orchestra.js';
+import {RETURNING_BOSS_KITS} from './enemies/returning-boss.js';
+import {trainingKits,imperialSupport} from './enemies/training-roster.js';
+import {installAmbush} from './enemies/ambush.js';
+import {FACTION_LEADER_KITS} from './enemies/faction-leaders.js';
+import {KAZIMIERZ_KITS} from './enemies/kazimierz.js';
+import {ROGUE_LEADER_KITS} from './enemies/rogue-leaders.js';
+import {COMPATIBILITY_BASIC_KITS} from './enemies/compatibility-basic.js';
+import {COMPATIBILITY_AMMO_KITS} from './enemies/compatibility-ammo.js';
+import {COMPATIBILITY_DEEP_KITS} from './enemies/compatibility-deep.js';
+import {COMPATIBILITY_SARKAZ_KITS} from './enemies/compatibility-sarkaz.js';
+import {COMPATIBILITY_MOBILITY_KITS} from './enemies/compatibility-mobility.js';
+import {COMPATIBILITY_PAPER_KITS} from './enemies/compatibility-paper.js';
+import {COMPATIBILITY_NAMED_KITS} from './enemies/compatibility-named.js';
+import {COLUMBIA_KITS} from './enemies/columbia.js';
+import {SIRACUSA_KITS} from './enemies/siracusa.js';
+import {OTHER_LEADER_KITS} from './enemies/other-leaders.js';
+import {ADDITIONAL_CORE_KITS} from './enemies/additional-leaders-core.js';
+import {ADDITIONAL_COMBAT_KITS} from './enemies/additional-leaders-combat.js';
+import {ADDITIONAL_OBJECTIVE_KITS} from './enemies/additional-leaders-objectives.js';
+import {ADDITIONAL_SUPPORT_KITS,ADDITIONAL_SUPPORT_STATS} from './enemies/additional-leader-supports.js';
+import {SUNKEN_KITS} from './enemies/sunken.js';
+import {KALTSIT_TALULAH_KITS} from './enemies/kaltsit-talulah.js';
+import {EXTRA_MINI_KITS,EXTRA_MINI_STATS} from './enemies/extra-mini-bosses.js';
+import {ARK_UPDATE_ELITE_BOUNTY_KITS} from './enemies/ark-update-elite-bounties-20261101.js';
+import {SANKTA_KITS} from './enemies/sankta.js';
+import {CONTRACT_CREATURE_KITS,CONTRACT_CREATURE_STATS} from './enemies/contract-creatures.js';
+import {CONTRACT_ENEMY_KITS,CONTRACT_ENEMY_STATS} from './enemies/contract-expansion.js';
 // server/sim/content/enemies.js — enemy special types (特训敌人) and individual enemy abilities (DESIGN §7).
 //
 // Battle side: install(battle) registers ONE set of global dispatch hooks per battle (ensureInstalled — idempotent,
@@ -139,6 +173,7 @@ export function ensureInstalled(b) {
   const st = stOf(b);
   if (st.installed) return st;
   st.installed = true;
+  installEnemyPressure(b);
   b.on('enemySpawn', ({ enemy }) => onSpawn(b, enemy), { priority: 100 });
   b.on('hit', (c) => onHitOut(b, c), { priority: 200 });
   b.on('hit', (c) => chaliceShare(b, c), { priority: -400 });
@@ -174,10 +209,12 @@ export function registerMeta() {}
 
 function onSpawn(b, e) {
   const kit = KITS[e.def.raw?.effectRef ?? e.defId];
-  if (typeof kit !== 'function') return;
-  const ab = abOf(b, e);
-  const list = safe(b, e, () => kit(ab, e, b)) || [];
-  attach(b, e, list);
+  if (typeof kit === 'function') {
+    const ab = abOf(b, e);
+    const list = safe(b, e, () => kit(ab, e, b)) || [];
+    attach(b, e, list);
+  }
+  installAmbush(b,e);
 }
 
 function onHitOut(b, c) {
@@ -267,7 +304,7 @@ function onTick(b, dt) {
           a.left = Math.max(TICK, a.cd);
           a.casts = (a.casts ?? 0) + 1;
           e.skillAnimUntil = b.time + 0.5;
-          if (a.sk) castSlot(b, e, a.sk);   // display only: the skill slot it uses (render/app.js 'cast')
+          if (a.sk) castSlot(b, e, a.sk,a.fxDuration);   // display only: the skill slot it uses (render/app.js 'cast')
           safe(b, e, () => a.fire(b, e, a));
         }
       }
@@ -279,7 +316,34 @@ function onTick(b, dt) {
 // KITS: enemyKey → (ab, e, battle) => ability list. One line per key (name · what), in the family files
 // (enemies/*.js); spread here in the original order — the same keys in the same order as before the split.
 
-export const KITS = Object.freeze({
+const BASE_KITS = {
+  ...BLACKFLOW_ELITE_KITS,
+  ...ARK_UPDATE_URSUS_KITS,
+  ...URSUS_WAR_CASTER_KITS,
+  ...COMPATIBILITY_BASIC_KITS,...ORCHESTRA_KITS,...PRISONER_KITS,
+  ...COMPATIBILITY_AMMO_KITS,
+  ...COMPATIBILITY_DEEP_KITS,
+  ...COMPATIBILITY_SARKAZ_KITS,
+  ...COMPATIBILITY_MOBILITY_KITS,
+  ...COMPATIBILITY_PAPER_KITS,
+  ...COMPATIBILITY_NAMED_KITS,
+  ...COLUMBIA_KITS,
+  ...ROGUE_LEADER_KITS,
+  enemy_1115_embald:imperialSupport,
+  ...KAZIMIERZ_KITS,
+  ...FACTION_LEADER_KITS,
+  ...ADDITIONAL_CORE_KITS,
+  ...SUNKEN_KITS,
+  ...KALTSIT_TALULAH_KITS,
+  ...ADDITIONAL_COMBAT_KITS,
+  ...ADDITIONAL_OBJECTIVE_KITS,
+  ...ADDITIONAL_SUPPORT_KITS,
+  ...OTHER_LEADER_KITS,
+  ...EXTRA_MINI_KITS,
+  ...ARK_UPDATE_ELITE_BOUNTY_KITS,
+  ...CONTRACT_CREATURE_KITS,
+  ...CONTRACT_ENEMY_KITS,
+  ...RETURNING_BOSS_KITS,
   ...INVISIBLE_KITS,
   ...TIMES_KITS,
   ...ELEMENT_KITS,
@@ -287,26 +351,43 @@ export const KITS = Object.freeze({
   ...REFLECTION_KITS,
   ...FLY_KITS,
   ...SPECIAL_KITS,
+  ...BOLIVAR_KITS,
+  ...SANKTA_KITS,
   ...LEADER_KITS,
-});
+  ...SIRACUSA_KITS,
+};
 
 /** Keys deliberately left to their data stats (reason). */
 export const STATS_ONLY = Object.freeze({
+  trap_007_ballis:'Native fixed-direction bounty device; owned objective helper configures its arrow.',
+  trap_041_fcanon:'Native cannon support device; standalone objective adapter.',
+  trap_043_dupilr:'Native broken pillar; parent owns shield interaction.',
+  trap_054_dancdol:'Native stage assistant; parent owns objective interaction.',
+  trap_127_bldore:'Native blood throne; parent owns transition.',
+  trap_137_winfire:'Native emergency heater; parent owns standalone heat count.',
+  enemy_1380_dthmak:'Native logical deathmark; parent owns control cleanup.',
+  enemy_1294_duchns:'Native logical dying flame; parent owns control cleanup.',
+  bounty_scene_cledub_answer:'Existing standalone destructible ground-mark adaptation; not a troop.',
+  ...ADDITIONAL_SUPPORT_STATS,
+  ...EXTRA_MINI_STATS,
+  ...CONTRACT_CREATURE_STATS,
+  ...CONTRACT_ENEMY_STATS,
+  enemy_1086_ltsodr:'plain infantry',enemy_1086_ltsodr_2:'plain infantry',enemy_1087_ltwolf:'plain hound',enemy_1087_ltwolf_2:'plain hound',enemy_1088_ltsmer:'gramophones are absent from this mode',
   enemy_1000_gopro_2: 'plain melee', enemy_1001_bigbo: 'plain leader (bounty)', enemy_1005_yokai: 'FLY, no attack (engine)',
   enemy_1005_yokai_2: 'FLY ranged (engine)', enemy_1005_yokai_3: 'FLY ranged (engine)', enemy_1006_shield: 'heavy defender',
   enemy_1006_shield_2: 'heavy defender', enemy_1006_shield_3: 'heavy defender', enemy_1007_slime: 'plain',
   enemy_1010_demon: 'plain', enemy_1010_demon_2: 'plain', enemy_1041_lazerd: 'FLY arts (engine)', enemy_1041_lazerd_2: 'FLY arts (engine)',
   enemy_1043_zomsbr: 'regen is data (hpRecoveryPerSec 80)', enemy_1061_zomshd: 'regen is data (hpRecoveryPerSec 200)',
   enemy_1046_agent: 'plain', enemy_1071_dftman: 'plain', enemy_1092_mdgint: 'plain (bounty)',
-  enemy_1251_lysyta: 'R-series armour interaction absent', enemy_1251_lysyta_2: 'same',
-  enemy_1252_lysytb_2: 'same', enemy_1254_lypa_2: 'no listed ability', enemy_1325_cbgpro: 'plain', enemy_1325_cbgpro_2: 'plain',
+  enemy_1254_lypa_2: 'no listed ability', enemy_1325_cbgpro: 'plain', enemy_1325_cbgpro_2: 'plain',
   enemy_1367_dseed: 'altar pulse absent (骸骨拷打者 leaves them inert, uncounted, in place)',
   enemy_1381_winman: 'plain', enemy_1381_winman_2: 'plain', enemy_1387_winshd: '封冻/供暖器 zones absent', enemy_1415_mmkabi_2: 'chains absent',
   enemy_1433_dsbasi: 'plain', enemy_1433_dsbasi_2: 'plain', enemy_1438_dspred: '赘生甲壳 absent',
   enemy_2002_bearmi: 'plain', enemy_2002_bearmi_2: 'plain',
-  enemy_9012_acloon: '炎佑 is a bond summon (bonds.js)', enemy_10040_cnvbln: '狂欢时刻 absent', enemy_10043_sailor: 'bridges/cannons absent',
+  enemy_9012_acloon: '炎佑 is a bond summon (bonds.js)', enemy_10043_sailor: 'bridges/cannons absent',
   enemy_10073_mpcar: 'plain', enemy_10124_uashld_2: 'taunt is data; 矿工游击队 absent',
 });
+export const KITS = Object.freeze({...trainingKits(BASE_KITS,STATS_ONLY), ...BASE_KITS});
 
 // 圣杯 damage sharing: ground enemies near a living chalice pass `share` of the damage they take to it.
 function chaliceShare(b, c) {

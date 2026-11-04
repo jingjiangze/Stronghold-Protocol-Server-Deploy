@@ -285,7 +285,24 @@ export class MatchPhases {
       this.markPrivate(ps);
     }
     void timeout;
+    this.initTeamHp();   // 对抗模式：选完策略后建整队共享血池
     this.enterBattleCheck();
+  }
+
+  /**
+   * 「包含无场景地图」 (Match opts.incompleteMaps, room.setIncompleteMaps; off by default): the stage pool every draw below
+   * starts from. Off, only the stages with an official scene package stay (server/match/sceneStages.js, the Set Match puts
+   * on `this.sceneStages` / the gd); on, the mode's full list. Narrowing to nothing (no manifest, a tier whose maps all
+   * lack a scene) falls back to the full pool, so a draw never runs dry.
+   * @returns {string[]}
+   */
+  _stagePool() {
+    const pool = Array.isArray(this.gd?.mode?.stages) ? this.gd.mode.stages : [];
+    const scene = this.sceneStages instanceof Set ? this.sceneStages
+      : (this.gd && this.gd.sceneStages instanceof Set ? this.gd.sceneStages : null);
+    if (this.incompleteMaps === true || !scene) return pool;
+    const kept = pool.filter((id) => scene.has(id));
+    return kept.length ? kept : pool;
   }
 
   /**
@@ -298,11 +315,25 @@ export class MatchPhases {
   /** 第 r 回合该用哪张图（纯函数：不碰状态，重放/预测都走它）。池不足 2 张时返回 null（沿用当前图）。 */
   stageIdForRound(r) {
     if (this.stageForced) return null;
-    const pool = Array.isArray(this.gd.mode?.stages) ? this.gd.mode.stages : [];
+    // 肉鸽（2026-11-04）：节点决定本回合的地图层级 —— rogue-core 的 mixin 把节点 tier 解析成
+    // `rogue_ro4_<tier>-*` 里的一张。插件未安装（无 rogueStageFor）或该 tier 没有可用图时返回 null，
+    // 落回下面的权重抽取（Boss 回合的 b-* 过滤仍保留为兜底）。`stageForced` 仍优先：编辑器「试玩这张图」不被覆盖。
+    if (this.isRogue === true && typeof this.rogueStageFor === 'function') {
+      const s = this.rogueStageFor(r);
+      if (s) return s;
+    }
+    const pool = this._stagePool();
     let cands = pool
       .map((id) => [id, this.gd.stage(id)])
       .filter(([, st]) => st && st.active !== false && Number(st.weight) > 0)
       .map(([id, st]) => [id, Number(st.weight)]);
+    // 肉鸽 Boss 节点（2026-11-03）：只从官方 `b-*` 变体图里抽 —— Boss 本体的出怪挂在那些图的出怪表上；
+    // 过滤后一张都没有时回全池（老数据 / 未重新生成时行为不变）。「包含无场景地图」的收窄在 `_stagePool()` 里已做完，
+    // 所以 b-* 依旧优先。其余（排除上一张、权重、seed 派生）照旧。
+    if (this.isRogue === true && r === this.gd.bossRound) {
+      const bossCands = cands.filter(([id]) => /rogue_.*_b-/.test(String(id)));
+      if (bossCands.length) cands = bossCands;
+    }
     if (cands.length < 2) return null;
     // 「每回合换图」的换：不上一回合刚打过的那张（否则相邻两回合可能抽到同一张，看起来像没换）。
     // 用 r-1 自己的派生流再算一次，保持确定性（重放/预测同一条链）；池里只剩这一张时仍然用它。
@@ -335,12 +366,31 @@ export class MatchPhases {
     return true;
   }
 
+  /**
+   * 每回合换战场（业主 2026-10-17 定稿；「随机地图」开着时的协同共竞规则）。
+   * 换图会重建棋盘，为了不出现「先程序化、后官方场景」的两次重建，同时把**下一回合**要用哪张图算出来
+   * （`this.nextStageId`），让客户端在本回合空闲时预热场景包。
+   */
   pickRoundStage(r) {
     if (this.stageForced) return;
     this._applyStage(this.stageIdForRound(r));
-    // 下一回合的图（预测用；不进状态，只给客户端预热）
     const next = this.stageIdForRound(r + 1);
     this.nextStageId = next || this.stageId;
+  }
+
+  /**
+   * boss 关要换成哪张战场（2026-10-22 业主口径：关掉「随机地图」时，开局随机一张，只在 boss 关刷新）。
+   * 抽法沿用 `stageIdForRound`（同一套权重与独立 seed），但**保证不等于当前这张** —— 否则 1/N 的概率会抽回
+   * 同一张图，看起来像「boss 关没刷新」。预换热身也用这个函数，客户端拿到的一定是真正会装上的那张。
+   */
+  bossStageFor(r) {
+    const id = this.stageIdForRound(r);
+    if (id && id !== this.stageId) return id;
+    const cands = this._stagePool()
+      .filter((x) => x !== this.stageId && this.gd.stage(x) && this.gd.stage(x).active !== false && Number(this.gd.stage(x).weight) > 0);
+    if (!cands.length) return id || this.stageId;
+    const rng = createRng(deriveSeed(this.seed, `stage-boss:${r}`));
+    return cands[rng.int(cands.length)];
   }
 
   /**
@@ -350,7 +400,7 @@ export class MatchPhases {
    */
   pickBossStage(r) {
     if (this.stageForced) return;
-    this._applyStage(this.stageIdForRound(r));
+    this._applyStage(this.bossStageFor(r));
   }
 
   enterBattleCheck() {
@@ -380,10 +430,76 @@ export class MatchPhases {
   _startRoundAfterOffers(r) {
     this.phase = PHASE.ROUND_START;
     this.round = r;
-    // 每回合换战场（业主 2026-10-18 定稿）：**只有协同共竞**每回合抽一张新图；其他玩法沿用原规则 ——
-    // 开局定一张，之后只在 boss 关换（`pickBossStage`，与 `_planBossWaves` 同一关，必须排在它前面）。
-    if (this.isXie) this.pickRoundStage(r);
-    else if (r === this.gd.bossRound || r === this.gd.hiddenRound) this.pickBossStage(r);
+
+    // 协同共竞（mode_xie_*）：第 3 回合开始前开一次「海克斯熔毁协议」四栏商店（保真移植 hexmod 的 meltdown）。
+    // 关店后回调继续本回合；st.wave === 0 保证只开一次，不会因为回调再进本函数而重复开。
+    try {
+      if (String(this.modeId || '').startsWith('mode_xie_') && r === 3 && typeof this.meltdownOpen === 'function') {
+        const st = this._melt();
+        if (!st.open && st.wave === 0) {
+          this.meltdownOpen(() => this._startRoundAfterOffers(r));
+          return;
+        }
+      }
+    } catch (e) { this.reportError?.('meltdown open', e); }
+    // 藏品三选一（业主 2026-10-27）：协同房 R4 / R8 / R12 各一次，非阻塞（选完或 20s 超时自动取第一张）。
+    try {
+      if ((String(this.modeId || '').startsWith('mode_xie_') || this.isRogue === true) && typeof this.relicOffer === 'function'
+        && typeof this.relicDraftRound === 'function' && this.relicDraftRound(r)) {
+        this.relicOffer();
+      }
+    } catch (e) { this.reportError?.('relic offer', e); }
+    // 肉鸽随机事件（不期而遇）：R3 / R6 / R9，非阻塞，20s 超时取第一个选项。
+    try {
+      if (this.isRogue === true && typeof this.rogueEventOffer === 'function'
+        && typeof this.rogueEventRound === 'function' && this.rogueEventRound(r)) {
+        this.rogueEventOffer();
+      }
+    } catch (e) { this.reportError?.('rogue event', e); }
+    // 肉鸽：本回合随机词缀 + 紧急作战（数值已并进敌人乘区；紧急回合给全队补偿资金）
+    try {
+      if (this.isRogue === true && typeof this.rogueRoundAffix === 'function') {
+        const aff = this.rogueRoundAffix(r);
+        const hot = typeof this.rogueEmergencyRound === 'function' && this.rogueEmergencyRound(r);
+        for (const ps of this.alivePlayers()) {
+          if (hot) {
+            try { ps.addFunds(4, { reason: 'rogue-emergency' }); } catch { /* noop */ }
+            this.toast(ps, 'warn', `紧急作战：敌人生命 +25% / 攻击 +20%，补偿 +4 资金`);
+          }
+          if (aff && aff.label) this.toast(ps, 'info', aff.label);
+        }
+      }
+    } catch (e) { this.reportError?.('rogue affix toast', e); }
+    // 肉鸽节点推进（P0，2026-11-03）：rogue-core 插件的 mixin 提供；未安装时 typeof 守卫跳过。
+    try {
+      if (this.isRogue === true && typeof this.rogueNodeBegin === 'function') this.rogueNodeBegin(r);
+    } catch (e) { this.reportError?.('rogue node', e); }
+    // 攻防回合：狩猎期窗口内每回合红蓝互换攻守（首攻红队）；非攻防回合两者为 null。
+    const role = this.roleTeamsFor(r);
+    this.attackingTeam = role ? role.attack : null;
+    this.defenderTeam = role ? role.defend : null;
+    this._confrontDoneRound = 0;
+    // 战场刷新（业主 2026-10-22 定稿）：
+    //   * 「随机地图」开着（默认）：协同共竞**每回合**抽一张新图（原有规则）；其他玩法沿用官方规则（开局一张，只在 boss 关换）。
+    //   * 关掉：开局前已经随机抽了一张（Match 的 setupMatchWaves），整局不换，**只在 boss 关（含隐藏 boss 关）刷新一次**。
+    //   * 肉鸽例外（2026-11-03）：**与「随机地图」开关无关**，每回合都换图 —— 「每层不同地图」是玩法本体，
+    //     而 `randomStage` 默认 false，写在「开着才换」的分支里等于永远不换。
+    // 关闭态的下一张图提前一回合算进 `nextStageId`，客户端在本回合空闲时预热场景包（换图不白屏）。
+    // 顺序要紧：必须在 `_planBossWaves` 之前（同一关的出战表按新图的几何算）。
+    const bossNext = (x) => x === this.gd.bossRound || x === this.gd.hiddenRound;
+    if (this.isRogue === true) {
+      // 肉鸽：每回合换图（stageIdForRound 自带 seed 派生、且排除上一张，重放安全）
+      this.pickRoundStage(r);
+    } else if (this.randomStage !== true) {
+      // 业主 2026-10-27：**关掉就整局同一张图** —— boss 关也不再刷新。此前「关 = 开局一张、boss 关刷新一次」
+      // 会让玩家在 R14/R15 看到地图被换掉（线上反馈「关了还是被切图」）。
+      this.nextStageId = this.stageId;
+    } else if (this.isXie) {
+      // 协同共竞每回合换图（「随机地图」开着时）；stageIdForRound 自带 seed 派生，重放安全
+      this.pickRoundStage(r);
+    } else if (bossNext(r)) {
+      this.pickBossStage(r);
+    }
     this._revivalHeld = false; // 救援冻结是一次性的（每回合最多挂起一次）
     this.fields = [];
     this.watchers.clear();
@@ -392,21 +508,43 @@ export class MatchPhases {
     this.sp = null;
     this.wave = null;
     this.bossWaves = null;
+    // 对抗模式：上一回合的 狩猎期 / 事件期状态不得漏进本回合的 PREP / 视图
+    if (this.isVersus) {
+      this.confrontStage = null; this.confront = null; this.confrontSubs = null; this.confrontTargets = null;
+      this._confrontRemoved = null;
+    }
+    // 熔毁代价的「每回合全属性」档：每回合把 debt.round 累加进 growth（业主 2026-10-26 接线）
+    if (this.melt && this.melt.debt) {
+      const per = Math.max(0, Number(this.melt.debt.round) || 0);
+      if (per > 0) this.melt.growth = Math.max(0, Number(this.melt.growth) || 0) + per;
+    }
     const alive = this.alivePlayers();
     // the round's enemies (shared composition, generated now so the prep preview is exact). Planned BEFORE the players'
     // round start: its recompute() checks the board on the field the player deploys on this round (deployFieldOf reads
     // the boss pairing), so R14 → R15 never re-checks a boss-field board against the normal field (user playtest #5
     // item 7). rngWaves is used only here, so the order leaves every random stream unchanged.
-    const isBoss = r === this.gd.bossRound || r === this.gd.hiddenRound;
+    // 肉鸽（mode_rogue_*）例外（2026-11-03）：Boss / 隐藏回合仍按**普通战斗**打 —— 官方图在 Boss 半场（rows 0–5）
+    // 没有部署格，Boss 本体由该图的出怪表带 `tag:'boss'` 出场（tools/build-rogue-maps-v2.mjs）。其它模式逐字不变。
+    const isBoss = this.isRogue !== true && (r === this.gd.bossRound || r === this.gd.hiddenRound);
     if (isBoss) {
       this._planBossWaves();
     } else {
       // stageId: a workshop stage may bind its own wave table to a round (shared/waveAuthoring.js; waves.js buildNormalWave)
       this.wave = buildNormalWave(this.gd, this.rngWaves, this.factions, r, this.stageId);
+      // 对抗：记下本回合真正生成的怪 —— 狩猎期「只能选该回合往前出过的怪」以它为真源（业主 2026-10-26）
+      if (this.isVersus) {
+        try { this.confrontRecordWave(r, this.wave); } catch (e) { this.reportError('confrontRecordWave', e); }
+      }
     }
     for (const ps of alive) ps.startRound(r);
+    // hexDraftDisabled：业主 2026-10-26 口径 —— 协同共竞**不做海克斯三选一**（草案），只保留熔毁商店。
+    // 商店（第 3 回合）里的卡片仍通过 _hexApply 直接生效，与草案无关，所以这里整段不要。
     // 协同经济 (DESIGN §28): the ask budget and the team transfer total are **per round**, re-armed here
     if (this.teamEcon) this.econNewRound();
+    // rule 藏品：lpDrainRest「进入休整期时目标生命 −1（最低 1）」
+    try { if (typeof this.applyRelicLpDrain === 'function') this.applyRelicLpDrain('rest'); } catch (e) { this.reportError?.('relic lp rest', e); }
+    // rule 藏品的回合级经济（资金流失 / 国王水晶的休整期资金）—— 与团队经济无关，单独跑
+    try { if (typeof this.applyRelicRoundEconomy === 'function') this.applyRelicRoundEconomy(); } catch (e) { this.reportError?.('relic round economy', e); }
     // 方案 B (DESIGN §27): the loans of the last round are paid back out of the income just granted
     if (this.teamEcon) this.econSettleDebts(alive);
     // 助战 (shared/support.js): re-check what each player brought against the pool ONE more time at the first round's
@@ -486,6 +624,8 @@ export class MatchPhases {
   }
 
   afterRoundStart() {
+    // 对抗模式的事件期（eventRoundsFor）：一回合一次，先于机变 / 休整期。
+    if (this.eventDue && this.eventDue()) { this.enterEvent(); return; }
     if (this.gd.spRounds().includes(this.round)) this.enterSpDraft();
     else this.beforePrepOffers();
   }
@@ -493,7 +633,8 @@ export class MatchPhases {
   beforePrepOffers() {
     // The official round start and its draw/draft finish first; only entering prep waits.
     this.sp = null;
-    const step = () => this.enterPrep();
+    // 攻防回合：先由攻方投放（CONFRONT），再进入守方的休整期；非攻防回合照旧。
+    const step = () => (this.isRoleRound() ? this.enterConfront() : this.enterPrep());
     if (this.openOfferWindow('prep', this.round) !== 'open') { step(); return; }
     this._offerResume = step;
   }

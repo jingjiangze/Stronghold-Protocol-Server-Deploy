@@ -56,9 +56,10 @@
 //   and is stunned attack@extrabomb.stun s (not when it dodged the hit [ASSUMED]). The skill's end drops a pending shell.
 
 import { num, talentBb, traitBb, moduleOn, skillRec, batMod, up, giveSp, installReveal } from '../shared/tier1.js';
+import { hypot } from '../../../detmath.js';
 import { offsetTile, dirFromDelta, dirVec } from '../../../dir.js';
 import { isHpLoss } from '../../../damage.js';
-import { hypot } from '../../../detmath.js';
+
 
 const S1 = 'skchr_jesca2_1';
 const S2 = 'skchr_jesca2_2';

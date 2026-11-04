@@ -1,10 +1,7 @@
 // server/sim/content/kits/ops/chess_char_5_17-f12yin.js — 山 (char_264_f12yin) kit, tier 5.
 // Conventions of the tier-5 kits: ../shared/tier5.js; kit contract and rules: ../README.md.
 
-import {
-  HALF_HP, num, talent, traitBb, skillGrid, batPct, mods, selectedId, lazySkills, instantKind, skillRange, whileOn,
-  permBuff,
-} from '../shared/tier5.js';
+import { HALF_HP, num, talent, traitBb, skillGrid, batPct, mods, selectedId, lazySkills, instantKind, skillRange, whileOn, permBuff } from '../shared/tier5.js';
 
 export default {
   // ---------------------------------------------------------------------------------------------------------------

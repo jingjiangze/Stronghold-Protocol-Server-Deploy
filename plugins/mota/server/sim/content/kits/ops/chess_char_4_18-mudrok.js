@@ -1,10 +1,7 @@
 // server/sim/content/kits/ops/chess_char_4_18-mudrok.js — 泥岩 (char_311_mudrok) kit, tier 4.
 // Conventions of the tier-4 kits: ../shared/tier4.js; kit contract and rules: ../README.md.
 
-import {
-  AURA, num, tbb, grid, batFlat, enemyHasTag, targetsInGrid, whileDeployed, pulse, toggleBuff, alt, lonely,
-  withDefaults,
-} from '../shared/tier4.js';
+import { AURA, num, tbb, grid, batFlat, enemyHasTag, targetsInGrid, whileDeployed, pulse, toggleBuff, alt, lonely, withDefaults } from '../shared/tier4.js';
 
 export default withDefaults({
   // ===== 泥岩 (unyield) S2 岩崩锤 — next attack: heal 4 %, 190 % phys to all ground enemies around, 30 % stun; talents

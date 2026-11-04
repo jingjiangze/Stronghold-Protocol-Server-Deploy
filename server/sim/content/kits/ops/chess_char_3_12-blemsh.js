@@ -2,10 +2,7 @@
 // Conventions of the tier-3 kits: ../shared/tier3.js; kit contract and rules: ../README.md.
 
 import { bodyKeys, bodyOnTile } from '../../../body.js';
-import {
-  num, defOf, talentBb, traitBb, altSkills, instantKindOf, alive, onTiles, gridKeys, fx, copyGrid, NINE, isLeader,
-  giveSp,
-} from '../shared/tier3.js';
+import { num, defOf, talentBb, traitBb, altSkills, instantKindOf, alive, onTiles, gridKeys, fx, copyGrid, NINE, isLeader, giveSp } from '../shared/tier3.js';
 
 /** Refresh period (s) of 瑕光 S2's 生命回复速度 buff (it lasts two periods, so it never lapses while the skill runs). */
 const REGEN_IV = 0.25;

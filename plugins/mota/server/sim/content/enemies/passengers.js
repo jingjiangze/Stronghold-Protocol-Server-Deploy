@@ -42,10 +42,10 @@ function isMachine(p) {
  * still boards. Fear, silence, cold and 诱导 are not in the carrier's stop list either (that list is hidden,
  * 失衡, stun, freeze, sleep, 浮空 — checked against these flag names).
  */
-function canBoard(e, p) {
+function canBoard(e, p, radius = BOARD_RADIUS) {
   if (p === e || !p.alive || !p.deployed || p.hidden || p.mem.carrier) return false;
   if (isLeader(p) || isMachine(p) || p.motion === 'FLY') return false;
-  return hypot(p.x - e.x, p.y - e.y) <= BOARD_RADIUS + 1e-9;
+  return hypot(p.x - e.x, p.y - e.y) <= radius + 1e-9;
 }
 
 function unload(b, e, a) {
@@ -84,8 +84,8 @@ function unload(b, e, a) {
  * [ASSUMED] A carried passenger also takes no new damage, because damage.js returns 0 for `hidden` — not only
  * because nothing selects it. Identity, bounty and HP already lost stay on the unit.
  */
-export function passengerBus(ab, camel = false) {
-  const max = T(ab, camel ? 'bus.max_cnt' : 'Bus.max_cnt', 'bus.max_cnt', 'Bus.max_cnt') ?? (camel ? 5 : 4);
+export function passengerBus(ab, camel = false, options = {}) {
+  const max = options.max ?? T(ab, camel ? 'bus.max_cnt' : 'Bus.max_cnt', 'bus.max_cnt', 'Bus.max_cnt') ?? (camel ? 5 : 4);
   const speed = T(ab, 'bus.move_speed') ?? -0.2;
   return {
     camel,
@@ -111,7 +111,7 @@ export function passengerBus(ab, camel = false) {
         // [ASSUMED] Overflow boards in stable spawn order (`b.enemies`). PRTS names no priority.
         for (const p of b.enemies) {
           if (a.passengers.length >= max) break;
-          if (!canBoard(e, p)) continue;
+          if (!canBoard(e, p, options.radius ?? BOARD_RADIUS) || options.filter && !options.filter(p,e)) continue;
           p.mem.carrier = e;
           p.swing = false;
           b._cutAttackStand(p);
@@ -124,6 +124,8 @@ export function passengerBus(ab, camel = false) {
         p.y = e.y;
         p.moving = false;
       }
+      if(options.onChange&&a.seats!==a.passengers.length)options.onChange(b,e,a.passengers.length);
+      if(!camel)a.seats=a.passengers.length;
       if (camel && a.seats !== a.passengers.length) {
         a.seats = a.passengers.length;
         // One replaced buff, so the cuts add: mul = max(0, 1 + n·bus.move_speed), not 0.8^n.
@@ -134,6 +136,6 @@ export function passengerBus(ab, camel = false) {
         });
       }
     },
-    death(c, b, e, a) { unload(b, e, a); },
+    death(c, b, e, a) { if(options.unloadDelay>0&&a.passengers.length)b.after(options.unloadDelay,()=>unload(b,e,a));else unload(b, e, a); },
   };
 }

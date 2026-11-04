@@ -121,6 +121,13 @@ export class MatchRehearsal {
     for (const task of [...this._rehearsalTasks.values()]) this._dropRehearsalTask(task, !this.disposed);
   }
 
+  /** Stop only the seat that a spectator inherited; its former bot must not apply a late layout (server/aiTakeover.js). */
+  cancelSeatRehearsal(playerId) {
+    for (const task of [...this._rehearsalTasks.values()]) {
+      if (task.playerId === playerId) this._dropRehearsalTask(task, true);
+    }
+  }
+
   /** Run a delegated rehearsal on the server instead: the job resumes locally, the task is dead (its answers ignored). */
   _takeOverRehearsal(task, reason) {
     this._dropRehearsalTask(task, true);

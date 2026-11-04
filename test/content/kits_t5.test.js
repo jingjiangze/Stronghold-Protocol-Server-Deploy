@@ -1044,7 +1044,7 @@ test('圣约送葬人 T1 受选之人: the extra attack consumes no ammo and nev
 });
 
 test('元素伤害 uses the engine elemental type: × elementalTakenMul (元素脆弱), never × trueTakenMul (烛煌 熔点引爆, 妮芙 失魂)', () => {
-  // one battle per burst: after a burst the enemy's gauges stay locked for its 爆发冷却 (damage.js)
+  // one battle per burst: after a burst the enemy's gauges stay locked for its 爆发冷却 (attack/element.js)
   const arena = () => {
     const h = makeBattle({
       defs: { enemies: { enemy_dummy: dummy() } },
@@ -1471,7 +1471,7 @@ test('soak: random tier-5 lineups (normal + elite) on real stages/waves — norm
   const { createRng } = await import('../../server/sim/rng.js');
   const ds = getDefaultSource();
   const T5 = ds.chessIds().filter((id) => /^chess_char_5_\d+_[ab]$/.test(id));
-  const stages = ds.stageIds().filter((id) => { const s = ds.getStage(id); return s && s.raw && s.raw.active !== false && s.rows && s.rows.length === 19; });
+  const stages = ds.stageIds().filter((id) => { const s = ds.getStage(id); return s && s.raw && s.raw.active !== false && s.rows && s.rows.length === 19 && !String(id).startsWith('rogue_'); });
   const waves = ds.waveIds().filter((id) => { const w = ds.getWave(id); return w && (w.kind === 'normal' || (!w.kind && /_0\d$|_h0[1-6]$/.test(id))); });
   const boss = ds.waveIds().filter((id) => ['boss', 'hidden'].includes(ds.getWave(id)?.kind));
   const escaped = ds.waveIds().filter((id) => ds.getWave(id)?.kind === 'escaped');

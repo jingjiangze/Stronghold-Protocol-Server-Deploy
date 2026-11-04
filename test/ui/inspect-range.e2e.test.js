@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
-import { startServer } from '../../server/index.js';
+import { startServer } from '../../server/boot-main.js';
 import { makeBattle } from '../helpers/battleHarness.js';
 import { spawnMapChar } from '../../server/sim/content/tokens.js';
 

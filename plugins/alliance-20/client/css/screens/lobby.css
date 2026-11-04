@@ -13,7 +13,6 @@
   align-content: start;
 }
 .lobby-left, .lobby-right { display: flex; flex-direction: column; min-width: 0; }
-.lobby-mode { grid-column: 1 / -1; min-width: 0; }
 .lobby-left { grid-column: 1; grid-row: 3; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .12rem .4rem; }
 .lobby-left > .section-label:first-child { grid-column: 1; grid-row: 1; }
 .lobby-left > .matchmaking-panel { grid-column: 1; grid-row: 2; margin-bottom: 0; }
@@ -23,17 +22,9 @@
 .lobby-right { grid-column: 1; grid-row: 2; }
 .lobby-right .diff-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .18rem; }
 .lobby-right .diff-card { padding: .18rem .2rem .16rem .28rem; gap: .1rem .14rem; }
-.lobby-right .diff-card__head { flex-wrap: wrap; gap: .06rem .08rem; }
-.lobby-right .diff-card__meta { flex-basis: 100%; margin-left: .36rem; }
-.lobby-right .diff-card__name { font-size: calc(.24 * var(--t)); }
-.lobby-right .diff-card__effects { gap: .03rem .14rem; }
-.lobby-right .diff-card__check .icon { width: .35rem; height: .35rem; padding: .06rem; }
 .lobby-right .create-box { align-items: center; margin-top: .22rem; }
 .lobby-right .create-box > .tt-anchor { width: min(7rem, 100%); }
 .lobby-right .create-box .btn--xl { height: .72rem; font-size: calc(.28 * var(--t)); }
-
-/* ---- mode cards ------------------------------------------------------------------------------------ */
-.lobby-mode .mode-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .24rem; margin-bottom: 0; }
 
 .mode-beta {
   display: inline-flex;
@@ -48,7 +39,6 @@
   letter-spacing: .06em;
   line-height: 1.35;
 }
-.mode-card__name-row { display: flex; align-items: center; flex-wrap: wrap; gap: .13rem; }
 
 .firepower-brief {
   --bk-c: var(--gold-2);
@@ -138,16 +128,6 @@
 }
 .mode-card:nth-child(2) { animation-delay: 60ms; }
 .mode-card:nth-child(3) { animation-delay: 120ms; }
-.mode-card__bg {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(70% 55% at 100% 0%, rgba(78, 216, 175, .10), transparent 70%),
-    repeating-linear-gradient(-45deg, rgba(255, 255, 255, .018) 0 2px, transparent 2px 12px),
-    linear-gradient(transparent 70%, rgba(0, 0, 0, .35));
-  transition: opacity var(--t-med);
-}
 .mode-card::before {
   content: '';
   position: absolute;
@@ -160,52 +140,6 @@
   transform-origin: left;
   transition: transform var(--t-slow) var(--ease-out);
 }
-.mode-card__icon {
-  position: absolute;
-  top: .32rem;
-  left: .28rem;
-  width: .88rem;
-  height: .88rem;
-  display: grid;
-  place-items: center;
-  background: #0c0f0e;
-  border: 1px solid var(--line-2);
-  color: var(--text-md);
-  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
-  transition: background var(--t-med), color var(--t-med);
-}
-.mode-card__icon .icon { width: .44rem; height: .44rem; }
-.mode-card__text { position: relative; display: flex; flex-direction: column; gap: .1rem; }
-.mode-card__name { font-size: calc(.38 * var(--t)); font-weight: 900; letter-spacing: .08em; line-height: 1.15; }
-.mode-card__desc { font-size: calc(.17 * var(--t)); color: var(--text-lo); line-height: 1.65; max-width: 3.6rem; }
-.mode-card__points { display: flex; flex-direction: column; gap: .05rem; margin-top: .06rem; font-size: calc(.15 * var(--t)); color: var(--text-md); }
-.mode-card__points span::before {
-  content: '';
-  display: inline-block;
-  width: .06rem;
-  height: .06rem;
-  margin: 0 .1rem .02rem 0;
-  background: var(--mint-700);
-  transform: rotate(45deg);
-  vertical-align: middle;
-}
-.mode-card__check {
-  position: absolute;
-  bottom: .25rem;
-  left: .28rem;
-  display: flex;
-  align-items: center;
-  gap: .05rem;
-  padding: .04rem .12rem .04rem .08rem;
-  background: var(--mint-500);
-  color: var(--text-on-mint);
-  font-size: calc(.14 * var(--t));
-  font-weight: 700;
-  opacity: 0;
-  transform: translateY(-.06rem);
-  transition: opacity var(--t-med), transform var(--t-med) var(--ease-out);
-}
-.mode-card__check .icon { width: .16rem; height: .16rem; }
 .mode-card:hover { border-color: var(--line-3); --bk-c: var(--line-3); }
 .mode-card:active { transform: translateY(1px); }
 .mode-card.is-selected {
@@ -214,63 +148,29 @@
   box-shadow: 0 0 0 1px rgba(78, 216, 175, .22), 0 0 .44rem rgba(23, 249, 183, .13), inset 0 0 .7rem rgba(23, 249, 183, .05);
 }
 .mode-card.is-selected::before { transform: scaleX(1); }
-.mode-card.is-selected .mode-card__icon { background: var(--mint-500); border-color: var(--mint-400); color: var(--text-on-mint); }
-.mode-card.is-selected .mode-card__check { opacity: 1; transform: none; }
-.mode-card--firepower .mode-card__bg { background: radial-gradient(85% 65% at 100% 0%, rgba(255, 198, 0, .11), transparent 70%), repeating-linear-gradient(-45deg, rgba(255, 255, 255, .018) 0 2px, transparent 2px 12px); }
-.mode-card--firepower .mode-card__icon { color: var(--gold-2); }
 .mode-card--firepower::before { background: linear-gradient(90deg, var(--gold), transparent); }
 .mode-card--firepower.is-selected { --bk-c: var(--gold); border-color: var(--gold-2); box-shadow: 0 0 0 1px rgba(255, 198, 0, .2), 0 0 .3rem rgba(255, 198, 0, .1), inset 0 0 .6rem rgba(255, 198, 0, .04); }
-.mode-card--firepower.is-selected .mode-card__icon, .mode-card--firepower.is-selected .mode-card__check { background: var(--gold); color: #181405; border-color: var(--gold-2); }
 
 /* Full-width protocol choices stay readable when the root scale reaches its mobile floor. */
 @media (max-width: 900px) {
-  .lobby-mode .mode-card { padding-left: 1.1rem; }
-  .lobby-mode .mode-card__icon { left: .22rem; width: .66rem; height: .66rem; }
-  .lobby-mode .mode-card__name { font-size: calc(.34 * var(--t)); }
-  .lobby-mode .mode-card__desc { font-size: calc(.18 * var(--t)); }
-  .lobby-mode .mode-card__points { font-size: calc(.16 * var(--t)); }
   .firepower-features { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .16rem .26rem; }
   .lobby-right .diff-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .lobby-right .diff-card__head { flex-wrap: nowrap; }
-  .lobby-right .diff-card__meta { flex-basis: auto; margin-left: auto; }
   .lobby-left { display: flex; }
   .lobby-left > .matchmaking-panel { margin-bottom: .22rem; }
 }
 @media (max-height: 460px) and (min-width: 641px) {
-  .lobby-mode .mode-card { min-height: 0; padding: .24rem .22rem .22rem 1.05rem; }
-  .lobby-mode .mode-card__name { font-size: calc(.34 * var(--t)); }
-  .lobby-mode .mode-card__check { bottom: .18rem; left: .22rem; font-size: calc(.12 * var(--t)); padding: .03rem .06rem; }
   .firepower-brief { padding: .16rem .2rem; }
   .firepower-features { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .lobby-right .diff-list { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .lobby-right .diff-card__head { flex-wrap: wrap; }
-  .lobby-right .diff-card__meta { flex-basis: 100%; margin-left: .36rem; }
 }
 @media (max-width: 640px) {
   .lobby-screen .lobby-body { grid-template-columns: minmax(0, 1fr); gap: .3rem; padding: .26rem .3rem .4rem; }
-  .lobby-mode { grid-column: 1; }
   .lobby-right { grid-column: 1; grid-row: 2; }
   .lobby-left { grid-column: 1; grid-row: 3; }
-  .lobby-mode .mode-cards { grid-template-columns: minmax(0, 1fr); gap: .15rem; }
-  .lobby-mode .mode-card { min-height: 0; padding: .25rem .26rem .24rem 1.18rem; }
-  .lobby-mode .mode-card__icon { top: .3rem; }
-  .lobby-mode .mode-card__name { font-size: max(calc(.34 * var(--t)), 18px); }
-  .lobby-mode .mode-card__desc { font-size: max(calc(.18 * var(--t)), 11px); max-width: none; }
-  .lobby-mode .mode-card__points { display: flex; font-size: max(calc(.15 * var(--t)), 10px); }
-  .lobby-mode .mode-card__check { bottom: .2rem; left: .22rem; }
-  .lobby-mode .mode-card__text { padding-top: .03rem; }
   .firepower-brief__hint { margin-left: 0; width: 100%; font-size: max(calc(.15 * var(--t)), 10px); }
   .firepower-feature strong { font-size: max(calc(.17 * var(--t)), 11px); }
   .firepower-feature p { font-size: max(calc(.15 * var(--t)), 10px); }
   .mode-beta { font-size: max(calc(.13 * var(--t)), 9px); }
-  .lobby-right .diff-card__head { flex-wrap: wrap; }
-  .lobby-right .diff-card__meta { flex-basis: 100%; margin-left: .36rem; }
-  .lobby-right .diff-card__name { font-size: max(calc(.22 * var(--t)), 12px); }
-  .lobby-right .diff-card__desc { font-size: max(calc(.16 * var(--t)), 10px); line-height: 1.5; }
-  .lobby-right .diff-card__effects { display: flex; font-size: max(calc(.14 * var(--t)), 9px); }
-  .lobby-right .diff-card__check { display: none; }
-  .lobby-right .diff-card__meta { font-size: max(calc(.14 * var(--t)), 9px); }
-  .lobby-right .diff-card__meta .num { font-size: max(calc(.17 * var(--t)), 10px); }
   .lobby-right .create-box { width: 100%; }
   .lobby-right .create-box .btn--xl { font-size: max(calc(.28 * var(--t)), 16px); height: max(.72rem, 40px); }
   .matchmaking-panel { flex-wrap: wrap; }
@@ -345,60 +245,12 @@
 .diff-card:nth-child(2) { animation-delay: 40ms; }
 .diff-card:nth-child(3) { animation-delay: 80ms; }
 .diff-card:nth-child(4) { animation-delay: 120ms; }
-.diff-card__bar { position: absolute; left: 0; top: 0; bottom: 0; width: .06rem; background: var(--d-color); opacity: .45; transition: opacity var(--t-med), box-shadow var(--t-med); }
-.diff-card__head { grid-column: 1 / -1; display: flex; align-items: center; gap: .1rem; min-width: 0; }
-.diff-card__glyph { width: .28rem; height: .28rem; color: var(--d-color); filter: drop-shadow(0 0 5px var(--d-color)); filter: drop-shadow(0 0 5px color-mix(in srgb, var(--d-color) 55%, transparent)); }
-.diff-card__name { font-size: calc(.27 * var(--t)); font-weight: 900; letter-spacing: .06em; color: var(--d-color); }
-.diff-card__code { font-size: calc(.14 * var(--t)); color: var(--text-dim); letter-spacing: .1em; }
-.diff-card__meta { margin-left: auto; display: flex; align-items: center; gap: .04rem; font-size: calc(.14 * var(--t)); color: var(--text-lo); white-space: nowrap; }
-.diff-card__meta .num { color: var(--text-hi); font-weight: 700; font-size: calc(.17 * var(--t)); }
-.diff-card__hidden {
-  margin-left: .08rem;
-  padding: 0 .07rem;
-  border: 1px solid transparent; border: 1px solid color-mix(in srgb, var(--d-color) 45%, transparent);
-  color: var(--d-color); color: color-mix(in srgb, var(--d-color) 80%, #fff);
-  font-size: calc(.12 * var(--t));
-  line-height: 1.6;
-}
-.diff-card__desc { grid-column: 1; font-size: calc(.16 * var(--t)); color: var(--text-md); }
-.diff-card__effects { grid-column: 1; display: flex; flex-wrap: wrap; gap: .04rem .2rem; font-size: calc(.14 * var(--t)); color: var(--text-lo); }
-.diff-card__effects span::before { content: '·'; margin-right: .05rem; color: var(--d-color); font-weight: 900; }
-/* battlefield pool note (config.json modes[].stages): 战场固定为 战场#01 / 战场随机（共N张） — the last item of the
-   effects row (no extra card height: the lobby must not scroll at 1280×720 / 1920×1080) */
-.diff-card__effects .diff-card__stage { display: inline-flex; align-self: flex-start; align-items: center; gap: .05rem; }
-.diff-card__effects .diff-card__stage::before { content: none; }
-.diff-card__stage .icon { flex: none; width: .15rem; height: .15rem; color: var(--d-color); opacity: .85; }
-.diff-card__check {
-  grid-column: 2;
-  grid-row: 2 / span 2;
-  align-self: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: .03rem;
-  font-size: calc(.12 * var(--t));
-  color: var(--text-dim);
-}
-.diff-card__check .icon {
-  width: .46rem;
-  height: .46rem;
-  padding: .09rem;
-  border-radius: 50%;
-  border: 2px solid var(--line-2);
-  color: transparent;
-  transition: background var(--t-med), border-color var(--t-med), color var(--t-med), transform var(--t-med) var(--ease-out);
-}
-.diff-card__check span { opacity: 0; transition: opacity var(--t-med); }
 .diff-card:hover { border-color: var(--line-3); }
 .diff-card.is-selected {
   border-color: var(--d-color); border-color: color-mix(in srgb, var(--d-color) 65%, transparent);
   background: linear-gradient(90deg, #151a18, rgba(15, 19, 17, .95) 70%); background: linear-gradient(90deg, color-mix(in srgb, var(--d-color) 15%, #151a18), rgba(15, 19, 17, .95) 70%);
   box-shadow: 0 0 .3rem transparent; box-shadow: 0 0 .3rem color-mix(in srgb, var(--d-color) 16%, transparent);
 }
-.diff-card.is-selected .diff-card__bar { opacity: 1; box-shadow: 0 0 .14rem var(--d-color); }
-.diff-card.is-selected .diff-card__check { color: var(--d-color); }
-.diff-card.is-selected .diff-card__check .icon { background: var(--d-color); border-color: var(--d-color); color: #150a04; transform: rotate(-8deg); }
-.diff-card.is-selected .diff-card__check span { opacity: 1; }
 
 /* ---- create ------------------------------------------------------------------------------------------ */
 .create-box { margin-top: .3rem; display: flex; flex-direction: column; gap: .12rem; }
@@ -778,10 +630,8 @@
   letter-spacing: .02em;
 }
 
-
 .matchmaking-count { display: inline-flex; gap: .035rem; color: var(--mint); font-size: max(calc(.12 * var(--t)), 11px); white-space: nowrap; align-items: baseline; }
 .mode-card .matchmaking-count { margin-top: .08rem; }
-.diff-card__head { flex-wrap: wrap; }
 
 /* Keep the deployed matchmaking controls beside the room browser. */
 .matchmaking-panel__action { flex-wrap: wrap; justify-content: flex-end; gap: .1rem; }
@@ -2675,9 +2525,6 @@ button.ally-card:disabled { filter: grayscale(.7) brightness(.7); cursor: defaul
 
 /* 座位卡顶部 P 编号条按队伍着色 */
 
-
-
-
 .rseat--team-red    .rseat__strip i,
 .rseat--team-yellow .rseat__strip i,
 .rseat--team-blue   .rseat__strip i,
@@ -3110,10 +2957,8 @@ button.ally-card:disabled { filter: grayscale(.7) brightness(.7); cursor: defaul
   letter-spacing: .02em;
 }
 
-
 .matchmaking-count { display: inline-flex; gap: .035rem; color: var(--mint); font-size: max(calc(.12 * var(--t)), 11px); white-space: nowrap; align-items: baseline; }
 .mode-card .matchmaking-count { margin-top: .08rem; }
-.diff-card__head { flex-wrap: wrap; }
 
 /* Keep the deployed matchmaking controls beside the room browser. */
 .matchmaking-panel__action { flex-wrap: wrap; justify-content: flex-end; gap: .1rem; }
@@ -4790,26 +4635,6 @@ button.ally-card:disabled { filter: grayscale(.7) brightness(.7); cursor: defaul
 .hub-ach__rank > .tbadge { width: .34rem; height: .34rem; }
 .splate__rank > .tbadge { width: .44rem; height: .44rem; }
 
-/* 公告板（ui/announcements.js）：大厅常驻细条 + 浮窗。
-   条目按网关的 level 分级上色（info 薄荷 / warning 琥珀 / critical 红），维护类条目另带 is-upcoming / is-live 状态。 */
-.announce-bar {
-  width: min(100%, 8.6rem); display: flex; align-items: center; gap: .1rem;
-  padding: .1rem .16rem; border: 1px solid var(--line-2); border-radius: 2px;
-  background: rgba(16, 20, 18, .82); color: var(--text-md); font-size: .15rem;
-  cursor: pointer; text-align: left;
-}
-.announce-bar .icon { width: .2rem; height: .2rem; flex: none; }
-.announce-bar__tag { flex: none; padding: 0 .08rem; border: 1px solid currentColor; border-radius: 2px; font-size: .13rem; letter-spacing: .02em; }
-.announce-bar__title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-hi); }
-.announce-bar__more { flex: none; display: inline-flex; align-items: center; gap: .04rem; font-size: .13rem; color: var(--text-lo); }
-.announce-bar__more .icon { width: .16rem; height: .16rem; }
-.announce-bar--info { border-color: var(--mint-a35); color: var(--mint-500); }
-.announce-bar--warning { border-color: var(--amber-a20); color: var(--amber); background: rgba(40, 24, 6, .72); }
-.announce-bar--critical { border-color: var(--red-a20); color: var(--red-premium); background: rgba(46, 10, 8, .72); }
-.announce-bar.is-live { animation: announce-pulse 2.4s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) { .announce-bar.is-live { animation: none; } }
-@keyframes announce-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .72; } }
-
 .modal__box.announcement-board { width: min(7rem, calc(100vw - 32px)); }
 .announcement-board .modal__body { max-height: min(62vh, 5.6rem); overflow: hidden; display: flex; flex-direction: column; gap: .12rem; }
 .announcement-scroll { overflow: auto; min-height: 0; padding-right: .06rem; }
@@ -4833,3 +4658,164 @@ button.ally-card:disabled { filter: grayscale(.7) brightness(.7); cursor: defaul
 .announcement-reading span { display: inline-flex; align-items: center; gap: .04rem; }
 .announcement-reading__track { height: 2px; background: var(--line); border-radius: 1px; overflow: hidden; }
 .announcement-reading__track i { display: block; height: 100%; background: var(--mint-500); transform-origin: left center; }
+
+/* 玩法（插件模式）胶囊：space 已被 alliance 的 rs-clock 占满，这里跟在等待时间后面；基座 room.css 有同名规则，
+   但 alliance 的 lobby.css 是整份副本、没有它，所以在这里补一条同款。 */
+.room-mode { margin-left: .1rem; padding: 0 .08rem; border: 1px solid rgba(255, 106, 61, .6); color: #ff8a5c; font-size: calc(.16 * var(--t)); vertical-align: middle; }
+/* 每个座位的插件内容状态（DESIGN §32.6）：载入中 / 就绪 / 校验失败 */
+.rseat__content { position: absolute; left: .1rem; bottom: .1rem; padding: 0 .06rem; font-size: max(.12rem, 9px);
+  background: rgba(8, 11, 10, .85); border: 1px solid var(--line-2); color: var(--text-dim); }
+.rseat__content.is-ready { border-color: var(--mint-700); color: var(--mint-400); }
+.rseat__content.is-failed { border-color: rgba(255, 84, 84, .6); color: #ff7a7a; }
+
+/* ---- 娱乐模式弹窗（2026-11-01：与大厅入口/难度卡同一设计语言 —— 暗底细线 + 括号角 + 令牌色） ------- */
+.fun-modal { width: min(9.2rem, 94vw); height: auto; max-height: 86vh; }
+.fun-modal .modal__head { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: .14rem; padding-right: .56rem; }
+.fun-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .14rem; padding: .14rem .3rem .22rem; overflow: auto; }
+.fun-card {
+  --acc: var(--mint-400);
+  position: relative; display: flex; flex-direction: column; gap: .07rem; min-height: 1.42rem;
+  padding: .15rem .18rem .13rem; overflow: hidden; text-align: left; cursor: pointer; color: var(--text-hi); font: inherit;
+  background: linear-gradient(160deg, rgba(30, 46, 42, .94), rgba(9, 15, 14, .96));
+  border: 1px solid var(--line-2);
+  box-shadow: 0 .06rem .24rem rgba(0, 0, 0, .5);
+  transition: transform var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.fun-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--acc); opacity: .85; }
+.fun-card:hover:not(:disabled) {
+  transform: translateY(-.03rem); border-color: var(--acc);
+  box-shadow: 0 .08rem .3rem rgba(0, 0, 0, .55), 0 0 .18rem color-mix(in srgb, var(--acc) 24%, transparent);
+}
+.fun-card:disabled { opacity: .5; cursor: default; }
+.fun-card__en { font: 700 .11rem/1 ui-monospace, Consolas, monospace; letter-spacing: .22em; color: var(--acc); }
+.fun-card__name { font-size: .28rem; font-weight: 900; letter-spacing: .06em; white-space: nowrap; }
+.fun-card__desc { color: var(--text-dim); font-size: .14rem; line-height: 1.65; }
+.fun-card__corner { position: absolute; right: 0; bottom: 0; width: .26rem; height: .26rem; background: linear-gradient(135deg, transparent 50%, var(--acc) 50%); opacity: .75; }
+.fun-rooms { padding: 0 .3rem .22rem; display: flex; flex-wrap: wrap; gap: .4rem .4rem; align-items: center; }
+.fun-rooms { gap: .4rem; }
+@media (max-width: 760px) { .fun-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* ==========================================================================================
+   选择模拟协议 · 版式（2026-11-01 第四稿：业主「左侧做成和右侧一样的卡片，盖住地图」）
+
+   构图：地图铺满整个内容区做**背景**；左右两列卡片都压在它上面，
+   左侧 = 对抗规则三张卡（与右侧难度卡同一个壳子：暗底渐变 + 2px 边 + 圆角 + 阴影），
+   右侧 = 难度四张卡 + 私密/开始。
+   ========================================================================================== */
+.proto-body {
+  position: relative;
+  grid-template-columns: minmax(0, 1fr) min(max(4rem, 24px, calc(210px * var(--sp-ui, 1))), 24vw);
+  gap: .16rem .22rem;
+}
+/* 地图：绝对铺满整个 body，压在两列之下 */
+.proto-body > .proto-stage {
+  position: absolute; inset: 0; z-index: 0; overflow: hidden;
+  border: 0; background: none;
+}
+.proto-body > .proto-stage .ps { inset: 0; height: 100%; }
+
+.proto-main { position: relative; z-index: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: .12rem; }
+
+/* ---- 左列：对抗规则，卡壳与右侧难度卡一致 ---- */
+.proto-main .proto-dock {
+  flex: 0 0 auto; max-width: min(4.6rem, 38%); padding: 0; border: 0; background: none; backdrop-filter: none;
+  display: flex; flex-direction: column; gap: .1rem;
+}
+.proto-main .proto-dock__row { grid-template-columns: minmax(0, 1fr); gap: .1rem; }
+.proto-main .vsopt {
+  flex-direction: column; align-items: flex-start; gap: .03rem; height: auto;
+  padding: .13rem .16rem .12rem .2rem; border: 2px solid #55585a; border-radius: .2rem;
+  background: linear-gradient(180deg, #252627, #1a1b1c);
+  box-shadow: 0 .05rem .16rem rgba(0, 0, 0, .5);
+}
+.proto-main .vsopt::before { display: none; }
+.proto-main .vsopt:hover:not(:disabled):not(.is-on) { border-color: #7b7f81; }
+.proto-main .vsopt.is-on {
+  border-color: var(--acc);
+  box-shadow: inset 3px 0 0 var(--acc), 0 .05rem .16rem rgba(0, 0, 0, .5);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--acc) 13%, #252627), #1a1b1c);
+}
+.proto-main .vsopt__code { min-width: max(.28rem, 17px); height: max(.28rem, 17px); font-size: max(.13rem, 9px); border-radius: .05rem; }
+.proto-main .vsopt__text { gap: .02rem; }
+.proto-main .vsopt__text b { font-size: max(.24rem, 14px); letter-spacing: .03em; }
+.proto-main .vsopt.is-on .vsopt__text b { color: var(--acc); }
+.proto-main .vsopt__text small { font-size: max(.14rem, 10px); color: #8b918f; }
+
+/* 规则专属参数（换攻守 / 倍速）跟在卡片下方，做一条轻量说明带 */
+.proto-main .proto-dock__foot {
+  margin-top: .02rem; padding: .07rem .12rem; gap: .14rem;
+  border: 1px solid rgba(255, 255, 255, .1); border-radius: .12rem;
+  background: rgba(0, 0, 0, .42);
+}
+.proto-main .proto-dock__foot:empty { display: none; }
+
+/* 模式介绍：压在贴底位置，带渐变保证在图上可读 */
+.proto-main .proto-brief {
+  position: static; left: auto; bottom: auto; max-width: min(4.8rem, 40%);
+  padding: .09rem .16rem .11rem .18rem; border-left: 3px solid var(--d-color);
+  background: linear-gradient(90deg, rgba(0, 0, 0, .72), rgba(0, 0, 0, .12) 82%);
+}
+.proto-main .proto-brief__mode { display: flex; align-items: baseline; gap: .1rem; font-size: max(.18rem, 11px); font-weight: 800; color: #eef2f0; }
+.proto-main .proto-brief__mode i { font-style: normal; font-family: var(--font-display); font-size: .78em; letter-spacing: .16em; color: #8b918f; }
+.proto-main .proto-brief p { margin: .03rem 0 0; font-size: max(.15rem, 10px); line-height: 1.5; color: #a9b0ad; }
+.proto-main .proto-fp { position: static; left: auto; top: auto; width: auto; max-height: none; }
+.proto-main .proto-versus--info { flex: 0 0 auto; max-width: min(4.8rem, 40%); background: rgba(0, 0, 0, .5); }
+
+/* ---- 右列：难度卡 ---- */
+.proto-side {
+  position: relative; z-index: 1; min-height: 0; display: flex; flex-direction: column; gap: .1rem;
+  border-left: 1px solid rgba(255, 255, 255, .08); padding-left: .2rem;
+  background: linear-gradient(90deg, rgba(0, 0, 0, .34), transparent 78%);
+}
+.proto-side .proto-list {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  display: flex; flex-direction: column; gap: .09rem; padding: .05rem .06rem .05rem .1rem;
+  scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .25) transparent;
+}
+.proto-side .pcard { padding: .1rem .14rem .1rem .18rem; border-radius: .12rem; gap: .02rem; }
+.proto-side .pcard.is-on {
+  transform: none; border-color: var(--d-color);
+  box-shadow: inset 3px 0 0 var(--d-color), 0 0 .16rem color-mix(in srgb, var(--d-color) 18%, transparent);
+}
+.proto-side .pcard.is-on > :not(.pcard__glow, .pcard__stamp) { padding-right: 0; }
+.proto-side .pcard__stamp, .proto-side .pcard.is-on .pcard__stamp { display: none; }
+.proto-side .pcard.is-on .pcard__glow { opacity: .55; }
+.proto-side .pcard__name { font-size: max(.26rem, 15px); }
+.proto-side .pcard__desc { padding-bottom: .03rem; font-size: max(.15rem, 10px); }
+.proto-side .pcard__effects { flex-direction: row; flex-wrap: wrap; gap: 0 .16rem; font-size: max(.15rem, 10px); }
+.proto-side .proto-foot { margin-top: auto; padding-left: 0; }
+
+/* 尺寸自适应：视口变窄时继续收列，但不折行成上下两段 */
+@media (max-width: 1100px) {
+  .proto-main .proto-dock, .proto-main .proto-brief, .proto-main .proto-versus--info { max-width: min(4.6rem, 52%); }
+  .proto-side { padding-left: .14rem; }
+}
+@media (max-width: 860px) {
+  .proto-body { grid-template-columns: minmax(0, 1fr) min(3.4rem, 40vw); gap: .12rem .16rem; }
+  .proto-main .proto-dock, .proto-main .proto-brief, .proto-main .proto-versus--info { max-width: 100%; }
+  .proto-side .pcard__effects { display: none; }
+  .proto-side .pcard__desc { display: none; }
+}
+
+/* 矮屏兜底（不做竖屏适配） */
+@media (max-height: 640px) {
+  .proto-main .proto-brief p { display: none; }
+  .proto-side .pcard { padding: .08rem .12rem .08rem .16rem; }
+  .proto-side .pcard__effects { display: none; }
+}
+
+/* 模拟邀约（2026-11-02 业主：放到首页三个模式卡正上方、靠右；尺寸/外观恢复原来那一档药丸，不要缩小版） */
+.hub-invite {
+  display: inline-flex; align-items: center; align-self: flex-end; gap: .08rem;
+  height: max(.5rem, 30px); padding: 0 .2rem; font: inherit;
+  font-size: max(.2rem, 12px); font-weight: 700; color: #eef0ef;
+  background: linear-gradient(180deg, #2c2f2f, #1b1d1d);
+  border: 1px solid rgba(255, 255, 255, .2); border-radius: 999px;
+  cursor: pointer; white-space: nowrap; transition: border-color var(--t-fast), background var(--t-fast);
+}
+.hub-invite:hover { border-color: rgba(255, 255, 255, .45); }
+.hub-invite .icon { width: max(.2rem, 13px); height: max(.2rem, 13px); }
+
+/* 插件库清单的筛选条（2026-11-02）：复用 .set-toggle 的观感，只补排布 */
+.plugpanel__filters { display: flex; flex-wrap: wrap; gap: .06rem; margin: .06rem 0 .08rem; }
+.plugpanel__filters .set-toggle { font-size: max(.12rem, 9.5px); }

@@ -12,6 +12,7 @@ import { normalizeToken } from '../simdata.js';
 import { isPotential, isCultivate } from '../../../shared/potential.js';
 import { setupUnitKit } from '../content/index.js';
 import { installTraitAttackSpeed } from '../content/traitMods.js';
+
 import { clone } from './util.js';
 
 export class BattlePlayers {
@@ -162,11 +163,56 @@ export class BattlePlayers {
     const u = this._makeAlly(ps, def, 'op', r, c, { uid: inp.uid, dir, skin: inp.skin });
     u.items = [...(inp.items ?? [])];
     u.carry = inp.carryState ?? null;
-    // 练度 (自持有, 0.2.2): the owned operator's ×ATK / ×DEF / ×max HP (units.js Πmul) — never a 补位 stand-in's nor a
-    // prototype 自选 pick's (another character than the one the player owns)
+    /*
+     * ⚠ **不要在这里加 `u.spine = inp.spine` / `u.skin = …`。**
+     *
+     * 我一度在这里插了一段"把皮肤从 input 搬到单位"的代码,以为 sim 丢了它 —— **那是错的**:
+     * 这个函数**末尾**(见下面 `// 干员皮肤` 那一段)本来就在拷 `inp.skin` / `inp.skinOf`。
+     * 我插的那段是重复的,而且更糟的是它**骗过了变异测试**:
+     * 我把自己的那段删掉再跑自检,依然全过 —— 因为末尾那段还在起作用,
+     * 于是我一度以为"自检抓不到 bug",其实是我在错误的位置做变异。
+     *
+     * 教训:插代码之前先 `grep` 一遍同一个函数体,确认它是不是已经有了。
+     */
+    /*
+     * 练度 (自持有, 0.2.2): the owned operator's ×ATK / ×DEF / ×max HP (units.js Πmul) — never a 补位 stand-in's nor a
+     * prototype 自选 pick's (another character than the one the player owns).
+     */
     if (isCultivate(inp.cultivate) && !def.standInFor && !def.raw?.diyProto) {
       const mul = typeof this.data.cultivateMul === 'function' ? this.data.cultivateMul(inp.cultivate) : null;
       if (mul) { u.cultivate = inp.cultivate; u.cultMul = Object.freeze({ ...mul }); u.markDirty(); }
+    }
+    /*
+     * 危机合约的干员减益 (shared/contractEffects.js `opStatMul`)。
+     *
+     * 「临阵磨枪 / 训练不足 / 恢复期 / 重伤残」把干员的 ×ATK / ×DEF / ×max HP 压下去(0.9 → 0.5)。
+     * 接在 `cultMul` 上而不是 `mods`:那一项在 `units.js _recalc` 里与 buff / 潜能各自独立相乘,
+     * 而且 `maxHp` / `atk` / `def` 都带**不低于基础值**的下限,所以纯减益不会被翻成增益。
+     *
+     * ⚠ 必须**无条件**施加 —— 上面那个 `if` 只在有练度时才装 `cultMul`,而减益对每个自家干员都成立
+     * (补位 / 自选编队也一样,它们只是不能改练度,不是不该吃合约)。
+     */
+    /*
+     * ⚠ 倍率挂在**玩家输入**上(`ps.input.contractOpStatMul`),不是**单位**上 ——
+     * 这个函数的 `inp` 是单位,`battleInput()` 把合约那一段放在它返回的玩家对象里。
+     * 第一版读 `inp.contractOpStatMul`,于是恒为 undefined、减益完全不生效(实测面板一点没动)。
+     */
+    const contractOp = (ps && ps.input && ps.input.contractOpStatMul) || (this.data && this.data.contractOpStatMul);
+    if (contractOp && (contractOp.atk !== 1 || contractOp.def !== 1 || contractOp.hp !== 1)) {
+      const prev = u.cultMul || { atk: 1, def: 1, hp: 1 };
+      u.cultMul = Object.freeze({ atk: prev.atk * contractOp.atk, def: prev.def * contractOp.def, hp: prev.hp * contractOp.hp });
+      u.markDirty();
+    }
+    // 干员皮肤 (docs/SKINS.md): the skin this piece wears. It rides on the UNIT (not the def) because the def is
+    // cached per (chessId, loadout) and shared by every player fielding that chess — two players may skin the same
+    // operator differently. snapshot.js unitInfo() puts it back on the wire, and the client resolves the model.
+    //
+    // ⚠ `skinOf` 必须**一起拷贝**:自选编队上场时模型画的是被选中的干员,而皮肤要按归属 id 查目录
+    // (`public/js/assets.js spineEntry`)。这里只拷 `skin` 的话,`unitInfo` 再想带 `skinOf` 也没有 ——
+    // 皮肤在战斗里静默退回默认模型。这里是整条链的最后一环,漏了它前面全白做。
+    if (typeof inp.skin === 'string' && inp.skin) {
+      u.skin = inp.skin;
+      if (typeof inp.skinOf === 'string' && inp.skinOf) u.skinOf = inp.skinOf;
     }
     return u;
   }
@@ -195,6 +241,8 @@ export class BattlePlayers {
         hpRecoveryPerSec: st.hpRecoveryPerSec, cost: st.cost, respawnTime: st.respawnTime,
       },
     });
+    if(kind==='op')u.contractRedeployMul=ps?.input?.contractRedeployMul||1;
+    if(kind==='op' && ps?.bandId==='band_closur' && ps.input?.closurDebt>0) { u.debtPenalty=.9; u.markDirty(); }
     u.alive = false;
     u.deployed = false;
     u.items = [];

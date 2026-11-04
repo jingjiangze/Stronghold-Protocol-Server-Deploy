@@ -2,9 +2,7 @@
 // Conventions of the tier-5 kits: ../shared/tier5.js; kit contract and rules: ../README.md.
 
 import { COLS } from '../../../constants.js';
-import {
-  AURA_IV, AURA_DUR, RING1, num, on, talent, mods, dist, inFaction, isOp, selectedId, lazySkills, whileOn,
-} from '../shared/tier5.js';
+import { AURA_IV, AURA_DUR, RING1, num, on, talent, mods, dist, inFaction, isOp, selectedId, lazySkills, whileOn } from '../shared/tier5.js';
 
 const isSargonMinos = (u) => inFaction(u, 'sargonShip', ['sargon', 'minos']);
 

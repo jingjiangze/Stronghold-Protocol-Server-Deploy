@@ -1,0 +1,39 @@
+{
+  "manifest": 2,
+  "id": "roguelike-core",
+  "name": {
+    "zh": "肉鸽节点核心",
+    "en": "Roguelike node core"
+  },
+  "description": {
+    "zh": "P0 垂直切片：节点序列、行动力、战斗→奖励→下一节点→结局钩子。叠加在 mota 的对局引擎上，不替换引擎；数值为自设计（非官方）。",
+    "en": "P0 vertical slice: node sequence, action points, battle -> reward -> next node -> ending hook. A mixin over mota's match engine; the numbers are self-designed, not official."
+  },
+  "version": "0.1.0",
+  "app": ">=0.3.0 <0.5.0",
+  "api": 2,
+  "class": "trusted",
+  "scope": [
+    "room"
+  ],
+  "authors": [
+    "jingjiangze"
+  ],
+  "license": "GPL-3.0-or-later",
+  "permissions": [
+    "trusted.server"
+  ],
+  "entry": {
+    "server": "host/noop.js"
+  },
+  "code": {
+    "matchMixin": "server/match/NodeMixin.js"
+  },
+  "requires": {
+    "roguelike-data-ro4": ">=0.1.0 <0.2.0"
+  },
+  "needs": [
+    "code.matchMixin",
+    "trusted.server"
+  ]
+}

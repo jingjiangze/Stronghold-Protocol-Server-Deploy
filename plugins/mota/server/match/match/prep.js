@@ -10,11 +10,17 @@ import { testSlice } from '../testTrace.js';
 import { DELAYS } from './common.js';
 
 export class MatchPrep {
+  /** 本回合参加休整的玩家：攻防回合只有守方（攻方只投放）；普通回合全体存活玩家。 */
+  prepPlayers() {
+    if (typeof this.isRoleRound !== 'function' || !this.isRoleRound()) return this.alivePlayers();
+    return this.defenders();
+  }
+
   enterPrep() {
     this.phase = PHASE.PREP;
     this.sp = null;
-    const alive = this.alivePlayers();
-    for (const ps of alive) {
+    const prep = this.prepPlayers();
+    for (const ps of prep) {
       ps.ready = false;
       // Items gained as the previous prep ended waited unmerged (acquireItem deferMerge). Merge them now, before
       // this prep's onPrepStart grants and before the player acts — not in endPrep, which runs in the same prep
@@ -24,19 +30,24 @@ export class MatchPrep {
       this.dispatch(ps, 'onPrepStart', { round: this.round });
       ps.recompute();
     }
-    // A co-op room waits for every alive seat's Ready (maybeEndPrep), so a human able to press it must have a
-    // deadline — otherwise that human's silence stalls the match forever (docs/PS100-MIGRATION.md §5, the
-    // 「1 真人 + N AI」 room: `prepFallbackGuard`). `soloUntimed` still governs the OTHER phases (INFO_CHECK,
-    // BAND_DRAFT, SP_DRAFT and the silent presentation steps); here the guard only hands that lone human the co-op
-    // prep timer it was missing.
+    // 攻方本回合没有战场：不进入休整，只做待合并装备的清理并直接 Ready，等待守方开打。
+    for (const ps of this.alivePlayers()) {
+      if (prep.includes(ps)) continue;
+      try { ps.checkItemMerges(); } catch { /* ignore */ }
+      ps.recompute();
+      ps.ready = true;
+      ps.dirty();
+    }
+    // 只有一个真人的房（独立模拟 / 单人肉鸽 / 「1 真人 + N AI」）没有休整倒计时：没有第二个玩家会来按准备，
+    // 倒计时只是逼自己 —— 与 `soloUntimed` 同一条规则（docs/PS100-MIGRATION.md §5，user playtest #4 item 3）。
+    // AI 席位会立刻 Ready，所以不计时也不会把 `maybeEndPrep` 卡住。
     //
-    // The round's own prepTime decides 0 vs a deadline, exactly as before: a round that declares `prepTime: null`
-    // means UNTIMED and stays untimed (the config is the authority on whether this round is timed at all — the
-    // zero-delay ordering of `verification-slices.test.js` depends on it). The `infoCheck` 25 s guard is used ONLY
-    // for the lone-human room, and never to time a round the data leaves untimed for anyone else.
+    // 其余房间仍由数据决定：本回合声明了 `prepTime` 就用它；声明为 null 就是不计时（config 是权威 ——
+    // `verification-slices.test.js` 的零延迟顺序依赖这一点）。`infoCheck` 25 s 兜底只给 `prepFallbackGuard`
+    // （没有单人豁免的多真人房），且从不给一个数据里本就不计时的回合加表。
     this.setDeadline(this.prepDeadlineSeconds(), () => this.prepDeadline());
     let i = 0;
-    for (const ps of alive) if (ps.botControlled) this.scheduleBotPrep(ps, i++);
+    for (const ps of prep) if (ps.botControlled) this.scheduleBotPrep(ps, i++);
     this.markPublic();
     this.maybeEndPrep();
   }
@@ -45,18 +56,19 @@ export class MatchPrep {
    * Seconds of this round's prep deadline (null = untimed). The SINGLE definition of the rule, so the prep and the
    * `attachAudit` check can never drift apart:
    *
-   *   * solo (and any room with no seat able to press Ready) → null: nobody waits on anybody, and there is no Ready
-   *     gate that could stall;
+   *   * solo, and any room with only ONE human seat (loneHuman: 独立模拟 or a 同盟 / 肉鸽 room started alone or with
+   *     AI teammates only) → null: nobody waits on anybody, and a lone human's silence cannot stall anything — the
+   *     AI seats press Ready at once. Same rule as `soloUntimed` (docs/PS100-MIGRATION.md §5, user playtest #4 item 3);
    *   * the round declares a `prepTime` → that value (today's behaviour, unchanged);
    *   * the round declares none, but this is the lone-human co-op room (`prepFallbackGuard`) → the official
-   *     `timers.infoCheck` guard, so that human's silence can never stall the match (docs/PS100-MIGRATION.md §5);
+   *     `timers.infoCheck` guard, so that human's silence can never stall the match;
    *   * otherwise → null: the data left this round untimed and it stays untimed.
    *
    * @returns {number|null}
    */
   prepDeadlineSeconds() {
-    // SOLO only — NOT `soloUntimed`, which is also true for the lone-human co-op room this whole guard exists for.
-    if (this.isSolo) return null;
+    // 独立模拟与「只有一个真人」的房（含单人肉鸽）都不计时 —— 没有第二个玩家会来按准备，倒计时只是逼自己。
+    if (this.isSolo || this.loneHuman === true) return null;
     const declared = this.gd.prepTime(this.round);
     if (declared != null) return declared;
     return this.prepFallbackGuard ? this.gd.timer('infoCheck') : null;
@@ -168,7 +180,7 @@ export class MatchPrep {
 
   maybeEndPrep() {
     if (this.phase !== PHASE.PREP || this._prepEndQueued) return;
-    const allReady = () => { const alive = this.alivePlayers(); return alive.length > 0 && alive.every((p) => p.ready); };
+    const allReady = () => { const alive = this.prepPlayers(); return alive.every((p) => p.ready); };
     if (!allReady()) return;
     const round = this.round;
     this._prepEndQueued = true;
@@ -181,7 +193,7 @@ export class MatchPrep {
 
   prepDeadline() {
     if (this.phase !== PHASE.PREP) return;
-    for (const ps of this.alivePlayers()) {
+    for (const ps of this.prepPlayers()) {
       if (ps.ready) continue;
       this.autoPickPersonalChoice(ps, 'random');
       ps.resolveTemp();
@@ -201,7 +213,7 @@ export class MatchPrep {
     this._cancelRehearsal();
     this.setDeadline(0);
     const alive = this.alivePlayers();
-    for (const ps of alive) this.dispatch(ps, 'onPrepEnd', { round: this.round });
+    for (const ps of this.prepPlayers()) this.dispatch(ps, 'onPrepEnd', { round: this.round });
     // 协同经济 (DESIGN §28): the prep end closes every request, then the leftovers convert (坎诺特 bands skip it)
     if (this.teamEcon) {
       this.econCloseAll('prep-end');
@@ -209,13 +221,23 @@ export class MatchPrep {
     }
     for (const ps of alive) ps.endPrep();
     const r = this.round;
-    if (r === this.gd.bossRound) {
+    // 肉鸽（mode_rogue_*，2026-11-03）：Boss / 隐藏回合仍按**普通战斗**打 —— 官方图在 Boss 半场（rows 0–5）没有部署格，
+    // Boss 本体由该图的出怪表带 `tag:'boss'` 出场（tools/build-rogue-maps-v2.mjs），phases.js startRound 同样用
+    // `isRogue !== true` 排除这两关的 boss 出怪计划。所以这两条 Final Assault / Hidden Core 分支对肉鸽不成立，肉鸽
+    // R14 照常走 startCombat（普通战斗准备）。其它模式逐字不变。
+    if (r === this.gd.bossRound && this.isRogue !== true) {
       this.hiddenLayerSum = alive.reduce((s, p) => s + p.activatedLayers(), 0);
       this.startFinalAssault(false);
-    } else if (r === this.gd.hiddenRound) {
+    } else if (r === this.gd.hiddenRound && this.isRogue !== true) {
       this.startFinalAssault(true);
+    } else if (this.isRoleRound && this.isRoleRound() && this._confrontDoneRound !== this.round) {
+      // 防御性兜底：攻防回合若还没投放，先回到攻方投放，再进守方休整
+      this.enterConfront();
     } else {
       this.startCombat();
     }
   }
+
+  /** 攻方投放结束后的守方休整（与 enterPrep 同一套逻辑，仅参战名单不同）。 */
+  enterDefenderPrep() { this.enterPrep(); }
 }

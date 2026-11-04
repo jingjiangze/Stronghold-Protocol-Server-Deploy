@@ -25,7 +25,7 @@
 // difficulty }), `warnings` in room.state's `{ code, params }` shape, `dataBytes` (what the members download beyond the
 // vanilla files).
 
-import { ERR, DIFFICULTIES } from '../../shared/constants.js';
+import { ERR, DIFFICULTIES, LEGACY_DIFFICULTIES } from '../../shared/constants.js';
 import { contentHashOf, csUrlPart, isContentHash } from '../../shared/plugins/identity.js';
 import { normalizeSettings } from '../../shared/plugins/patch.js';
 import { buildContentSet, contentSetFiles } from './contentSet.js';
@@ -62,7 +62,7 @@ export function pluginModes(modes, vanillaData) {
       id: m.modeId,
       name: typeof m.name === 'string' ? m.name.slice(0, 40) : m.modeId,
       roomMode: m.type === 'SINGLE' ? 'solo' : 'coop',
-      difficulty: DIFFICULTIES.includes(m.difficulty) ? m.difficulty : null,
+      difficulty: DIFFICULTIES.includes(m.difficulty) || LEGACY_DIFFICULTIES.includes(m.difficulty) ? m.difficulty : null,
     }));
 }
 

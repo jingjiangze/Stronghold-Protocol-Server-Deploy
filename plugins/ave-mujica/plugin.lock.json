@@ -1,0 +1,29 @@
+{
+  "lock": 1,
+  "id": "ave-mujica",
+  "version": "1.8.24",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "IMPORT-REPORT.md": {
+      "sha256": "14908cce5f0c3338c8b23c046250b19ddc1479edb8aa8ab52b2c9bb6360d3b25",
+      "bytes": 223676
+    },
+    "README.md": {
+      "sha256": "c0577c059ff67210affae6f4623f6e864acac61b8f6e71fde248ba4de68aec97",
+      "bytes": 356
+    },
+    "data/records.json": {
+      "sha256": "5099aa7cfa8a1db14bc4983a9022c024c4b20dd0f4d6dfadc1cedd3db050e454",
+      "bytes": 11031
+    },
+    "operators/imported.json": {
+      "sha256": "3949b066bd7aa54e1e8dbecfac43d04611af9ccd573a519fe2d482ac0f9435b6",
+      "bytes": 68874
+    },
+    "plugin.json": {
+      "sha256": "9f70f1009fd4f10ada8316533bea11930ad1e6e410c14a7a96af235931231162",
+      "bytes": 1737
+    }
+  },
+  "spine": {}
+}

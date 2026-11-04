@@ -101,6 +101,10 @@ export const initialState = Object.freeze({
   // lobby's picker stays hidden), `selected` = the host's picks for the next room it creates. The values themselves live
   // in public/js/roomMods.js; this slice is what the UI renders from.
   roomMods: { available: [], selected: [] },
+  // 官方版本（DESIGN §35.23）：`versions` = 服务器启用的版本列表（main.js 的 welcome 写入；null = 开关关闭）；
+  // `lobbyVersion` = 本浏览器的大厅选择（与核心 store 同口径）—— 缺了它刷新页面后大厅版本偏好不会被恢复。
+  versions: null,
+  lobbyVersion: (() => { const v = loadPref('lobby.version', null); return typeof v === 'string' && v.length <= 40 ? v : null; })(),
 });
 
 /** The app-wide store singleton. */

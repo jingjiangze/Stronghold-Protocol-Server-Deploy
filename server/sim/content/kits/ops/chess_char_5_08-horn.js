@@ -1,10 +1,9 @@
 // server/sim/content/kits/ops/chess_char_5_08-horn.js — 号角 (char_4039_horn) kit, tier 5.
 // Conventions of the tier-5 kits: ../shared/tier5.js; kit contract and rules: ../README.md.
 
+import { installHornWebModule20261101 } from '../shared/hornWebModule20261101.js';
 import { bodyInRadius } from '../../../body.js';
-import {
-  AURA_IV, AURA_DUR, num, talent, traitBb, batPct, mods, isOp, selectedId, lazySkills, instantKind, whileOn,
-} from '../shared/tier5.js';
+import { AURA_IV, AURA_DUR, num, talent, traitBb, batPct, mods, isOp, selectedId, lazySkills, instantKind, whileOn } from '../shared/tier5.js';
 
 /** 号角 S2 过载: the second half of the ammo (PRTS 备注 of S3 "技能进行到一半时"; S2 counts shots). [ASSUMED] */
 const HORN_S2_OVERLOAD_AT = 0.5;
@@ -100,6 +99,7 @@ export default {
         } },
       ],
       install(battle, unit) {
+        installHornWebModule20261101(battle, unit, chess);
         const aspd = num(tm.attack_speed); // FOR-Y: 不阻挡敌人时…攻击速度+10
         if (aspd) whileOn(battle, unit, 0.2, () => { if (!unit.blocking.length) battle.addBuff(unit, { key: 'horn:moduleY', duration: 0.3, mods: { aspd } }); });
         if (sid === 'skchr_horn_1') {

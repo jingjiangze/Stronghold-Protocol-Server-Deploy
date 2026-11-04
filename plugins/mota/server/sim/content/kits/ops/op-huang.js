@@ -51,6 +51,7 @@
 
 import { num, talentBb, moduleBb, traitBb, up, onHitBy, onHitOn, toggleBuff, skillRec } from '../shared/tier1.js';
 import { absoluteRangeKeys } from '../../../targeting.js';
+import { queueCosmeticSkillHit } from '../../../cosmeticSkillHits20261102.js';
 
 const S1 = 'skchr_huang_1';
 const S2 = 'skchr_huang_2';
@@ -127,7 +128,11 @@ export default {
               if (s.k >= S3_CYCLES) { finish(battle, unit, s); return; }
               const foes = cutTargets(battle, unit);
               if (foes.length) battle.fx('aoe', { x: unit.x, y: unit.y, radius: 0.6, id: unit.id, skill: 'huang:cut' });
-              for (const e of foes) if (e.alive) battle.dealDamage(unit, e, { amount: unit.s.atk, type: 'phys', isSkill: true, tags: ['skill'] });
+              for (const e of foes) if (e.alive) {
+                const dealt = battle.dealDamage(unit, e, { amount: unit.s.atk, type: 'phys', isSkill: true, tags: ['skill'] });
+                // [ASSUMED] Native channel HIT follows the unchanged web damage cycle, never the owner-area flash.
+                if (dealt > 0) queueCosmeticSkillHit(battle, unit, e, S3, s.k);
+              }
             }
           },
           onEnd({ battle, unit, reason }) {

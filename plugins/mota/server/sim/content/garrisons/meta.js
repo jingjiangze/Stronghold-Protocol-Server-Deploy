@@ -29,6 +29,7 @@
 //     fires on another event and reads the player's refreshes of the round (roundStats), like 本回合每获得过 / 每花费.
 
 import { metaBonds, frontPiece, behindPiece, distinctTiers } from '../support/meta.js';
+import { registerOwnerMeta } from './ownerMeta.js';
 
 const ids = (s) => String(s ?? '').split(',').map((x) => x.trim()).filter(Boolean);
 const num = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : typeof v === 'string' && v.trim() !== '' && Number.isFinite(+v) ? +v : d);
@@ -430,9 +431,10 @@ H.SERVER_FRONT_SAME_EFFECT_PREP_START = {
 };
 
 
-/** effectKey → handler (the registered objects). */
-export const HANDLERS = Object.freeze(H);
+
+H.OWNER_ACTIVE_FACTION_LAYERS={onPrepEnd(ctx){if(!onBoard(selfView(ctx)))return;for(const id of bondOrder(ctx))if(ctx.data.bonds[id]?.isCore&&ctx.bondActive(id))ctx.addLayers(id,num(ctx.source.bb.layers,10),{requireActive:true});}};
 
 export function registerMeta(registry) {
   for (const [key, h] of Object.entries(H)) registry.garrison(key, h);
+  registerOwnerMeta(registry);
 }

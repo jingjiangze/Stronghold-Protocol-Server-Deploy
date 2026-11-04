@@ -28,7 +28,13 @@ describe('parseStage', () => {
       }
       // the own board is always drawn and playable; hand slots are raised benches (the escaped levels' two maps, kind
       // 'unite', have no bench: nobody prepares on them)
+      const rogue = String(id).startsWith('rogue_');
       for (let r = 9; r <= 12; r++) for (let c = 3; c <= 8; c++) assert.ok(g[r][c].drawn, `${id} board ${r},${c}`);
+      if (rogue) {
+        // 2026-11-03：官方肉鸽地图嵌在 19×21 画框里，画框空白是禁区 —— 没有本作的手牌排/目标点
+        assert.ok(st.rogueFrame && Number.isInteger(st.rogueFrame.row) && Number.isInteger(st.rogueFrame.col), `${id} rogueFrame`);
+        continue;
+      }
       for (let c = 0; c < 10; c++) {
         if (st.kind === 'unite') { assert.equal(g[7][c].glyph, '#', `${id} no hand ${c}`); continue; }
         assert.equal(g[7][c].glyph, 'a', `${id} hand ${c}`);

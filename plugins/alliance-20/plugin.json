@@ -3,16 +3,30 @@
   "id": "alliance-20",
   "name": "同盟模拟 · 20 人分队",
   "englishName": "Alliance 20",
-  "description": "20 人座位 + 红黄蓝绿分队 + 对局内按队伍筛选用人。只改 UI 与座位视图，玩法数据不变。",
-  "version": "1.0.0",
-  "app": ">=0.3.0 <0.4.0",
+  "description": "20 人座位 + 红黄蓝绿分队；局内用标准队伍面板（可上下滑动），只改 UI 与座位视图，玩法数据不变。",
+  "version": "1.1.0",
+  "app": ">=0.3.0 <0.5.0",
   "api": 2,
   "class": "trusted",
-  "scope": ["room"],
-  "permissions": ["trusted.server"],
-  "entry": { "server": "host/noop.js" },
+  "scope": [
+    "room"
+  ],
+  "permissions": [
+    "trusted.server"
+  ],
+  "entry": {
+    "server": "host/noop.js"
+  },
   "code": {
-    "client": ["js/screens/room.js", "js/ui/teamPanel.js", "css/screens/lobby.css", "css/screens/game.css"],
+    "client": [
+      "js/screens/room.js",
+      "js/ui/teamPanel.js",
+      "css/screens/lobby.css",
+      "css/screens/game.css"
+    ],
     "data": []
-  }
+  },
+  "needs": [
+    "code.client"
+  ]
 }

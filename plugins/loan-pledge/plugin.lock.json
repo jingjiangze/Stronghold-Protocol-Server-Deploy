@@ -1,0 +1,25 @@
+{
+  "lock": 1,
+  "id": "loan-pledge",
+  "version": "0.1.0",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "README.md": {
+      "sha256": "74c6f33e900297f6368dfc59ca259c44598ae3273d1f3cd9580414d1d770ee73",
+      "bytes": 1372
+    },
+    "host/noop.js": {
+      "sha256": "10a8e11b7adcf11700336b6f445e17b8a3f1b7fedddab04af0fc299cd609c1f3",
+      "bytes": 278
+    },
+    "plugin.json": {
+      "sha256": "ae12655de333fb763333d178d144f43b88f8708811b27a8935602fb09e18965a",
+      "bytes": 1012
+    },
+    "server/match/LoanMatch.js": {
+      "sha256": "d64d2e3f65e7a1b5a2b012ea8b8cc4f650bfffb8c58f571bb3ac5b8ee818ec3b",
+      "bytes": 7578
+    }
+  },
+  "spine": {}
+}

@@ -21,7 +21,7 @@ describe('the settings entry of the lobby and the room', { skip: !ENABLED && 'se
   let browser;
   let base;
   before(async () => {
-    const { startServer } = await import('../../server/index.js');
+    const { startServer } = await import('../../server/boot-main.js');
     const puppeteer = (await import('puppeteer-core')).default;
     srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true });
     base = `http://127.0.0.1:${srv.port}`;
@@ -70,8 +70,11 @@ describe('the settings entry of the lobby and the room', { skip: !ENABLED && 'se
     assert.equal(await modalText(page), null, 'Esc closes it');
     assert.ok(await page.$('.lobby-screen'), 'the lobby is still there');
 
-    // the room: 创建同盟 → the same button, closed with 完成
-    await page.evaluate(() => [...document.querySelectorAll('button')].find((b) => /创建同盟/.test(b.textContent))?.click());
+    // the room: 同盟模拟 → 创建同盟 (the room at once) → the same button, closed with 完成
+    await page.click('.mode-card[data-mode="coop"]');
+    await page.waitForSelector('[data-testid="alliance-create"]', { visible: true, timeout: 5000 });
+    await page.waitForFunction(() => !document.querySelector('[data-testid="alliance-create"]')?.disabled, { timeout: 15000 });
+    await page.click('[data-testid="alliance-create"]');
     await page.waitForSelector('.room-screen', { timeout: 15000 });
     await sleep(500);
     assert.ok(await settingsBeforeGuide(page, '.room-screen .topbar__left', 'room-guide'), '设置 sits right before 玩法说明 in the room\'s top bar');

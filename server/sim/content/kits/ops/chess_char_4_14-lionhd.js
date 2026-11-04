@@ -1,9 +1,7 @@
 // server/sim/content/kits/ops/chess_char_4_14-lionhd.js — 莱恩哈特 (char_373_lionhd) kit, tier 4.
 // Conventions of the tier-4 kits: ../shared/tier4.js; kit contract and rules: ../README.md.
 
-import {
-  num, tbb, grid, targetsInRange, whileDeployed, toggleBuff, resCut, alt, applyModuleRange, withDefaults,
-} from '../shared/tier4.js';
+import { num, tbb, grid, targetsInRange, whileDeployed, toggleBuff, resCut, alt, applyModuleRange, withDefaults } from '../shared/tier4.js';
 
 export default withDefaults({
   // ===== 莱恩哈特 (splashcaster) S2 解构与爆破 — charges: 170 % arts to all in the wider range + RES −8 % for 6 s; 破片杀伤

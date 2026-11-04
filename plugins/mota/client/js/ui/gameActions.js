@@ -124,7 +124,11 @@ export async function act(t, fields = {}, opts = {}) {
     if (s) audio.sfx(s);
     return true;
   } catch (err) {
-    if (!opts.quiet) {
+    // 2026-10-22 真机诊断：一局里 8 次 TIMEOUT 全是视图类请求（观战切换）在 8 s 后报错。
+    // `quietOn` 让「看一眼别人战场」这类**只影响视图**的请求在超时/断线时不弹横幅 —— 视图没切过去而已，
+    // 服务器没做成也不会改变任何状态。真正的拒绝（BAD_TARGET 等）仍然照常提示。
+    const quietHit = !opts.quiet && Array.isArray(opts.quietOn) && opts.quietOn.includes(err && err.code);
+    if (!opts.quiet && !quietHit) {
       const map = opts.detailText;
       const say = map && err && typeof err.detail === 'string' ? map[err.detail] : null;
       let text = null;
@@ -172,9 +176,14 @@ export const actions = {
   offer: (offer, idx, refresh = false, cardId) => act(refresh ? 'g.offerRefresh' : 'g.offer', { offerId: offer.id, pluginId: offer.pluginId, seq: offer.seq, idx, cardId }),
   choice: (idx, choiceId) => act('g.choice', choiceId === undefined ? { idx } : { idx, choiceId }),
   ready: (ready) => act('g.ready', { ready }, { sfx: ready ? 'ready' : 'back' }),
-  emote: (id) => act('g.emote', { id }, { quiet: false }),
+  emote: (id) => {
+    // A peer copy for instant display (browser-only side channel); the server frame below stays authoritative.
+    try { globalThis.__spP2P?.broadcast?.({ kind: 'emote', id }); } catch { /* no peer channel */ }
+    return act('g.emote', { id }, { quiet: false });
+  },
   // `playerId`: the player tapped in the team panel (a shared field shows two) — what an eliminated viewer follows
-  watch: (fieldId, playerId = null) => act('g.watch', typeof playerId === 'string' && playerId ? { fieldId, playerId } : { fieldId }, { sfx: 'tab' }),
+  // 只切视图：超时/断线不弹错误横幅（quietOn），成功与真正的拒绝行为不变
+  watch: (fieldId, playerId = null) => act('g.watch', typeof playerId === 'string' && playerId ? { fieldId, playerId } : { fieldId }, { sfx: 'tab', quietOn: ['TIMEOUT', 'OFFLINE', 'INTERNAL'] }),
   autoplay: (on) => act('g.autoplay', { on }),
   // solo battles only (ui/matchStatus.js pauseAvailable): m.public.paused follows
   pause: (on) => act('g.pause', { on: !!on }, { sfx: on ? 'click' : 'confirm' }),
@@ -192,6 +201,9 @@ export const actions = {
   // 救济 (DESIGN §27): take one fund out of the team reserve. No arguments — the server decides who may take, and it
   // refuses anyone but the (tied) weakest teammate at or below the threshold.
   econRelief: () => act('g.econ.relief', {}, { sfx: 'confirm', detailText: RELIEF_DETAIL_TEXT }),
+  // 主动存入（业主 2026-10-30）：把本回合 1 点资金放进团队储备。无参数 —— 金额恒为 1、每人每回合 1 次，
+  // 服务端按 econDepositedBy 判上限；被拒时落到通用的 ERR_TEXT（RATE / NO_FUNDS）即可。
+  econDeposit: () => act('g.econ.deposit', {}, { sfx: 'confirm' }),
   // 赏金加时 (2026-10-18): 休整期用协同资金给全队买准备时间。秒数/价格由服务端决定（本回合已买次数递增）。
   econBounty: () => act('g.econ.bounty', {}, { sfx: 'confirm', detailText: BOUNTY_DETAIL_TEXT }),
   // 还钱 / 催钱 (2026-10-17): 债务不再是下回合自动扣，借款人点还、债权人点催。
@@ -200,4 +212,8 @@ export const actions = {
   // room-level intent (NOT g.*): the host frees a spectator seat while the match runs — the server takes room.removeSpectator at
   // any time (server/lobby.js removeSpectator), the game screen had no entry for it (ui/hud.js SpectatorPill; GitHub #120)
   removeSpectator: (playerId) => act('room.removeSpectator', { playerId }, { sfx: 'back' }),
+  // 对抗模式（2V2 / 4V4）：狩猎期目标 / 布阵、事件期选择
+  confrontTarget: (targetPlayerId) => act('g.confrontTarget', { targetPlayerId }, { sfx: 'confirm' }),
+  confront: (group, position, picks, commit = true, bosses = []) => act('g.confront', { group, position, picks, commit: commit === true, ...(Array.isArray(bosses) && bosses.length ? { bosses } : {}) }, { sfx: 'confirm' }),
+  eventPick: (target) => act('g.event.pick', { target }, { sfx: 'confirm' }),
 };

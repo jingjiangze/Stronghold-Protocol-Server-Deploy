@@ -1,9 +1,7 @@
 // server/sim/content/kits/ops/chess_char_5_13-ghost2.js — 归溟幽灵鲨 (char_1023_ghost2) kit, tier 5.
 // Conventions of the tier-5 kits: ../shared/tier5.js; kit contract and rules: ../README.md.
 
-import {
-  AURA_IV, AURA_DUR, num, talent, traitBb, skillGrid, batPct, mods, isAbyssal, isOp, selectedId, lazySkills, whileOn,
-} from '../shared/tier5.js';
+import { AURA_IV, AURA_DUR, num, talent, traitBb, skillGrid, batPct, mods, isAbyssal, isOp, selectedId, lazySkills, whileOn } from '../shared/tier5.js';
 
 export default {
   // ---------------------------------------------------------------------------------------------------------------

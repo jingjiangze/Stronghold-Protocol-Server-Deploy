@@ -1,0 +1,17 @@
+{
+  "lock": 1,
+  "id": "roguelike-data-ro4",
+  "version": "0.1.0",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "data/rogue-nodes.json": {
+      "sha256": "e29b21a37ca7203a5e4787749fdfa40ef8ade97b8ca530b97260711aec27bfd7",
+      "bytes": 10801
+    },
+    "plugin.json": {
+      "sha256": "0e3a9fa8a66273f4b5532f18b4085aaab89b373b6aaea0a7c8fb343721c3a861",
+      "bytes": 801
+    }
+  },
+  "spine": {}
+}

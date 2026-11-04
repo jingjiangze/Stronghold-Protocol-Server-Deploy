@@ -306,25 +306,43 @@ function composeContentSet({ registry, ids = [], checkDataOnly = false }) {
   if (tr.problems.length) return { problems: tr.problems };
   // Checking declarative references must never execute a dependency's script setup/preflight.
   if (checkDataOnly) return { data, problems: [] };
-  // 多代码根：所有带 code 的插件按 loadOrder（缺省 0，再按 id）排序，后加载者覆盖同路径。
+  // 多代码根：plugins 已按 resolvePluginOrder（shared/plugins/order.js：priority 降序 + id）排好，这里不能再排一次。
+  // 旧代码按 p.manifest.loadOrder 排序，但 loadOrder 不在 V2_FIELDS、归一化后恒为 undefined ⇒ 实际退化成 id 字典序，
+  // 把 order.js 的 requires / loadAfter 结果冲掉。保持入参顺序即可：后加载者覆盖同路径。
   const codeRoots = plugins.filter((p) => p.manifest?.code && p.dir)
-    .sort((a, b) => (Number(a.manifest.loadOrder) || 0) - (Number(b.manifest.loadOrder) || 0) || String(a.id).localeCompare(String(b.id)))
     .map((p) => ({ id: p.id, root: p.dir, match: p.manifest.code.match || null,   // 对局入口只认 code.match；entry.server 是 trusted 运行时钩子，不是 Match
+      // 对局类的**叠加层**（2026-11-01）：除种子 Match 外的插件可以各带一份 matchMixin，对局宿主按加载顺序把它们
+      // 的方法拷到同一个对局类上（重名直接报错）。没有插件声明时与只有 code.match 的行为完全一致。
+      matchMixin: p.manifest.code.matchMixin || null,
       client: Array.isArray(p.manifest.code.client) ? p.manifest.code.client : [],
       data: Array.isArray(p.manifest.code.data) ? p.manifest.code.data : [] }));
   const code = codeRoots.length ? { roots: codeRoots,
     match: [...codeRoots].reverse().find((r) => r.match)?.match || null,
+    matchMixins: codeRoots.filter((r) => r.matchMixin).map((r) => ({ id: r.id, root: r.root, path: r.matchMixin })),
     client: [...new Set(codeRoots.flatMap((r) => r.client))],
     data: [...new Set(codeRoots.flatMap((r) => r.data))] } : null;
-  // 无损插件：code.data 里的整份配置原样成为该内容集的 config（与 delta 线把合并结果放进树里等价）。
+  // 无损插件：`code.data` 里声明的**任何** `data/<name>.json` 都整份顶替同名数据表。
+  //
+  // 2026-10-30 之前这里只认死 `data/config.json`，其它一律跳过 —— 于是「整份替换 data/assets.json」
+  // 这类真实需求（线上包 `nlc-skins`：国服素材清单 7969 条）在引擎层**无路可走**。
+  // 泛化后 `config` 的行为逐字节不变（它就是一张叫 config 的表），新增的只是「别的表也能这么换」。
+  //
+  // 2026-11-01 回归：这条泛化在 852b8755 的合并里被整块回退成只认 config（`test/plugins/codeDataTables.test.js`
+  // 仍钉着泛化语义，shard 2 因此常红）。此处恢复原实现，与同批新增的 matchMixin 互不影响。
+  //
+  // 只认 `data/<name>.json` 这一种形态（与下面把表写回 `data/${name}.json` 的循环对称）：
+  // 别的路径（`assets/foo.png`、`data/sub/x.json`）在这里没有语义，静默跳过。
   if (code) {
-    // 多根：最后一个带 data/config.json 的根胜出（后加载者覆盖）。
+    // 多根：后加载者覆盖同路径（与 `client` / `match` 的既有口径一致，这里不能再排一次序）。
     for (const r of codeRoots) {
-      if (!r.data.includes('data/config.json')) continue;
-      const cfgPath = path.join(r.root, 'data/config.json');
-      if (!fs.existsSync(cfgPath)) continue;
-      if (data === base.data || Object.isFrozen(data)) data = clone(data);
-      data.config = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+      for (const rel of r.data) {
+        const mm = /^data\/([A-Za-z0-9_-]+)\.json$/.exec(String(rel));
+        if (!mm) continue;
+        const tablePath = path.join(r.root, rel);
+        if (!fs.existsSync(tablePath)) continue;
+        if (data === base.data || Object.isFrozen(data)) data = clone(data);
+        data[mm[1]] = JSON.parse(fs.readFileSync(tablePath, 'utf8'));
+      }
     }
   }
   const bodies = new Map(base.files), files = {}, hashes = {};

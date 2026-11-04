@@ -7,7 +7,7 @@
 import { hasTraitFor } from '../operatorTraits.js';
 import { ERR } from '../../../shared/constants.js';
 import { msg, dn } from '../../../shared/i18n.js';
-import { tileKey, parseKey, inField, canPlace, placeClass, freeSlot, pieceDir, parseDir, ownerRangeKeys } from '../board.js';
+import { tileKey, parseKey, inField, rectOfMap, canPlace, placeClass, freeSlot, pieceDir, parseDir, ownerRangeKeys } from '../board.js';
 import { attackRangeGrid, loadoutRecord, resolveRecordLoadout } from '../../../shared/loadoutRecord.js';
 import { summonPlacementGrid } from '../../../shared/summonPlacement.js';
 import { OK, fail } from './common.js';
@@ -158,7 +158,7 @@ export class PlayerPlacement {
 
   _moveChessToBoard(loc, r, c, dir = 'RIGHT') {
     const piece = loc.piece;
-    if (!inField(r, c) || !this._legal(piece, r, c)) return fail(ERR.BAD_TILE);
+    if (!inField(r, c, rectOfMap(this.deployMap())) || !this._legal(piece, r, c)) return fail(ERR.BAD_TILE);
     const key = tileKey(r, c);
     const occ = this.board.get(key) || null;
     if (occ === piece) return this._reorient(piece, dir);
@@ -181,7 +181,7 @@ export class PlayerPlacement {
       this.recompute();
       return OK;
     }
-    // hand/temp → board
+    // hand/temp → board: a chess swap reuses the source slot, even with a full bench (round53).
     if (!occ || occ.kind !== 'chess') {
       if (this.deployCount >= this.deployCap) return fail(ERR.BOARD_FULL);
     }
@@ -241,7 +241,7 @@ export class PlayerPlacement {
 
   _moveTokenToBoard(loc, r, c, dir = 'RIGHT') {
     const piece = loc.piece;
-    if (!inField(r, c)) return fail(ERR.BAD_TILE);
+    if (!inField(r, c, rectOfMap(this.deployMap()))) return fail(ERR.BAD_TILE);
     const key = tileKey(r, c);
     const occ = this.board.get(key) || null;
     // a summon dragged onto its own owner swaps with it: a range-bound one must be inside the owner's range from the

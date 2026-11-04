@@ -49,7 +49,7 @@ describe('cosmetic plugins in the browser (P1a)', { skip: !ENABLED && 'set SP_E2
       assets: { chars: { [roomId]: { avatar: 'art/red.png' } } } }), { 'art/red.png': png(8, 8, [255, 0, 0, 255]) });
     writePlugin(path.join(tmp, 'my-skin'), cosmetic({ name: { zh: '绿色头像', en: 'Green avatar' }, scope: ['personal'],
       assets: { chars: { [personalId]: { avatar: 'art/green.png' } } } }), { 'art/green.png': png(8, 8, [0, 255, 0, 255]) });
-    const { startServer } = await import('../../server/index.js');
+    const { startServer } = await import('../../server/boot-main.js');
     const srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true, pluginsDir: tmp });
     // the content-hash index (built ~1 s after the start): the page then loads the served manifest's /assets/~<hash>/ URLs
     for (const t0 = Date.now(); Date.now() - t0 < 20000;) {
@@ -67,12 +67,10 @@ describe('cosmetic plugins in the browser (P1a)', { skip: !ENABLED && 'set SP_E2
       assert.match(await host.page.$eval('[data-testid="title-plugins"]', (e) => e.textContent), /本服务器安装了 2 个插件/);
       await host.shot('title');
       await host.enter('凯尔希');
-      await host.click('.mode-card', '同盟模拟');
-      await host.click('.diff-card', '标准模拟');
-      await host.click('.create-box button', '创建同盟');
-      const code = (await host.waitFor((s) => !!s.room?.code, 'room created')).room.code;
+      const { code } = await host.createCoop();
       await guest.open();
       await guest.enter('阿米娅');
+      await guest.click('.mode-card', '同盟模拟');
       await guest.click('.join-row input');
       await guest.page.keyboard.type(code);
       await guest.click('.join-row button', '加入同盟');
@@ -148,7 +146,7 @@ describe('cosmetic plugins in the browser (P1a)', { skip: !ENABLED && 'set SP_E2
 
   test('a server without plugins: its page never asks for the catalogue (title, the room\'s 插件 panel, 设置)', { timeout: 2 * 60 * 1000 }, async () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-plugins-none-'));
-    const { startServer } = await import('../../server/index.js');
+    const { startServer } = await import('../../server/boot-main.js');
     const srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true, pluginsDir: tmp });
     const seen = [];
     srv.server.on('request', (req) => seen.push(req.url));
@@ -166,10 +164,7 @@ describe('cosmetic plugins in the browser (P1a)', { skip: !ENABLED && 'set SP_E2
       assert.ok(loaded('/js/content.js') && loaded('/js/cosmetics.js'), 'the small parts load with the page');
       for (const u of lazy) assert.equal(loaded(u), false, `the title page does not load ${u}`);
       await c.enter('凯尔希');
-      await c.click('.mode-card', '同盟模拟');
-      await c.click('.diff-card', '标准模拟');
-      await c.click('.create-box button', '创建同盟');
-      await c.waitFor((st) => !!st.room?.code, 'room created');
+      await c.createCoop();
       await c.click('[data-testid="plugin-tag"]');
       await c.page.waitForSelector('[data-testid="plugin-panel"]', { timeout: 10000 });
       assert.match(await c.page.$eval('[data-testid="plugin-panel"]', (e) => e.textContent), /本服务器没有可在房间中使用的插件/);

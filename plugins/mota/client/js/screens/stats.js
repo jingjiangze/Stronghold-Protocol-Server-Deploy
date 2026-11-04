@@ -134,12 +134,23 @@ function ModdedSwitch({ agg }) {
   </label>`;
 }
 
+/** 分段称号 (2026-10-31): 按「本机累计抢到的 boss 播报次数」解锁；称号最后做，先给一个可用的分档。 */
+const BROADCAST_TIERS = [
+  { min: 1, name: '见习播报员' },
+  { min: 5, name: '常驻播报员' },
+  { min: 15, name: '王牌播报员' },
+  { min: 40, name: '传奇播报员' },
+];
+
 /** 总览: cards, the per-difficulty table, the six titles, and the line about what counts. */
 function Overview({ agg, gd, nickname, records }) {
   useData('chess', 'items', 'backups');
   const rows = DIFFICULTIES.filter((d) => agg.byDifficulty[d]).concat(Object.keys(agg.byDifficulty).filter((d) => !DIFFICULTIES.includes(d)));
   const fonts = uiUrl(gd.m, 'statistics/fontStyles');
   const titles = (Array.isArray(gd.config?.titles) ? gd.config.titles : []).map((x) => ({ ...x, count: agg.titles[x.id]?.count || 0 }));
+  // 抢播报 (2026-10-31): 本机累计的 boss 播报次数（20/50/80% 各算一条），按档位给分段称号。
+  const broadcasts = Math.max(0, Math.floor(Number(agg.sums?.bossBroadcasts) || 0));
+  const broadcastTier = BROADCAST_TIERS.filter((x) => broadcasts >= x.min).pop() || null;
   // records whose room mode is unknown (`roomMode` null) count in the total but in neither mode row
   const unknownMode = Math.max(0, agg.count - agg.byMode.solo.games - agg.byMode.coop.games);
   return html`<${Section} title=${t('总览')} micro="OVERVIEW">
@@ -180,6 +191,9 @@ function Overview({ agg, gd, nickname, records }) {
       </div>
       ${titles.length ? html`<div class="st-title-panel">
         <${TitleHexagon} titles=${titles} manifest=${gd.m} /></div>` : null}
+      ${broadcastTier ? html`<p class="st-broadcast-tier" data-testid="stats-broadcast-tier">
+        ${t('播报次数')} <b class="num">${fmtNum(broadcasts)}</b> · <span class="st-broadcast-tier__name">${t(broadcastTier.name)}</span>
+      </p>` : null}
     </div>
     <div class="st-cards">
       <${StatCard} micro="GAMES" value=${fmtNum(agg.count)} label=${t('总局数')} />

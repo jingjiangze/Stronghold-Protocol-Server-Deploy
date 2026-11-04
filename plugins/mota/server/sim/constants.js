@@ -71,7 +71,7 @@ export const MIN_DAMAGE_RATIO = 0.05;
 export const ELEMENT_GAUGE_MAX = 1000;
 export const ELEMENT_GAUGE_MAX_LEADER = 2000;
 /** Element names with a gauge on every unit. `necrosis` is a legacy spare gauge (凋亡 is `apoptosis`). */
-export const ELEMENTS = Object.freeze(['burn', 'neural', 'necrosis', 'apoptosis', 'erosion']);
+export const ELEMENTS = Object.freeze(['burn', 'neural', 'necrosis', 'apoptosis', 'erosion', 'frenzy']);
 /**
  * Element bursts — official term table (gamedata_const termDescriptionDict):
  *   `ally` = an operator/summon hit by enemy damage (ba.dt.burning / neural / apoptosis / erosion),
@@ -104,12 +104,13 @@ export const ELEMENT = Object.freeze({
     enemy: Object.freeze({ elemDamage: 5000, defDown: 120, duration: 8 }),
   }),
   necrosis: Object.freeze({ dps: 100, duration: 12, atkDownPct: 0.2 }),
+  frenzy: Object.freeze({duration:15,aspd:50,dps:100,perAttack:50,maxDps:600}),
 });
 /**
  * Official element order (PRTS 元素: SANITY 1 神经, WATER 2 侵蚀, FIRE 3 灼燃, DARK 4 凋亡; the legacy `necrosis` last):
  * the tie-break of the "当前损伤元素" a unit shows — the fullest gauge, then the lower id (damage.js elementView).
  */
-export const ELEMENT_ORDER = Object.freeze(['neural', 'erosion', 'burn', 'apoptosis', 'necrosis']);
+export const ELEMENT_ORDER = Object.freeze(['neural', 'erosion', 'burn', 'apoptosis', 'frenzy', 'necrosis']);
 /** 麻痹 (ba.palsy): each stack cancels one normal attack of an enemy; at most 3 stacks, lasts until consumed. */
 export const PALSY_MAX = 3;
 
@@ -227,8 +228,6 @@ export const MAX_HOOK_DEPTH = 32;
 /** spawnEnemy refuses to exceed this many living enemies on one field (runaway content spawn loops). */
 export const MAX_ALIVE_ENEMIES = 600;
 
-/** Heal-over-time / regen events are aggregated and only emitted when they reach this amount. */
-export const REGEN_EVENT_MIN = 1;
 
 /**
  * How far inside the field rectangle an enemy is held (tiles; Battle._clampPos). [ASSUMED] The rectangle's edge lies

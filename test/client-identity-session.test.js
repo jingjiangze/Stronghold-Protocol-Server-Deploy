@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { BroadcastChannel } from 'node:worker_threads';
 import WebSocket from 'ws';
-import { startServer } from '../server/index.js';
+import { startServer } from '../server/boot-main.js';
 import { CLAIM_QUERY_MS, createIdentity, Net } from '../public/js/net.js';
 
 function storage(seed = {}) {

@@ -3,9 +3,7 @@
 
 import { canTargetEnemy } from '../../../targeting.js';
 import { bodyDist } from '../../../body.js';
-import {
-  num, defOf, talentBb, moduleTalentBb, altSkills, instantKindOf, groundAspd, alive, fx, enemiesOn, isLeader, giveSp,
-} from '../shared/tier3.js';
+import { num, defOf, talentBb, moduleTalentBb, altSkills, instantKindOf, groundAspd, alive, fx, enemiesOn, isLeader, giveSp } from '../shared/tier3.js';
 
 /** The unit's own profile damage multiplier on `target` (fastshot fly bonus …) for damage a kit deals itself. */
 function profileMul(battle, unit, target) {

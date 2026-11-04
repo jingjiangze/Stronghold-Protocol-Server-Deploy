@@ -5,7 +5,7 @@
   "englishName": "Mota (lossless mount)",
   "description": "把魔塔服务器的原树按内容集挂载：源码不改，功能与 UI 保持原样。",
   "version": "0.3.1",
-  "app": ">=0.3.0 <0.4.0",
+  "app": ">=0.3.0 <0.5.0",
   "api": 2,
   "class": "trusted",
   "scope": [
@@ -18,6 +18,7 @@
     "server": "host/noop.js"
   },
   "code": {
+    "lobby": "server/protocol.js",
     "match": "server/match/Match.js",
     "client": [
       "js/assets.js",
@@ -42,7 +43,6 @@
       "js/resources/worker.js",
       "js/roomMods.js",
       "js/screens/bandDraft.js",
-      "js/screens/chat.js",
       "js/screens/diy.js",
       "js/screens/game.js",
       "js/screens/loadout.js",
@@ -68,7 +68,6 @@
       "js/ui/extensions.js",
       "js/ui/friends.js",
       "js/ui/gameActions.js",
-      "js/ui/gameComponents.js",
       "js/ui/gameLogic/bonds.js",
       "js/ui/gameLogic/format.js",
       "js/ui/gameLogic/settings.js",
@@ -98,7 +97,6 @@
       "js/ui/shopBar.js",
       "js/ui/skinAssets.js",
       "js/ui/skinPicker.js",
-      "js/ui/skins.js",
       "js/ui/skinsModel.js",
       "js/ui/supportModel.js",
       "js/ui/supportSync.js",
@@ -112,6 +110,7 @@
       "css/screens/game-shop.css",
       "css/screens/guide.css",
       "css/screens/loadout.css",
+      "css/screens/proto-dock.css",
       "css/screens/result.css",
       "js/content.js",
       "js/render/vfx/wiring.js",
@@ -120,10 +119,43 @@
       "js/ui/clipboard.js",
       "js/screens/stats.js",
       "js/ui/connBanner.js",
-      "js/ui/assetDownload.js"
+      "js/ui/assetDownload.js",
+      "js/ui/confrontOverlay.js",
+      "js/ui/eventOverlay.js",
+      "js/ui/rosterPanel.js",
+      "js/ui/eventFoe.js",
+      "js/ui/entryDetail.js",
+      "js/ui/hexGlyph.js",
+      "js/ui/hexOverlay.js",
+      "js/ui/meltdownOverlay.js",
+      "css/screens/hex.css",
+      "js/ui/relicOverlay.js",
+      "js/ui/rogueHud.js",
+      "js/ui/rogueMapDock.js",
+      "js/ui/rogueMapModel.js",
+      "js/ui/rogueNodesHost.js",
+      "js/ui/rogueEventOverlay.js",
+      "js/ui/roguePanel.js",
+      "css/screens/rogue-panel.css"
     ],
     "data": [
       "data/config.json"
     ]
-  }
+  },
+  "csp": {
+    "img": [
+      "https://sp.isomer319.xyz",
+      "https://hk1.bbsmc.cn"
+    ],
+    "connect": [
+      "https://sp.isomer319.xyz"
+    ]
+  },
+  "needs": [
+    "code.match",
+    "code.client",
+    "code.data",
+    "code.lobby",
+    "protocol.extend"
+  ]
 }

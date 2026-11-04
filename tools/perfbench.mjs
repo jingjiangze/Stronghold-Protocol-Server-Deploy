@@ -122,7 +122,7 @@ async function main() {
   fs.mkdirSync(out, { recursive: true });
 
   const puppeteer = (await import('puppeteer-core')).default;
-  const { startServer } = await import('../server/index.js');
+  const { startServer } = await import('../server/boot-main.js');
   const srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true });
   const browser = await puppeteer.launch({ executablePath: chrome, headless: true, args: gpuArgs() });
   const results = [];

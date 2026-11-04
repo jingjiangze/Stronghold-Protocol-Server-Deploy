@@ -26,8 +26,8 @@
 // SelfFear ×1.5 included). Deterministic: every draw is battle.rng().
 
 import { MOVE_SCALE, COLS } from './constants.js';
-import { straightClear } from './grid.js';
 import { hypot } from './detmath.js';
+import { straightClear } from './grid.js';
 
 /** 半径10格 — the fan's radius (tiles). */
 export const FEAR_RADIUS = 10;

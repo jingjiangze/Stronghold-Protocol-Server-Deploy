@@ -1,0 +1,37 @@
+{
+  "manifest": 2,
+  "id": "versus-room",
+  "name": {
+    "zh": "对抗房（房间层）"
+  },
+  "englishName": "Versus Rooms",
+  "description": {
+    "zh": "2V2/4V4 的房间层规则：分边人数（2 → 4 席，4 → 8 席）、开局前按人数收窄座位表并补满 AI、分边外有人占位则拒绝开局。对局本体仍在 mota（code.match 单入口），这里只做核心大厅不认识的房间逻辑。"
+  },
+  "version": "0.1.0",
+  "app": ">=0.3.0 <0.5.0",
+  "api": 2,
+  "authors": [
+    {
+      "name": "jingjiangze"
+    }
+  ],
+  "license": "GPL-3.0-or-later",
+  "class": "trusted",
+  "scope": [
+    "room"
+  ],
+  "permissions": [
+    "trusted.server"
+  ],
+  "entry": {
+    "server": "host/noop.js"
+  },
+  "code": {
+    "lobby": "server/versusLobby.js"
+  },
+  "needs": [
+    "code.lobby",
+    "room.option.teamSize"
+  ]
+}

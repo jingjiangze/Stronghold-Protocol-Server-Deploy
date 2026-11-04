@@ -1,12 +1,18 @@
+import { webWireShape } from './arkWebTraits20261101.js';
+import { validRoomMusicCommand } from './roomMusic.js';
+import {validCricket} from './cricket.js';
+import { validNamecard } from './namecard.js';
+import {validRandomEvents} from './roundEvents.js';
 // Normative message catalogue (DESIGN §8). Used by server (validation) and client (building requests).
 // Every client→server message is `{ t, rid?, ...fields }`. Unknown `t` or invalid fields ⇒ ERR.BAD_MSG.
 
-import { DIFFICULTIES, NAME_MAX_LEN, ROOM_CODE_LEN, MAX_SEATS, EMOTES, GEO, TEAMS } from './constants.js';
+import { DIFFICULTIES, DIFFICULTY_TIERS, TRAINING_DIFFICULTY, NAME_MAX_LEN, ROOM_CODE_LEN, MAX_SEATS, ROOM_CAPACITIES, MAX_DRAFT_CARDS, EMOTES, GEO, CHAT_MAX_LEN, ROOM_DESC_MAX } from './constants.js';
 import { isDroppableChess } from './standIn.js';
-import { diySlotIds, validateDiyPicks } from './diy.js';
+import { diySlot, diySlotIds, validateDiyPicks } from './diy.js';
 import { cultivatedStats, isPotential, isCultivate, POTENTIAL_DEFAULT, CULTIVATE_DEFAULT, hasPotentialData } from './potential.js';
 import { isContentHash } from './plugins/identity.js';
 import { isPluginId } from './plugins/manifest.js';
+import { CONTRACTS } from './contracts.js';
 import { isTestCommand } from './testMode.js';
 import { PLUGIN_OFFER_SLOTS } from './plugins/limits.js';
 
@@ -15,6 +21,16 @@ const isInt = (v, lo = -Infinity, hi = Infinity) => Number.isInteger(v) && v >= 
 const isStr = (v, max = 64) => typeof v === 'string' && v.length <= max;
 const isBool = (v) => typeof v === 'boolean';
 const isId = (v) => typeof v === 'string' && v.length > 0 && v.length <= 64 && /^[A-Za-z0-9_\-.:]+$/.test(v);
+/** { id: count }:称号次数 / 常选计数。宽度和数值都封顶,避免一个恶意 payload 撑爆内存。 */
+const isCounts = (v) => {
+  if (v == null || typeof v !== 'object' || Array.isArray(v)) return false;
+  const keys = Object.keys(v);
+  if (keys.length > 64) return false;
+  return keys.every((k) => k.length <= 40 && Number.isInteger(v[k]) && v[k] >= 0 && v[k] <= 1e6);
+};
+/** 战绩三格:模拟总数 / 成功卫戍 / 绝境突破。 */
+const isTally = (v) => v == null || (typeof v === 'object' && !Array.isArray(v)
+  && ['matches', 'wins', 'hardWins'].every((k) => v[k] == null || (Number.isInteger(v[k]) && v[k] >= 0 && v[k] <= 1e6)));
 const isUid = (v) => isInt(v, 1, 2 ** 31);
 const isNum = (v, lo = -Infinity, hi = Infinity) => typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi;
 const isPlain = (v) => !!v && typeof v === 'object' && !Array.isArray(v) && Object.getPrototypeOf(v) === Object.prototype;
@@ -34,7 +50,13 @@ const isScalar = (v) => isStr(v, 64) || isNum(v) || isBool(v);
 // ---- client-side combat (DESIGN §14): b.progress / b.result payloads -------------------------------------------
 
 /** Size limits of a b.result payload (the whole frame also obeys the 64 KB inbound limit). */
-export const RESULT_LIMITS = Object.freeze({ players: 4, leaked: 400, unitsEnd: 64, unitStats: 160, layerGains: 40, mods: 16, unspawned: 400 });
+/**
+ * Size limits of a battle-result payload.
+ *
+ * `players` stays 4 because it caps the per-source maps of ONE battle (a field holds a unite group, never the whole
+ * room); `sources` is the room-wide count of contributing ids a result may name, which is what grew with capacity.
+ */
+export const RESULT_LIMITS = Object.freeze({ players: 4, sources: MAX_SEATS, leaked: 400, unitsEnd: 64, unitStats: 160, layerGains: 40, mods: 16, unspawned: 400 });
 const BIG = 1e13;
 const isStat = (v) => v === undefined || isNum(v, 0, BIG);
 const isModVal = (v) => v === null || isNum(v, -BIG, BIG) || isStr(v, 64) || isBool(v);
@@ -54,8 +76,9 @@ const isPerPlayer = (p) => isPlain(p) && isInt(p.killed, 0, 1e5) && isInt(p.tota
   && optional((x) => isInt(x, 0, 1e5))(p.resolved)
   && optional((x) => isInt(x, 0, 1e9))(p.creditedKills)
   && isList(p.leaked, RESULT_LIMITS.leaked, isLeak) && isBool(p.perfect)
-  && isMap(p.layerGains, RESULT_LIMITS.layerGains, isId, (v) => isNum(v, 0, 1e4))
+  && isMap(p.layerGains, RESULT_LIMITS.layerGains, isId, (v) => isNum(v, -1e4, 1e4))
   && isStat(p.coins) && isStat(p.damageDealt) && isStat(p.bossDamage) && isStat(p.healingDone) && isStat(p.deaths)
+  && optional(webWireShape)(p.webTraits)
   && isList(p.unitsEnd, RESULT_LIMITS.unitsEnd, isUnitEnd)
   && (p.unitStats === undefined || isList(p.unitStats, RESULT_LIMITS.unitStats, isUnitStat));
 const isUnspawned = (u) => isPlain(u) && isId(u.enemyKey) && nullable(isId)(u.sourcePlayerId) && nullable((v) => isStr(v, 16))(u.tag)
@@ -73,6 +96,8 @@ export function isBattleResult(v) {
     && (v.unspawned === undefined || isList(v.unspawned, RESULT_LIMITS.unspawned, isUnspawned))
     && optional((x) => isInt(x, 0, 1e9))(v.errors) && optional((x) => isNum(x, 0, BIG))(v.bossHpLeft);
 }
+
+
 
 // ---- operator loadout (DESIGN §16): room.loadout { entries } -------------------------------------------------
 
@@ -92,6 +117,32 @@ const isLoadoutEntry = (e) => isPlain(e) && Object.keys(e).length > 0 && Object.
   && optional((v) => isInt(v, 0, LOADOUT_LIMITS.skillIndex))(e.skill) && optional(isId)(e.module);
 /** Structural check of `room.loadout.entries`. */
 export const isLoadoutEntries = (v) => isMap(v, LOADOUT_LIMITS.entries, isId, isLoadoutEntry);
+
+/** One `room.loadout.ops` entry: `{ potential?: 1–6, cultivate?: 0–3 }`, at least one of them. */
+
+/** Structural check of `room.loadout.ops` (0.2.2): a map of ≤ 256 charIds → `{ potential?, cultivate? }`. */
+
+
+/**
+ * The operators a player sets a potential / 练度 for (0.2.2): the charIds of the 干员调配 roster — the visible normal chess
+ * (checkLoadout's targets; a hidden chess shares its visible twin's charId: 锡人, 耶拉 …) — and the owned 6★ 自选 picks
+ * (data/backups.json `diy.ownedPool`). A PRESET (特许) operator the player does not own is set by hand (潜能 1, 未精英化:
+ * the official 「未持有的特许按1潜」 and +0 %); a 补位 stand-in or a prototype pick takes neither.
+ * @param {Record<string, any>|null|undefined} chess data/chess.json
+ * @param {any} [backups] data/backups.json
+ * @returns {Set<string>}
+ */
+
+
+/**
+ * Semantic check + normalisation of `room.loadout.ops` (0.2.2) — strict like checkLoadout: an operator `isOperator` does
+ * not know (cultivationCharIds) rejects the whole message. Entries equal to the defaults (潜能 6, 练度 3) are dropped, the
+ * rest stored complete `{ potential, cultivate }`. `undefined` / `null` = no settings (`{}`).
+ * @param {any} ops
+ * @param {(charId: string) => boolean} isOperator
+ * @returns {{ ok: true, ops: Record<string, { potential: number, cultivate: number }> } | { error: 'BAD_MSG'|'BAD_TARGET', detail: string }}
+ */
+
 
 /** Skill indexes a chess record offers (data `skills[]`, DESIGN §16; the default skill alone while data lacks it). */
 function skillIndexesOf(c) {
@@ -411,15 +462,43 @@ export function checkDiyPicks(picks, { data, kitted = null } = { data: null }) {
   /** @type {Record<string, { charId: string, skillIndex: number, uniEquipId: string|null }>} */
   const kept = {};
   let dropped = 0;
-  for (const id of Object.keys(picks)) if (picks[id] != null && !slots.includes(id)) dropped++;
+  /*
+   * ★ **金卡槽位(`_b`)要归一化到 baseId,不能当"不认识的键"丢掉。**
+   *
+   * 每一格自选在数据里有**两份**棋子记录:`_a`(普通)与 `_b`(精锐/金卡)。
+   * 客户端发填报时,键用的是**玩家正在看的那一格**的 id —— 而金卡是单独一格,
+   * 玩家完全可以在 `_b` 上填。
+   *
+   * 这里原来只做精确匹配(`slots.includes(id)`,而 `diySlotIds` 只返回 `_a`),于是:
+   *   · `_b` 的键被计入 `dropped` 丢弃;
+   *   · 下面那个 `for (const slotId of slots)` 只遍历 `_a`,自然也补不回来。
+   * 结果返回 `{ ok: true, picks: {} }` —— **看着成功,其实一条都没留下**,
+   * `setDiy` 于是把整份填报当空,干员与皮肤一起消失。
+   *
+   * 表现(owner 报的):**休整期正常(客户端本地显示),一进战斗就变回原皮** ——
+   * 服务端从头到尾没存下这个填报。金卡自选槽还会连带丢掉干员本身。
+   *
+   * `diySlot()` 本来就知道 `_b` → `baseId` 的映射(shared/diy.js),用它认键即可。
+   */
+  for (const id of Object.keys(picks)) {
+    if (picks[id] != null && !slots.includes(id)) dropped++;
+  }
   for (const slotId of slots) {
-    const pick = Object.hasOwn(picks, slotId) ? picks[slotId] : null;
+    const slot = diySlot(slotId, data);
+    /* 先看规范键;没有再找它的金卡 id(玩家可能是在 `_b` 那一格上填的) */
+    let key = null;
+    if (Object.hasOwn(picks, slotId)) key = slotId;
+    else if (slot && slot.goldenId && Object.hasOwn(picks, slot.goldenId)) key = slot.goldenId;
+    if (key == null) continue;
+    const pick = picks[key];
     if (pick == null) continue;
     const res = validateDiyPicks({ ...kept, [slotId]: pick }, { data, kitted });
-    if ('ok' in res) kept[slotId] = res.picks[slotId];
-    else dropped++;
+    if ('ok' in res) {
+      kept[slotId] = res.picks[slotId];
+      if (key !== slotId) dropped--;        // 上面按"不认识的键"记过一次:它其实被收下了
+    } else dropped++;
   }
-  return { ok: true, picks: kept, dropped };
+  return { ok: true, picks: kept, dropped: Math.max(0, dropped) };
 }
 
 // ---- unit stats (user playtest #4 item 7): m.unitStats units and the browser battle's live stats ---------------------
@@ -493,39 +572,217 @@ const target = (v) => {
 /** @type {Record<string, Record<string, (v:any)=>boolean> & { $optional?: string[] }>} */
 export const C2S = {
   // session & lobby
-  hello: { name: (v) => isStr(v, NAME_MAX_LEN) && v.trim().length > 0, token: (v) => v == null || isStr(v, 64), version: (v) => v == null || isInt(v, 0, 1e6),
-    noReplace: isBool, claimAt: (v) => isNum(v, 0, Number.MAX_SAFE_INTEGER), $optional: ['token', 'version', 'noReplace', 'claimAt'] },
+  // `avatar` is the 个人档案 portrait: the chessId the player picked, or '' / absent for the default. It is
+  // validated as a plain identifier (letters/digits/underscore) so the server never forwards a path or markup to
+  // other clients — the id is opaque beyond that and each client resolves it against its own chess data.
+  hello: {
+    name: (v) => isStr(v, NAME_MAX_LEN) && v.trim().length > 0,
+    /*
+     * ⚠ `token` = **断线重连令牌**(服务器发给会话,用来找回上一局——`registry.byToken`)。
+     *   `pass`  = **登录准入码**(所有人要带的门牌,server/access.js)。
+     *
+     *   这两个**必须是两个字段**。它们原来挤在 `token` 上,而客户端只有一个值:
+     *   写完重连令牌紧接着写准入码,后者**覆盖**前者 —— 于是服务端拿准入码去找旧会话,
+     *   永远找不到,每次都建新会话(新 playerId),原席位变成幽灵,房间几次掉线就满了
+     *   (owner 报的「一个房间就会导致房间已满 / 无法观战 / 中途断线无法重连回去」)。
+     *
+     *   服务端准入判定读 `pass ?? token`,所以**老客户端**(只发 token)仍然连得上。
+     */
+    token: (v) => v == null || isStr(v, 64),
+    pass: (v) => v == null || isStr(v, 64),
+    version: (v) => v == null || isInt(v, 0, 1e6),
+    /*
+     * `avatar` —— 玩家选的立绘/头像 id。
+     *
+     * ⚠⚠ **这里必须同时接受 `custom:` 自定义头像** (owner 2026-10-16:
+     *   「是更换了自定义头像之后会无效的请求然后卡住」)。
+     *
+     *   原来只允许 `/^[A-Za-z0-9_]+$/` —— 那是**官方立绘 chessId** 的形状
+     *   (`char_1041_angel2` 之类,纯字母数字下划线)。而自定义头像是
+     *   `custom:<短名>`(带**冒号**)、玩家上传的更是 `custom:u/<账号>`(还带**斜杠**),
+     *   两种写法**一律被判非法** ⇒ 整条 `hello` 回 `bad field avatar`
+     *   ⇒ 客户端弹「无效的请求」,而且那次连接**就此卡住**。
+     *
+     *   教训:这个校验是"字段形状"的白名单,而头像的 id 空间**后来长出了新形状**
+     *   —— 加自定义头像时只改了业务层(`shared/avatars.js` 的 `parseAvatarId`),
+     *   漏了协议层这份白名单,于是两处对"合法 id"的定义不一致,
+     *   而**协议层是先跑的那一道**,业务层根本没机会看到它。
+     *
+     *   现在两处共用同一个形状规则(见下面 `isAvatarIdStr`),不会再漂。
+     */
+    avatar: (v) => v == null || isAvatarIdStr(v),
+    /*
+     * ★ **设备身份 token** (owner 2026-10-17「排行榜和获赞还是不生效」→「都修」)。
+     *
+     *   客户端首次连接时生成一个随机 token 存在 localStorage,以后每次都带上。
+     *   服务端没见过就**替它建一个账号**(账号名从博士代号派生)——
+     *   玩家**不注册、不登录、不输密码**,但从此有稳定身份,
+     *   排行榜 / 获赞 / 档案 / 自定义头像这些依赖账号的功能才有对象可用。
+     *
+     * ⚠ 它**是凭证**:拿到它就能冒充该账号。强度等同于"记住登录状态"的 cookie。
+     *   不校验得更严是因为它本来就是个随机串(形状校验挡的是垃圾输入,不是攻击者)。
+     */
+    device: (v) => v == null || (typeof v === 'string' && /^[A-Za-z0-9_-]{16,64}$/.test(v)),
+    noReplace: isBool, claimAt: (v) => isNum(v, 0, Number.MAX_SAFE_INTEGER),
+    privateDelta: (v) => v === 1,
+    $optional: ['token', 'pass', 'version', 'avatar', 'device', 'noReplace', 'claimAt', 'privateDelta'],
+  },
+  /*
+   * 账号 (server/accounts.js) — 账号密码登录, so a player's profile follows them to another device.
+   *
+   * `proof` is NOT the password: it is the PBKDF2 derivation the client makes (`shared/accountAuth.js`), and the
+   * server hashes THAT with scrypt before storing it. The extra hop keeps a password the player probably reuses
+   * elsewhere off the wire and out of the logs — this is served over plain HTTP on a LAN, so the wire is readable.
+   * It is not a substitute for TLS (a proof can be replayed); see the note on `Network.onAccountMsg`.
+   *
+   * These work BEFORE `hello`: the title screen has nothing to name yet. `acc.rename` / `acc.profile.set` come after,
+   * because both need a session.
+   */
+  'acc.register': { account: (v) => isStr(v, 32), proof: (v) => isStr(v, 256) },
+  'acc.login': { account: (v) => isStr(v, 32), proof: (v) => isStr(v, 256) },
+  // the DISPLAY name only — the account name is the login and can never change
+  'acc.rename': { name: (v) => isStr(v, NAME_MAX_LEN) && v.trim().length > 0 },
+  /*
+   * ★ `vote { target }` — 对局结束后给别的博士点赞 (owner 2026-10-17)。
+   *
+   *   ⚠ `target` 是**被赞那个人的 playerId**(对局里的 id,不是账号名)——
+   *     客户端只可能知道 playerId,账号名由服务端自己查
+   *     (`network.accountOf(target)`)。**绝不能让客户端直接指定账号名**,
+   *     否则谁都能给任意账号刷赞。
+   *
+   *   服务端按"一对只能算一次"记,所以重复点不会刷数。
+   */
+  vote: { target: (v) => isStr(v, 64) && v.length > 0 },
+  /*
+   * acc.avatar.set { data } / acc.avatar.clear — 玩家自己上传头像
+   * (owner 2026-10-15:「做在个人档案里(每个玩家都能传自己的)」)。
+   *
+   * `data` 是 `data:image/png;base64,...`(canvas 导出的那种)。上限由**服务端**判
+   * (64 KB / 512px / 必须正方形),这里只挡一个明显离谱的长度 ——
+   * 协议层的字符串长度限制是为了不让一个 100 MB 的帧进到业务逻辑里。
+   *
+   * ⚠ **不接受 http(s) 地址**:那样等于让服务器替玩家去抓一个外部 URL。
+   */
+  'acc.avatar.set': { data: (v) => isStr(v, 96 * 1024) },
+  'acc.avatar.clear': { id: v=>v==null||isStr(v,80), $optional:['id'] },
+  'acc.namecard.set': { data: (v) => isStr(v, 60 * 1024) },
+  'acc.namecard.clear': { id: v=>v==null||isStr(v,80), $optional:['id'] },
+  /*
+   * 公开档案 (点击他人查看档案): 签名 + 对局数 + 胜场.
+   *
+   * The client owns this blob — there is no account any more, so the profile lives in localStorage and is PUSHED here
+   * whenever it changes (and once on connect). The server keeps it on the session and projects it onto the seat, which
+   * is where other players read it from.
+   *
+   * Only aggregates, never the per-match history: 「你赢了几成」 is public, 「你上周三打了什么」 is not.
+   */
+  'p.avatar': { avatar: v => v === null || isAvatarIdStr(v), revision: v => Number.isSafeInteger(v) && v > 0, epoch:v=>Number.isSafeInteger(v)&&v>=0 },
+  'p.profile': {
+    namecard: validNamecard,
+    comment: (v) => v == null || isStr(v, 60),
+    matches: (v) => v == null || isInt(v, 0, 1e6),
+    wins: (v) => v == null || isInt(v, 0, 1e6),
+    soloScore: (v) => v == null || isInt(v, 0, 100),
+    coopScore: (v) => v == null || isInt(v, 0, 100),
+    soloTitles: (v) => v == null || isCounts(v),
+    coopTitles: (v) => v == null || isCounts(v),
+    soloTally: (v) => v == null || isTally(v),
+    coopTally: (v) => v == null || isTally(v),
+    picks: (v) => v == null || isCounts(v),
+    crisisPoints: (v) => v == null || isInt(v, 0, 1e9),
+    /*
+     * 危机合约分档 (owner:「只有成功完成（存活）的才会计入最高分和累计分数」「然后查看他人档案功能也增加这些
+     * 包括危机合约相关的」): 别人的档案里也要看得到"他最好的成绩"和"三档各多少次",不能只有一个累计分 ——
+     * 累计分只反映活动量,最高分和三档才反映水平。
+     *
+     * `tiers` 的键必须和 shared/crisisScore.js 的 `CRISIS_TIERS` 一致(clear / hold / fallen)。
+     */
+    crisis: (v) => v == null || (typeof v === 'object' && !Array.isArray(v)
+      && [v.bestHard, v.bestAbyss, v.totalPoints, v.clears, v.matches].every((x) => x == null || isInt(x, 0, 1e9))
+      && (v.tiers == null || (typeof v.tiers === 'object' && !Array.isArray(v.tiers)
+        && [v.tiers.clear, v.tiers.hold, v.tiers.fallen].every((x) => x == null || isInt(x, 0, 1e6))))),
+    $optional: ['namecard', 'comment', 'matches', 'wins', 'soloScore', 'coopScore', 'soloTitles', 'coopTitles', 'soloTally', 'coopTally', 'picks', 'crisisPoints', 'crisis'],
+  },
+  /*
+   * 公开档案:签名 + 战绩 + 六维称号次数 + 常选 —— 点「查看档案」时别人看到的那一份.
+   *
+   * 数据只存在于**玩家自己的 localStorage** 里。做法是客户端**主动推上来**,服务端存一份、随 room.state 分发给
+   * 同房的人 (owner:「然后服务端获取分发给同房的玩家不就行了」)—— 比"请求者去问对方客户端"简单得多,
+   * 而且对方掉线之后档案还在,不会因为问不到就变空。
+   *
+   * 推的是**聚合值**:两栏的综合评分 / 称号次数 / 战绩三格、常选计数、合约总分。
+   * 逐场战绩(history)**不参与** —— 那是"你上周三打了什么"级别的私人记录,不是给别人看的排行榜。
+   */
+  // the whole profile blob ({ avatar, comment, history }); the client owns its shape, the server bounds its size
+  'acc.profile.set': { $optional:['identityEpoch'], identityEpoch:v=>Number.isSafeInteger(v)&&v>=0, profile: (v) => v == null || (typeof v === 'object' && !Array.isArray(v)) },
   ping: { c: (v) => typeof v === 'number' && Number.isFinite(v) },
   // test: only the literal true (DESIGN §34.8). Omit it for a normal room — `false` is a bad field, so a
   // string cannot sneak in as "not a test". The server still refuses it unless SP_TEST_MODE is on.
-  // 断线重建：页面把它保管的 `b.snapshot` 送回来（服务端重启后 room 还在、match 没了）。
-  'b.snapshot': { snapshot: (v) => v !== null && typeof v === 'object' && !Array.isArray(v) },
-  'room.create': { mode: (v) => v === 'solo' || v === 'coop', difficulty: (v) => DIFFICULTIES.includes(v), private: (v) => v === true || v === false, variant: (v) => v == null || (typeof v === 'string' && v.length > 0 && v.length <= 64 && /^[A-Za-z0-9_.:-]+$/.test(v)), test: (v) => v === true, $optional: ['test', 'variant', 'private'] },
+  // 肉鸽是独立模式（2026-11-01，客户端发 `mode:'rogue'`）：它的难度表是 N1–N20（difficultiesFor('rogue')），
+  // 与 solo/coop 的旧 4 档并列接受；同一个 N 档发在 coop/solo 上仍然是坏字段（行为不变，不做全局放宽）。
+  // `variant` 是房间玩法变体（'rogue' / 'xie' / 对抗规则档），只校验形状，怎么解释由 lobby 与插件决定。
+  'room.create': { mode: (v) => v === 'solo' || v === 'coop' || v === 'rogue', difficulty: (v, m) => DIFFICULTIES.includes(v) || v === TRAINING_DIFFICULTY || (m?.mode === 'rogue' && DIFFICULTY_TIERS.includes(v)), variant: (v) => v == null || (typeof v === 'string' && v.length > 0 && v.length <= 64 && /^[A-Za-z0-9_.:-]+$/.test(v)), test: (v) => v === true, capacity: (v) => ROOM_CAPACITIES.includes(v), $optional: ['test','capacity','variant'] },
   'room.join': { $optional: ['testAck'], testAck: (v) => v === true, code: (v) => isStr(v, ROOM_CODE_LEN + 2) && /^[A-Za-z0-9]+$/.test(v) },
   'room.leave': {},
-  // 20 人分组（mod）：换队（team=null 清空；seat 只有房主能给）与房间座位上限
-  'room.setTeam': { $optional: ['seat'], team: (v) => v === null || (typeof v === 'string' && TEAMS.includes(v)), seat: (v) => v === undefined || isInt(v, 0, MAX_SEATS - 1) },
-  'room.setMaxSeats': { n: (v) => isInt(v, 1, MAX_SEATS) },
-  // 房间人数上限（客户端滑条）：code 防陈旧标签页改到别的房间；4 的倍数由服务端再校验一次
-  'room.setSeatCap': { code: (v) => isStr(v, ROOM_CODE_LEN + 2) && /^[A-Za-z0-9]+$/.test(v), seatCap: (v) => isInt(v, 1, MAX_SEATS) },
-  'room.list': {},
-  // host, before the match: the room's public/private switch (the mota client's 私密房间 checkbox).
-  'room.setPrivate': { private: (v) => typeof v === 'boolean' },
+  'room.music': { command: validRoomMusicCommand },
   'room.ready': { ready: isBool },
-  'room.setDifficulty': { difficulty: (v) => DIFFICULTIES.includes(v) },
+  'room.setDifficulty': { difficulty: (v) => DIFFICULTIES.includes(v) || v === TRAINING_DIFFICULTY },
   // the co-op room option 「AI 队友最后选择」 (GitHub #338; host, before the match): the strategy and 机变 drafts order every
   // human seat before every AI seat (server/match/match/phases.js humansFirst); room.state.aiPicksLast
   'room.setAiPicksLast': { on: isBool },
+  // 「包含无场景地图」 (host, before the match; off by default): `false` narrows every stage pool to the stages that ship
+  // an official scene package (data/local-assets.json's `scene/<stageId>` groups, server/match/sceneStages.js); `true`
+  // keeps every stage of the mode (a stage without a scene falls back to the procedural board). room.state.incompleteMaps
+  // is omitted unless it is on, so a default room.state stays identical.
+  'room.setIncompleteMaps': { on: isBool },
+  // the host resizes the room before the match: `capacity` is one of ROOM_CAPACITIES and never below the seats taken
+  'room.setCapacity': { capacity: (v) => ROOM_CAPACITIES.includes(v) },
+  /*
+   * 危机合约 (shared/contracts.js): the host replaces the room's selection with `contracts` — a small array of
+   * contract ids. Validated against the room's size server-side (`contractsValidFor`), so the client only has to send
+   * what the 危机合约 screen has ticked.
+   *
+   * ⚠ 上限是**合约表的总条数**,不是写死的 16。合约表从 1 条长到 45 条之后,16 会拒绝一份完全合法的选择
+   * (湮灭 12 条 + 毁灭 13 条大多可以一起选),客户端看到的就是「无效的请求」(owner 报的)。
+   * 用 `CONTRACTS.length` 而不是再写一个大数字:以后加合约不必记得回来改这里。
+   */
+  'room.setContracts': { contracts: (v) => Array.isArray(v) && v.length <= CONTRACTS.length && v.every((c) => isStr(c, 32)) },
+  'room.setCricket': {settings:validCricket},
+  'room.setRandomEvents': {settings:validRandomEvents},
   'room.addBot': {},
   'room.removeBot': { seat: (v) => isInt(v, 0, MAX_SEATS - 1) },
   // the host removes another human before the match (server/lobby.js kick; community report #17); playerId = the one the
   // host confirmed — a seat that changed hands meanwhile is refused
   'room.kick': { seat: (v) => isInt(v, 0, MAX_SEATS - 1), playerId: isId },
+  // 移交创建者 (the seat card's player menu): host only, and only to a seat that holds a human
+  'room.makeHost': { seat: (v) => isInt(v, 0, MAX_SEATS - 1) },
+  /*
+   * 私人 / 匹配开关 (host only). `isPrivate` is the 房间锁: a private room refuses EVERY join, code or not
+   * (「持有密钥也无法进入」). `matchmaking` only means "list me in the lobby's 匹配 panel".
+   *
+   * Both optional so a caller may flip one without restating the other; the server forces `matchmaking` off whenever
+   * `isPrivate` goes on.
+   */
+  'room.setAccess': {
+    isPrivate: (v) => v == null || isBool(v),
+    matchmaking: (v) => v == null || isBool(v),
+    $optional: ['isPrivate', 'matchmaking'],
+  },
+  /*
+   * 房间简介 (owner:「打开可以给房间写简介」).
+   *
+   * 上限给到 ROOM_DESC_MAX 的**两倍**:服务端还会再截断一次(`cleanRoomDesc`,按码点),
+   * 这里只负责挡住"一个超长 payload 打进来"这种滥用。两边用同一个常量会让协议层
+   * 拒绝掉服务端本来会接受的内容(比如差一个码点的边界),所以刻意留一倍余量。
+   */
+  'room.setDesc': { desc: (v) => typeof v === 'string' && [...v].length <= ROOM_DESC_MAX * 2 },
+  /* 是否允许其他人观战(owner:「增加是否允许其他人观战」) */
+  'room.setSpectate': { allow: isBool },
+  // 随机匹配: join the fullest matchable room, or fail when there is none
+  'room.matchNow': {},
+  // ask for the 匹配 room list right now (the panel opening, or a manual refresh)
+  'room.list': {},
   'room.start': {},
-  'room.rerollSetup': { setupRevision: (v) => isInt(v, 0, 2 ** 31) },
-  'room.cancelReroll': { voteId: (v) => isInt(v, 1, 2 ** 31) },
-  // operator loadout (DESIGN §16): stored per session/seat; accepted until the match leaves INFO_CHECK — `ops` (0.2.2):
-  // the per-operator 潜能 / 练度 (absent = none set: every operator at 潜能 6, 精英2 Lv.60)
   'room.loadout': { entries: isLoadoutEntries, ops: isLoadoutOps, $optional: ['ops'] },
   // 干员皮肤 (docs/SKINS.md): the appearances the player wears, keyed by operator charId; PUBLIC, so it is accepted in
   // any room phase (the loadout locks at INFO_CHECK because it changes what a unit does; a skin changes only the model)
@@ -556,22 +813,54 @@ export const C2S = {
   // every data file's bytes against /cs/<cs16>/index.json, that manifest's composition against `cs`; `ok: false` = it
   // could not (the seat shows it). A room with gameplay plugins starts only once every player's page sent it for its cs
   'room.consent': { cs: isContentHash, accept: isBool },
-  // WebRTC 信令（P2P 插件）：服务端只做房间内点对点转发，内容不解析、不落库。
-  'p2p.offer': { to: isId, sdp: (v) => typeof v === 'string' && v.length > 0 && v.length <= 20000 },
-  'p2p.answer': { to: isId, sdp: (v) => typeof v === 'string' && v.length > 0 && v.length <= 20000 },
-  'p2p.ice': { to: isId, candidate: (v) => v === null || (typeof v === 'object' && !Array.isArray(v)) },
-  'p2p.bye': { to: isId },
   'room.contentReady': { cs: isContentHash, ok: isBool, $optional: ['ok'] },
+  /*
+   * 切换座位 (room.swapSeat) — 坐到空位,或与另一个人互换位置。
+   *
+   * `playerId` 省略 = 移动自己(任何人都可以);带上是**房主**在移动别人,这就是"调整所有人的座位顺序"。
+   * 房主移动别人时仍然是一次**换位**:被移动的人与目标格的人互换,不会有人被挤掉,
+   * 也不会出现两个座位同时指向同一个人。
+   *
+   * `targetSeat` 的上界按房间容量(最多 MAX_SEATS)在服务端再判一次 —— 这里用一个宽上界挡住明显的畸形值,
+   * 具体是否越界由 lobby 按 `capacity` 决定(协议层不该知道房间多大)。
+   */
+  'room.swapSeat': {
+    targetSeat: (v) => isInt(v, 0, MAX_SEATS - 1),
+    playerId: isId,
+    $optional: ['playerId'],
+  },
+  /* 玩家 ↔ 观战席互切:`out: true` 让出座位去观战,`false` 从观战席坐回一个空位。 */
+  'room.sitOut': { out: isBool },
+  /*
+   * 房间聊天 (room.chat) — 只在**大厅**可用:开局后聊天走对局内的 `g.chat` / `m.chat`。
+   * 上限与对局内聊天共用 `CHAT_MAX_LEN`(40 字符),服务端还会再清洗与截断一次。
+   */
+  'room.chat': { text: (v) => isStr(v, CHAT_MAX_LEN) && v.trim().length > 0 },
+  /*
+   * 重刷本局 (opening reroll, upstream 0.2.3 #77 / PR #408 — match/setupVote.js).
+   *
+   * INFO_CHECK only, host only, and only when every connected human agrees. `setupRevision` is the revision the
+   * requester thinks it is confirming: a stale one is refused so a click that crossed a reroll cannot reroll again.
+   * `voteId` does the same for a vote that has already been replaced by a newer one.
+   *
+   * ⚠ Both belong to `room.*` (not `g.*`) because the LOBBY authorizes them: the host check lives in
+   * server/lobby.js rerollSetup, next to every other host-only action. `g.rerollVote` is the participants'.
+   */
+  'room.rerollSetup': { setupRevision: (v) => isInt(v, 0, 2 ** 31) },
+  'room.cancelReroll': { voteId: (v) => isInt(v, 1, 2 ** 31) },
 
   // match
   'g.infoReady': { setupRevision: (v) => isInt(v, 0, 2 ** 31), $optional: ['setupRevision'] },
-  'g.rerollVote': { voteId: (v) => isInt(v, 1, 2 ** 31), agree: isBool },
+  
   'g.band': { bandId: isId },
   'g.bandSkip': {},
   // the strategy highlighted in the draft screen (user playtest #4 item 4): a turn that runs out takes it while it is
   // free (Match.timeoutBand); absent / null clears it
   'g.bandFocus': { bandId: nullable(isId), $optional: ['bandId'] },
+  'g.bandWish': { bandId: nullable(isId), $optional: ['bandId'] },
   'g.buy': { slot: (v) => isInt(v, 0, 15) },
+  'g.borrow': { n: (v) => isInt(v, 1, 8), $optional: ['n'] },
+  'g.repay': { n: (v) => isInt(v, 1, 15), $optional: ['n'] },
   'g.refresh': {},
   'g.freeze': {},
   'g.levelUp': {},
@@ -580,20 +869,26 @@ export const C2S = {
   'g.move': { uid: isUid, to: target, dir: isDir, $optional: ['dir'] },
   // replaceUid: with both of the target's slots used, the equipped item the replace dialog picked (research 09 §1.2
   // UseEquipUp.unloadInstId; absent ⇒ the oldest; not one of the target's items ⇒ BAD_TARGET)
-  'g.equip': { itemUid: isUid, targetUid: isUid, replaceUid: nullable(isUid), $optional: ['replaceUid'] },
+  'g.equip': { itemUid: isUid, targetUid: isUid, replaceUid: nullable(isUid), recipientId:nullable(isId), $optional: ['replaceUid','recipientId'] },
   'g.art': { itemUid: isUid, row: (v) => isInt(v, 0, GEO.ROWS - 1), col: (v) => isInt(v, 0, GEO.COLS - 1), dir: isDir, $optional: ['dir'] },
+  'g.suiCard': { fieldId:isId, row:v=>isInt(v,0,GEO.ROWS-1), col:v=>isInt(v,0,GEO.COLS-1) },
   'g.destroy': { uid: isUid },
   // unequip (DESIGN §34.15): one equipped item back to the hand, else the visible temp window. Official rooms refuse it.
   'g.unequip': { itemUid: isUid },
-  'g.reward': { idx: (v) => isInt(v, 0, 5) },
-  'g.choice': { idx: (v) => isInt(v, 0, 5), choiceId: isId, $optional: ['choiceId'] },
+  'g.reward': { idx: (v) => isInt(v, 0, MAX_DRAFT_CARDS - 1) },
+  'g.choice': { idx: (v) => isInt(v, 0, MAX_DRAFT_CARDS - 1), choiceId: isId, $optional: ['choiceId'] },
   // a plugin interaction window (PLUGIN API v2, docs/PLUGINS.md §10b): offerId is the window's declared id, idx the
   // slot picked; g.offerRefresh redraws one slot (the window's own `refresh.perSlot` bounds how often). The host
   // applies the window's declared effect primitive — a plugin never receives these messages itself.
   'g.offer': { offerId: isId, pluginId: isId, seq: (v) => isInt(v, 0, 1000000), cardId: optional(isId), idx: (v) => isInt(v, 0, PLUGIN_OFFER_SLOTS - 1) },
   'g.offerRefresh': { offerId: isId, pluginId: isId, seq: (v) => isInt(v, 0, 1000000), cardId: optional(isId), idx: (v) => isInt(v, 0, PLUGIN_OFFER_SLOTS - 1) },
   'g.ready': { ready: isBool },
+  'g.selfLimit': { id: isStr,step:v=>Number.isInteger(v)&&v>=0&&v<64 },
+  'g.selfBenefit':{id:v=>v===null||isStr(v),step:v=>Number.isInteger(v)&&v>=0&&v<64},
   'g.emote': { id: (v) => EMOTES.includes(v) },
+  // 对局文字聊天: a free-text line, bounds-checked here so the server never has to trust the client's length.
+  // `isStr` measures in CHARACTERS; an all-whitespace line is rejected outright.
+  'g.chat': { text: (v) => isStr(v, CHAT_MAX_LEN) && v.trim().length > 0 },
   // playerId: the player tapped in the team panel (a 联防 / boss pair field shows two) — what an eliminated viewer or a
   // spectator seat follows from then on (Match.watchPref; community report of 2026-10-06, item 56)
   'g.watch': { fieldId: (v) => isStr(v, 32), playerId: isId, $optional: ['playerId'] },
@@ -601,22 +896,42 @@ export const C2S = {
   // solo pause (official PauseUp / ResumeUp, DESIGN §14): freezes the running battle (field clock, deadlines, the
   // browser's local runner) — solo matches only (co-op ⇒ WRONG_PHASE), only while a battle runs; m.public.paused
   'g.pause': { on: isBool },
+  'g.speed': { speed: (v) => v === 1 || v === 2 },
+  /*
+   * 暂停投票 (match/pauseVote.js) — co-op only, 休整期 only.
+   *
+   * `g.pauseVote` opens a vote to hold the round's prep clock for five minutes; `reason` is what goes into the popup
+   * everyone sees (a 120-character cap, enforced server-side). `g.resumeVote` opens the same vote to lift a hold that
+   * is already running — no reason: there is nothing to explain. `g.votePause { on }` is one player's answer to
+   * whichever vote is open (true 同意 / false 拒绝; repeating the same side withdraws it).
+   *
+   * The 80 % rule and the tally are the server's (UNITE_ABANDON_RATIO over living humans) — the client never
+   * re-derives them, it renders `m.public.pauseVote`.
+   */
+  'g.kickVote': { targetId: (v) => isStr(v,128)&&v.length>0, reason: (v)=>isStr(v,120)&&v.trim().length>0 },
+  'g.voteKick': { voteId: (v)=>Number.isSafeInteger(v)&&v>0,on:isBool },
+  'g.pauseVote': { reason: (v) => v == null || isStr(v, 120) },
+  'g.resumeVote': {},
+  'g.votePause': { on: isBool },
+  /*
+   * 重刷本局 (opening reroll, upstream 0.2.3 #77 / PR #408 — match/setupVote.js).
+   *
+   * One participant's answer to the open reroll vote: true 同意, false 拒绝 (a refusal ends the vote at once — unlike
+   * the 暂停 vote there is no tally to keep, because EVERY connected human must agree). `voteId` guards against
+   * answering a vote that has already been replaced.
+   */
+  'g.rerollVote': { voteId: (v) => isInt(v, 1, 2 ** 31), agree: isBool },
+  /*
+   * 分组拦截 (联防) controls.
+   *
+   * `g.uniteVote` asks the room to abandon the defence zone the current group is holding. The server counts it and, at
+   * UNITE_ABANDON_RATIO of the LIVING players, retreats the group at once and puts the next one on. `on: false`
+   * withdraws a vote already cast, so a repeat is idempotent.
+   */
+  'g.uniteVote': { on: isBool },
   // the stats the own board's units start their next battle with (user playtest #4 item 7; prep phases): answered by
   // the push m.unitStats { seq, round, units: [unitStatsEntry] }; `seq` is echoed so the client keeps the newest answer
   'g.unitStats': { seq: (v) => isInt(v, 0, 2 ** 31), $optional: ['seq'] },
-  // 协同共竞 (mota plugin): the client sends these only after m.public.econ advertises the rule set; the
-  // room's Match (the plugin's) handles them. Kept here because server/net.js validates every C2S frame
-  // against this table before the lobby/match sees it.
-  'g.publicFull': {},
-  'g.econ.request': { to: (v) => v == null || isId(v), amount: (v) => isInt(v, 1, 99), $optional: ['to'] },
-  'g.econ.respond': { id: isId, approve: isBool },
-  'g.econ.project': { project: isId },
-  'g.econ.vote': { id: isId, approve: isBool },
-  'g.revive': { playerId: isId, round: (v) => isInt(v, 1, 99) },
-  'g.econ.relief': {},
-  'g.econ.bounty': {},
-  'g.econ.repay': { to: (v) => v == null || isId(v), $optional: ['to'] },
-  'g.econ.nudge': { to: isId },
   'g.leave': {},
   // host test commands (DESIGN §34.8 phase 2). The server applies them only in a test match. `args` is checked
   // again by shared/testMode.js parseTestArgs (ids, bounds). Unknown keys inside args fail there, not here.
@@ -624,6 +939,8 @@ export const C2S = {
 
   // client-side combat (DESIGN §14): the authoritative client of a field reports its battle; a 联防 field adds
   // `left` = { [leakerId]: its enemies still standing (unspawned, alive, or through again) } (server/sim/spec.js
+  // uniteLeft; user playtest #6 item 7 — the leakers' live counter)
+  'b.bsFire': { battleId: isId, key: (v) => isStr(v, 120), duration: (v) => isNum(v, 0.01, 60) },
   // uniteLeft; user playtest #6 item 7 — the leakers' live counter). `resolved` = the HUD capsule's numerator: the
   // field's own scheduled enemies that were knocked out **or leaked** (official: 漏一个 1/3, 打死一个 2/3,
   // 打死会分裂的 3/3 — Battle.leakedInTotal; runtime splits / summons stay out of both parts of the capsule). A boss / hidden field adds
@@ -633,9 +950,9 @@ export const C2S = {
     battleId: isId, gt: (v) => isNum(v, 0, 1e5), killed: (v) => isInt(v, 0, 1e5), total: (v) => isInt(v, 0, 1e5),
     resolved: (v) => isInt(v, 0, 1e5),
     leaks: (v) => isNum(v, 0, 1e6), bossDmg: (v) => isNum(v, 0, BIG),
-    by: (v) => isMap(v, RESULT_LIMITS.players, isId, (x) => isNum(x, 0, BIG)), done: isBool,
-    left: (v) => isMap(v, RESULT_LIMITS.players, isId, (x) => isInt(x, 0, 1e5)),
-    leaksBy: (v) => isMap(v, RESULT_LIMITS.players, isId, (x) => isNum(x, 0, 1e6)),
+    by: (v) => isMap(v, RESULT_LIMITS.sources, isId, (x) => isNum(x, 0, BIG)), done: isBool,
+    left: (v) => isMap(v, RESULT_LIMITS.sources, isId, (x) => isInt(x, 0, 1e5)),
+    leaksBy: (v) => isMap(v, RESULT_LIMITS.sources, isId, (x) => isNum(x, 0, 1e6)),
     $optional: ['resolved', 'leaks', 'bossDmg', 'by', 'done', 'left', 'leaksBy'],
   },
   // `cs` (DESIGN §32, optional): the content hash the reporting browser ran the battle on — its spec's `cs`. In a room
@@ -657,15 +974,51 @@ export const C2S = {
 
 // Server → client message types (documentation + client dispatch table keys).
 export const S2C = [
+  'm.bsFire',
   'welcome', 'ok', 'error', 'pong',
-  'room.state', 'room.closed', 'b.snapshot', 'b.snapshotRequest',
+  'b.speed', // Solo battle clock change: { speed: 1 | 2, fields: [{ battleId, elapsed }] }.
+  /*
+   * s.avatars { list: [{ id, url, label, by }], urls: [{ id, url }] }
+   *
+   * `list` — **这个人能选的自定义头像** (owner 2026-10-15「然后做成头像 让只有我能用」)。
+   *   ⚠ 它是**服务端按账号裁剪过的**:别人的专属头像根本不在里面,所以客户端无从伪造。
+   *   发两次 —— `onHello`(账号还没绑上)与 `onAccountBound`(绑上之后,这时才有专属头像);
+   *   客户端语义是**整体替换**,重复发没有副作用。
+   *
+   * `urls` — ★ **所有人可见的 id → URL 映射** (owner 2026-10-17:「自定义头像 别的玩家不显示
+   *   看不到」)。登记表里每一张图的 id 与公开 URL,**不含权限信息**。
+   *
+   *   ⚠ 它必须存在,而且必须发给**所有人**:只靠 `list` 的话,
+   *     没被授权的玩家**画不出别人档案上的自定义头像**,房间里看你就成了首字母。
+   *     而 owner 要的是「**所有人看得见,只有被授权的人能选**」——
+   *     "能不能选"和"能不能看到"是两件事,原来把它们绑在一起了。
+   *
+   *   ⚠ 发它**不放松权限**:选头像仍然要过服务端(`server/avatars.js allows`
+   *     + `net.onProfileMsg` 的白名单拦截)。而且图片本来就在 `/data/avatars/` 公开挂载下,
+   *     这份映射只是让客户端知道该取哪个文件名。
+   */
+  's.avatars',
+  's.namecards',
+  'p.identity', 'room.state', 'room.closed', 'room.music',
   'm.public', 'm.private', 'm.field', 'm.toast', 'm.ticker', 'm.emote', 'm.result',
+  // 房间聊天 { seq, playerId, name, seat, text, at } — one line, broadcast to the whole room (players + spectators)
+  'm.roomChat',
+  // 对局内聊天 { seq, playerId, name, seat, text, at } — the in-match channel (g.chat / m.chat).
+  // ⚠ 这一条**上游 0.2.4/0.2.5 和 fork 的 S2C 里都漏了**(服务端 intents.js 在发、客户端 main.js 在监听)。
+  //    S2C 只作文档与分发表用途,运行时不校验,所以一直没暴露;补上以免以后有人照着它对消息。
+  'm.chat',
   // m.layer { playerId, bondId, add } — own live prep layer gain; ephemeral, never replayed on resync.
+  // ⚠ 上游 0.2.5 新增。三方合并时它和 fork 自研的 'm.roomChat' 是同一块冲突,取任一侧都会丢掉另一侧 ——
+  //    这里把两边都留下。少了它,`economy.js` 发出的 m.layer 不在 S2C 声明里(客户端 main.js 仍在监听)。
   'm.layer',
   // m.unitStats { seq, round, units: [unitStatsEntry] } — the answer to g.unitStats (the requester only)
   'm.unitStats',
   // client-side combat (DESIGN §14): b.start { battleId, fieldId, kind, spec, authoritative, startAt, serverNow, elapsed,
-  // speed, watch? } · b.pool { hp, max, teamLp, acked: { [fieldId]: cumulative boss damage counted } } ·
+  // speed, watch?, bgmTheme? } — `bgmTheme` 是**自适应开战 BGM** 的主题名 (shared/bgmTheme.js):服务端在开战时算定
+  // (关卡声明优先、敌人家族兜底),同一场战斗发给所有人都是同一个值,战斗中不变;null/缺失 = 走原来的回合曲子。
+  // · b.pool { hp, max, teamLp, acked: { [fieldId]: cumulative boss damage counted },
+  // fought: seconds since THIS boss round started, board?: [{ id, dmg }] top-5 damage of this boss round —
+  // present only when it changed, so the client keeps the last value } ·
   // b.end { battleId, fieldId, reason }
   'b.start', 'b.pool', 'b.end',
   // a delegated bot layout rehearsal (DESIGN §14): b.rehearsal { taskId, playerId, cap, specs } — the host's browser
@@ -681,6 +1034,30 @@ export const S2C = [
  * Validate a decoded client message. Returns `null` when valid, otherwise a short reason string.
  * Extra unknown fields are ignored (not copied by handlers).
  */
+/**
+ * 头像 id 的**形状白名单**(`hello.avatar`)。
+ *
+ * 合法形状有两类 —— 这个函数是它们**唯一**的定义,业务层(`shared/avatars.js`)与协议层共用:
+ *
+ *   · 官方立绘 chessId: `char_1041_angel2` / `chess_char_6_13_a` → 纯字母数字下划线
+ *   · 自定义头像:       `custom:hat`、玩家上传的 `custom:u/<账号>`
+ *
+ * ⚠ 长度上限 48:`custom:` 7 字符 + 上传那条 `u/<账号≤32>` = 最多 41,
+ *   留一点余量。上限必须真的挡住超长输入(它会进档案 blob 并广播给同房间的人)。
+ *
+ * ⚠ `custom:` 后面**不做细粒度校验** —— 那是 `shared/avatars.js parseAvatarId` 的职责
+ *   (它还要判路径穿越、账号名字符集)。这里只管"形状像不像一个 id",
+ *   免得把两套规则写两遍又写漂(这正是原来那个 bug 的成因)。
+ *
+ * @param {unknown} v
+ */
+export function isAvatarIdStr(v) {
+  if (typeof v !== 'string' || v.length > 48) return false;
+  if (v === '') return true;                                   // 空串 = 用默认
+  if (/^custom:[A-Za-z0-9_/-]+$/.test(v)) return true;         // 自定义(含玩家上传)
+  return /^[A-Za-z0-9_]+$/.test(v);                            // 官方立绘 chessId
+}
+
 export function validateC2S(msg) {
   if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return 'not an object';
   const spec = typeof msg.t === 'string' && Object.hasOwn(C2S, msg.t) ? C2S[msg.t] : null;
@@ -691,7 +1068,9 @@ export function validateC2S(msg) {
     if (k === '$optional') continue;
     const v = msg[k];
     if (v === undefined && optional.includes(k)) continue;
-    if (!check(v)) return `bad field ${k}`;
+    // the whole message is the second argument so a field may depend on another one (room.create.difficulty on
+    // `mode`: the N1–N20 ladder belongs to 肉鸽). Every one-argument check ignores it, so nothing else changes.
+    if (!check(v, msg)) return `bad field ${k}`;
   }
   return null;
 }

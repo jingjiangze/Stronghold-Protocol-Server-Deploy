@@ -443,8 +443,7 @@ export function bardRegen(battle, bard, ally, value, duration = BARD_REGEN_DUR) 
 
 const installBard = (battle, unit) => {
   battle.every(BARD_REGEN_IV, () => {
-    // Continuous regeneration is an aura, so stun does not stop it.
-    if (!unit.alive || !unit.deployed || unit.hidden) return;
+    if (!unit.canAct) return;
     const v = unit.s.atk * (unit.profile.auraRatio ?? 0.1);
     for (const ally of battle.alliesInGrid(unit)) bardRegen(battle, unit, ally, v);
   }, { owner: unit });
@@ -720,5 +719,3 @@ export function resolveProfile(def, kitTrait = null) {
   return p;
 }
 
-/** Every subProfessionId with a specific behaviour (used by tests to check coverage). */
-export const KNOWN_SUBPROFESSIONS = Object.freeze(Object.keys(SUB));

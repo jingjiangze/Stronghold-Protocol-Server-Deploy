@@ -3,9 +3,7 @@
 
 import { absoluteRangeKeys } from '../../../targeting.js';
 import { bodyInRange } from '../../../body.js';
-import {
-  num, tbb, live, hasBond, onDefaultSkill, selectedSkill, N4, bstate, freeTiles, bestTile,
-} from '../shared/tier6.js';
+import { num, tbb, live, hasBond, onDefaultSkill, selectedSkill, N4, bstate, freeTiles, bestTile } from '../shared/tier6.js';
 
 /** Deploy-order tracker: last op deployed per owner (read before the update by priority-0 deploy handlers). */
 function ensureDeployTracker(battle) {

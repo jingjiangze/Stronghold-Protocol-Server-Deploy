@@ -188,13 +188,15 @@ function acceptedEncodings(header) {
  * @param {string | undefined} header
  * @returns {'br' | 'gzip' | null}
  */
-/** Static responses: gzip/br on by default; SP_HTTP_COMPRESS=off disables it (a proxy that strips
- * Content-Encoding would otherwise hand the browser raw compressed bytes). */
-const HTTP_COMPRESS = String(process.env.SP_HTTP_COMPRESS || 'on').toLowerCase() !== 'off';
-
 export function pickEncoding(header) {
+  // 部署侧开关（2026-10-26 乱码事故）：SP_HTTP_COMPRESS = off | gzip | br（缺省 br）。
+  // 背景：某些边缘/网关会剥掉 `Content-Encoding: br` 却留下 brotli 实体，浏览器按 utf-8 解 → 整页乱码。
+  // SP_NO_BROTLI=1 等价于 gzip。off 完全不压缩。
+  const mode = String(process.env.SP_HTTP_COMPRESS || '').toLowerCase();
+  if (mode === 'off' || mode === 'none' || mode === 'identity') return null;
+  const noBrotli = mode === 'gzip' || String(process.env.SP_NO_BROTLI || '') === '1';
   const acc = acceptedEncodings(header);
-  const brQ = acc.br ?? 0;
+  const brQ = noBrotli ? 0 : (acc.br ?? 0);
   const gzQ = acc.gzip ?? acc['x-gzip'] ?? acc['*'] ?? 0;
   if (brQ > 0 && brQ >= gzQ) return 'br';
   if (gzQ > 0) return 'gzip';
@@ -289,7 +291,7 @@ export async function serveFile(req, res, absPath, stat, mountName, segments, qu
   const compressible = COMPRESSIBLE.has(ext);
   // RFC 9110 §14.2: Range is defined only for GET; other methods ignore it, including for encoding selection.
   const rangeHeader = req.method === 'GET' ? req.headers.range : undefined;
-  const encoding = HTTP_COMPRESS && compressible && stat.size >= GZIP_MIN_BYTES && !rangeHeader ? pickEncoding(req.headers['accept-encoding']) : null;
+  const encoding = compressible && stat.size >= GZIP_MIN_BYTES && !rangeHeader ? pickEncoding(req.headers['accept-encoding']) : null;
   const baseTag = opts.contentHash || `${stat.size.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}`;
   const etag = `"${baseTag}${encoding === 'br' ? '-br' : encoding === 'gzip' ? '-gz' : ''}"`;
   const lastModified = stat.mtime.toUTCString();
@@ -354,7 +356,7 @@ export async function serveFile(req, res, absPath, stat, mountName, segments, qu
  * @param {{ body: Buffer, hash: string, type: string, cacheControl: string, key: string, cache: CompressCache }} o
  */
 export async function serveBuffer(req, res, { body, hash, type, cacheControl, key, cache }) {
-  const encoding = HTTP_COMPRESS && body.length >= GZIP_MIN_BYTES ? pickEncoding(req.headers['accept-encoding']) : null;
+  const encoding = body.length >= GZIP_MIN_BYTES ? pickEncoding(req.headers['accept-encoding']) : null;
   const etag = `"${hash}${encoding === 'br' ? '-br' : encoding === 'gzip' ? '-gz' : ''}"`;
   const headers = { 'Content-Type': type, 'Cache-Control': cacheControl, ETag: etag, Vary: 'Accept-Encoding' };
   const inm = req.headers['if-none-match'];

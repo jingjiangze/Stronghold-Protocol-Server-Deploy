@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { startServer } from '../../server/index.js';
+import { startServer } from '../../server/boot-main.js';
 import { TestClient } from '../helpers/wsClient.js';
 import { PHASE, EMOTES } from '../../shared/constants.js';
 

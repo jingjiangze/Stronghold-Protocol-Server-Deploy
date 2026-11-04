@@ -58,12 +58,13 @@
 //   with S3 and this kit used it as the marker) and the skill summons it each time.
 
 import { num, talentBb, skillRec, batMod, up, installAura, toggleBuff } from '../shared/tier1.js';
+import { hypot } from '../../../detmath.js';
 import { absoluteRangeKeys, canTargetEnemy, sortEnemyTargets } from '../../../targeting.js';
 import { bodyInRange } from '../../../body.js';
 import { hasHp } from '../../../damage.js';
 import { RESIST_STATUSES } from '../../../buffs.js';
 import { TICK } from '../../../constants.js';
-import { hypot } from '../../../detmath.js';
+
 
 const S1 = 'skchr_aglna2_1';
 const S2 = 'skchr_aglna2_2';

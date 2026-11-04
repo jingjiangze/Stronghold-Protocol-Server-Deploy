@@ -1,3 +1,6 @@
+import { webTraitResult } from '../content/garrisons/webTraits20261101.js';
+import {isHuntEntry} from '../../../shared/huntProgression.js';
+import {hasScopedEnemySource} from '../../../shared/enemyResultSources.js';
 // server/sim/battle/lifecycle.js — Battle methods: lifecycle: start (the battle-start deployment: by column, operators
 // then summons; 联防 forced exits; `battleStart`), step (the tick order of the Battle.js header), the end checks, timeout
 // / forced / cleared finishes and the BattleResult.
@@ -5,6 +8,8 @@
 
 import { FORCED_EXIT, MAX_BATTLE_TIME } from '../constants.js';
 import { noteAttackCommit, updateAlly, updateEnemy } from '../ai.js';
+import {withEventActor} from '../eventTeams.js';
+import {startRoundEvents} from '../roundEvents.js';
 
 export class BattleLifecycle {
   start() {
@@ -50,6 +55,7 @@ export class BattleLifecycle {
       }
     }
     this.emit('battleStart', {});
+    startRoundEvents(this);
     // 联防 restores the previous phase's state after all opening effects have established the new stats. In
     // particular, Egir rebuilds devour attributes without charging carried targets for its opening damage again.
     // Keep fractional HP: a legal survivor below 1% (or below 1 HP after max-HP changes) must not be healed by carry.
@@ -58,6 +64,10 @@ export class BattleLifecycle {
       if (!cs || cs.down || !u.alive || !u.deployed || u.deploySeq <= seq0) continue;
       if (u.kind === 'op' && Number.isFinite(cs.hpPct) && cs.hpPct > 0) u.hp = u.s.maxHp * Math.min(1, cs.hpPct);
       if (Number.isFinite(cs.sp) && u.skill) u.skill.setSpTotal(cs.sp);
+    }
+    // Maintainer 2026-10-24: third relay group receives half a skill bar once, after own-combat SP carries.
+    if(this.kind==='unite'&&this.flags.uniteOpeningSpFraction>0)for(const u of this.allyUnits){
+      if(u.kind==='op'&&u.alive&&u.deployed&&u.skill)u.skill.setSpTotal(u.skill.spTotal+u.skill.spCost*this.flags.uniteOpeningSpFraction);
     }
     // redeploy-time effects that start with the battle (机变 征召 "所有干员的再部署时间-50%", added by a battleStart
     // handler) cover the operators forced out above too: their timer is re-read with them, as a later knock-out's is
@@ -90,7 +100,7 @@ export class BattleLifecycle {
         for (let i = 0, n = list.length; i < n && !this._endReq; i++) {
           const e = list[i];
           if (!e.alive) continue;
-          try { updateEnemy(this, e, dt); } catch (err) { this._internalError('updateEnemy', err); }
+          try { withEventActor(this,e,()=>updateEnemy(this, e, dt)); } catch (err) { this._internalError('updateEnemy', err); }
           this._clampPos(e);
         }
       });
@@ -132,7 +142,7 @@ export class BattleLifecycle {
     this.finished = true;
     this.reason = reason === 'timeout' ? 'timeout' : 'forced';
     this._endReq = null;
-    try { this._result = this._buildResult(); } catch { this._result = { time: this.time, reason: this.reason, perPlayer: {}, killed: this.killed, total: this.total, resolved: this.resolved, errors: this.errorCount }; }
+    try { this._result = this._buildResult(); } catch { this._result = { time: this.time, reason: this.reason, perPlayer: {}, killed: this.killed, total: this.total, errors: this.errorCount }; }
     this.projectiles.clear();
   }
 
@@ -155,7 +165,7 @@ export class BattleLifecycle {
     // §5.5) — never merely because it emptied: the h07_04 pair leader (official route: no wait) can walk into the
     // objective, and the field then idles while another field may still empty the pool or the overtime drain ends it.
     const poolHolds = !!this.sharedBoss && (this.kind === 'boss' || this.kind === 'hidden');
-    if (this.autoFinish && !poolHolds && !this._pending.length && !this.enemies.some((e) => e.alive) && this.started) {
+    if (this.autoFinish && !poolHolds && !this._pending.length && !this.enemies.some((e) => e.alive&&e.mods?.eventTeam!==1) && this.started) {
       if (!this._hasPendingEnemySchedules()) { this._finish('cleared'); return; }
     }
     if (this.time >= this.timeLimit - 1e-9) { this._timeout(); return; }
@@ -163,7 +173,7 @@ export class BattleLifecycle {
   }
 
   _hasPendingEnemySchedules() {
-    for (const s of this._sched) if (!s.cancelled && s.holdsBattle) return true;
+    for (const s of this._sched) if (!s.cancelled && s.holdsBattle&&s.owner?.mods?.eventTeam!==1) return true;
     return false;
   }
 
@@ -183,7 +193,7 @@ export class BattleLifecycle {
         const pp = this._pp(p.ownerPlayerId ?? this._ownerForTile(p.pos ?? this._routeFor(p.routeIndex, p.route)?.start));
         if (pp) pp.total--;
       }
-      this.unspawned.push({ enemyKey: p.enemyKey, time: p.time, tag: p.tag ?? null, sourcePlayerId: p.sourcePlayerId ?? null });
+      this.unspawned.push({ enemyKey: p.enemyKey, time: p.time, tag: p.tag ?? null,...(p.mods?.bountyId||hasScopedEnemySource(p.enemyKey)?{mods:p.mods}:{}), sourcePlayerId: p.sourcePlayerId ?? null,...(isHuntEntry(p)?{mods:p.mods,lpr:0}:p.enemyKey==='enemy_1571_mirbst'?{mods:p.mods,lpr:p.mods?.returnLpDebt??3}:{} ) });
     }
     this._pending = [];
     this._finish('timeout');
@@ -242,9 +252,11 @@ export class BattleLifecycle {
         id: u.id, uid: u.uid, defId: u.defId, name: u.name, kind: u.kind,
         dmg: Math.round(u.stats.dmg), kills: u.stats.kills, heal: Math.round(u.stats.heal), taken: Math.round(u.stats.taken), attacks: u.stats.attacks,
       }));
+      const web = webTraitResult(this, ps);
+      if (web) pp.webTraits = web;
       perPlayer[ps.playerId] = pp;
     }
-    const res = { time: Math.round(this.time * 1000) / 1000, reason: this.reason, perPlayer, killed: this.killed, total: this.total, resolved: this.resolved, errors: this.errorCount };
+    const res = { time: Math.round(this.time * 1000) / 1000, reason: this.reason, perPlayer, killed: this.killed, total: this.total, errors: this.errorCount };
     if (this.unspawned && this.unspawned.length) res.unspawned = this.unspawned;
     if (this.sharedBoss) res.bossHpLeft = Math.max(0, this.sharedBoss.hp);
     return res;

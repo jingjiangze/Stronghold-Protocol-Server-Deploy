@@ -406,6 +406,8 @@ button.bpop__harmony:hover { border-style: solid; color: #fff; }
 .spov__turntxt .icon { width: .26rem; height: .26rem; }
 .spov__turntxt.is-mine { color: var(--mint-400); text-shadow: 0 0 .16rem rgba(23, 249, 183, .45); animation: blink 1.2s ease-in-out infinite; }
 .spov__turntxt.is-done { color: var(--mint-400); }
+/* 草稿态（2026-10-27）：已保存但还没确认出击 —— 用琥珀色区分「可继续改」与「已锁定」 */
+.spov__turntxt.is-draft { color: var(--amber, #f2b544); }
 /* someone else deciding: the name over 正在决策…, right-aligned, an hourglass beside them */
 .spov__turntxt.is-other { gap: .12rem; color: #eef1f0; }
 .spov__turntxt.is-other .icon { width: .34rem; height: .34rem; }
@@ -768,3 +770,338 @@ button.bpop__harmony:hover { border-style: solid; color: #fff; }
   .offerov .spov__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .offerov .spcard__icon { width: .6rem; height: .6rem; }
+
+/* 2V2 对抗期 overlay (ui/confrontOverlay.js) — reuses the .spov shell classes */
+/* The 0.3.1 header is a 3-column grid (name | rule | description). The 狩猎期 overlay carries a much wider action row
+   than 机变 has (自动选择 / 沿用上轮 / 提交（n 只 · …）), so on a desktop the description column was squeezed to one
+   character and the whole phase header read vertically (user report 2026-10-18). Stack this header: the title block
+   keeps the full width, the actions sit on their own line and wrap when the screen is narrow. ui/eventOverlay.js
+   (evov) and ui/rosterPanel.js (rospov) share the shell but have a compact turn row, so they keep the one-line head. */
+.confov .spov__head { flex-direction: column; align-items: stretch; gap: .08rem; }
+.confov .spov__turn { flex-wrap: wrap; justify-content: flex-end; row-gap: .06rem; }
+/* The panel itself scrolls when a short screen cannot hold the header plus the picking body (the two columns' own
+   max-heights stay, so the list still scrolls on its own inside a tall panel). */
+.confov .spov__inner, .evov .spov__inner, .rospov .spov__inner {
+  overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-width: thin; scrollbar-color: rgba(234, 255, 248, .28) transparent;
+}
+.confov .spov__inner::-webkit-scrollbar, .evov .spov__inner::-webkit-scrollbar, .rospov .spov__inner::-webkit-scrollbar { width: .08rem; }
+.confov .spov__inner::-webkit-scrollbar-thumb, .evov .spov__inner::-webkit-scrollbar-thumb, .rospov .spov__inner::-webkit-scrollbar-thumb {
+  background: rgba(234, 255, 248, .26); border-radius: .04rem;
+}
+.confov__groups { display: grid; grid-template-columns: repeat(4, 1fr); gap: .08rem; margin: .1rem 0; }
+.confgroup { display: flex; flex-direction: column; gap: .05rem; padding: .1rem; border: 2px solid var(--line-3); border-radius: .1rem; background: rgba(255, 255, 255, .05); cursor: pointer; text-align: left; color: inherit; }
+.confgroup.is-sel { border-color: var(--mint-400); }
+.confgroup:disabled { opacity: .55; cursor: default; }
+.confgroup__head { display: flex; justify-content: space-between; align-items: baseline; gap: .05rem; }
+.confgroup__name { font-size: calc(.18 * var(--t)); }
+.confgroup__ficon { width: .24rem; height: .24rem; margin-right: .04rem; vertical-align: -.04rem; object-fit: contain; }
+.confgroup__meta { font-size: calc(.12 * var(--t)); color: var(--text-md); }
+.confgroup__icons { display: flex; flex-wrap: wrap; gap: .03rem; }
+.confgroup__ic { width: .28rem; height: .28rem; display: inline-flex; }
+.confgroup__ic img { width: 100%; height: 100%; object-fit: contain; }
+/* the picking area takes its own content height; the panel (.spov__inner) scrolls when the screen is too short, while
+   a type's pool and the placed list keep their own wheel (the 提交 button stays in the header above them) */
+.confov__body { display: grid; grid-template-columns: 1fr 1fr; gap: .14rem; flex: 0 0 auto; min-height: 0; }
+.confov__pool, .confov__placed { display: flex; flex-direction: column; min-height: 0; }
+.confov__h { font-size: calc(.17 * var(--t)); margin: 0 0 .06rem; flex: 0 0 auto; }
+/* 本回合还能放 n 只 (user 2026-10-17): resident above the picking body — remaining value ÷ the current type's
+   cheapest monster, plus the protocol's picks cap. */
+.confov__remain { display: flex; align-items: baseline; gap: .1rem; flex: 0 0 auto; margin: 0; padding: .04rem .12rem;
+  border-left: 2px solid var(--mint-400); background: rgba(23, 249, 183, .06); font-size: calc(.14 * var(--t)); color: var(--text-md); }
+.confov__remain b { color: var(--mint-400); font-size: calc(.16 * var(--t)); font-weight: 800; }
+.confov .spov__turntxt.is-final { color: var(--gold-2); text-shadow: 0 0 .16rem rgba(242, 189, 62, .4); }
+/* Both picking columns scroll on their own — a thin, half-transparent bar and real touch scrolling on phones — and a
+   max-height in vh keeps the panel inside a landscape phone (the header's 提交 stays reachable). */
+.confov__chips, .confov__list {
+  max-height: min(46vh, calc(4.4 * var(--t)));
+  overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin; scrollbar-color: rgba(234, 255, 248, .28) transparent;
+}
+.confov__chips::-webkit-scrollbar, .confov__list::-webkit-scrollbar { width: .08rem; height: .08rem; }
+.confov__chips::-webkit-scrollbar-track, .confov__list::-webkit-scrollbar-track { background: transparent; }
+.confov__chips::-webkit-scrollbar-thumb, .confov__list::-webkit-scrollbar-thumb {
+  background: rgba(234, 255, 248, .26); border-radius: .04rem;
+}
+.confov__chips::-webkit-scrollbar-thumb:hover, .confov__list::-webkit-scrollbar-thumb:hover { background: rgba(234, 255, 248, .42); }
+/* touch: a wide, always-visible track — tapping the track pages the column instead of dragging a 3 px thumb (the two
+   columns each scroll their own panel; user 2026-10-18) */
+@media (pointer: coarse) {
+  .confov__chips, .confov__list { scrollbar-width: auto; }
+  .confov__chips::-webkit-scrollbar, .confov__list::-webkit-scrollbar { width: .16rem; }
+  .confov__chips::-webkit-scrollbar-track, .confov__list::-webkit-scrollbar-track { background: rgba(234, 255, 248, .08); }
+  .confov__chips::-webkit-scrollbar-thumb, .confov__list::-webkit-scrollbar-thumb { background: rgba(234, 255, 248, .34); border-radius: .08rem; }
+}
+.confov__chips { display: flex; flex-wrap: wrap; align-items: flex-start; align-content: flex-start; gap: .05rem; flex: 1 1 auto; min-height: 1.2rem; overflow-y: auto; overscroll-behavior: contain; }
+.cchip { display: inline-flex; align-items: center; gap: .04rem; flex: 0 0 auto; max-width: 100%; padding: .03rem .07rem; border: 1px solid var(--line-3); border-radius: .09rem; background: rgba(255, 255, 255, .04); cursor: pointer; color: inherit; }
+.cchip:disabled { opacity: .4; cursor: default; }
+.cchip__icon { width: .3rem; height: .3rem; }
+.cchip__icon img { width: 100%; height: 100%; object-fit: contain; }
+.cchip__name { font-size: calc(.14 * var(--t)); }
+.cchip__val { font-size: calc(.11 * var(--t)); color: var(--text-md); }
+.confov__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .05rem; flex: 1 1 auto; min-height: 1.2rem; overflow-y: auto; overscroll-behavior: contain; }
+.confrow { display: flex; align-items: center; gap: .05rem; padding: .04rem .06rem; border: 1px solid var(--line-3); border-radius: .09rem; }
+.confrow__idx { width: .22rem; text-align: center; color: var(--text-md); }
+.confrow__icon { width: .3rem; height: .3rem; }
+.confrow__icon img { width: 100%; height: 100%; object-fit: contain; }
+.confrow__name { flex: 1; font-size: calc(.14 * var(--t)); }
+.confrow__route { display: flex; gap: .03rem; }
+.confrow__gate { padding: .02rem .05rem; font-size: calc(.11 * var(--t)); border-radius: .05rem; border: 1px solid var(--line-3); background: transparent; color: var(--text-md); cursor: pointer; }
+.confrow__gate.is-on { background: var(--mint-400); color: #06210f; border-color: var(--mint-400); }
+/* 队列: default gate 下路 — TAP the row to switch it, PRESS AND HOLD to drag it in the order */
+.confov__tip { font-size: calc(.12 * var(--t)); margin: 0 0 .06rem; flex: 0 0 auto; }
+.confrow { cursor: pointer; touch-action: none; user-select: none; transition: border-color var(--t-fast), transform var(--t-fast); }
+.confrow__gate2 { min-width: .62rem; text-align: center; padding: .02rem .05rem; font-size: calc(.12 * var(--t)); font-weight: 700; border: 1px solid #c4583d; color: #ffab97; background: rgba(196, 88, 61, .12); }
+.confrow.is-upper .confrow__gate2 { border-color: #3d78c4; color: #8cc6ff; background: rgba(61, 120, 196, .12); }
+.confrow.is-drag { border-color: var(--mint-400); box-shadow: 0 0 .18rem rgba(23, 249, 183, .35); transform: scale(1.02); }
+.confrow.is-over { border-color: var(--gold); box-shadow: 0 0 .18rem rgba(246, 163, 41, .4); }
+.confrow__order { display: flex; gap: .02rem; }
+.confrow__order button { background: transparent; border: none; color: var(--text-md); cursor: pointer; padding: .02rem; }
+.confov__empty, .confov__hint { padding: .2rem; text-align: center; }
+/* narrow screens: 4 type cards and 2 picking columns would be narrower than their own labels; stack them and let the
+   .spov__inner scroll (a portrait phone has ~6rem of usable width inside the overlay) */
+@media (max-width: 900px) {
+  .confov__groups { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .confov__body { grid-template-columns: minmax(0, 1fr); }
+  .confov__chips, .confov__list { max-height: none; }
+}
+
+/* 对抗期 step 1: the opponents as '?' frames — team colour + P number only (the client never learns who they are) */
+.confov__targets { display: flex; flex-direction: column; align-items: center; gap: .16rem; padding: .12rem 0 .2rem; }
+.confov__foes { display: flex; gap: .5rem; max-width: 100%; overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: none; touch-action: pan-x; cursor: grab; padding-bottom: .02rem; }
+/* 对手多的时候（10V10 有 10 个）要能横向滑；业主不要可见滚动条（2026-10-27） */
+.confov__foes::-webkit-scrollbar { display: none; }
+.confov__foes.is-drag { cursor: grabbing; }
+.confov__foes > * { flex: none; }
+.conffoe { position: relative; width: 1.5rem; height: 1.7rem; display: grid; place-items: center; cursor: pointer;
+  background: linear-gradient(180deg, rgba(20, 24, 22, .92), rgba(8, 10, 9, .96)); transition: transform var(--t-fast), border-color var(--t-fast); }
+.conffoe--blue { border: 2px solid #3d78c4; box-shadow: inset 0 0 .4rem rgba(74, 163, 255, .16); }
+.conffoe--red { border: 2px solid #c4583d; box-shadow: inset 0 0 .4rem rgba(255, 106, 74, .16); }
+.conffoe:disabled { cursor: default; opacity: .85; }
+.conffoe.is-sel { transform: scale(1.06); border-color: var(--mint-400); box-shadow: 0 0 .3rem rgba(23, 249, 183, .5); }
+.conffoe__q { font-size: calc(.8 * var(--t)); font-weight: 700; color: var(--text-lo); }
+.conffoe__p { position: absolute; right: .04rem; bottom: .02rem; font-size: calc(.14 * var(--t)); font-weight: 700; padding: 0 .05rem; background: rgba(8, 11, 10, .9); border: 1px solid var(--line-2); }
+.conffoe--blue .conffoe__p { color: #8cc6ff; border-color: #3d78c4; }
+.conffoe--red .conffoe__p { color: #ffab97; border-color: #c4583d; }
+.confov__pairs { display: flex; gap: .3rem; }
+.confpair { display: flex; align-items: center; gap: .06rem; font-size: calc(.14 * var(--t)); color: var(--text-md); }
+.confpair.is-self b { color: var(--mint-400); }
+/* 出怪位置 (25 / 50 / 75 % of the round's monster count) */
+.confpos { display: flex; gap: .08rem; margin-bottom: .06rem; }
+.confpos__opt { display: flex; align-items: center; gap: .06rem; padding: .06rem .12rem; font-size: calc(.14 * var(--t));
+  border: 1px solid var(--line-3); border-radius: .08rem; background: rgba(0, 0, 0, .25); color: var(--text-md); cursor: pointer; }
+.confpos__opt.is-on { border-color: var(--mint-400); color: var(--mint-400); background: rgba(23, 249, 183, .08); }
+.confpos__pct { font-size: calc(.11 * var(--t)); color: var(--text-lo); }
+
+/* 2V2 事件期 overlay (ui/eventOverlay.js) — reuses the .spov shell classes. The monster entry of the round sits on top
+   (visible before anyone picks), the four targets and the match's three selections scroll under it. */
+.evov .spov__inner { gap: .1rem; }
+.evov .spov__timer { display: inline-flex; }
+.evov__foe { flex: 0 0 auto; display: flex; flex-direction: column; gap: .04rem; padding: .07rem .14rem .08rem;
+  border-left: 2px solid var(--orange); background: rgba(232, 90, 26, .07); }
+.evov__h { font-size: calc(.17 * var(--t)); margin: 0 0 .05rem; flex: 0 0 auto; }
+.evov__foecard { display: flex; align-items: baseline; gap: .14rem; flex-wrap: wrap; }
+/* an entry is a button: the dotted underline + ⓘ say "open the explanation" (ui/entryDetail.js) */
+.evov__link { width: 100%; margin: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.evov__link .evov__name { text-decoration: underline dotted; text-underline-offset: .04rem; }
+.evov__link:hover .evov__name { color: #fff; }
+.evov__more { display: inline-flex; width: .18rem; height: .18rem; margin-left: auto; color: var(--text-md); opacity: .7; }
+.evov__more .icon { width: 100%; height: 100%; }
+.evov__link:hover .evov__more { color: var(--mint-400); opacity: 1; }
+.evov__look { display: inline-flex; align-items: center; gap: .03rem; padding: 0 .06rem; background: transparent;
+  border: 1px solid var(--line-2); color: var(--text-md); font: inherit; font-size: calc(.11 * var(--t)); cursor: pointer; }
+.evov__look .icon { width: .14rem; height: .14rem; }
+.evov__look:hover { color: var(--mint-400); border-color: var(--mint-700); }
+.evov__foe .evov__h { margin: 0; color: var(--text-lo); font-size: calc(.13 * var(--t)); letter-spacing: .08em; }
+.evov__name { font-size: calc(.26 * var(--t)); font-weight: 900; color: var(--orange-hi); letter-spacing: .04em; }
+.evov__eff { font-size: calc(.14 * var(--t)); color: var(--text-md); }
+.evov__elite { display: flex; align-items: baseline; gap: .1rem; flex-wrap: wrap; margin: 0; padding-top: .05rem;
+  border-top: 1px dashed var(--line-3); font-size: calc(.14 * var(--t)); color: var(--text-md); }
+.evov__elite b { color: var(--gold); font-weight: 800; }
+.evov__elite .num { color: var(--gold-2); }
+.evov__body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: rgba(234, 255, 248, .28) transparent; padding-right: .04rem; }
+.evov__body::-webkit-scrollbar { width: .08rem; }
+.evov__body::-webkit-scrollbar-thumb { background: rgba(234, 255, 248, .26); border-radius: .04rem; }
+.evov__targets { display: grid; grid-template-columns: repeat(auto-fit, minmax(1.5rem, 1fr)); gap: .1rem; flex: 0 0 auto; }
+/* 同盟狩猎 has only 队友 / 自己: two targets, two columns (no dead 对面 seats) */
+.evov__targets--duo { grid-template-columns: repeat(2, 1fr); }
+.evotarget { display: flex; flex-direction: column; align-items: flex-start; gap: .03rem; padding: .09rem .12rem;
+  border: 2px solid var(--line-3); background: rgba(255, 255, 255, .04); color: inherit; text-align: left; cursor: pointer;
+  transition: border-color var(--t-fast), background var(--t-fast), transform var(--t-fast); }
+.evotarget:hover:not(:disabled) { border-color: var(--mint-400); background: rgba(23, 249, 183, .08); transform: translateY(-.02rem); }
+.evotarget.is-sel { border-color: var(--mint-400); background: rgba(23, 249, 183, .12); box-shadow: inset 0 0 0 1px var(--mint-400); }
+.evotarget:disabled { opacity: .45; cursor: default; }
+.evotarget.is-sel:disabled { opacity: .85; }
+.evotarget__label { font-size: calc(.12 * var(--t)); font-weight: 700; letter-spacing: .08em; color: var(--text-lo); }
+.evotarget__name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: calc(.19 * var(--t)); font-weight: 700; }
+.evotarget__p { color: var(--text-md); }
+.evotarget__why { font-size: calc(.11 * var(--t)); color: var(--orange-hi); }
+.evov__result { display: flex; align-items: center; gap: .08rem; flex-wrap: wrap; flex: 0 0 auto; margin: .1rem 0 0;
+  padding: .05rem .12rem; border-left: 2px solid var(--mint-400); background: rgba(23, 249, 183, .07);
+  font-size: calc(.15 * var(--t)); font-weight: 700; color: var(--text-hi); }
+.evov__result .icon { width: .22rem; height: .22rem; color: var(--mint-400); }
+.evov__auto { font-size: calc(.11 * var(--t)); font-weight: 700; padding: 0 .06rem; color: var(--gold-2);
+  border: 1px solid rgba(242, 189, 62, .45); background: rgba(242, 189, 62, .08); }
+.evov__hint { margin: .07rem 0 .1rem; font-size: calc(.12 * var(--t)); flex: 0 0 auto; }
+.evohist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .04rem; flex: 0 0 auto; }
+.evohist__row { display: flex; align-items: center; gap: .12rem; padding: .04rem .1rem; border: 1px solid var(--line);
+  font-size: calc(.13 * var(--t)); color: var(--text-md); }
+.evohist__row.is-cur { border-color: var(--mint-800); background: rgba(23, 249, 183, .05); }
+.evohist__n { min-width: .66rem; font-weight: 800; color: var(--mint-400); }
+.evohist__round { min-width: .42rem; color: var(--text-lo); }
+.evohist__target { min-width: 1.1rem; color: var(--text-hi); }
+.evohist__card { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.evohist__link { display: inline-flex; align-items: center; gap: .03rem; padding: 0; border: 0; background: none;
+  color: var(--text-hi); font: inherit; text-align: left; text-decoration: underline dotted; text-underline-offset: .02rem; cursor: pointer; }
+.evohist__link .icon { width: .14rem; height: .14rem; flex: none; opacity: .6; }
+.evohist__link:hover { color: var(--mint-400); }
+.evohist__link:hover .icon { opacity: 1; }
+@media (max-height: 431.98px) {
+  /* landscape phone: the monster block stays compact and the body does the scrolling */
+  .evov .spov__inner { gap: .06rem; }
+  .evov__foe { padding: .04rem .1rem .05rem; }
+  .evov__name { font-size: calc(.2 * var(--t)); }
+  .evov__targets { gap: .06rem; }
+  .evotarget { padding: .05rem .08rem; }
+  .evov__hint { margin: .04rem 0 .06rem; }
+  .evohist__row { padding: .02rem .08rem; }
+}
+
+/* ---- 词条说明 popup (ui/entryDetail.js): the effect, how the number is computed, and how long it lasts ------------- */
+.entrydlg .modal__body { display: flex; flex-direction: column; gap: .07rem; }
+.entrydlg__meta { display: flex; align-items: center; gap: .08rem; flex-wrap: wrap; font-size: calc(.14 * var(--t)); }
+.entrydlg__badge { display: inline-flex; align-items: center; gap: .04rem; padding: .01rem .08rem;
+  border: 1px solid currentColor; border-radius: .06rem; font-weight: 800; letter-spacing: .04em; }
+.entrydlg__badge .icon { width: .16rem; height: .16rem; }
+.entrydlg__badge.is-mint { color: var(--mint-400); }
+.entrydlg__badge.is-gold { color: var(--gold-2); }
+.entrydlg__badge.is-red { color: var(--red-premium); }
+.entrydlg__class { color: var(--text-md); }
+.entrydlg__left { margin-left: auto; color: var(--text-lo); font-size: calc(.12 * var(--t)); }
+.entrydlg__row { display: flex; align-items: baseline; gap: .1rem; margin: 0; font-size: calc(.16 * var(--t)); line-height: 1.5; }
+.entrydlg__k { flex: 0 0 1.05rem; color: var(--text-lo); }
+.entrydlg__v { color: var(--text-hi); }
+.entrydlg__mul { margin-left: .08rem; font-size: calc(.12 * var(--t)); color: var(--gold-2); }
+.entrydlg__elite { display: flex; flex-direction: column; gap: .03rem; padding-top: .05rem; border-top: 1px dashed var(--line-2); }
+.entrydlg__notes { display: flex; flex-direction: column; gap: .04rem; margin-top: .02rem; padding-top: .07rem;
+  border-top: 1px dashed var(--line-2); font-size: calc(.13 * var(--t)); line-height: 1.55; color: var(--text-md); }
+.entrydlg__notes p { margin: 0; }
+@media (max-height: 431.98px) {
+  .entrydlg .modal__body { gap: .04rem; }
+  .entrydlg__row { font-size: calc(.14 * var(--t)); }
+}
+
+/* ---- [ROSTER] 公示 (ui/rosterPanel.js): 悬赏名单 / 同盟狩猎 投放公示 / 事件期 词条公示, one shared shape ------- */
+.rospov .spov__inner { gap: .14rem; }
+.rospov__timer { display: flex; align-items: baseline; gap: .08rem; font-size: calc(.26 * var(--t)); font-weight: 800; letter-spacing: .04em; color: var(--gold-2); text-shadow: 0 0 .18rem rgba(242, 189, 62, .4); white-space: nowrap; }
+.rospov--clash { z-index: 60; pointer-events: none; }
+.rospov__rows { display: flex; flex-direction: column; gap: .08rem; margin: 0; padding: 0 .04rem 0 0; list-style: none; overflow-y: auto; min-height: 0; max-height: min(64vh, calc(7 * var(--t))); scrollbar-width: thin; }
+.rospov__row { display: flex; align-items: center; min-height: calc(.62 * var(--t)); padding: .05rem .12rem; background: rgba(255, 255, 255, .025); border: 1px solid var(--line); }
+.rospov__group { padding: .06rem .04rem .02rem; font-size: calc(.15 * var(--t)); font-weight: 800; letter-spacing: .1em; color: var(--mint-400); }
+.rospov__group:not(:first-child) { margin-top: .06rem; color: #ffab97; }
+.rospov__note { margin: 0; font-size: calc(.13 * var(--t)); }
+.rospov__foe { flex: 0 0 auto; display: flex; flex-direction: column; gap: .04rem; padding: .07rem .14rem .08rem; border: 1px solid var(--line-2); background: rgba(255, 255, 255, .02); }
+.rospov__h { margin: 0; color: var(--text-lo); font-size: calc(.13 * var(--t)); letter-spacing: .08em; }
+.rospov__foeline { display: flex; align-items: baseline; gap: .14rem; flex-wrap: wrap; margin: 0; font-size: calc(.15 * var(--t)); color: var(--text-md); }
+.rospov__foeline b { color: var(--mint-400); }
+.rospov__foeline.is-elite b { color: var(--gold-2); }
+.rospov__plan, .rospov__give { display: flex; align-items: baseline; gap: .1rem; flex-wrap: wrap; font-size: calc(.2 * var(--t)); color: var(--text-md); }
+.rospov__who, .rospov__p { color: var(--mint-400); }
+.rospov__name { max-width: 2.2rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #eafff8; }
+.rospov__sep { color: var(--text-lo); }
+.rospov__cat { color: var(--gold-2); font-weight: 700; }
+.rospov__verb { color: var(--text-dim); }
+.rospov__eff { margin-left: .1rem; color: var(--mint-400); }
+.confclash__count { font-size: calc(.14 * var(--t)); font-weight: 700; color: var(--text-md); white-space: nowrap; }
+
+/* 对抗期 clash: after both sides are locked, the own team's pairs collide on screen (display only, self-fading) */
+/* 悬赏名单: once the bounty phase closes, BOTH teams' boards are revealed (who sent what at whom, and the bounty) */
+.confclash { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: rgba(4, 6, 6, .86); animation: clashVeil 5.2s ease both; pointer-events: none; }
+.confclash__inner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .2rem .36rem; align-items: start; max-width: 94vw; max-height: 94vh; overflow: hidden; }
+.confclash__head { grid-column: 1 / -1; text-align: center; }
+.confclash__tip { grid-column: 1 / -1; text-align: center; margin: 0; font-size: calc(.13 * var(--t)); color: var(--text-lo); }
+.confclash__team { display: flex; flex-direction: column; gap: .08rem; padding: .1rem .14rem; border: 1px solid var(--line-2); }
+.confclash__team--mine { border-color: rgba(23, 249, 183, .5); }
+.confclash__team--foe { border-color: rgba(255, 106, 74, .5); }
+.confclash__teamtag { font-size: calc(.15 * var(--t)); font-weight: 700; letter-spacing: .08em; color: var(--text-md); }
+.confclash__team--mine .confclash__teamtag { color: var(--mint-400); }
+.confclash__team--foe .confclash__teamtag { color: #ffab97; }
+.confclash__row { display: flex; align-items: center; gap: .2rem; animation: clashRow 5.2s ease both; }
+.confclash__side { position: relative; width: 1.25rem; height: 1.45rem; display: grid; place-items: center; border: 2px solid var(--line-2); background: rgba(8, 11, 10, .9); }
+.confclash__side--blue { border-color: #4aa3ff; box-shadow: inset 0 0 .4rem rgba(74, 163, 255, .28); }
+.confclash__side--red { border-color: #ff6a4a; box-shadow: inset 0 0 .4rem rgba(255, 106, 74, .28); }
+.confclash__side .pavatar { --av: 1rem; }
+.confclash__q { font-size: calc(.7 * var(--t)); font-weight: 700; color: var(--text-lo); }
+.confclash__p { position: absolute; right: .02rem; bottom: 0; font-size: calc(.14 * var(--t)); font-weight: 700; padding: 0 .04rem; background: rgba(8, 11, 10, .9); }
+.confclash__side--blue .confclash__p { color: #8cc6ff; }
+.confclash__side--red .confclash__p { color: #ffab97; }
+.confclash__mid { display: flex; align-items: center; gap: .05rem; flex: 1 1 auto; min-width: 0; max-width: none; justify-content: flex-start; }
+.confclash__mid img { width: .42rem; height: .42rem; object-fit: contain; }
+.confclash__more { flex: none; padding: 0 .04rem; font-size: calc(.13 * var(--t)); font-weight: 800; color: var(--text-md); }
+.confclash__vs { font-size: calc(.46 * var(--t)); font-weight: 700; color: var(--orange-hi); animation: clashHit 5.2s ease both; }
+.confclash .confclash__coin { font-size: calc(.14 * var(--t)); font-weight: 700; color: var(--gold); white-space: nowrap; }
+/* The seat / source line (P1 / P2 …, "P1 已选择", the P label of a bounty row): one step BELOW body text, always a
+   single horizontal line, ellipsised instead of wrapping into a stack on a narrow phone (user 2026-10-17). */
+.confseat { font-size: calc(.10 * var(--t)); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.confclash__row { flex-wrap: nowrap; white-space: nowrap; min-width: 0; }
+.confclash__mid { flex-wrap: wrap; overflow: visible; }
+@media (max-height: 431.98px) {
+  /* landscape phone: the two picking columns keep ≥ 3 rows of chips without pushing the panel past the screen */
+  .confov__remain { font-size: calc(.12 * var(--t)); padding: .02rem .08rem; }
+  .confov__chips, .confov__list { min-height: 0; max-height: 38vh; }
+  .confclash__inner { gap: .08rem .18rem; max-height: 92vh; }
+  .confclash__row { gap: .1rem; }
+  .confclash__side { width: 1rem; height: 1.15rem; }
+  .confclash__mid img { width: .3rem; height: .3rem; }
+}
+@keyframes clashVeil { 0% { opacity: 0; } 8% { opacity: 1; } 82% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes clashRow { 0% { transform: translateY(.4rem); opacity: 0; } 14% { transform: translateY(0); opacity: 1; } }
+
+/* the hunt overlays keep their phase kicker inside the name column (the grid has no own slot for it) */
+.spov__name .micro { display: block; margin-bottom: .06rem; }
+
+/* 自定义路线 / 投放时刻（ui/confrontOverlay.js 的每只怪一行）：下拉选预设路线，数字框填时刻 */
+.confrow__plan { display: inline-flex; align-items: center; gap: .04rem; }
+.confrow__plan select, .confrow__plan input { height: .26rem; font-size: calc(.12 * var(--t)); background: rgba(0, 0, 0, .4); color: var(--text-md); border: 1px solid var(--line-3); border-radius: .05rem; }
+.confrow__plan input { width: .7rem; }
+
+/* 对抗期局内提示（js/screens/game.js）：攻方等待条与守方来袭清单。
+   注意：这些类原本写在 plugins/mota/client/css/screens/game.css，但该文件不在 plugin.json 的 code.client 清单里，
+   服务端根本不会下发 —— 必须放这里才生效。 */
+.gtop__vrole { padding: 0 .06rem; border-radius: 2px; background: rgba(110, 231, 183, .18); color: #8ff0d2; }
+.gtop__vrole.is-defend { background: rgba(77, 140, 232, .2); color: #a8c8f5; }
+/* 对抗期横幅：照游戏内斜切面板的写法（双层裁剪 = 1px 描边 + 填充，两处切角），不再用大圆角/整块半透明。
+   位置贴在顶栏之下居中（实测顶栏底边 114px ≈ 1.7rem）。 */
+.gm__attackwait { position: absolute; left: 50%; top: 1.72rem; transform: translateX(-50%); z-index: 6; padding: 1px; pointer-events: none;
+  background: rgba(23, 249, 183, .42);
+  clip-path: polygon(.2rem 0, 100% 0, 100% calc(100% - .2rem), calc(100% - .2rem) 100%, 0 100%, 0 .2rem);
+  filter: drop-shadow(0 .08rem .28rem rgba(0, 0, 0, .55)); }
+.gm__attackwait__in { display: flex; flex-direction: column; align-items: center; gap: .05rem; padding: .1rem .36rem .12rem;
+  text-align: center; clip-path: inherit;
+  background: linear-gradient(180deg, rgba(10, 15, 13, .94), rgba(10, 15, 13, .85)); }
+.gm__attackwait__micro { font-size: calc(.1 * var(--t)); font-weight: 700; letter-spacing: .2em; color: rgba(23, 249, 183, .78); }
+.gm__attackwait__t { display: inline-flex; align-items: center; gap: .07rem; font-size: calc(.21 * var(--t)); font-weight: 800;
+  letter-spacing: .08em; color: var(--mint-400); text-shadow: 0 0 .18rem rgba(23, 249, 183, .38); }
+.gm__attackwait__t .icon { width: .21rem; height: .21rem; }
+.gm__attackwait p { margin: 0; font-size: calc(.14 * var(--t)); line-height: 1.5; color: #cfe9df; letter-spacing: .02em; }
+.gm__attackwait .num { margin-top: .03rem; padding: .02rem .14rem; font-size: calc(.13 * var(--t)); font-weight: 800; color: #06210f;
+  background: var(--mint-400);
+  clip-path: polygon(.06rem 0, 100% 0, 100% calc(100% - .06rem), calc(100% - .06rem) 100%, 0 100%, 0 .06rem); }
+/* 来袭清单：同一套斜切面板（金色描边区分「敌方投放」） */
+.gm__incoming { position: absolute; right: .3rem; top: 2.5rem; z-index: 6; padding: 1px;
+  background: rgba(240, 194, 58, .5);
+  clip-path: polygon(.16rem 0, 100% 0, 100% calc(100% - .16rem), calc(100% - .16rem) 100%, 0 100%, 0 .16rem);
+  filter: drop-shadow(0 .06rem .24rem rgba(0, 0, 0, .5)); }
+.gm__incoming__in { padding: .1rem .18rem .12rem; clip-path: inherit;
+  background: linear-gradient(180deg, rgba(12, 13, 10, .95), rgba(12, 13, 10, .86)); }
+.gm__incoming__t { display: flex; align-items: center; gap: .06rem; font-size: calc(.15 * var(--t)); font-weight: 800;
+  letter-spacing: .06em; color: #f0c23a; margin-bottom: .08rem; }
+.gm__incoming__t .icon { width: .17rem; height: .17rem; }
+.gm__incoming__t .num { color: #0c0d0a; background: #f0c23a; padding: 0 .08rem; }
+.gm__incoming ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: .06rem; }
+.gm__incoming li { display: flex; justify-content: space-between; gap: .22rem; white-space: nowrap; font-size: calc(.13 * var(--t)); color: #e3e7e5; }

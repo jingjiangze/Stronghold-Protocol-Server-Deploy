@@ -1,10 +1,10 @@
-// Bottom shop bar (research 06 §11.2 / D3): LEVEL card (upgrade price hex, 升级), 3–5 operator cards
+// Bottom shop bar (research 06 §11.2 / D3): level-up card (升级 price hex, 等级), 3–5 operator cards
 // (tier chip, price hex with discount/markup colours, portrait, bonds — a bond the mode never activates struck through,
 // 本局禁用 — class, frozen overlay, sold state,
 // merge progress), the item card, the funds card with ✕ 收起; above it 剩余可放置角色, 冻结/解冻 and 刷新.
 // Buying and upgrading take two taps (research 09 §5 / §6.5, official `EventOnFirstClick` → `EventOnConfirm` /
 // `EventOnUpgrade`): the first tap selects a card — it lifts and enlarges, its detail opens and it shows 确认购买
-// (无法购买 + the reason when it cannot be bought) — and a second tap on the same card buys it; the LEVEL card's first
+// (无法购买 + the reason when it cannot be bought) — and a second tap on the same card buys it; the upgrade card's first
 // tap arms 确认升级 and the second upgrades (已满级 at level 6). A tap anywhere else, a shop change or the end of the
 // editable phase disarms. A tap anywhere on a card is the card's tap — its 确认购买 strip included (it takes no
 // pointer): there is no ⓘ corner (the official cards have none; user playtest #6 item 10 — on phones its invisible
@@ -227,7 +227,7 @@ function LevelCard({ shop, reason, armed = false, onTap }) {
       aria-pressed=${String(!!armed)}>
     ${!max ? html`<${HexBadge} value=${price} tone=${reason && reason !== t('调度中心已达最高等级') ? 'dark' : 'gold'} size="md" class="lvcard__price" />` : null}
     <span class="lvcard__frame">
-      <span class="lvcard__micro">LEVEL</span>
+      <span class="lvcard__micro">${t('等级')}</span>
       <b class="lvcard__num num">${lv}</b>
     </span>
     <span class="lvcard__label">${max ? t('已满级') : armed ? t('确认升级') : t('升级')}</span>
@@ -315,16 +315,21 @@ export function RewardCards({ offer, priv, editable, onPick, onDetail, onLater, 
  * as `.gm__borrow`). A plain component (no hooks) so test/ui runs it directly.
  * @param {{ econ:any, editable:boolean, onRefuse?:(why:string)=>void }} props
  */
-export function EconStrip({ econ, editable, onRefuse = null }) {
+export function EconStrip({ econ, editable, onRefuse = null, onOpenShop = null }) {
   const projects = !econ.borrowOnly && econ.projects.length ? econ.projects : null;
   if (econ.borrowOnly || (!projects && econ.reserve == null)) return null;
   // 点不动也要有句人话 (user report 2026-10-17: 「应急存储后勤调度这些按钮依旧点不了（无反应）」): a disabled button
   // swallows the tap and says nothing. These stay pressable, every refusal names its reason, and a held press shows what
   // the level actually does (longPress.js).
   const refuse = (why) => { if (onRefuse) onRefuse(why); };
-  const projectWhat = (p, n) => (p.id === 'logistics'
-    ? t('全队每回合可调拨的资金上限 +{n}', { n })
-    : t('休整结束时最多保留 {n} 资金到下一回合', { n }));
+  // 商店设施三项（业主 2026-10-30「升级项搬到商店」）：now/next 现在是**级数**，文案按 id 出
+  const projectWhat = (p, n) => (p.id === 'shopLevel'
+    ? t('商店等级 +{n}', { n })
+    : p.id === 'teamIncome'
+      ? t('每回合协同资金上限 +{n}', { n })
+      : p.id === 'equipCost'
+        ? t('装备价格 −{n}', { n })
+        : t('+{n}', { n }));
   const projectNote = (p) => {
     const head = t('{name} Lv{level}：{what}', { name: t(p.name), level: p.level, what: projectWhat(p, p.now) });
     if (p.maxed || p.next == null) return `${head}\n${t('已满级')}`;
@@ -337,9 +342,18 @@ export function EconStrip({ econ, editable, onRefuse = null }) {
   }) : '');
   const reliefHold = longPress(reliefNote);
   return html`<div class="econbar" role="group" aria-label=${t('协同经济')}>
-    <span class="econbar__res" title=${t('协同资金：队友结余与完美作战的积累，用于后勤项目与告急救济')}>
-      <${CoinGlyph} class="econbar__coin" /><b class="num">${econ.reserve}</b><span class="econbar__micro">${t('协同资金')}</span>
+    <span class="econbar__res econbar__mine" data-testid="reserves"
+      title=${t('团队储备：防守奖励与主动存入攒起来的全队共用资金，用来买商店升级、借款垫付、告急救济与救援')}>
+      <b class="num" data-testid="team-reserve">${econ.reserve || 0}</b>
+      <span class="econbar__micro">${t('团队储备')}</span>
     </span>
+    ${onOpenShop
+      ? html`<button type="button" class="econbar__res econbar__shop" data-testid="open-melt-shop"
+          title=${t('熔毁商店：卖装备，四栏各限购一件，可用团队储备或本回合资金付款，或换成敌人属性代价')}
+          onClick=${() => { onOpenShop(); }}>
+          <${CoinGlyph} class="econbar__coin" /><span class="econbar__micro">${t('商店')}</span>
+        </button>`
+      : null}
     ${projects ? html`<span class="econbar__projects">
       ${projects.map((p) => {
         const hold = longPress(() => projectNote(p));
@@ -374,6 +388,14 @@ export function EconStrip({ econ, editable, onRefuse = null }) {
         if (econ.relief.teamLeft <= 0) return refuse(t('本回合全队的救济次数已用完'));
         actions.econRelief();
       }}>${t('领取救济')}<b class="num">${econ.relief.amount}</b></button>` : null}
+    ${econ.deposit ? html`<button type="button" class=${cx('econbar__relief', !econ.deposit.can && 'is-off')}
+      title=${econ.deposit.done ? t('本回合已经存入过协同资金（每人每回合最多 1 次）') : t('把本回合 1 点资金存入协同资金（每人每回合最多 1 次）')}
+      onClick=${() => {
+        if (!editable) return refuse(t('休整期才能存入协同资金'));
+        if (econ.deposit.done) return refuse(t('本回合已经存入过协同资金'));
+        if (!econ.deposit.can) return refuse(t('当前无法存入（资金不足，或已经准备就绪）'));
+        actions.econDeposit();
+      }}>${t('存入协同资金')}<b class="num">1</b></button>` : null}
   </div>`;
 }
 
@@ -386,7 +408,7 @@ export function EconStrip({ econ, editable, onRefuse = null }) {
  *   the bonds this mode never activates (gameLogic modeOffBonds), struck through on the operator cards
  */
 export function ShopBar({ priv, editable, collapsed, refreshBusy = false, onCollapse, onBuy, onLevel, onRefresh, onFreeze, onDetail, onDetailClose, onRefuse, barRef,
-  reward = null, onReward, onRewardLater, onArm = null, offBonds = null, econ = null }) {
+  reward = null, onReward, onRewardLater, onArm = null, offBonds = null, econ = null, onOpenShop = null }) {
   const shop = priv?.shop || {};
   const slots = Array.isArray(shop.slots) ? shop.slots : [];
   const chessSlots = slots.map((s, i) => ({ s, i })).filter(({ s }) => !s || s.kind !== 'item');
@@ -443,7 +465,7 @@ export function ShopBar({ priv, editable, collapsed, refreshBusy = false, onColl
   return html`<section class=${cx('shopbar', frozen && 'is-frozen', !editable && 'is-locked', showReward && 'has-reward', armed && 'has-armed')} ref=${barRef} aria-label=${t('调度中心')}>
     ${/* 协同经济 sits ABOVE the tools row, not inside it: as a grid item spanning both columns it sized the columns
          and blew 冻结/刷新 up to fill them (user report 2026-10-09). Its own row keeps the buttons packed right. */ null}
-    ${econ ? html`<div class="shopbar__econ"><${EconStrip} econ=${econ} editable=${editable} onRefuse=${onRefuse} /></div>` : null}
+    ${econ ? html`<div class="shopbar__econ"><${EconStrip} econ=${econ} editable=${editable} onRefuse=${onRefuse} onOpenShop=${onOpenShop} /></div>` : null}
     <div class="shopbar__tools">
       <span class="shopbar__remain">${t('剩余可放置角色：')}<b class=${cx('num', remaining === 0 && 't-orange')}>${remaining}</b></span>
       <button type="button" class=${cx('toolbtn', 'toolbtn--ice', frozen && 'is-on')} disabled=${!!frzReason} onClick=${onFreeze}

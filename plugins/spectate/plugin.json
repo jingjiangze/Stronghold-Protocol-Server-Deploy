@@ -1,0 +1,39 @@
+{
+  "manifest": 2,
+  "id": "spectate",
+  "name": {
+    "zh": "实时观战"
+  },
+  "englishName": "Live Spectate",
+  "description": {
+    "zh": "局内实时观战：队友头像下方一个「观战」开关，切换实时查看他的战场（观战链路本身是引擎能力；观战席位不限）。"
+  },
+  "version": "0.1.0",
+  "app": ">=0.3.0 <0.5.0",
+  "api": 2,
+  "authors": [
+    {
+      "name": "jingjiangze"
+    }
+  ],
+  "license": "GPL-3.0-or-later",
+  "class": "trusted",
+  "scope": [
+    "room"
+  ],
+  "permissions": [
+    "trusted.server"
+  ],
+  "entry": {
+    "server": "host/noop.js"
+  },
+  "code": {
+    "client": [
+      "js/ui/teamPanel.js",
+      "css/spectate.css"
+    ]
+  },
+  "needs": [
+    "code.client"
+  ]
+}

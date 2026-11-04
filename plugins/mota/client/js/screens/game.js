@@ -83,7 +83,7 @@ import { ruleOption } from '../../../shared/plugins/rules.js';
 import { html, Spinner, PhaseBanner, ResultDialog, Icon, Button, confirmDialog, closeAllDialogs, useTicker } from '../ui/components.js';
 import { useGameData, GIcon } from '../ui/gameComponents.js';
 import { useFieldView } from '../ui/fieldHost.js';
-import { TopBar, liveLp, ownLeaks, uniteRemaining, tempInfo, tempReadyReason } from '../ui/hud.js';
+import { TopBar, liveLp, ownLeaks, uniteRemaining, tempInfo, tempReadyReason, EffectsColumn } from '../ui/hud.js';
 import { BondStrip, BondPopup } from '../ui/bondStrip.js';
 import { TeamPanel } from '../ui/teamPanel.js';
 import { ShopBar } from '../ui/shopBar.js';
@@ -99,7 +99,14 @@ import { ChoiceOverlay, spMarks } from '../ui/choiceOverlay.js';
 import { EnemyDrawer } from '../ui/enemyDrawer.js';
 import { Ticker } from '../ui/ticker.js';
 import { EmoteWheel } from '../ui/emotes.js';
-import { EffectsList } from '../ui/effectsList.js';
+import { ConfrontOverlay, ConfrontClash } from '../ui/confrontOverlay.js';
+import { HexOverlay, normalizeHexOffer } from '../ui/hexOverlay.js';
+import { RelicOverlay, normalizeRelicOffer } from '../ui/relicOverlay.js';
+import { RoguePanel } from '../ui/roguePanel.js';
+import { RogueEventOverlay, normalizeRogueOffer } from '../ui/rogueEventOverlay.js';
+import { MeltdownOverlay } from '../ui/meltdownOverlay.js';
+import { EventOverlay } from '../ui/eventOverlay.js';
+import { AiTakeoverPanel } from '../ui/aiTakeover.js';
 import { CombatHud } from '../ui/combatHud.js';
 import { CombatMetricsPanel } from '../ui/combatMetrics.js';
 import { SettingsModal, settingsStore, useSettings } from '../ui/settings.js';
@@ -193,6 +200,26 @@ const inBattleCard = (d) => d?.kind === 'unit' || (d?.kind === 'device' && d.dev
 function MatchScreen() {
   useDocClass('sp-in-match');
   useEffect(() => { preloadPopupArt(); }, []);
+  // 海克斯 / 熔毁商店的样式只在插件里（/css/screens/hex.css），核心 index.html 不引用它：首次进对局注入一次。
+  useEffect(() => {
+    if (typeof document === 'undefined' || !document.head) return;
+    if (document.querySelector('link[data-sp-plugin-css="hex"]')) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '/css/screens/hex.css';
+    link.setAttribute('data-sp-plugin-css', 'hex');
+    document.head.appendChild(link);
+  }, []);
+  // 肉鸽叠加面板的样式同理（/css/screens/rogue-panel.css 只在 mota 插件的客户端里有）：首次进对局注入一次。
+  useEffect(() => {
+    if (typeof document === 'undefined' || !document.head) return;
+    if (document.querySelector('link[data-sp-plugin-css="rogue-panel"]')) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '/css/screens/rogue-panel.css';
+    link.setAttribute('data-sp-plugin-css', 'rogue-panel');
+    document.head.appendChild(link);
+  }, []);
   const pub = useStore((s) => s.match.public);
   const priv = useStore((s) => s.match.private);
   // 协同经济 (DESIGN §27/§28): the borrow plate has a HUD spot of its own (.gm__borrow); the model is null
@@ -221,7 +248,10 @@ function MatchScreen() {
   const hudElRef = useRef(null);                         // .gm__hud (inside the safe-area insets: the panels' frame)
   const { view, kind: viewKind } = useFieldView(hostRef);
 
-  const [watching, setWatching] = useState(null);        // fieldId the player chose to watch (null = home)
+  const [watching, setWatching] = useState(null);
+  // 对抗模式（2V2 / 4V4）的面板忙态
+  const [confBusy, setConfBusy] = useState(false);
+  const [eventBusy, setEventBusy] = useState(false);        // fieldId the player chose to watch (null = home)
   const [watchWho, setWatchWho] = useState(null);        // { fieldId, playerId }: the teammate picked with 前往查看
   const [drawer, setDrawer] = useState(null);            // 'enemies' | 'info' | null
   const [bondOpen, setBondOpen] = useState(null);        // { id, ownerId, from }: the bond popup and whose bond it shows
@@ -245,6 +275,9 @@ function MatchScreen() {
   const [emoteOpen, setEmoteOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exitOpen, setExitOpen] = useState(false);
+  // 集成战略叠加面板（2026-11-04：节点 / 地图 / 藏品改成一页一开的官方风格面板，不再是三个常驻浮窗）。
+  // 只在非战斗阶段可开：战斗 / 结算由下面 phase effect 关掉、入口按钮同步 disabled。
+  const [roguePanel, setRoguePanel] = useState(false);
   // 战斗倍速（顶栏那个 ×1/×2/×3/×4）：**纯本地播放选择** —— 同一段确定的 tick 序列只是推进得更快，
   // 所以战果一字不变（runner.setRate 的注释 + test/match/runner.test.js 用 b.result 逐字节相同钉住）。
   const [playRate, setPlayRate] = useState(1);
@@ -263,7 +296,12 @@ function MatchScreen() {
   const [bossPlate, setBossPlate] = useState(null);      // ui/bossPlates.js: { kind: 'final'|'core'|'end', … , key }
   const [readyBusy, setReadyBusy] = useState(false);
   const [spBusy, setSpBusy] = useState(null);
-  const [personalBusy, setPersonalBusy] = useState(null); // { choiceId, idx }: an older request cannot clear a newer pick
+  const [personalBusy, setPersonalBusy] = useState(null);
+  // 海克斯草案 / 熔毁商店（从 hexmod 移植）：服务端下发在 m.private 里，这里只做展示与转发。
+  const [hexBusy, setHexBusy] = useState(null);
+  const [relicBusy, setRelicBusy] = useState(null);
+  const [rogueBusy, setRogueBusy] = useState(null);
+  const [hexRerollSlot, setHexRerollSlot] = useState(null); // { choiceId, idx }: an older request cannot clear a newer pick
   const [layer, setLayer] = useState('ALL');             // 联防 / 最终攻势 camera: 'L' | 'ALL' | 'R'
   const [pen, setPen] = useState(false);                 // the camera shows the enemy preview pen (research 09 §2)
   const [camKind, setCamKind] = useState('prep');        // kind of the last camera request (data-camera)
@@ -276,9 +314,15 @@ function MatchScreen() {
   const phase = pub?.phase;
   const mode = phaseMode(phase);
   const combat = isCombatPhase(phase);
+  // 集成战略面板的门（官方肉鸽只在准备期翻节点/地图）：作战中与结算都不可开，入口与选择一并禁用。
+  const rogueBlocked = isCombatPhase(phase) || phase === PHASE.SETTLE;
+  const rogueOpenable = !rogueBlocked;
   const solo = roomSolo || String(pub?.modeId || '').includes('single');
   const players = sortedPlayers(pub);
   const meP = players.find((p) => p.playerId === myId) || null;
+  // 攻防角色（2V2/4V4）：attack=本回合只投放怪物，defend=本回合下干员防守；非攻防回合 null
+  const myRole = meP?.role || null;
+  const mySub = myRole === 'attack' ? (pub?.confront?.subs?.[myId] || null) : null;
   // a spectator seat watches like an eliminated player (it has no m.private and no row in m.public)
   const alive = spectator ? false : priv ? priv.alive !== false : meP?.alive !== false;
   // 协议已失效 (ui/downedPlate.js): once, when the player's own `alive` — as read from real data, never a reload's empty
@@ -305,8 +349,8 @@ function MatchScreen() {
   const unequipAllow = ruleOption(roomRules, 'unequip') === 'allow';
   const prepLoadoutOpen = ruleOption(roomRules, 'prepLoadout') === 'prep';
   const hasOffers = !!pub?.offers?.length;
-  const editable = !offerBlocksPrep(pub?.offers) && phase === PHASE.PREP && !!priv && alive && !priv.ready && !watchingOther && !hasPersonalChoice;
-  const showShop = !!priv && alive && (phase === PHASE.PREP || phase === PHASE.SP_DRAFT || phase === PHASE.ROUND_START) && !watchingOther;
+  const editable = !offerBlocksPrep(pub?.offers) && phase === PHASE.PREP && !!priv && alive && !priv.ready && !watchingOther && !hasPersonalChoice && myRole !== 'attack';
+  const showShop = !!priv && alive && myRole !== 'attack' && (phase === PHASE.PREP || phase === PHASE.SP_DRAFT || phase === PHASE.ROUND_START) && !watchingOther;
   const layersDisabled = phase === PHASE.UNITE || isBossPhase(phase);
   const sp = phase === PHASE.SP_DRAFT ? normalizeSp(pub?.sp, players) : null;
   const total = phaseTotalSeconds(pub, gd.config, myId);
@@ -374,7 +418,7 @@ function MatchScreen() {
     getChess: (id) => { const c = gd.chess(id); return ownDiyRecord(c, priv, { chess: data.get('chess'), backups: data.get('backups') }) || c; },
     getToken: gd.token, getItem: gd.item, getEffect: gd.effect, backups: gd.backups, morphMode,
   }), [priv, pub?.stageId, editable, gd.ready, deployField, data.locale(), morphMode]);
-  live.current = { pub, priv, field, view, editable, hasPersonalChoice, placeCtx, watching, watchWho, watchingOther, home, myId, alive, spectator, detail, drawer, bondOpen, emoteOpen, settingsOpen, exitOpen, drag, facing, sel, selBusy, pen, collapsedNow: collapsed, localDone: false, canPause: false, paused };
+  live.current = { pub, priv, field, view, editable, hasPersonalChoice, placeCtx, watching, watchWho, watchingOther, home, myId, alive, spectator, detail, drawer, bondOpen, emoteOpen, settingsOpen, exitOpen, roguePanel, drag, facing, sel, selBusy, pen, collapsedNow: collapsed, localDone: false, canPause: false, paused };
 
   // ---- camera: every request goes through setCam, which remembers it for the pen's way back -----------------------
   // the own prep board: the normal board, or — in the prep of a boss round — the player's half of the boss field
@@ -860,6 +904,8 @@ function MatchScreen() {
     // a battle unit's panel (live HP of a unit of the fight that just ended) never outlives its battle
     if (!isCombatPhase(phase) && phase !== PHASE.SETTLE) setDetail((d) => (inBattleCard(d) ? null : d));
     if (isCombatPhase(phase)) { setCollapsed(false); setDrag(null); view?.highlightTiles(null, null); }
+    // 集成战略面板跟着相位走：作战 / 结算一开就关（入口按钮同时 disabled，见 gm__corner 的「肉鸽」）
+    if (isCombatPhase(phase) || phase === PHASE.SETTLE) setRoguePanel(false);
     setSel(null);
     if (phase !== PHASE.PREP) setRewardMin(false);
     setSpBusy(null);
@@ -991,7 +1037,7 @@ function MatchScreen() {
     const me = Array.isArray(L.pub?.players) ? L.pub.players.find((p) => p && p.playerId === L.myId) : null;
     // `econ` 在别处算，且本回调 deps 是 []：这里现算一份，免得读到首帧的旧值
     const econNow = econBarModel({ priv: L.priv, pub: L.pub });
-    const ask = r ? readyFundsPrompt(L.priv, { keptBands: data.get('config')?.economy?.leftoverFundsKeptByBands, autoplay: !!me?.autoplay, econ: econNow, convertMax: data.get('config')?.economy?.reserve?.convertPerPlayerMax }) : null;
+    const ask = r ? readyFundsPrompt(L.priv, { keptBands: data.get('config')?.economy?.leftoverFundsKeptByBands, autoplay: !!me?.autoplay, econ: econNow }) : null;
     if (ask) {
       if (askingReady.current) return;
       askingReady.current = true;
@@ -1487,7 +1533,8 @@ function MatchScreen() {
       const L = live.current;
       if (document.querySelector('.offerov[role="dialog"]')) return; // Only the visible dialog owns keyboard input.
       // dialogs / the guide own the keyboard; behind the 本局信息 / 敌方情报 drawer only Esc (closing it) acts
-      if (shortcutBlocked(act, { modal: !!document.querySelector('.modal, .guide'), drawer: !!L.drawer })) return;
+      // （集成战略面板同理：打开时只有 Esc 生效，别让 Space 之类顺手把「准备就绪」发出去）
+      if (shortcutBlocked(act, { modal: !!document.querySelector('.modal, .guide'), drawer: !!L.drawer || L.roguePanel })) return;
       // Spectating, eliminated, watching another board, or AI 托管: prep shortcuts do nothing. Esc still closes,
       // except a pending 教鞭 choice, whose overlay keeps Escape. Solo pause is below and does not run for these seats.
       const suspended = prepShortcutsSuspended({
@@ -1513,7 +1560,9 @@ function MatchScreen() {
         return; // ChoiceOverlay handles Escape without cancelling the server's pending choice.
       }
       if (act === 'escape') {
-        if (L.emoteOpen) setEmoteOpen(false);
+        // 集成战略面板是最上层的整屏弹层：Esc 先关它
+        if (L.roguePanel) setRoguePanel(false);
+        else if (L.emoteOpen) setEmoteOpen(false);
         else if (L.pen && !L.detail) togglePenRef.current(false);
         else if (L.bondOpen) setBondOpen(null);
         else if (L.detail) setDetail(null);
@@ -1701,6 +1750,16 @@ function MatchScreen() {
   const detailBonds = detailOwner === strip.ownerId ? stripBonds : playerBonds({ pub, priv, myId, ownerId: detailOwner, live: liveLayers });
   // bonds this mode never activates (标准: 10 of 23, 奥术 among them) — shown 本局禁用 on cards, chips and the popup
   const offBonds = modeOffBonds(getMode(pub?.modeId));
+  // 空壳不渲染（2026-11-04 视觉验收：备战期左上角挂着一条「BONDS 部署干员以激活盟约」、右侧挂着空 EFFECTS 图标块）。
+  // 判据只看组件自己的字段：`strip.bonds` 里一条「有内容」的盟约都没有（无成员 / 无层数 / 非本局禁用）→ 整块不渲染；
+  // 效果列同理，`priv.effects`（观战时是看的那位的 `field.effects`）里没有一条**带名称**的 → 不渲染
+  // （第四轮验收：只带 desc 的条目也会出无名图标，英文 EFFECTS 标题底下挂一枚空图标，读起来像调试残留；
+  //   标题已由 ui/hud.js 的 EffectsColumn 换成中文「效果」，这里连外壳一起收掉）。
+  const bondRows = (Array.isArray(stripBonds) ? stripBonds : []).filter((b) => b && (b.active === true || Number(b.count) > 0 || Number(b.layers) > 0 || b.off === true));
+  const effectSource = watchingOther && field ? (field.effects ?? null) : priv?.effects;
+  const effectRows = (Array.isArray(effectSource) ? effectSource : []).filter((e) => e && typeof e === 'object' && String(e.name || '').trim());
+  const showBonds = bondRows.length > 0;
+  const showEffects = effectRows.length > 0;
 
   return html`<div class=${cx('screen', 'gm', `gm--${mode}`, drag && 'is-dragging', barCollapsed && 'is-collapsed', (sp || hasPersonalChoice || offerBlocksPrep(pub?.offers)) && 'has-sp', sp && 'has-spdraft', pen && 'is-pen', readyWhy && 'has-readywhy')}
       data-camera=${pen ? 'pen' : camKind}>
@@ -1732,7 +1791,7 @@ function MatchScreen() {
         speed=${playRate} onSpeed=${battleRunner ? (n) => setPlayRate(battleRunner.setRate(n)) : null}
         spectators=${specFacts.list} myId=${myId} isHost=${specFacts.isHost} onRemoveSpectator=${removeSpectator} room=${modRoom} />
 
-      <div class="gm__bonds">
+      ${showBonds ? html`<div class="gm__bonds">
         <button type="button" class="bonds-toggle" aria-expanded=${!bondsCollapsed} aria-controls="match-bond-strip"
           aria-label=${bondsCollapsed ? t('展开盟约') : t('收起盟约')} title=${bondsCollapsed ? t('展开盟约') : t('收起盟约')}
           onKeyDown=${(e) => {
@@ -1744,17 +1803,17 @@ function MatchScreen() {
             setBondsCollapsed(!bondsCollapsed);
           }}><${Icon} name=${bondsCollapsed ? 'chevronRight' : 'chevronLeft'} /></button>
         <div id="match-bond-strip" class="gm__bond-list" hidden=${bondsCollapsed}>
-          <${BondStrip} bonds=${stripBonds} layersDisabled=${layersDisabled} openId=${bondPop && bondPop.ownerId === strip.ownerId ? bondPop.bondId : null}
+          <${BondStrip} bonds=${bondRows} layersDisabled=${layersDisabled} openId=${bondPop && bondPop.ownerId === strip.ownerId ? bondPop.bondId : null}
             owner=${strip.name} onOpen=${(id) => openBond(id, strip.ownerId, 'strip')} />
         </div>
-      </div>
+      </div>` : null}
 
       <${TeamPanel} pub=${pub} myId=${myId} watching=${watchingNow} bubbles=${bubbles} onWatch=${watchPlayer} cap=${gd.config?.lpCapPerRound ?? 10} uniteLocal=${uniteLocal}
         spMarks=${sp ? spMarks(sp, { solo }) : null}
         self=${Number.isFinite(priv?.lp) ? { lp: priv.lp, pending: liveLpNow.pending, unite: liveLpNow.unite, left: liveLpNow.left } : null}
         observe=${cc ? { canObserve: (p) => observeTarget(p, pub, myId, { observing: watchingOther, ownDone: localDone }), observing: watchingOther, onBack: backHome } : null} />
 
-      <div class="gm__effects"><${EffectsList} effects=${watchingOther && field ? (field.effects ?? null) : priv?.effects} /></div>
+      ${showEffects ? html`<div class="gm__effects"><${EffectsColumn} effects=${effectRows} /></div>` : null}
 
       ${watchingOther && !combat ? html`<div class="gm__watching" role="status">
         <${GIcon} name="eye" /><span>${tParts('正在查看 {name} 的阵地（只读）', { name: html`<b>${watchedName}</b>` })}</span>
@@ -1770,6 +1829,7 @@ function MatchScreen() {
 
       ${showShop ? html`<${ShopBar} priv=${priv} editable=${editable} collapsed=${barCollapsed} refreshBusy=${refreshBusy} onCollapse=${setCollapsed}
         barRef=${barRef} offBonds=${offBonds} econ=${econ}
+        onOpenShop=${String(pub?.modeId || '').startsWith('mode_xie_') ? () => { net.request('g.meltOpen', {}).catch(() => {}); } : null}
         onBuy=${buy} onLevel=${() => actions.levelUp()} onRefresh=${() => actions.refresh()} onFreeze=${() => actions.freeze()}
         onDetail=${(id, kind, hint) => setDetail({ kind: kind === 'item' ? 'item' : 'chess', id, hint: hint || null, tap: ++cardTap.current })}
         onDetailClose=${() => setDetail((d) => (d?.kind === 'chess' || d?.kind === 'item' ? null : d))}
@@ -1793,7 +1853,7 @@ function MatchScreen() {
       <div class="ui-slot gm__ui-slot" data-ui-slot="hud.right" aria-label=${t('界面插件')} dangerouslySetInnerHTML=${{ __html: '' }}></div>
 
       <div class="gm__corner">
-        ${showMetrics && metricsOpen ? html`<${CombatMetricsPanel} myId=${myId} onClose=${() => setMetricsOpen(false)} />` : null}
+        <${AiTakeoverPanel} />
         ${spectator ? null : html`<${EmoteWheel} open=${emoteOpen} onToggle=${setEmoteOpen} onSend=${(id) => actions.emote(id)} disabled=${conn.status !== 'online'} />`}
         ${showMetrics ? html`<button type="button" class="gm__gear gm__metrics" aria-label=${t('作战统计')} title=${t('作战统计')} aria-expanded=${metricsOpen}
           aria-controls="combat-metrics-panel" onKeyDown=${(e) => { if (e.key === ' ') e.stopPropagation(); }} onClick=${() => {
@@ -1805,10 +1865,47 @@ function MatchScreen() {
           }}><${Icon} name="signal" /></button>` : null}
         ${prepLoadoutOpen && phase === PHASE.PREP && priv && !priv.ready && !spectator
           ? html`<${LoadoutButton} from="prep" size="sm" />` : null}
+        ${!spectator && alive && pub?.rogue ? html`<button type="button"
+          class="gm__gear gm__rogue" data-testid="rogue-panel-open"
+          aria-label=${t('集成战略：节点 / 地图 / 藏品')} title=${t('集成战略')}
+          aria-expanded=${roguePanel} aria-controls="rogue-panel"
+          disabled=${!rogueOpenable} onClick=${() => {
+            setRoguePanel((v) => !v);
+            setEmoteOpen(false);
+            setMetricsOpen(false);
+            setDetail(null);
+            setSel(null);
+            setBondOpen(null);
+          }}><${Icon} name="rogue" /></button>` : null}
         <button type="button" class="gm__gear" aria-label=${t('设置')} title=${t('设置')} onClick=${() => setSettingsOpen(true)}><${GIcon} name="gear" /></button>
         <button type="button" class="gm__gear gm__guide" aria-label=${t('玩法说明')} title=${t('玩法说明')} onClick=${() => openGuide(0)}><${Icon} name="book" /></button>
         <${FullscreenButton} class="gm__gear gm__fs" />
       </div>
+
+      ${showMetrics && metricsOpen ? html`<${CombatMetricsPanel} myId=${myId} onClose=${() => setMetricsOpen(false)} />` : null}
+      ${pub?.phase === PHASE.EVENT ? html`<${EventOverlay} pub=${pub} busy=${eventBusy}
+        onPick=${async (target) => { setEventBusy(true); try { await actions.eventPick(target); } finally { setEventBusy(false); } }} />` : null}
+      ${pub?.confront && ((myRole === 'attack' && (pub.confront.active || pub.confront.roster)) || (myRole === 'defend' && pub.confront.roster)) ? html`<${ConfrontOverlay} pub=${pub} busy=${confBusy}
+        onTarget=${async (targetPlayerId) => { setConfBusy(true); try { await actions.confrontTarget(targetPlayerId); } finally { setConfBusy(false); } }}
+        onConfirm=${async (group, position, picks, commit, bosses) => { setConfBusy(true); try { await actions.confront(group, position, picks, commit, bosses); } finally { setConfBusy(false); } }} />` : null}
+      ${pub?.confront && pub.confront.applied ? html`<${ConfrontClash} pub=${pub} />` : null}
+      ${myRole === 'attack' && (phase === PHASE.ROUND_START || phase === PHASE.PREP || phase === PHASE.COMBAT || phase === PHASE.SETTLE) ? html`<div class="gm__attackwait" role="status" data-testid="attack-wait">
+        <div class="gm__attackwait__in">
+          <span class="gm__attackwait__micro">${'HUNTING PHASE // ' + t('进攻')}</span>
+          <div class="gm__attackwait__t"><${Icon} name="sword" />${t('本回合你是进攻方')}</div>
+          <p>${t('怪物已投放，等待守方布阵与作战。点击左侧头像可实时观战。')}</p>
+          ${mySub ? html`<span class="num">${t('本回合投放 {n} 只', { n: mySub.total })}</span>` : html`<span class="t-dim">${t('等待投放结算')}</span>`}
+        </div>
+      </div>` : null}
+      ${myRole === 'defend' && phase === PHASE.PREP && Array.isArray(priv?.incoming) && priv.incoming.length ? html`<div class="gm__incoming" data-testid="incoming">
+        <div class="gm__incoming__in">
+          <div class="gm__incoming__t"><${Icon} name="sword" />${t('来袭怪物')} <b class="num">${priv.incoming.length}</b></div>
+          <ul>${priv.incoming.map((e, i) => html`<li key=${i}>
+            <span>${(gd.enemy && gd.enemy(e.enemyKey) && gd.enemy(e.enemyKey).name) || e.enemyKey}</span>
+            <span class="t-dim">${e.gate === 'upper' ? t('上路') : t('下路')}${Number.isFinite(e.time) ? ` · ${e.time.toFixed(1)}s` : ''}</span>
+          </li>`)}</ul>
+        </div>
+      </div>` : null}
 
       ${drawer ? html`<${EnemyDrawer} tab=${drawer} onTab=${setDrawer} pub=${pub} priv=${priv} onClose=${() => setDrawer(null)}
         bandId=${scoutBandId} bandOwner=${scoutBandOwner}
@@ -1830,6 +1927,30 @@ function MatchScreen() {
         name=${(selEntry.piece.kind === 'item' ? gd.item(selEntry.piece.id) : selEntry.piece.kind === 'token' ? gd.token(selEntry.piece.id) : ownShown(selEntry.piece.id))?.name || ''}
         onRetreat=${retreatSel} onSell=${sellSel} onDestroy=${sellSel} />` : null}
     </div>
+
+    ${!spectator && alive && normalizeHexOffer(priv) ? html`<${HexOverlay}
+      cards=${normalizeHexOffer(priv)} busyId=${hexBusy} rerollSlot=${hexRerollSlot}
+      grade=${priv?.hexGrade || null} bandId=${priv?.bandId || null}
+      deadline=${priv?.hexDeadline || 0} rerolls=${priv?.hexRerolls || null}
+      draft=${priv?.hexOfferDraft || 1} picked=${priv?.hexOfferPicked || null} ownedIds=${priv?.hexes || []}
+      onPick=${async (id) => { setHexBusy(id); try { await net.request('g.hex', { hexId: id }); } catch { /* server 会自己报 */ } finally { setHexBusy(null); } }}
+      onReroll=${async (slot) => { setHexRerollSlot(slot); try { await net.request('g.hexReroll', { slot }); } catch {} finally { setHexRerollSlot(null); } }} />` : null}
+
+    ${!spectator && alive && priv?.meltdown ? html`<${MeltdownOverlay} view=${priv.meltdown}
+      onBuy=${async (itemId) => { try { await net.request('g.meltBuy', { itemId }); } catch {} }}
+      onBuyRelic=${async (relicId) => { try { await net.request('g.meltBuyRelic', { relicId }); } catch {} }}
+      onClose=${async () => { try { await net.request('g.meltClose', {}); } catch {} }} />` : null}
+
+    ${!spectator && alive && normalizeRelicOffer(priv) ? html`<${RelicOverlay} cards=${normalizeRelicOffer(priv)}
+      busyId=${relicBusy} round=${priv?.relicOfferRound || 0}
+      onPick=${async (relicId) => { setRelicBusy(relicId); try { await net.request('g.relicPick', { relicId }); } finally { setRelicBusy(null); } }} />` : null}
+
+    ${!spectator && alive && normalizeRogueOffer(priv) ? html`<${RogueEventOverlay} offer=${normalizeRogueOffer(priv)} busy=${!!rogueBusy}
+      onPick=${async (choiceId) => { setRogueBusy(choiceId); try { await net.request('g.roguePick', { choiceId }); } finally { setRogueBusy(null); } }} />` : null}
+
+    ${!spectator && alive && pub?.rogue && roguePanel ? html`<${RoguePanel} pub=${pub} relicCards=${priv?.relicCards || null}
+      open=${roguePanel} blocked=${rogueBlocked} onClose=${() => setRoguePanel(false)}
+      onPickNode=${(intent, payload) => net.request(intent, payload)} />` : null}
 
     ${hasOffers && !sp && !personalChoice ? html`<${OfferOverlay} pub=${pub} myId=${myId} readOnly=${spectator || !alive} onAction=${actions.offer} />` : null}
     ${sp ? html`<${ChoiceOverlay} pub=${pub} sp=${sp} myId=${myId} solo=${solo} busyIdx=${spBusy} total=${total}

@@ -54,9 +54,10 @@
 //   (isAttack, every victim a splash victim: the shot aims at a tile); a stun / freeze holds the cycle, disarm stops it.
 
 import { num, talentBb, traitBb, moduleOn, skillRec, up, statBuff } from '../shared/tier1.js';
+import { hypot } from '../../../detmath.js';
 import { toLocal } from '../../../dir.js';
 import { COLS, PROJECTILE_SPEEDS } from '../../../constants.js';
-import { hypot } from '../../../detmath.js';
+
 
 const S1 = 'skchr_phenxi_1';
 const S2 = 'skchr_phenxi_2';

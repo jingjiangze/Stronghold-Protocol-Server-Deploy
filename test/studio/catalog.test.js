@@ -9,7 +9,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { startServer } from '../../server/index.js';
+import { startServer } from '../../server/boot-main.js';
 import { zipFiles } from '../../server/plugins/zip.js';
 import { ZIP_FETCH_TIMEOUT_MS } from '../../server/plugins/install.js';
 import { PLUGIN_LIMITS } from '../../shared/plugins/manifest.js';

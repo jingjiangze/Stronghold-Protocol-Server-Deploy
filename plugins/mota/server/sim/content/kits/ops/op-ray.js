@@ -58,12 +58,13 @@
 //   阻回 (PRTS 备注 "获得技力效果无视阻回").
 
 import { num, talentBb, traitBb, skillRec, up } from '../shared/tier1.js';
+import { hypot } from '../../../detmath.js';
 import { acquireTargets, effectiveProfile } from '../../../ai.js';
 import { sortEnemyTargets } from '../../../targeting.js';
 import { bodyInRange } from '../../../body.js';
 import { PUSH_DIRECTIONAL_MIN_DIST } from '../../../constants.js';
 import { startCountdown } from '../../tokens.js';
-import { hypot } from '../../../detmath.js';
+
 
 const S1 = 'skchr_ray_1';
 const S2 = 'skchr_ray_2';

@@ -229,8 +229,12 @@ test('observing: no watching while the own battle runs; after it ends a teammate
   h.toPrep(1);
   for (const pid of ['p_0', 'p_1', 'p_2']) m.handle(pid, { t: 'g.ready', ready: true });
   h.run(() => m.phase === PHASE.COMBAT);
-  // p_1 still fights: it may not look elsewhere
-  assert.deepEqual(m.handle('p_1', { t: 'g.watch', fieldId: 'n:p_2' }), { error: 'WRONG_PHASE', detail: 'own battle running' });
+  // 业主 2026-10-30：自己的战斗还在打，也可以切去看队友的普通战场（本地那块继续跑；
+  // 重连由 _resendBattle 先恢复自己那块，所以刷新不会丢）
+  assert.deepEqual(m.handle('p_1', { t: 'g.watch', fieldId: 'n:p_2' }), { ok: true });
+  assert.equal(m.watchers.get('p_1'), 'n:p_2');
+  assert.equal(h.lastTo('p_1', 'b.start').watch, true);
+  assert.equal(h.lastTo('p_1', 'b.start').authoritative, false);
   h.run(() => fields(h).find((f) => f.fieldId === 'n:p_0').done);
   const target = fields(h).find((f) => f.fieldId === 'n:p_2');
   assert.equal(target.live, true);

@@ -1,3 +1,4 @@
+import { installContractSupports } from './contractSupport.js';
 // server/sim/Battle.js — one field simulation (normal / unite / boss / hidden). Public API: DESIGN §5.1.
 //
 //   const b = new Battle({ seed, kind, modeId, round, stage|stageId, rect, timeLimit, players, spawns, routes,
@@ -66,6 +67,7 @@ import { BattleTiles } from './battle/tiles.js';
 import { BattleDisplacement } from './battle/displacement.js';
 import { BattleEconomy } from './battle/economy.js';
 import { BattleEvents } from './battle/events.js';
+import {prepareRoundSpawns} from './roundEvents.js';
 
 export { pushTiles } from './battle/displacement.js';
 
@@ -85,6 +87,19 @@ export class Battle {
     /** When false the battle only ends by time limit / boss pool / forceEnd (tests, sandboxes). */
     this.autoFinish = opts.autoFinish !== false;
     this.data = toDataSource(opts.data);
+    /*
+     * 危机合约的模拟器侧钩子 (shared/contractEffects.js)。
+     *
+     * `toDataSource` 返回的可能是**共享**的默认 DataSource(测试、没传 data 时),直接往它上面写会污染别的战斗 ——
+     * 所以这里复制一份(带原型链的浅拷贝,查询方法照旧)。
+     */
+    if (opts.contractOpStatMul || opts.contractHealMul || opts.contractLayerCap) {
+      const extra = {};
+      if (opts.contractOpStatMul) extra.contractOpStatMul = opts.contractOpStatMul;
+      if (opts.contractHealMul != null && opts.contractHealMul !== 1) extra.contractHealMul = opts.contractHealMul;
+      if (opts.contractLayerCap) extra.contractLayerCap = opts.contractLayerCap;
+      if (Object.keys(extra).length) this.data = Object.assign(Object.create(Object.getPrototypeOf(this.data)), this.data, extra);
+    }
     let stage = opts.stage ?? (opts.stageId ? this.data.getStage(opts.stageId) : null);
     if (stage && !stage._norm) stage = normalizeStage(stage.id ?? opts.stageId, stage);
     this.stage = stage || { id: 'empty', rows: [], devices: [] };
@@ -170,7 +185,7 @@ export class Battle {
 
     // ---- spawns
     this._pending = [];
-    for (const s of opts.spawns ?? []) if (s && typeof s === 'object') this._safe(() => this._queueSpawn(s, true), 'queueSpawn');
+    for (const s of prepareRoundSpawns(this,opts.spawns??[])) if (s && typeof s === 'object') this._safe(() => this._queueSpawn(s, true), 'queueSpawn');
     this._pending.sort((a, b) => a.time - b.time || a.seq - b.seq);
 
     // ---- content
@@ -191,6 +206,7 @@ export class Battle {
       catch { this._result = { time: this.time, reason: 'forced', perPlayer: {}, killed: this.killed, total: this.total, resolved: this.resolved, errors: this.errorCount }; }
     } else {
       for (const u of this.allyUnits) if (!u.kit) this._setupUnit(u);
+      installContractSupports(this);
       if (typeof opts.setup === 'function') this._safe(() => opts.setup(this), 'opts.setup');
     }
   }

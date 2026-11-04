@@ -2,10 +2,7 @@
 // Conventions of the tier-4 kits: ../shared/tier4.js; kit contract and rules: ../README.md.
 
 import { sortEnemyTargets } from '../../../targeting.js';
-import {
-  AURA, AURA_DUR, num, tbb, nationOf, enemiesOnRange, targetsInRange, whileDeployed, toggleBuff, skillActive, isSel,
-  alt, instantKind, withDefaults,
-} from '../shared/tier4.js';
+import { AURA, AURA_DUR, num, tbb, nationOf, enemiesOnRange, targetsInRange, whileDeployed, toggleBuff, skillActive, isSel, alt, instantKind, withDefaults } from '../shared/tier4.js';
 
 /** Enemy leaders / elites (精英或领袖敌人). */
 const isEliteEnemy = (e) => !!e && (e.isBoss || e.def?.rank === 'ELITE' || e.def?.rank === 'BOSS');

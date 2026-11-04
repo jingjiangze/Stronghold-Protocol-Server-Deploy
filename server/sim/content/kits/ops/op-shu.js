@@ -3,7 +3,7 @@
 // Kit contract and the 自选 rules: ../README.md ("How to add an operator (自选)").
 //
 // Forms (data/backups.json units.char_2025_shu, the DIY slot statuses): normal = E2 Lv1, skills at rank 4, no module;
-// elite = E2 Lv60, rank 7, GUA-X at stage 1 (tier 5) or 3 (tier 6). Full potential (the owner's decision of 2026-10-07).
+// elite = E2 Lv60, rank 7, GUA-X at stage 1 (tier 5) or 3 (tier 6). Potential 0 [ASSUMED: no account].
 // Sources: character_table / skill_table / battle_equip_table (zh_CN, as built into backups.json); PRTS 黍 (百谷长青 备注
 // "本天赋效果为永久地块效果，自身退场时清空所有地块的播种效果，不对装置职业的目标生效。生命恢复的提供方式为增加位于地块上干员的
 // “生命回复速度”属性，不受治疗加成和禁疗影响"; 天有四时 修正 "在场时" / "编入队伍且"; S1 修正 "小于等于一半"; S2 备注 "实际效果为技能
@@ -25,8 +25,8 @@
 //   +hp_recovery_per_sec (an hpRegen buff, checklist 11: 禁疗 / 无法被友方治疗 do not stop it — 斥罪 too) and 庇护
 //   damage_resistance (the shared applyStrongest key PROTECT), refreshed every FARM_EVERY s (and at once on a sowing and at
 //   S2's start / end); both × S2's extra_extend_scale while S2 runs (shu_s_2 sets DoFarm's extra_extend_scale). Two 黍 of a
-//   shared field: the stronger regeneration and 庇护 hold. GUA-X stage 3 (full potential): 85 / s, 17 % and
-//   "部署时立即给所处地块播种该效果" (bbStr born_range_id 0-1: her own tile at every deployment).
+//   shared field: the stronger regeneration and 庇护 hold. GUA-X stage 3: 80 / s, 15 % and "部署时立即给所处地块播种该效果"
+//   (bbStr born_range_id 0-1: her own tile at every deployment).
 // - T2 天有四时: while she is deployed, ≥ PROF_NEEDED different professions among the allied operators on the field ⇒ every
 //   allied operator's max HP +max_hp; ≥ PROF_NEEDED operators of one profession ⇒ ASPD +attack_speed (charpack auras:
 //   operators only, 孤立 included); if her squad (her player's operators, deployed or not) holds ≥ SUI_NEEDED 【岁】 operators
@@ -99,9 +99,15 @@ export default {
     const born = RANGE_IDS[r0?.bbStr?.born_range_id] ?? null;
     const b1 = bbOf(chess, S1), b2 = bbOf(chess, S2), b3 = bbOf(chess, S3);
     const s1 = skillRec(chess, S1);
-    // GUA-Y stages 2/3: the extra ATK sits on the module's hidden talent (index -1), not 天有四时.
+    /*
+     * 黍 模组「好时节」(GUA-Y, 0.2.3 上游 2e12287)——
+     * 额外攻击力挂在**模组的隐藏天赋**上(数据 index −1),而不是「天有四时」。
+     * 所以这里必须用 `talentRec(chess, -1)`,不能拿 t0 / t1。
+     */
     const seasonAtk = num(talentRec(chess, -1)?.bb?.atk);
+    /** 同一位玩家场上的干员(「编入队伍」类天赋都按 ownerId 分组)。 */
     const squadOf = (battle, unit) => battle.allyUnits.filter((a) => a.kind === 'op' && a.ownerId === unit.ownerId);
+    /** 队伍里【岁】干员够不够。 */
     const suiReady = (battle, unit) => squadOf(battle, unit).filter((a) => SUI.has(a.def?.charId)).length >= SUI_NEEDED;
     const g1 = gridOf(chess, S1, X4), g2 = gridOf(chess, S2, X1), g3 = gridOf(chess, S3, X2);
 
@@ -248,6 +254,10 @@ export default {
             const per = new Map();
             for (const a of ops) { const p = a.def?.profession ?? '?'; per.set(p, (per.get(p) ?? 0) + 1); }
             const many = per.size >= PROF_NEEDED, same = Math.max(0, ...per.values()) >= PROF_NEEDED;
+            /*
+             * 黍 模组「好时节」(GUA-Y 2/3 阶):额外攻击力要**三个条件里满足两个**才给 ——
+             * 职业数够、同职业数够、队里【岁】够。官方把这个 bonus 挂在模组的隐藏天赋上。
+             */
             const bonus = seasonAtk > 0 && Number(many) + Number(same) + Number(suiReady(battle, unit)) >= 2;
             for (const a of ops) {
               if (many && hpUp) battle.addBuff(a, { key: 'talent:shu:seasons:hp', duration: FARM_HOLD, mods: { hpPct: hpUp }, source: unit, tags: ['talent'] });
@@ -278,7 +288,10 @@ export default {
         } },
       ],
       install(battle, unit) {
-        // GUA-Y: damage reduction, independent of the sown tile's 庇护 (official trait damage_resistance).
+        /*
+         * 黍 模组「好时节」(GUA-Y):伤害减免 —— 和种下地块的「庇护」是**两件独立的事**
+         * (官方特性里的 damage_resistance)。0.2.3 上游 2e12287 补上。
+         */
         const dr = num(tb.damage_resistance);
         if (dr > 0) battle.on('deploy', ({ unit: u }) => {
           if (u === unit) battle.addBuff(unit, { key: 'shu:gua-y', mods: { dmgTakenMul: 1 - dr }, source: unit, tags: ['module'] });

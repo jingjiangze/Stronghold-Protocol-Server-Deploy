@@ -54,7 +54,11 @@ export function observeTarget(p, pub, myId, { observing = false, ownDone = false
   if (!meAlive || !own) return { fieldId: target.fieldId };
   if (own.fieldId === target.fieldId) return { reason: t('队友与你在同一战场，使用 ‹ › 切换视角') };
   if (target.kind === 'boss' || target.kind === 'hidden') return { reason: t('无法查看另一组队友的战场') };
-  if (own.kind === 'normal' && own.live !== false && !ownDone) return { reason: t('作战中无法查看队友，作战结束后可前往查看') };
+  // 业主 2026-10-30：**战斗中也要能看队友**。原来这里拒绝（「作战中无法查看队友，作战结束后可前往查看」），
+  // 客户端因此从不发起 g.watch —— 而服务端（插件 Match 2026-10-25 起）本来就允许。
+  // client 模式下没有战斗帧流：观战者收到该场的 b.start（spec + elapsed）自己重跑；自己那块留在本地继续
+  // tick（runner 的 running() 对「authoritative 且未上报」的 entry 恒真），「返回战场」从当前
+  // fieldMeta + snapshot 重新入场，状态不丢。boss / hidden 的异组隐藏仍在上一条拒绝。
   return { fieldId: target.fieldId };
 }
 

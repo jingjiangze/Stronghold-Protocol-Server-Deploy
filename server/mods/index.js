@@ -6,10 +6,14 @@
 // Who may use it: the same gate as the studio (server/studio/gate.js) — this machine or the local network, a local Host,
 // and for a write the owner's key (`plugins/.studio-key`, header `X-SP-Mod`). A read needs no key. Nothing here is
 // enabled by default: an import installs a plugin folder, and a room still has to switch it on.
+//
+// (i18n-ignore-file: the answers are bilingual by design, 中文 · English — the same rule server/http/common.js carries,
+// docs/I18N.md. The page itself (page.js) is bilingual for the same reason.)
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { PLUGIN_LIMITS } from '../../shared/plugins/manifest.js';
+import { pluginCompatibility } from '../../shared/plugins/compat.js';
 import { sendError, sendJson } from '../http/common.js';
 import { studioAllowed } from '../studio/gate.js';
 import { loadStudioKey, sameKey } from '../studio/key.js';
@@ -17,6 +21,7 @@ import { fetchHttps, readDownloadAllow } from '../plugins/install.js';
 import { importArchive } from './import.js';
 import { startInbox } from './inbox.js';
 import { modPage } from './page.js';
+import { MOD_PAGE_SCRIPT } from './pageScript.js';
 
 const MAX_JSON_BYTES = 64 * 1024;
 
@@ -50,55 +55,75 @@ function readBody(req, limit) {
   });
 }
 
+/** The policy file (`plugins/config.json`, server/plugins/policy.js) as an object: a missing, broken or non-object one is {}. */
+function readPolicy(pluginsDir) {
+  try {
+    const json = JSON.parse(fs.readFileSync(path.join(pluginsDir, 'config.json'), 'utf8'));
+    return json && typeof json === 'object' && !Array.isArray(json) ? json : {};
+  } catch { return {}; }
+}
+
+/**
+ * The `default` list after switching one plugin on or off — the set a new room starts with (policy.js `default`, the
+ * one the manager's toggle writes). On adds once; off removes; anything that is not a plugin id is kept as it was.
+ * @param {unknown} current @param {string} id @param {boolean} on
+ * @returns {string[]}
+ */
+export function nextDefault(current, id, on) {
+  const list = Array.isArray(current) ? current.filter((x) => typeof x === 'string') : [];
+  return on ? [...new Set([...list, id])] : list.filter((x) => x !== id);
+}
+
 /** The status rows the page lists: what is installed and whether the registry loaded it. */
-function statusRows(registry, pluginsDir) {
+function statusRows(registry, pluginsDir, inboxPath) {
   let list = [];
   try { list = registry ? registry.plugins() : []; } catch { list = []; }
-  // plugins/config.json 的 default / required：房间开局的插件集合，以及关不掉的那几个。
-  let policy = {};
-  try { policy = JSON.parse(fs.readFileSync(path.join(pluginsDir, 'config.json'), 'utf8')) || {}; } catch { policy = {}; }
+  const policy = readPolicy(pluginsDir);
   const enabled = new Set(Array.isArray(policy.default) ? policy.default : []);
-  const required = new Set(Array.isArray(policy.required) ? policy.required : []);
   const rows = list.filter((p) => p && p.id && !String(p.id).startsWith('_')).map((p) => ({
     id: p.id,
     name: (p.manifest && p.manifest.name) || p.name || p.id,
     version: (p.manifest && p.manifest.version) || p.version || '',
     class: p.class || (p.manifest && p.manifest.class) || '',
     status: p.status || '',
-    supported: p.supported !== false,
+    // 0.3.1 的 registry `supported` 只对语言包为 true（玩法插件 false）；这里用 compat 自己判，
+    // 否则管理器会把所有玩法插件标成「不支持」并禁用开关。语言包的 unknown 不算 incompatible。
+    supported: (() => {
+      try { return pluginCompatibility(p.manifest || {}, {}).status !== 'incompatible'; }
+      catch { return p.supported !== false; }
+    })(),
     enabled: enabled.has(p.id),
-    required: required.has(p.id),
     ...(p.disabled ? { disabled: p.disabled } : {}),
   })).sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-  let inbox = null;
-  try { inbox = fs.readdirSync(path.join(path.dirname(pluginsDir), 'mod-inbox')).filter((n) => n.endsWith('.zip')).length; } catch { inbox = null; }
-  return { plugins: rows, inbox, default: [...enabled], required: [...required] };
+  // The count is reported as `inboxCount`: `inbox` is the handler's path, and spreading this object after it
+  // used to knock the path out with a number (the caller could never learn where the drop folder is).
+  // It counts the folder the manager actually watches (inboxPath), not `dirname(pluginsDir)/mod-inbox`.
+  let inboxCount = null;
+  try { inboxCount = fs.readdirSync(inboxPath).filter((n) => n.endsWith('.zip')).length; } catch { inboxCount = null; }
+  return { plugins: rows, inboxCount, default: [...enabled] };
 }
 
 /**
  * @param {{ root: string, pluginsDir: string, dataDir: string, registry?: any, vanilla?: object|null, log?: any,
  *   inboxDir?: string, autoInbox?: boolean, fetch?: typeof fetch, platform?: { status: () => any } | null }} opts
  */
-export function createMods({ root, pluginsDir, dataDir, registry = null, vanilla = null, log = console, inboxDir = null, autoInbox = true, fetch: fetchImpl = null, platform = null }) {
+export function createMods({ root, pluginsDir, dataDir, registry = null, vanilla = null, log = console, inboxDir = null, autoInbox = true, fetch: fetchImpl = null, platform = null, lobby = null }) {
   const { key } = loadStudioKey(pluginsDir, { log });
-  let inboxPath = path.resolve(inboxDir || process.env.SP_MOD_INBOX || path.join(root, 'mod-inbox'));
+  const inboxPath = path.resolve(inboxDir || path.join(root, 'mod-inbox'));
   const allow = readDownloadAllow(pluginsDir);
 
   const importFile = async (file) => importArchive(fs.readFileSync(file), { root, pluginsDir, dataDir, vanilla });
-  // 容器的 /app 可能是只读的（ModelScope 创空间就是这样）：拖目录即装的 watcher 建不出目录时
-  // **不能让整个服务器起不来**——退回一个可写的临时目录，再失败就干脆不装 watcher。
-  const openInbox = () => {
-    if (!autoInbox) return null;
-    const fallback = path.join(process.env.TMPDIR || process.env.TEMP || '/tmp', 'sp-mod-inbox');
-    for (const dir of [...new Set([inboxPath, fallback])]) {
-      try { const w = startInbox({ dir, importFile, log }); inboxPath = dir; return w; } catch (e) {
-        log?.warn?.(`[mods] inbox unavailable at ${dir} (${e?.code || e?.message || e}) — trying the next writable location`);
-      }
+  // 投递目录（mod-inbox）：容器里根目录可能是只读的（实测创空间 /app 报 EACCES），建不出来就禁用，
+  // 绝不能让一条 mkdir 失败把整个服务打挂；/mod 页面与 /mod/upload 不依赖它。
+  let inbox = null;
+  if (autoInbox) {
+    try {
+      inbox = startInbox({ dir: inboxPath, importFile, log });
+    } catch (e) {
+      inbox = null;
+      log?.warn?.(`[mods] inbox disabled: ${e?.code || e?.message || e} (${inboxPath})`);
     }
-    log?.warn?.('[mods] inbox disabled: no writable directory (drop-in installs need a writable dir; /mod upload still works)');
-    return null;
-  };
-  const inbox = openInbox();
+  }
 
   const keyOk = (req, query) => {
     const fromHeader = req.headers['x-sp-mod'] || req.headers['x-sp-studio'];
@@ -127,9 +152,19 @@ export function createMods({ root, pluginsDir, dataDir, registry = null, vanilla
         return;
       }
 
+      // The page's script, served as a file: the site CSP hashes only import maps, so an inline
+      // <script> on /mod is blocked and the table would stay empty. `script-src 'self'` covers this.
+      if (rawPath === '/mod/page.js') {
+        if (method !== 'GET') { sendError(req, res, 405, '不支持的请求方法 · Method not allowed'); return; }
+        const body = Buffer.from(MOD_PAGE_SCRIPT, 'utf8');
+        res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Length': body.length });
+        res.end(req.method === 'HEAD' ? undefined : body);
+        return;
+      }
+
       if (rawPath === '/mod/status.json') {
         if (method !== 'GET') { sendError(req, res, 405, '不支持的请求方法 · Method not allowed'); return; }
-        sendJson(req, res, 200, { ok: true, inbox: inboxPath, platform: platform ? platform.status() : { enabled: false }, ...statusRows(registry, pluginsDir) });
+        sendJson(req, res, 200, { ok: true, inbox: inboxPath, platform: platform ? platform.status() : { enabled: false }, ...statusRows(registry, pluginsDir, inboxPath) });
         return;
       }
 
@@ -178,8 +213,6 @@ export function createMods({ root, pluginsDir, dataDir, registry = null, vanilla
         return;
       }
 
-      // 启用 / 停用（房间开局集合 = plugins/config.json 的 default）。required 的插件关不掉。
-      // 策略文件按 mtime 自动重读（server/plugins/policy.js），所以新房间立刻生效，已开的房间保持原集合。
       if (rawPath === '/mod/enable') {
         if (method !== 'POST') { sendError(req, res, 405, '不支持的请求方法 · Method not allowed'); return; }
         if (!changeAllowed(req)) { sendError(req, res, 403, '拒绝跨站写入 · cross-site write refused'); return; }
@@ -190,22 +223,30 @@ export function createMods({ root, pluginsDir, dataDir, registry = null, vanilla
         try { parsed = JSON.parse(body.toString('utf8') || '{}'); } catch { sendError(req, res, 400, '请求体不是 JSON · body is not JSON'); return; }
         const id = typeof parsed?.id === 'string' ? parsed.id.trim() : '';
         const on = parsed?.on;
-        if (!id || typeof on !== 'boolean') { sendError(req, res, 400, '需要 { id, on } · id and on are required'); return; }
+        if (!id || typeof on !== 'boolean') { sendError(req, res, 400, '需要 { id, on } · needs { id, on }'); return; }
         let known = [];
         try { known = (registry ? registry.plugins() : []).map((p) => p && p.id).filter(Boolean); } catch { known = []; }
         if (!known.includes(id)) { sendJson(req, res, 404, { ok: false, error: 'PLUGIN_UNKNOWN', detail: id }); return; }
+        // The switch is the policy's own `default` (server/plugins/policy.js): the plugins a NEW room starts with. Its
+        // other fields (rooms, allow, classes, limits …) are the owner's and are written back untouched.
         const file = path.join(pluginsDir, 'config.json');
-        let cfg = {};
-        try { cfg = JSON.parse(fs.readFileSync(file, 'utf8')) || {}; } catch { cfg = {}; }
-        const required = new Set(Array.isArray(cfg.required) ? cfg.required : []);
-        if (!on && required.has(id)) { sendJson(req, res, 400, { ok: false, error: 'PLUGIN_BLOCKED', detail: `this server requires: ${id}` }); return; }
-        const current = Array.isArray(cfg.default) ? cfg.default : [];
-        const next = on ? [...new Set([...current, id])] : current.filter((x) => x !== id);
-        const saved = { ...cfg, default: next };
-        const tmp = `${file}.${process.pid}.tmp`;
-        fs.writeFileSync(tmp, `${JSON.stringify(saved, null, 2)}\n`);
-        fs.renameSync(tmp, file);
-        sendJson(req, res, 200, { ok: true, default: next, required: [...required] });
+        const policy = readPolicy(pluginsDir);
+        const next = nextDefault(policy.default, id, on);
+        const tmp = file + '.' + process.pid + '.tmp';
+        try {
+          fs.writeFileSync(tmp, JSON.stringify({ ...policy, default: next }, null, 2) + '\n');
+          fs.renameSync(tmp, file);
+        } catch (e) {
+          try { fs.rmSync(tmp, { force: true }); } catch { /* nothing to remove */ }
+          sendJson(req, res, 500, { ok: false, error: 'WRITE', detail: String(e?.message || e).slice(0, 300) });
+          return;
+        }
+        sendJson(req, res, 200, { ok: true, id, on, default: next, rooms: policy.rooms || 'host' });
+        // 业主 2026-10-30「通过 mod 管理器加载」：改完默认插件集后，让**在线房间**也跟上 ——
+        // 纯外观房间就地重应用（refreshPlugins），含玩法插件的房间只能通知房主（换 cs 必须重载）。
+        // 必须在响应之后做，且失败不能影响这次开关的结果。
+        try { registry?.rescan?.(); } catch { /* 扫描失败不影响已写入的开关 */ }
+        try { lobby?.pluginsReloaded?.([id]); } catch (e) { try { log.warn?.(`[mods] live rooms not notified: ${e && e.message}`); } catch { /* log must never throw */ } }
         return;
       }
 

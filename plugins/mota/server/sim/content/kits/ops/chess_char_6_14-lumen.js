@@ -2,9 +2,7 @@
 // Conventions of the tier-6 kits: ../shared/tier6.js; kit contract and rules: ../README.md.
 
 import { COLS } from '../../../constants.js';
-import {
-  num, bv, tbb, live, onDefaultSkill, instantKind, ABNORMAL, hasAbnormal, cleanseAbnormal,
-} from '../shared/tier6.js';
+import { num, bv, tbb, live, onDefaultSkill, instantKind, ABNORMAL, hasAbnormal, cleanseAbnormal } from '../shared/tier6.js';
 
 // ------------------------------------------------------------------------------------------------------------------
 // 流明 chess_char_6_14 (疗养师) — S3 灯火不灭; 凡人之愿; 应急处理; module 纯铜单筒望远镜
@@ -31,7 +29,7 @@ function lumen(bb, chess, def) {
           if (a.kind === 'device' || a.s.flags.noHeal || a.profile?.noHeal) continue; // a heal: never on 禁疗 / 孤立
           battle.addBuff(a, {
             key: `lumen:rain:${unit.id}`, duration: life, interval: iv, refresh: 'replace', visible: true, source: unit,
-            onTick: ({ unit: x }) => { if (x.hp < x.s.maxHp) battle.heal(unit, x, unit.s.atk * sc, { hot: true }); },
+            onTick: ({ unit: x }) => { if (x.hp < x.s.maxHp){battle.heal(unit, x, unit.s.atk * sc, { hot: true });battle.fx('skillPulse',{id:unit.id,target:x.id,x:x.x,y:x.y});} },
           });
         }
       },

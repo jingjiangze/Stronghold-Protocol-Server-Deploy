@@ -36,8 +36,12 @@ test('the listen entry points default to ::, and the image stays on IPv4', () =>
   assert.match(doc('scripts/launch.mjs'), /process\.env\.HOST \|\| '::'/);
   assert.match(doc('tools/doctor.mjs'), /process\.env\.HOST \|\| '::'/);
   assert.match(doc('README.md'), /\| `HOST` \| `::` \|/);
-  assert.match(doc('Dockerfile'), /HOST=0\.0\.0\.0/);
+  // This fork's image is the ModelScope one (deploy/stardust/ms-edge): nginx owns the platform port (7860) and the game
+  // process listens on loopback inside the container, so the image still never binds a wildcard — only the address family
+  // differs from upstream's 0.0.0.0. entrypoint.sh sets HOST=0.0.0.0 only for the stand-alone fallback path.
+  assert.match(doc('Dockerfile'), /HOST=127\.0\.0\.1/);
   assert.doesNotMatch(doc('Dockerfile'), /HOST=::/);
+  assert.doesNotMatch(doc('Dockerfile'), /HOST=0\.0\.0\.0/);
 });
 
 test('listenAddress: the option wins over the environment, the environment over the default', () => {
@@ -97,7 +101,7 @@ test('classifyAddresses: IPv6 kinds, and one entry per /64', () => {
 });
 
 test('lanUrls lists IPv4 first, brackets IPv6, and drops link-local', async () => {
-  const { lanUrls } = await import('../server/index.js');
+  const { lanUrls } = await import('../server/boot-main.js');
   const urls = lanUrls(3000);
   for (const u of urls) assert.match(u, /^http:\/\/(\[[0-9a-fA-F:]+\]|\d{1,3}(?:\.\d{1,3}){3}):3000$/, u);
   assert.ok(!urls.some((u) => u.includes('[fe80:')), 'no link-local URLs');
@@ -115,7 +119,7 @@ test('the default bind is one dual-stack socket, and an explicit host is not rew
 
   const saved = process.env.HOST;
   delete process.env.HOST;
-  const { startServer } = await import('../server/index.js');
+  const { startServer } = await import('../server/boot-main.js');
   const get = (srv, host) => new Promise((resolve) => {
     const req = http.get({ host, port: srv.port, path: '/healthz' }, (res) => { res.resume(); resolve(res.statusCode); });
     req.on('error', (e) => resolve(e.code || 0));
@@ -157,7 +161,7 @@ test('when :: cannot be bound, the default falls back to 0.0.0.0; EADDRINUSE doe
   const orig = proto.listen;
   const saved = process.env.HOST;
   delete process.env.HOST;
-  const { startServer } = await import('../server/index.js');
+  const { startServer } = await import('../server/boot-main.js');
 
   const stub = (failCode) => {
     const tried = [];

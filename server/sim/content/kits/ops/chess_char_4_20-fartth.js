@@ -1,3 +1,4 @@
+import { hypot } from '../../../detmath.js';
 // server/sim/content/kits/ops/chess_char_4_20-fartth.js — 远牙 (char_430_fartth) kit, tier 4.
 // Conventions of the tier-4 kits: ../shared/tier4.js; kit contract and rules: ../README.md.
 
@@ -6,7 +7,6 @@ import { bodyInRange } from '../../../body.js';
 import { absoluteRangeKeys, sortEnemyTargets } from '../../../targeting.js';
 import { isHpLoss } from '../../../damage.js';
 import { num, tbb, whileDeployed, toggleBuff, skillActive, isSel, alt, withDefaults } from '../shared/tier4.js';
-import { hypot } from '../../../detmath.js';
 
 const LINE = Object.freeze(Array.from({ length: COLS }, (_, i) => Object.freeze([0, i])));
 const tileKey = (u) => Math.round(u.y) * COLS + Math.round(u.x);

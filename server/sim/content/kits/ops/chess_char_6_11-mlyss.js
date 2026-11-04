@@ -1,10 +1,8 @@
 // server/sim/content/kits/ops/chess_char_6_11-mlyss.js — 缪尔赛思 (char_249_mlyss) kit, tier 6.
 // Conventions of the tier-6 kits: ../shared/tier6.js; kit contract and rules: ../README.md.
 
-import {
-  num, bv, tbb, tdesc, moduleBb, parseN, live, isTok, onDefaultSkill, selectedSkill, AROUND8, N4, bstate, bestTile,
-  pullToward,
-} from '../shared/tier6.js';
+import { installMlyssModule20261101 } from '../shared/ark-update-modules-20261101.js';
+import { num, bv, tbb, tdesc, moduleBb, parseN, live, isTok, onDefaultSkill, selectedSkill, AROUND8, N4, bstate, bestTile, pullToward } from '../shared/tier6.js';
 import { holdProtect } from '../shared/tier1.js';
 
 /** 莱茵生命 (character_table groupId "rhine") members of this season's pool (checked against the official table). */
@@ -71,7 +69,7 @@ function mlyss(bb, chess, def) {
   const manifoldMods = { atkPct: num(bb.atk), ...(num(bb.attack_speed) ? { aspd: num(bb.attack_speed) } : {}) };
   const buffManifold = (battle, t, dur) => battle.addBuff(t, { key: 'mlyss:s3', mods: manifoldMods, duration: dur });
   // module 落叶四季 (开源节流): copying a 莱茵生命 operator ⇒ she gains `sp`; deploying the copied one ⇒ it gains `sp_other`
-  const rhineSp = num(mod.sp), rhineSpOther = num(mod.sp_other);
+  const rhineSp = chess?.module?.id === 'uniequip_003_mlyss' ? num(mod.sp) : 0, rhineSpOther = num(mod.sp_other);
   const tokTal = (t, key) => { for (const x of t.def?.talents || []) if (x?.bb && typeof x.bb[key] === 'number') return x.bb; return {}; };
   // "其被击败后会在25秒后自动刷新" (token talent interval; the talent text as a fallback)
   const respawnOf = (t) => num(tokTal(t, 'scale').interval, parseN(tdesc(def, 0), /(\d+(?:\.\d+)?)秒后自动刷新/, 25));
@@ -129,6 +127,7 @@ function mlyss(bb, chess, def) {
   return {
     skills,
     install(battle, unit) {
+      installMlyssModule20261101(battle, unit, chess, tokId);
       if (sid === 'skchr_mlyss_2') {
         const regen = num(bb.hp_recovery_per_sec_by_max_hp_ratio), dr = num(bb.damage_resistance);
         battle.every(0.25, () => {

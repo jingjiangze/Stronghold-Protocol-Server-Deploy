@@ -2,8 +2,8 @@
 // Conventions of the tier-4 kits: ../shared/tier4.js; kit contract and rules: ../README.md.
 
 import { bodyInRange } from '../../../body.js';
-import { num, tbb, keySet, skillActive, isSel, alt, instantKind, withDefaults } from '../shared/tier4.js';
 import { hypot } from '../../../detmath.js';
+import { num, tbb, keySet, skillActive, isSel, alt, instantKind, withDefaults } from '../shared/tier4.js';
 
 /** 阿罗玛's 非首次标记 (talent 起泡性能测试): one per enemy, shared by every 阿罗玛 (PRTS 备注). */
 const AROMA_MARK = 'aroma:bubbled';

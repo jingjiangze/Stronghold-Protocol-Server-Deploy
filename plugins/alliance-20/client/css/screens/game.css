@@ -588,8 +588,9 @@
 }
 
 /* ---- team panel ------------------------------------------------------------------------------------------- */
-.team { position: absolute; left: .22rem; top: 2.36rem; display: flex; flex-direction: column; gap: .14rem; pointer-events: none;
-        max-height: calc(100vh - 3.4rem); overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; padding-right: .06rem; }
+.team { position: absolute; left: .22rem; top: 2.36rem; display: flex; flex-direction: column; gap: .14rem; pointer-events: none; }
+/* 20 人档才需要滚动；4 人档保持参考服的样子（气泡画在行外右侧，不被裁） */
+.team--many { max-height: calc(100vh - 3.4rem); overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; padding-right: .06rem; }
 /* 隐藏滚动条（滑动/滚轮照常可用） */
 .team::-webkit-scrollbar { width: 0; height: 0; display: none; }
 .team { scrollbar-width: none; -ms-overflow-style: none; }
@@ -646,7 +647,9 @@
 }
 .team__frame--plain { top: -.04rem; left: -.04rem; right: -.04rem; bottom: -.04rem; inset: -.04rem; background: none; -webkit-mask: none; mask: none; border: 2px solid var(--mint-500); box-shadow: 0 0 .14rem rgba(78, 216, 175, .65); }
 .team__row.is-self.is-team .pavatar { box-shadow: none; }
-.team__bubble { position: absolute; left: calc(100% + .06rem); top: 50%; transform: translateY(-50%); width: max-content; max-width: 3.2rem; }
+.team__bubble { position: absolute; left: calc(100% + .06rem); top: 50%; transform: translateY(-50%); width: max-content; max-width: 3.2rem; z-index: 4; }
+/* 20 人档的 .team 是滚动容器（overflow-y:auto ⇒ overflow-x 计算为 hidden）。气泡挂在行右侧会被整颗裁掉：
+   实测面板右边界 147、气泡 147–219。现在贴在行内右侧，可见且不扩面板命中区。 */
 /* 前往查看 / 返回战场 (research 09 §3.1: tapping a teammate's avatar expands a mint button under it) */
 .team__row.is-open .pavatar { box-shadow: 0 0 0 2px var(--mint-400), 0 0 .2rem rgba(23, 249, 183, .45); }
 .team__row.is-open .team__info { background: linear-gradient(90deg, rgba(13, 44, 36, .92), rgba(8, 11, 10, 0)); }

@@ -1,9 +1,7 @@
 // server/sim/content/kits/ops/chess_char_5_20-aglina.js — 安洁莉娜 (char_291_aglina) kit, tier 5.
 // Conventions of the tier-5 kits: ../shared/tier5.js; kit contract and rules: ../README.md.
 
-import {
-  AURA_IV, AURA_DUR, num, talent, skillGrid, batPct, mods, selectedId, lazySkills, whileOn,
-} from '../shared/tier5.js';
+import { AURA_IV, AURA_DUR, num, talent, skillGrid, batPct, mods, selectedId, lazySkills, whileOn } from '../shared/tier5.js';
 
 /** 安洁莉娜 S3 失重: weight (massLevel) reduction while weightless. PRTS: "重量下降一个等级". */
 const WEIGHTLESS_MASS = 1;

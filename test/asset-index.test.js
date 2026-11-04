@@ -14,7 +14,7 @@ import path from 'node:path';
 import { createHash, randomBytes } from 'node:crypto';
 import { createAssetIndex, hash16 } from '../server/http/assetIndex.js';
 import { rewriteManifest, relOf } from '../server/http/assetViews.js';
-import { startServer } from '../server/index.js';
+import { startServer } from '../server/boot-main.js';
 
 const sha16 = (buf) => createHash('sha256').update(buf).digest('hex').slice(0, 16);
 const IMMUTABLE = 'public, max-age=31536000, immutable';

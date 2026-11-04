@@ -1,0 +1,41 @@
+{
+  "lock": 1,
+  "id": "upstream-043-content",
+  "version": "0.4.3",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "data/bands.json": {
+      "sha256": "fa4e6a61cdf6a70376bf0328cb6bc0070525cc323543721b5ed66429a63e3ec3",
+      "bytes": 39281
+    },
+    "data/bosses.json": {
+      "sha256": "2913a8182259f7cdb371b15eed67562d3af39590db05cc32f78f0c1d7214933a",
+      "bytes": 26491
+    },
+    "data/effects.json": {
+      "sha256": "ceceb64c9386d088e216212fb1a3c7ec959afa12d527db8b7e0d243c2e8b9574",
+      "bytes": 256328
+    },
+    "data/enemies.json": {
+      "sha256": "27034c37ce38c76c486527bb4769bd4a00d8088af8576622e9635273225647a4",
+      "bytes": 2038023
+    },
+    "data/factions.json": {
+      "sha256": "5265ab97d30f33ead722bc5306b09e10783fa3c3409636fe1dc3e5dcc10d0ee5",
+      "bytes": 125289
+    },
+    "data/stages.json": {
+      "sha256": "71444addf87933b1eb1bef1181a0ebb0210313421cf10c3f3c3aac5f2afe55c0",
+      "bytes": 433527
+    },
+    "data/waves.json": {
+      "sha256": "56aa8930ad01080adf9371f44abad2254eeaa45d991109aff12664f941b3b98c",
+      "bytes": 226363
+    },
+    "plugin.json": {
+      "sha256": "f6f57762ff564234e31e3fc9da35a045003abe5e4df9a42d1d687c226a84cfe9",
+      "bytes": 1031
+    }
+  },
+  "spine": {}
+}

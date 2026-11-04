@@ -9,6 +9,30 @@
 import { boardOrder, pieceDir } from '../board.js';
 import { computeBonds, bondSnapshot, activatedLayers, bondsWithGains } from '../bondsMeta.js';
 
+/**
+ * `rangeGrid`（面向 RIGHT 的相对格子）→ 该棋子实际覆盖到的 `"r,c"` 集合。
+ * 旋转规则与 `server/sim/dir.js` 的 `rotateOffset` 一致（RIGHT 原样 / UP (dc,−dr) / LEFT (−dr,−dc) / DOWN (−dc,dr)），
+ * 这里内联一份而不是反向 import 核心 sim —— 插件只依赖 battle-input 契约，不依赖引擎内部模块。
+ */
+export function rangeTileKeys(grid, r, c, dir) {
+  const out = new Set();
+  if (!Array.isArray(grid) || !Number.isInteger(r) || !Number.isInteger(c)) return out;
+  const rot = (dr, dc) => {
+    switch (dir) {
+      case 'UP': return [dc, 0 - dr];
+      case 'LEFT': return [0 - dr, 0 - dc];
+      case 'DOWN': return [0 - dc, dr];
+      default: return [dr, dc];
+    }
+  };
+  for (const cell of grid) {
+    if (!Array.isArray(cell) || !Number.isInteger(cell[0]) || !Number.isInteger(cell[1])) continue;
+    const [ar, ac] = rot(cell[0], cell[1]);
+    out.add(`${r + ar},${c + ac}`);
+  }
+  return out;
+}
+
 export class PlayerRound {
   startRound(r) {
     this.round = { refreshes: 0, buys: 0, sells: 0, spent: 0, gainedChess: 0, arts: 0 };
@@ -44,7 +68,9 @@ export class PlayerRound {
     for (const uid of [...this._tempDue.keys()]) if (!this.temp.some((p) => p && p.uid === uid)) this._tempDue.delete(uid);
     // (queued reward offers stay: they last until picked, startRound)
     this.clearUnfrozenShop();
-    if (!this.gd.leftoverKeptBands.includes(this.bandId)) this.funds = 0;
+    // 三层资金（业主 2026-10-26）：每回合资金 → 个人储备 / 团队储备（由 Match 的分配函数决定比例与设施加成）。
+    if (this.match && typeof this.match.econSplitLeftover === 'function') this.match.econSplitLeftover(this);
+    else if (!this.gd.leftoverKeptBands.includes(this.bandId)) this.funds = 0;
     this.ready = true;
     this.dirty();
   }
@@ -54,6 +80,9 @@ export class PlayerRound {
   eliminate(round) {
     this.alive = false;
     this.ready = false;
+    // 三层资金：永久淘汰时个人储备一并清空（与 funds / pendingFunds 同口径）。
+    // 注意：救援分支（revival)只置 alive=false，**不**走这里；若将来加「淘汰后复活」，这里的清零会丢储备。
+    this.reserve = 0;
     this.eliminatedRound = round;
     const all = [];
     for (const p of this.board.values()) all.push(p);
@@ -167,6 +196,120 @@ export class PlayerRound {
         units.push(u);
       }
     }
+    // 肉鸽 rule 藏品：己方属性（攻击/生命/防御/攻速）—— 全局部分算一次，相邻类按每个单位自己的 4 邻域补
+    // （sim 侧 `_makeAlly()` 会把这些乘/加到单位基础属性上；缺省时什么都不改）
+    try {
+      const am = this.m && typeof this.m.relicAllyMul === 'function' ? this.m.relicAllyMul(this) : null;
+      const nb = this.m && typeof this.m.relicNeighborRules === 'function' ? this.m.relicNeighborRules() : null;
+      const camo = this.m && typeof this.m.relicCamoRules === 'function' ? this.m.relicCamoRules() : null;
+      // stunOnDeploy（“未尽的生命”）：按 seed+回合确定性地挑出 N 名干员，让他们部署即晕眩
+      const stunRule = this.m && typeof this.m.relicStunRule === 'function' ? this.m.relicStunRule(this) : null;
+      let stunUids = null;
+      if (stunRule && stunRule.count > 0) {
+        const pool = units.filter((x) => x.kind === 'chess').map((x) => x.uid);
+        if (pool.length) {
+          // 小 LCG：同 seed+回合 ⇒ 同一批倒霉蛋（复盘/双端一致，不用 Math.random）
+          let st = ((Number(this.m.seed) || 1) ^ (Number(this.m.round) || 1) * 2654435761) >>> 0;
+          const next = () => { st = (Math.imul(st, 1664525) + 1013904223) >>> 0; return st / 4294967296; };
+          const pick = pool.slice();
+          for (let i = pick.length - 1; i > 0; i--) { const j = Math.floor(next() * (i + 1)); [pick[i], pick[j]] = [pick[j], pick[i]]; }
+          stunUids = new Set(pick.slice(0, Math.min(stunRule.count, pick.length)));
+        }
+      }
+      // survivor（生还者合约）：只强化**场上攻击力最高**的那一名干员
+      const surv = this.m && typeof this.m.relicSurvivorRule === 'function' ? this.m.relicSurvivorRule(this) : null;
+      let survUid = null;
+      if (surv) {
+        let bestAtk = -1;
+        for (const u of units) {
+          if (u.kind !== 'chess') continue;
+          const rec = this.gd && typeof this.gd.chess === 'function' ? this.gd.chess(u.chessId) : null;
+          const a = Number(rec && rec.stats && rec.stats.atk) || 0;
+          if (a > bestAtk) { bestAtk = a; survUid = u.uid; }
+        }
+      }
+      // camoAura（犬植浆）：每被**别的干员**的攻击范围覆盖一次，攻击 +auraAtk（可叠加）
+      let auraCount = null;
+      if (camo && camo.auraAtk > 0) {
+        auraCount = new Map();
+        const cover = new Map(); // uid → 覆盖到的 "r,c" 集合
+        for (const u of units) {
+          if (u.kind !== 'chess') continue;
+          const rec = this.gd && typeof this.gd.chess === 'function' ? this.gd.chess(u.chessId) : null;
+          const grid = rec && Array.isArray(rec.rangeGrid) ? rec.rangeGrid : null;
+          if (grid) cover.set(u.uid, rangeTileKeys(grid, u.row, u.col, u.dir));
+        }
+        for (const u of units) {
+          const set = cover.get(u.uid);
+          if (!set) continue;
+          let n = 0;
+          for (const other of units) {
+            if (other.uid === u.uid) continue;
+            if (set.has(`${other.row},${other.col}`)) n += 1;
+          }
+          auraCount.set(u.uid, n);
+        }
+      }
+      if (am || nb || camo || surv || stunRule) {
+        const occ = new Set(boardOrder(this.board).map(({ r, c }) => `${r},${c}`));
+        for (const u of units) {
+          let n = 0;
+          if (nb) {
+            for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+              if (occ.has(`${u.row + dr},${u.col + dc}`)) n += 1;
+            }
+          }
+          // 精锐干员（4 阶以上）额外吃 eliteAtkPerRound / eliteHpPerRound 的每回合削弱
+          let eliteMul = { atkMul: 1, hpMul: 1, defMul: 1, aspdAdd: 0 };
+          try {
+            const tier = this.gd && typeof this.gd.tierOf === 'function' ? this.gd.tierOf(u.chessId) : 0;
+            if (Number(tier) >= 4) {
+              if (this.m && typeof this.m.relicEliteRoundMul === 'function') {
+                const rm2 = this.m.relicEliteRoundMul();
+                eliteMul.atkMul *= rm2.atkMul; eliteMul.hpMul *= rm2.hpMul;
+              }
+              // 精锐目标类：场上精锐数 / 合成层数
+              const er = this.m && typeof this.m.relicEliteRules === 'function' ? this.m.relicEliteRules() : null;
+              if (er) {
+                let elites = 0;
+                if (this.board && typeof this.board.values === 'function') {
+                  for (const piece of this.board.values()) {
+                    const t2 = this.gd && typeof this.gd.tierOf === 'function' ? this.gd.tierOf(piece && piece.id) : 0;
+                    if (Number(t2) >= 4) elites += 1;
+                  }
+                }
+                // allyElite（未叙魔王残片）「精锐干员攻击 −30%」：只乘在精锐身上
+                const ae = this.m && typeof this.m.relicAllyEliteMul === 'function' ? this.m.relicAllyEliteMul(this) : 1;
+                eliteMul.atkMul *= ae * (1 + er.atk * elites + er.mergePer * Math.min(er.mergeMax, Number(this.relicEliteMerges) || 0));
+                eliteMul.hpMul *= 1 + er.hp * elites;
+                eliteMul.defMul *= 1 + er.def * elites;
+                eliteMul.aspdAdd += er.aspdPer * Math.min(er.aspdMax, elites);
+              }
+            }
+          } catch { /* 取不到阶数就不削弱 */ }
+          // 迷彩类（camoRanged / camoAura）：远程判定看棋子的 position，光环按「被几名干员的攻击范围覆盖」叠
+          let camoMul = 1;
+          if (camo) {
+            if (camo.rangedAtk > 0) {
+              const rec = this.gd && typeof this.gd.chess === 'function' ? this.gd.chess(u.chessId) : null;
+              if (rec && rec.position === 'RANGED') camoMul *= 1 + camo.rangedAtk;
+            }
+            if (camo.auraAtk > 0 && auraCount) camoMul *= 1 + camo.auraAtk * (auraCount.get(u.uid) || 0);
+          }
+          // survivor（生还者合约）：只有攻击力最高的那一名吃「+20% ×(1+已打场数)」的攻/防
+          let survMul = 1;
+          if (surv && survUid === u.uid) survMul = 1 + surv.per * surv.stacks;
+          const atkMul = (am && Number.isFinite(am.atkMul) ? am.atkMul : 1) * (1 + (nb ? nb.atkPer * n : 0)) * eliteMul.atkMul * camoMul * survMul;
+          const aspdAdd = (am && Number.isFinite(am.aspdAdd) ? am.aspdAdd : 0) + (nb ? nb.aspdPer * n : 0);
+          const hpMul = (am && Number.isFinite(am.hpMul) ? am.hpMul : 1) * eliteMul.hpMul;
+          const defMul = (am && Number.isFinite(am.defMul) ? am.defMul : 1) * eliteMul.defMul * survMul;
+          const aspdAdd2 = aspdAdd + eliteMul.aspdAdd;
+          const stun = stunUids && stunUids.has(u.uid) ? stunRule.dur : 0;
+          u.relicMods = { ...(am || {}), atkMul, hpMul, ...(defMul !== 1 ? { defMul } : {}), ...(aspdAdd2 ? { aspdAdd: aspdAdd2 } : {}),
+            ...(stun ? { stunOnDeploy: stun } : {}) };
+        }
+      }
+    } catch { /* 尽力而为，绝不因为藏品坏了出不了兵 */ }
     return {
       playerId: this.playerId,
       seat: this.seat,
@@ -175,6 +318,15 @@ export class PlayerRound {
       units,
       bonds: bondSnapshot(reached ? this.bondsView() : this.bonds),
       bandId: this.bandId,
+      // 危机合约 (shared/contractEffects.js): this player's own share of the room's modifiers —
+      // `contractOpStatMul` (the operator stat multipliers: sim players.js `_makeAlly` reads it off the player input,
+      // which is why it rides here and not on a unit), `contractSupports` (the support protocols a 支援 contract
+      // grants: sim contractSupport.js) and `contractRedeployMul` (units.js). Each key is omitted while neutral, so a
+      // match without contracts sends exactly the input it always sent.
+      ...(this.m?.fx && (this.m.fx.opStatMul.atk !== 1 || this.m.fx.opStatMul.def !== 1 || this.m.fx.opStatMul.hp !== 1)
+        ? { contractOpStatMul: this.m.fx.opStatMul } : {}),
+      ...(this.m?.fx?.supportProtocols?.length ? { contractSupports: this.m.fx.supportProtocols } : {}),
+      ...(this.m?.fx?.opRedeployMul != null && this.m.fx.opRedeployMul !== 1 ? { contractRedeployMul: this.m.fx.opRedeployMul } : {}),
       playerEffects: this.effects.filter((e) => e.battle !== false).map((e) => ({
         id: e.id, key: e.key ?? null, source: e.iconKind ?? null, params: e.params ?? null, counter: e.counter ?? null, data: e.data ?? null,
       })),

@@ -36,7 +36,7 @@ describe('official shot and weapon-effect origins in a battle', { skip }, () => 
   const problems = [];
   before(async () => {
     const puppeteer = (await import('puppeteer-core')).default;
-    const { startServer } = await import('../../server/index.js');
+    const { startServer } = await import('../../server/boot-main.js');
     const msg = JSON.parse(readFileSync(path.join(ROOT, 'public/dev/perf/hard-normal-r13.json'), 'utf8'));
     const p = msg.spec.players[0];
     p.units = LINEUP.map(([chessId, row, col, dir, skillIndex], i) => ({ uid: 900 + i, kind: 'chess', chessId, row, col, dir, items: [], skillIndex }));

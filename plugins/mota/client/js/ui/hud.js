@@ -28,21 +28,39 @@
 // (user playtest #3 item 3; the row's own label is ui/underframe.js TempRowNotice).
 
 import { useEffect, useRef, useState } from '../../vendor/hooks.module.js';
-import { PHASE } from '../../../shared/constants.js';
+import { PHASE, TEAM_NAMES } from '../../../shared/constants.js';
 import { html, Button, Icon, PingPill, Countdown, Tooltip, MicroLabel, DifficultyTag, Modal, useTicker } from './components.js';
-import { Sprite, LpTower, GIcon, LocalSprite } from './gameComponents.js';
+import { Sprite, LpTower, GIcon, LocalSprite, Img, RichText } from './gameComponents.js';
 import { data, localAsset } from '../data.js';
-import { uiUrl } from './assetUrls.js';
+import { uiUrl, effectIconUrl } from './assetUrls.js';
 import { reducedMotion } from './device.js';
 import { serverNow } from '../store.js';
 import { isCombatPhase, isBossPhase, prepCapsuleLabel, bossFrac, bossPctText, fmtNum, shopBlockReason } from './gameLogic.js';
 import { overtimeState, overtimeDrainPerSec, remainAt } from './matchStatus.js';
 import { hotkeyLabelOf } from './settings.js';
-import { t, tParts, N_ } from '../../../shared/i18n.js';
+import { t, tParts, tName, N_ } from '../../../shared/i18n.js';
 import { UnofficialMark, ruleLine } from './pluginTag.js';
 import { TestMark } from './testConsole.js';
+import { effectDesc, bountyCounterText } from './effectsList.js';
 
 const cx = (...p) => p.flat().filter(Boolean).join(' ');
+
+/**
+ * 快捷键标签的中文写法：`Space` 在 HUD 上显示「空格」（设置 → 快捷键里的键位名仍是 Space，只改玩家读到的字；
+ * 别的键 R / F / W 照旧）。2026-11-04 视觉验收：准备就绪按钮里那枚小字是 `Space`，看着像误写的英文。
+ */
+const keyText = (key) => (key === 'Space' ? t('空格') : key);
+
+/**
+ * 效果种类 → 中文名（ui/effectsList.js 的 KIND 同口径；那边的小标写死英文 `EFFECTS`，所以效果列在这里自渲染）。
+ */
+const EFFECT_KIND = {
+  band: N_('策略'),
+  choice: N_('机变'),
+  team: N_('团队增益'),
+  item: N_('道具'),
+  garrison: N_('特质'),
+};
 
 /**
  * 观战席 capsule of the in-match top bar (GitHub #120, PR #120 by @salt-fishes; the spectator seats of community report #26):
@@ -362,7 +380,7 @@ export function ReadyToggle({ priv, onToggle, busy, readyCount, total }) {
       aria-pressed=${ready ? 'true' : 'false'} aria-describedby=${why ? 'readywrap-why' : undefined} onClick=${() => onToggle(!ready)}>
     <span class="readybtn__box">${ready ? html`<${Icon} name="check" />` : null}</span>
     <span class="readybtn__label">${ready ? t('取消准备') : t('准备就绪')}</span>
-    <kbd class="readybtn__key">${hotkeyLabelOf('ready')}</kbd>
+    <kbd class="readybtn__key">${keyText(hotkeyLabelOf('ready'))}</kbd>
   </button>`;
   return html`<div class="readywrap">
     ${reason ? html`<${Tooltip} text=${reason} placement="bottom">${btn}<//>` : btn}
@@ -409,7 +427,7 @@ export function OvertimeWarning({ ot }) {
   if (ot.state === 'pending') {
     return html`<div class="otwarn otwarn--pending" role="alert" data-state="pending">
       <${LocalSprite} name="icon_warn" class="otwarn__icon" fallback=${html`<${Icon} name="warn" class="otwarn__icon" />`} />
-      <span class="otwarn__tag">DOT</span>
+      <span class="otwarn__tag">${t('流失')}</span>
       <span class="otwarn__txt">${tParts('{n} 秒后全队生命值开始流失', { n: html`<b class="num">${ot.secs}</b>`, count: ot.secs })}</span>
     </div>`;
   }
@@ -417,7 +435,7 @@ export function OvertimeWarning({ ot }) {
     <span class="otwarn__blood">
       <${LocalSprite} name="blood_icon" class="otwarn__icon" fallback=${html`<${Icon} name="rook" class="otwarn__icon" />`} />
     </span>
-    <span class="otwarn__tag">DOT</span>
+    <span class="otwarn__tag">${t('流失')}</span>
     <span class="otwarn__txt">${tParts('超时 · 生命值 {n}/秒', { n: html`<b class="num">−${ot.perSec}</b>` })}</span>
     ${ot.lost > 0 ? html`<span class="otwarn__lost">${t('已流失')} <b class="num">${ot.lost}</b></span>` : null}
     <span key=${ot.secs} class="otwarn__tick num" aria-hidden="true">−${ot.perSec}</span>
@@ -435,7 +453,7 @@ function PauseGlyph() {
  */
 export function PauseButton({ paused, busy = false, onToggle }) {
   const label = paused ? t('继续作战') : t('暂停');
-  const key = hotkeyLabelOf('ready'); // the ready key pauses a solo battle (Space unless rebound: 设置 → 快捷键)
+  const key = keyText(hotkeyLabelOf('ready')); // the ready key pauses a solo battle (Space unless rebound: 设置 → 快捷键)
   return html`<${Tooltip} text=${paused ? t('继续作战（{key}）', { key }) : t('暂停作战（{key}）', { key })} placement="bottom">
     <button type="button" class=${cx('pausebtn', 'tapx', paused && 'is-on', busy && 'is-busy')} aria-pressed=${paused ? 'true' : 'false'}
         aria-label=${label} disabled=${busy} data-testid="pause" onClick=${() => onToggle?.()}>
@@ -464,7 +482,16 @@ export function TopBar({ pub, priv, conn, hud, total, drawer, onExit, onDrawer, 
   bounty = null, onBounty = null }) {
   const phase = pub?.phase;
   const boss = isBossPhase(phase);
-  const lp = boss && Number.isFinite(pub?.teamLp) ? pub.teamLp : Number.isFinite(priv?.lp) ? priv.lp : null;
+  // 对抗模式（2V2 / 4V4）：共享血池——顶栏显示本队池，并在难度旁列出两队剩余 + 狩猎期起始回合。
+  const versus = Number.isFinite(pub?.teamSize) && !!pub?.teamLps && typeof pub.teamLps === 'object';
+  const myTeam = versus && Array.isArray(pub?.players)
+    ? (() => { const s = pub.players.find((p) => p.playerId === myId)?.team; return s === 'red' ? 0 : s === 'blue' ? 1 : null; })()
+    : null;
+  const myRole = versus && Array.isArray(pub?.players) ? (pub.players.find((p) => p.playerId === myId)?.role || null) : null;
+  const poolOf = (t) => (versus && Number.isFinite(Number(pub.teamLps[t])) ? Math.max(0, Math.round(Number(pub.teamLps[t]))) : null);
+  const lp = versus && poolOf(myTeam) != null
+    ? poolOf(myTeam)
+    : boss && Number.isFinite(pub?.teamLp) ? pub.teamLp : Number.isFinite(priv?.lp) ? priv.lp : null;
   // normal rounds: the leaks of the own battle so far (boss rounds: the team LP above already moves live)
   const pending = !boss && Number.isFinite(lp) && live && live.pending > 0 ? Math.min(lp, live.pending) : 0;
   const hidden = phase === PHASE.HIDDEN_CORE || (Number.isFinite(pub?.lastRound) && pub.round > pub.lastRound);
@@ -494,8 +521,12 @@ export function TopBar({ pub, priv, conn, hud, total, drawer, onExit, onDrawer, 
           <${SpectatorPill} spectators=${spectators} myId=${myId} isHost=${isHost} onRemove=${onRemoveSpectator} />
         </div>
         ${pub?.difficulty ? html`<${DifficultyTag} difficulty=${pub.difficulty} size="sm" />` : null}
+        ${versus ? html`<span class="gtop__versus" data-testid="versus-info" title=${t('对抗模式：两队共享生命值，攻守每回合轮换')}>
+          <b class="gtop__vmode">${pub.teamSize}V${pub.teamSize}</b>
+          ${myRole ? html`<b class=${`gtop__vrole ${myRole === 'attack' ? 'is-attack' : 'is-defend'}`}>${myRole === 'attack' ? t('进攻') : t('防守')}</b>` : null}
+        </span>` : null}
         ${pub?.test ? html`<${TestMark} class="gtop__test" />` : null}
-        <${UnofficialMark} room=${room} compact=${true} class="gtop__mod" />
+        <${UnofficialMark} room=${room} class="gtop__mod" />
         ${ruleLine(room?.content?.rules) ? html`<span class="gtop__rules" data-testid="plugin-rules">${ruleLine(room?.content?.rules)}</span>` : null}
       </div>
     </div>
@@ -513,7 +544,7 @@ export function TopBar({ pub, priv, conn, hud, total, drawer, onExit, onDrawer, 
         <${PhaseCapsule} pub=${pub} hud=${hud} miss=${!boss && Number.isFinite(live?.left) ? live.left : null} />
         ${fx.kind && fx.kind !== 'enter' ? html`<${CapsuleScene} kind=${fx.kind} />` : null}
       </div>
-      <${LpTower} value=${lp} size="lg" tone=${lowLp ? 'danger' : boss ? 'team' : null} pending=${pending}
+      <${LpTower} value=${lp} size="lg" tone=${lowLp ? 'danger' : boss || versus ? 'team' : null} pending=${pending}
         note=${pending > 0 && live?.unite ? t('联防中') : null} tip=${pendingTip(lp, pending, { unite: !!live?.unite, cap, left: live?.left ?? null })} />
       <${Tooltip} text=${btn.right.tip} placement="bottom">
         <${CheckBtn} sprite=${btn.right.sprite} cls=${cx('enemybtn', btn.right.grey && 'is-grey')} label=${btn.right.label}
@@ -524,8 +555,8 @@ export function TopBar({ pub, priv, conn, hud, total, drawer, onExit, onDrawer, 
     <div class="gtop__right">
       <div class="gtop__clock">
         ${frozenSecs != null
-          ? html`<${Countdown} seconds=${frozenSecs} total=${total ?? undefined} size="md" label="PAUSED" />`
-          : html`<${Countdown} deadline=${pub?.deadline} total=${total ?? undefined} size="md" />`}
+          ? html`<${Countdown} seconds=${frozenSecs} total=${total ?? undefined} size="md" label=${t('暂停')} />`
+          : html`<${Countdown} deadline=${pub?.deadline} total=${total ?? undefined} size="md" label=${t('倒计时')} />`}
         ${pause && (pause.show || pause.paused) ? html`<${PauseButton} paused=${!!pause.paused} busy=${pause.busy} onToggle=${pause.onToggle} />` : null}
       </div>
       ${bounty ? html`<button type="button" data-testid="bounty-time" class=${cx('gtop__bounty',
@@ -547,7 +578,34 @@ export function TopBar({ pub, priv, conn, hud, total, drawer, onExit, onDrawer, 
 export function DpCounter({ dp }) {
   if (!Number.isFinite(dp)) return null;
   return html`<div class="dpbox" title=${t('部署费用（再部署消耗）')}>
-    <${GIcon} name="dp" class="dpbox__icon" /><b class="num">${Math.floor(dp)}</b><${MicroLabel}>COST</${MicroLabel}>
+    <${GIcon} name="dp" class="dpbox__icon" /><b class="num">${Math.floor(dp)}</b><${MicroLabel}>${t('费用')}</${MicroLabel}>
+  </div>`;
+}
+
+/**
+ * 右侧「效果」列（`m.private.effects`，观战时是看的那位的 `field.effects`）。为什么不直接用 ui/effectsList.js：
+ * 那个组件的小标写死英文 `EFFECTS`，而且「只有 desc、没有 name」的条目也会出一枚无名图标 —— 一个英文标题底下
+ * 只挂一个空图标，读起来像调试残留（2026-11-04 第四轮视觉验收）。本插件的覆盖表里没有 effectsList.js，所以这里
+ * 自渲染同一套结构（类名 `.effects` / `.effect` / `.efftip` 不变，样式照旧）：
+ *   1) 小标是中文「效果」；
+ *   2) 只保留**有名称**的条目；一条都没有时整块返回 null（调用方也不再渲染外壳）。
+ * @param {{ effects: any[]|null }} props
+ */
+export function EffectsColumn({ effects }) {
+  const list = (Array.isArray(effects) ? effects : []).filter((e) => e && typeof e === 'object' && String(e.name || '').trim());
+  if (!list.length) return null;
+  const assets = data.get('assets');
+  return html`<div class="effects" aria-label=${t('生效中的效果')}>
+    <${MicroLabel}>${t('效果')}</${MicroLabel}>
+    ${list.slice(0, 10).map((e, i) => html`<${Tooltip} key=${e.id ?? i} placement="bottom" text=${html`<div class="efftip">
+        <b>${tName(e.name)}</b><span class="efftip__kind">${EFFECT_KIND[e.iconKind] ? t(EFFECT_KIND[e.iconKind]) : ''}${e.counterText ? ` · ${bountyCounterText(e)}` : e.counter != null ? ` · ${e.counter}` : ''}</span>
+        <${RichText} as="p" text=${effectDesc(e)} />
+      </div>`}>
+      <span class=${`effect effect--${e.iconKind || 'x'}`}>
+        <${Img} src=${effectIconUrl(assets, e)} fallback=${html`<${GIcon} name="bolt" />`} />
+        ${e.counter != null && e.counter !== '' ? html`<b class="effect__n num">${e.counter}</b>` : null}
+      </span>
+    <//>`)}
   </div>`;
 }
 

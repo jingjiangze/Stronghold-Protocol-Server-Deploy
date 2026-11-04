@@ -1,3 +1,6 @@
+import {withoutContractBountyHp} from '../../../../shared/contractBountyEconomy.js';
+import {withEventActor} from '../../eventTeams.js';
+import {fixedLeader} from '../../../../shared/leaderSpawns.js';
 // server/sim/content/enemies/helpers.js — shared helpers of the enemy kits (split from content/enemies.js; the module
 // map is in its header): the constants several families use, the per-battle state, the ability bookkeeping (abOf /
 // attach / dispatch, T, canCast …) and the selection and damage helpers (elem, hurt, areaAllies & friends, zone,
@@ -107,9 +110,10 @@ export function abOf(b, e) {
  * slot's skill clip, render/vfx/skillfx.js: that skill's official effects for the window). No gameplay effect: no state,
  * no random draw (DESIGN §8.2; golden counts the event, nothing else moves).
  */
-export function castSlot(b, e, s) {
+export function castSlot(b, e, s, duration = null) {
   if (!b || !e || !s || !Number.isInteger(s.slot)) return;
-  const d = s.bb && typeof s.bb.duration === 'number' && s.bb.duration > 0 ? Math.round(s.bb.duration * 100) / 100 : 0;
+  const value=Number.isFinite(duration)&&duration>=0?duration:s.bb?.duration;
+  const d = typeof value === 'number' && value > 0 ? Math.round(value * 100) / 100 : 0;
   b._ev(d > 0 ? ['cast', e.id, s.slot, d] : ['cast', e.id, s.slot]);
 }
 
@@ -126,7 +130,7 @@ export function attach(b, e, list) {
 }
 
 function safe(b, e, fn) {
-  try { return fn(); } catch (err) { b._handlerError('content:enemies', e, err); return undefined; }
+  try { return withEventActor(b,e,fn); } catch (err) { b._handlerError('content:enemies', e, err); return undefined; }
 }
 
 function dispatch(b, e, name, c) {
@@ -137,7 +141,7 @@ function dispatch(b, e, name, c) {
     const f = a[name];
     if (!f) continue;
     if (a.sil && e.s.flags.silence) continue;
-    try { if (f.call(a, c, b, e, a, ab)) any = true; } catch (err) { b._handlerError(`enemies:${name}`, e, err); }
+    try { if (withEventActor(b,e,()=>f.call(a, c, b, e, a, ab))) any = true; } catch (err) { b._handlerError(`enemies:${name}`, e, err); }
   }
   return any;
 }
@@ -177,6 +181,14 @@ export function elem(b, src, tgt, el, amount, { ignoreSelect = false, tags = [] 
 export function hurt(b, src, tgt, amount, type = 'phys', { canDodge = false, tags = [], isSkill = true, ignoreSelect = false } = {}) {
   if (!tgt || !tgt.alive || !(amount > 0)) return 0;
   return b.dealDamage(src, tgt, { amount, type, canDodge, isSkill, ignoreSelect, tags: ['enemyAbility', ...tags] });
+}
+
+/** Native attack-shaped ability cue only: no damage, attack hooks, SP, cooldown or attack statistics. */
+export function abilityAttackFx(b,source,target,kind='none'){
+ if(source?.alive&&target?.alive)b._ev(['atk',source.id,target.id,kind]);
+}
+export function abilityTargetFx(b,source,target,duration=null){
+ if(source?.alive&&target?.alive)b.fx('enemySkillTarget',{id:source.id,target:target.id,x:target.x,y:target.y,...(duration>0?{dur:duration}:{})});
 }
 
 /** Allies whose tile is within `n` of (r, c): 'plus' = Manhattan (周围四格), 'box' = Chebyshev (周围8格). */
@@ -292,6 +304,7 @@ export function stayRoute(e, secs = 99999) {
  * `bountyCoins` is the coin copy the match writes for 联防. The parent object is left as it is.
  */
 function modsWithoutBounty(mods) {
+  mods=withoutContractBountyHp(mods);
   if (!mods || typeof mods !== 'object') return mods ?? null;
   if (mods.bountyId == null && mods.bountyCoins == null) return mods;
   const copy = { ...mods };
@@ -305,12 +318,13 @@ export function spawnChildren(b, parent, key, n, opts = {}) {
   const out = [];
   const route = opts.route ?? remainingRoute(parent);
   const cnt = Math.max(0, Math.min(20, Math.floor(n)));
-  const mods = modsWithoutBounty(opts.mods ?? parent.mods ?? null);
+  let mods = modsWithoutBounty(opts.mods ?? parent.mods ?? null);
+  if(fixedLeader(parent.def?.raw)||parent.mods?.fixedLeaderChild)mods={...mods,fixedLeaderChild:1};
   for (let i = 0; i < cnt; i++) {
     const off = cnt > 1 ? (i - (cnt - 1) / 2) * 0.2 : 0;
     const pos = opts.pos ?? [parent.y, parent.x + off];
     const c = b.spawnEnemy(key, {
-      pos, route, mods, tag: opts.tag ?? null, countInTotal: opts.countInTotal,
+      pos, route, mods, tag: opts.tag ?? null, countInTotal: opts.countInTotal, dir: opts.dir,
       ownerPlayerId: parent.ownerId ?? null, sourcePlayerId: parent.sourcePlayerId ?? null,
     });
     if (c) out.push(c);
@@ -426,3 +440,15 @@ export {
   BOOM_RADIUS, POLLUTION_INTERVAL, STEALTH_RESTORE_BY_KEY, DUCK_STEALTH_RESTORE, TEA_SPLASH_RADIUS, SHELL_SPLASH_RADIUS, stOf, safe, dispatch,
   num, auraBuff, watchDeaths, onTerrain,
 };
+
+// --- 0.3.3 旧测试兼容：0.4.3 用 setHits/hitCount 取代 ---
+export function grantHitShield(battle, enemy, count) {
+  if (!Number.isFinite(count) || !(count > 0)) return null;
+  const key = 'ab:hitShield';
+  const held = enemy.findBuff(key);
+  if (held) { held.shieldHits = Math.max(held.shieldHits, count); enemy.markDirty(); return held; }
+  return battle.addBuff(enemy, { key, shieldHits: count, shieldType: ['phys', 'arts'],
+    onRemove({ buff }) {
+      if (!(buff.shieldHits > 0)) battle.fx('shieldBreak', { x: enemy.x, y: enemy.y, id: enemy.id });
+    } });
+}

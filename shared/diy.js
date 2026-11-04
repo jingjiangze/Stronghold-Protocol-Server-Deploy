@@ -25,10 +25,13 @@
 // Which operators have a kit (a pick without one is not offered) is the sim's kit registry
 // (server/sim/content/kits/index.js KITTED_CHARS), passed in as `kitted`.
 
+import { operatorDefaultModule } from './operatorLoadoutDefaults.js';
 import { composeUnitRecord, unitForm, statusKey } from './standIn.js';
 import { atPotential } from './potential.js';
 
 /** The tiers that have 自选 slots. */
+// Owner 2026-10-20: five normal-equivalent copies per personal slot, never scaled by player count.
+export const DIY_COPIES = 5;
 export const DIY_TIERS = Object.freeze([5, 6]);
 
 /**
@@ -181,7 +184,9 @@ export function checkDiyPick(slotId, pick, data) {
   } else {
     if (want === null) return { error: `${charId}: an owned pick needs a skill index` };
     skillIndex = want;
-    uniEquipId = wantMod;
+    // Omitted means the operator default; explicit null / 'none' remains an unequipped choice.
+    uniEquipId = pick.uniEquipId === undefined
+      ? operatorDefaultModule(charId, (forms[1].modules ?? []).filter(isDiyModule), wantMod) : wantMod;
   }
   if (!forms.every((f) => (f.skills ?? []).some((s) => s && s.index === skillIndex))) return { error: `${charId}: no skill ${skillIndex}` };
   const elite = forms[1];

@@ -1,0 +1,1824 @@
+{
+  "lock": 1,
+  "id": "avemujica-look",
+  "version": "1.8.24",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "README.md": {
+      "sha256": "63e90a34133e0a905300976b9d47a1cc78408e997a36c23483e603ab4fc8aebf",
+      "bytes": 352
+    },
+    "assets.json": {
+      "sha256": "2b2c31e4bcf9179a2135b40f70faeb90158441a3db6bc1021cfb22e9765069a3",
+      "bytes": 14776
+    },
+    "files/assets/band/band_wuyouyoumeng.png": {
+      "sha256": "dc8c98c91b7e25afffc62bcdec2361d4f77be75af12042c02fe935ce1ac6c22c",
+      "bytes": 48590
+    },
+    "files/assets/bond/icon_aveMujica.png": {
+      "sha256": "efcc4ecc7993c5d403084ec569b541029c9e0a1e417f442eab1800e92c335511",
+      "bytes": 27235
+    },
+    "files/assets/char/avatar/char_4182_oblvns.png": {
+      "sha256": "f81d09c2950dc6beceef3cbd0534341d13e318dba74f5344842e1129978db09e",
+      "bytes": 61856
+    },
+    "files/assets/char/avatar/char_4182_oblvns_2.png": {
+      "sha256": "5cec24bd030d53c2f0fe142c901ad77ab5672843d849fc425db61573f4caf90e",
+      "bytes": 67747
+    },
+    "files/assets/char/avatar/char_4183_mortis.png": {
+      "sha256": "7ffa8312d860a18fdf31753e25e414185edfdc642d92c157b6f09f68a592ab67",
+      "bytes": 48143
+    },
+    "files/assets/char/avatar/char_4183_mortis_2.png": {
+      "sha256": "190774af2749a8f8da041732a584e0be450ac4b4baaa49b2c254be8e857d8aa1",
+      "bytes": 64344
+    },
+    "files/assets/char/avatar/char_4184_dolris.png": {
+      "sha256": "573315b9b9da45112582243261d0ec8548ef064c846340a8092649fbdc7dd66d",
+      "bytes": 52054
+    },
+    "files/assets/char/avatar/char_4184_dolris_2.png": {
+      "sha256": "a52e13ecdffa51404dcf4f3d8551de2f21fc538d428c8eec68da31c137818ea3",
+      "bytes": 62499
+    },
+    "files/assets/char/avatar/char_4185_amoris.png": {
+      "sha256": "54bdd7158c2bbf73cbf2797b4b59ad1346d97453574e5c5ca4961d6726b17ec4",
+      "bytes": 58617
+    },
+    "files/assets/char/avatar/char_4185_amoris_2.png": {
+      "sha256": "f417c028c6fb668d1c76ed6b212dcced09deef00daaf6bf610771e14e4639b02",
+      "bytes": 59919
+    },
+    "files/assets/char/avatar/char_4186_tmoris.png": {
+      "sha256": "6c3aa8828dd2514d6e54f1a90d36c23e44902ee9bb1eb0af71ee052a2e6104f8",
+      "bytes": 53452
+    },
+    "files/assets/char/avatar/char_4186_tmoris_2.png": {
+      "sha256": "20eb6b7d11d2c5a2db1a6404b87b731f392054567b7f070c7a723371c65ca00b",
+      "bytes": 64498
+    },
+    "files/assets/char/portrait/char_4182_oblvns.png": {
+      "sha256": "c4b5ed3db5a4a545db7125f37d1fc189f7bf590b659409205fa5d6c334394856",
+      "bytes": 133813
+    },
+    "files/assets/char/portrait/char_4182_oblvns_2.png": {
+      "sha256": "0d6cc80aa6cc9fd4fc65ecf17dc2ec96c74ecc37dfb59e9018ff8d02efb28f4d",
+      "bytes": 127540
+    },
+    "files/assets/char/portrait/char_4183_mortis_1.png": {
+      "sha256": "16dc4f2bf8f8ccef2213f6683214ee8277a63cdc272d149b2bd56b09cb355504",
+      "bytes": 108377
+    },
+    "files/assets/char/portrait/char_4183_mortis_2.png": {
+      "sha256": "fb6a0b7aae4c9c67df8a9492ba236e2df9060ba6ae990fbc274744453a00806c",
+      "bytes": 130558
+    },
+    "files/assets/char/portrait/char_4184_dolris.png": {
+      "sha256": "077809eb88568660b4a3921460031737bf7968a375a228667abd31565a14eeed",
+      "bytes": 125690
+    },
+    "files/assets/char/portrait/char_4184_dolris_2.png": {
+      "sha256": "0ea0293e5363c0ee902d7823303eceb6c615500f7cb7063066bb3a7f8008d66e",
+      "bytes": 106544
+    },
+    "files/assets/char/portrait/char_4185_amoris.png": {
+      "sha256": "226150f7733f55d8283f61bc7806f1a3e133d06121ad96a779a544d1fc6283b6",
+      "bytes": 122551
+    },
+    "files/assets/char/portrait/char_4185_amoris_2.png": {
+      "sha256": "cadb1d95e035053505d3717db6068de04488320eaa54f41a0506b666466c3971",
+      "bytes": 114882
+    },
+    "files/assets/char/portrait/char_4186_tmoris.png": {
+      "sha256": "5fd56f0c9ea6fd364f4389b9b322c4d8bd7d32cc592d965bcae6cafbbeefe539",
+      "bytes": 118167
+    },
+    "files/assets/char/portrait/char_4186_tmoris_2.png": {
+      "sha256": "fbecbb6774a6da6508fbad82408daec2d30c26d84a5099cb18f222c70af50bd7",
+      "bytes": 135159
+    },
+    "files/assets/skill/skchr_am_amoris_1.png": {
+      "sha256": "f0d851f46441f5ba9e3bfd4e9133432f5093d0db838858f3ca9186daaa19691c",
+      "bytes": 30930
+    },
+    "files/assets/skill/skchr_am_amoris_2.png": {
+      "sha256": "ea523d5f175032d99fce11bba4e3a96a3cbffabafd96b6ebb626b5694903c185",
+      "bytes": 31839
+    },
+    "files/assets/skill/skchr_am_doloris_1.png": {
+      "sha256": "dc3f923ee12c18c4ed01f138f2dba08c46d7995b7c06bf612edbf4b94798347a",
+      "bytes": 30406
+    },
+    "files/assets/skill/skchr_am_doloris_2.png": {
+      "sha256": "2eb98ccb51c1fd26138be0ba3dcc240f3d1edd6fc1b498e1ee727da903b67c88",
+      "bytes": 32918
+    },
+    "files/assets/skill/skchr_am_oblivionis_1.png": {
+      "sha256": "b28dc884ceaf44366152ed7127e54f2cd6d4cbe9f44eb436309b76cf708872fe",
+      "bytes": 32740
+    },
+    "files/assets/skill/skchr_am_oblivionis_2.png": {
+      "sha256": "f68338b8eab3b65c08e75cde8b011065faca27286c8461f90777c991ff40951b",
+      "bytes": 34883
+    },
+    "files/assets/skill/skchr_am_oblivionis_3.png": {
+      "sha256": "e3144919697cd8a526cd94213ce216be32e2fb1ed410c5c7673faace289637f1",
+      "bytes": 33037
+    },
+    "files/assets/skill/skchr_am_timoris_1.png": {
+      "sha256": "28a77b81f3a356d8518da389b90a5c82e10cb68a7722e43bc7d8d373e4d0fdce",
+      "bytes": 30218
+    },
+    "files/assets/skill/skchr_am_timoris_2.png": {
+      "sha256": "fe4ad9ad4ad049adb8509a5b91bad83a848f301dcb35400c24c4016c0bd5a35a",
+      "bytes": 32129
+    },
+    "files/assets/skill/skchr_mortis_1.png": {
+      "sha256": "24fe8b994516653c69b93ee8f08c2c31718441fa77ca3ad14c8b7a0fe021e5fb",
+      "bytes": 27761
+    },
+    "files/assets/skill/skchr_mortis_2.png": {
+      "sha256": "4f32cb0ac795505a6c4e33fa866e37357257d1f463e61bfeeeb595aee2e9dc20",
+      "bytes": 30759
+    },
+    "files/assets/skin/op/char_4182_oblvns/avatar.png": {
+      "sha256": "57931cbfaac64d44d7ed33d3b4c41d5b7468c103720c1f0e4de30dcadd2d738c",
+      "bytes": 68635
+    },
+    "files/assets/skin/op/char_4182_oblvns/front/char_4182_oblvns_avemujica_1.atlas": {
+      "sha256": "1e11003b25069e27c0bd72b303b3d78eba63425eacbda99cec5ff1e3e73b8127",
+      "bytes": 11363
+    },
+    "files/assets/skin/op/char_4182_oblvns/front/char_4182_oblvns_avemujica_1.png": {
+      "sha256": "8dfb13852b2fa2e9ebab56d2eb7b3e8f133b608c64f8836c49ab37e123b4a14f",
+      "bytes": 267744
+    },
+    "files/assets/skin/op/char_4182_oblvns/front/char_4182_oblvns_avemujica_1.skel": {
+      "sha256": "277efc237e29b944ace1ebdab5214ba0368bce4ec47b18cebf2457727f3d6093",
+      "bytes": 935689
+    },
+    "files/assets/skin/op/char_4182_oblvns/portrait.png": {
+      "sha256": "6d6d279741b40ba4c963d660c12474abb9ed4813ad809d2dbebbe8dfa6aa35c1",
+      "bytes": 127111
+    },
+    "files/assets/skin/op/char_4183_mortis/avatar.png": {
+      "sha256": "ce90229a821fe7e0a23787f07d0e6a2da43ee205f2dae909629b33141ba87248",
+      "bytes": 72596
+    },
+    "files/assets/skin/op/char_4183_mortis/front/char_4183_mortis_avemujica_1.atlas": {
+      "sha256": "6412aef5378bd7aab1ca33cc914c38eb135dab167161def4a98f3b36af258780",
+      "bytes": 21932
+    },
+    "files/assets/skin/op/char_4183_mortis/front/char_4183_mortis_avemujica_1.png": {
+      "sha256": "c90ed26b9bfe5641ec1088729defb166fa9291ea01e89e33687c269601398df6",
+      "bytes": 402444
+    },
+    "files/assets/skin/op/char_4183_mortis/front/char_4183_mortis_avemujica_1.skel": {
+      "sha256": "725dc77d31fafdfe5a83018c63dc95973df24e52f6519dd5f62385c68ce867b4",
+      "bytes": 736831
+    },
+    "files/assets/skin/op/char_4183_mortis/portrait.png": {
+      "sha256": "a0e62a03ab690df1dbdb3aba78ece2600333eb3f49616c9138607516a01afe40",
+      "bytes": 131746
+    },
+    "files/assets/skin/op/char_4184_dolris/avatar.png": {
+      "sha256": "c057404868468f78e46001099a1cff7537cffc25b9e78bbc2897c00b7e082404",
+      "bytes": 62541
+    },
+    "files/assets/skin/op/char_4184_dolris/front/char_4184_dolris_avemujica_1.atlas": {
+      "sha256": "7111018e00e8ed98aecbeaef212e7e8fc51f9d3840e638300d3eece896c6ad86",
+      "bytes": 11953
+    },
+    "files/assets/skin/op/char_4184_dolris/front/char_4184_dolris_avemujica_1.png": {
+      "sha256": "43b9dcd3226cfc09046faa61cb538235c79cef92f51fd8b3ac4bb2bac9686ddb",
+      "bytes": 186268
+    },
+    "files/assets/skin/op/char_4184_dolris/front/char_4184_dolris_avemujica_1.skel": {
+      "sha256": "6fbd6b38084e727aee6231a3c6284484e4775c8b6617ab5e8324231b6b72af7c",
+      "bytes": 279258
+    },
+    "files/assets/skin/op/char_4184_dolris/portrait.png": {
+      "sha256": "8b0c82ab0ccc7214fad37b30a7eacfc483876ebe5646f0de4d7e624d83e3a69d",
+      "bytes": 118612
+    },
+    "files/assets/skin/op/char_4185_amoris/avatar.png": {
+      "sha256": "241ea76db1b093476387a5a139695749e49df6953e8e171d3c6e762de85aff85",
+      "bytes": 70097
+    },
+    "files/assets/skin/op/char_4185_amoris/front/char_4185_amoris_avemujica_1.atlas": {
+      "sha256": "4bbad5b2c9d066e3a57447efbb6e40a5e08732422e00326a0d4ec4f8d8ba7e1a",
+      "bytes": 13313
+    },
+    "files/assets/skin/op/char_4185_amoris/front/char_4185_amoris_avemujica_1.png": {
+      "sha256": "aa05c2b52d6c741d0277c078ce0a18f3da63d7aeac020e16147a94c6d0f118c9",
+      "bytes": 385888
+    },
+    "files/assets/skin/op/char_4185_amoris/front/char_4185_amoris_avemujica_1.skel": {
+      "sha256": "949e7140fe1403ec972cbd9cc1e394a39a3a5a9f343ea209afac881da94d4368",
+      "bytes": 532298
+    },
+    "files/assets/skin/op/char_4185_amoris/portrait.png": {
+      "sha256": "5aec8aa299861a409b33100de6c3c1111747b1331cd9defc79551dddcc05073a",
+      "bytes": 128840
+    },
+    "files/assets/skin/op/char_4186_tmoris/avatar.png": {
+      "sha256": "ec878f31584ebe9bd0d265d6ba5cfaacc93c127cb79379e06ce2851d45dd609b",
+      "bytes": 62349
+    },
+    "files/assets/skin/op/char_4186_tmoris/front/char_4186_tmoris_avemujica_1.atlas": {
+      "sha256": "79e9ab0ec293c9625a1a8fbd5bda922bd7cdabb6b509514cc605b856b3093f3b",
+      "bytes": 8842
+    },
+    "files/assets/skin/op/char_4186_tmoris/front/char_4186_tmoris_avemujica_1.png": {
+      "sha256": "36bfcfb65693475fb83fffb259e9852d520fb54408a022577e2b594299147767",
+      "bytes": 153877
+    },
+    "files/assets/skin/op/char_4186_tmoris/front/char_4186_tmoris_avemujica_1.skel": {
+      "sha256": "155c47ef5ec310d534b4cb3bde9c9687d06476211841d6501590e8a8c58528df",
+      "bytes": 334107
+    },
+    "files/assets/skin/op/char_4186_tmoris/portrait.png": {
+      "sha256": "0e6f82f435ad7ad983999450c6f6f1984515ffe90eb268a48271551b0bf062ba",
+      "bytes": 123923
+    },
+    "files/assets/spine/op/char_4182_oblvns/back/char_4182_oblvns.atlas": {
+      "sha256": "2806e2bd11ffa9372d5829df591fd9821936057c94383121e72d6f4f7564d3e9",
+      "bytes": 19845
+    },
+    "files/assets/spine/op/char_4182_oblvns/back/char_4182_oblvns.png": {
+      "sha256": "b0e6f16fd24c15a68d48d5f15d7d409dfc43b3caa983843dfb2f35b0effab94e",
+      "bytes": 332918
+    },
+    "files/assets/spine/op/char_4182_oblvns/back/char_4182_oblvns.skel": {
+      "sha256": "27670b2ef314387f4d4b51896e1f67b3d07b32fc858b6ada8bdadecd7169160d",
+      "bytes": 1002567
+    },
+    "files/assets/spine/op/char_4182_oblvns/front/char_4182_oblvns.atlas": {
+      "sha256": "2806e2bd11ffa9372d5829df591fd9821936057c94383121e72d6f4f7564d3e9",
+      "bytes": 19845
+    },
+    "files/assets/spine/op/char_4182_oblvns/front/char_4182_oblvns.png": {
+      "sha256": "b0e6f16fd24c15a68d48d5f15d7d409dfc43b3caa983843dfb2f35b0effab94e",
+      "bytes": 332918
+    },
+    "files/assets/spine/op/char_4182_oblvns/front/char_4182_oblvns.skel": {
+      "sha256": "42bd0999dceb3157cdeab8d896163519cd8fafd93d702d10b83014934bafa3d8",
+      "bytes": 1071707
+    },
+    "files/assets/spine/op/char_4183_mortis/back/char_4183_mortis.atlas": {
+      "sha256": "2ddf930210896b248ff01ec0182b0579741274caf64f281c2c5b36c3a9ba9ed3",
+      "bytes": 14662
+    },
+    "files/assets/spine/op/char_4183_mortis/back/char_4183_mortis.png": {
+      "sha256": "e44459b8858fb8560b9f9672712bf3bf340a872c52ba4bda5770a86ae1192bf3",
+      "bytes": 229162
+    },
+    "files/assets/spine/op/char_4183_mortis/back/char_4183_mortis.skel": {
+      "sha256": "972fb5a075dcd3df1f83941af06fb5ffa3ff151dd24d897bf7158c24335340fa",
+      "bytes": 319847
+    },
+    "files/assets/spine/op/char_4183_mortis/front/char_4183_mortis.atlas": {
+      "sha256": "2ddf930210896b248ff01ec0182b0579741274caf64f281c2c5b36c3a9ba9ed3",
+      "bytes": 14662
+    },
+    "files/assets/spine/op/char_4183_mortis/front/char_4183_mortis.png": {
+      "sha256": "e44459b8858fb8560b9f9672712bf3bf340a872c52ba4bda5770a86ae1192bf3",
+      "bytes": 229162
+    },
+    "files/assets/spine/op/char_4183_mortis/front/char_4183_mortis.skel": {
+      "sha256": "6cd512fb51f9828f678d92a88af9f0467f2ceb6ce210204cd90e9af2a7df4e27",
+      "bytes": 399993
+    },
+    "files/assets/spine/op/char_4184_dolris/front/char_4184_dolris.atlas": {
+      "sha256": "2ee110bfa7d469db2b247859574b6c37d3b8974c4ea250341475ac9f7e715bf9",
+      "bytes": 11015
+    },
+    "files/assets/spine/op/char_4184_dolris/front/char_4184_dolris.png": {
+      "sha256": "cd31b1f258403ba7ebfcf857ac9d9fcf4d28c2a6393ec757b462dd83d9508ad5",
+      "bytes": 129587
+    },
+    "files/assets/spine/op/char_4184_dolris/front/char_4184_dolris.skel": {
+      "sha256": "802f881d6de4c2b3b4a93d15e390ccd19fcf0ea103d776dfcf27f76b78c1fd2c",
+      "bytes": 228694
+    },
+    "files/assets/spine/op/char_4185_amoris/back/char_4185_amoris.atlas": {
+      "sha256": "ae2ef967fc0a0dc2c75e78c719c68903e453b2772e6c56707bf7b4b85ccd25d3",
+      "bytes": 12603
+    },
+    "files/assets/spine/op/char_4185_amoris/back/char_4185_amoris.png": {
+      "sha256": "b6fc24fd571b7717b18de959a6a96daeaf1e33bdb2f200e69f16e25ee500674c",
+      "bytes": 542356
+    },
+    "files/assets/spine/op/char_4185_amoris/back/char_4185_amoris.skel": {
+      "sha256": "77fad82a3f33a24d9be72b40004def3a84d43b316edd0d849b764da5b1d231e4",
+      "bytes": 260691
+    },
+    "files/assets/spine/op/char_4185_amoris/front/char_4185_amoris.atlas": {
+      "sha256": "7e244c18482a8d8c11f6a3f10c9206931d075a9a23096f784a8e56b210dcd229",
+      "bytes": 16860
+    },
+    "files/assets/spine/op/char_4185_amoris/front/char_4185_amoris.png": {
+      "sha256": "53a2b834222a4a17bc8ce030a8cdae2222746e1b8c3b7973a842be3b6b29422f",
+      "bytes": 557729
+    },
+    "files/assets/spine/op/char_4185_amoris/front/char_4185_amoris.skel": {
+      "sha256": "b5d7a75ab219cbf9830fb2c4784bbed2fc22af90c873e1e273a161cd0b653cbe",
+      "bytes": 308759
+    },
+    "files/assets/spine/op/char_4186_tmoris/back/char_4186_tmoris.atlas": {
+      "sha256": "5b9b0a4e136c9c9a6ec1fcbf2f1a6edfc514b50116ad460ea807547d26b7e23e",
+      "bytes": 4697
+    },
+    "files/assets/spine/op/char_4186_tmoris/back/char_4186_tmoris.png": {
+      "sha256": "8d128063ba4a9f8b1b06d65959e132649e74e56d34f2ff2c0222f140ea057307",
+      "bytes": 82165
+    },
+    "files/assets/spine/op/char_4186_tmoris/back/char_4186_tmoris.skel": {
+      "sha256": "3d8634d27f3ed65771b6ea00bfd2c251f5fe2655239e290eef47ccb084b343ea",
+      "bytes": 138257
+    },
+    "files/assets/spine/op/char_4186_tmoris/front/char_4186_tmoris.atlas": {
+      "sha256": "ac208fe98996cab56d9da14584097f1ef62185d4c602aae625d3cd8b1ac09d46",
+      "bytes": 7830
+    },
+    "files/assets/spine/op/char_4186_tmoris/front/char_4186_tmoris.png": {
+      "sha256": "ab2f1e7304768d8e0d896bb70a4d30cfe747cfa015d07fb8316c1c86b5a873b0",
+      "bytes": 105026
+    },
+    "files/assets/spine/op/char_4186_tmoris/front/char_4186_tmoris.skel": {
+      "sha256": "40dbd12bda928b6ee014e3a356abb1a64dda3b25839d1f1d65655f13cde861fa",
+      "bytes": 208277
+    },
+    "files/assets/voice/jp/char_4182_oblvns/cn_019.mp3": {
+      "sha256": "27c3dd34d897931bd7eb6f4f4c69f68676dda05f39aa31953e08d514e8525ef5",
+      "bytes": 27603
+    },
+    "files/assets/voice/jp/char_4182_oblvns/cn_020.mp3": {
+      "sha256": "706c64c99f70d65f7aae5751a315eea25518a2e9dc1203726b31b3e0536187b7",
+      "bytes": 8168
+    },
+    "files/assets/voice/jp/char_4182_oblvns/cn_021.mp3": {
+      "sha256": "8d5ed2ba2c1a798e94ed8bb4b33194654d1e4b09b0cc36a5c5b32dbd7885a02a",
+      "bytes": 43485
+    },
+    "files/assets/voice/jp/char_4182_oblvns/cn_022.mp3": {
+      "sha256": "e0d411c82a28cdeda605700b6ef1db7072e8452577ddebf080da6148993726aa",
+      "bytes": 20080
+    },
+    "files/assets/voice/jp/char_4182_oblvns/cn_023.mp3": {
+      "sha256": "a8e2fda9847796560f322890e3826207dc7c93bf8cafef3911029a3d9c331d7b",
+      "bytes": 11720
+    },
+    "files/assets/voice/jp/char_4182_oblvns/cn_024.mp3": {
+      "sha256": "a1c12fdcfb7a7b4d4ac83602fb6bfe3cc59e7ed0a53a29184022d6abb3a340f7",
+      "bytes": 15691
+    },
+    "files/assets/voice/jp/char_4182_oblvns/cn_025.mp3": {
+      "sha256": "f657cf4aaffd6476dddc452e087b2248f3021eada193fcbf29ffa6a1108a2abf",
+      "bytes": 22169
+    },
+    "files/assets/voice/jp/char_4182_oblvns/cn_026.mp3": {
+      "sha256": "e6d30307b80722023002d57ec46ba0495880a6d7f47bac34310ecd0bc64c68e9",
+      "bytes": 21333
+    },
+    "files/assets/voice/jp/char_4182_oblvns/cn_027.mp3": {
+      "sha256": "b3f6266ef8179f0cfeff5f5bf7d5d8bcfff37b5fa383a80ff8a12ac0fd78a09b",
+      "bytes": 26767
+    },
+    "files/assets/voice/jp/char_4182_oblvns/cn_028.mp3": {
+      "sha256": "99087c90e9b6e82f4443dee796ffdac502e364bd5fcc26a827cb5bf425644da1",
+      "bytes": 37216
+    },
+    "files/assets/voice/jp/char_4182_oblvns/cn_029.mp3": {
+      "sha256": "96b5f92da43cd8a2ba4231c8c53738a070ff21a64c10ef32b716f8c9ba19e063",
+      "bytes": 72742
+    },
+    "files/assets/voice/jp/char_4182_oblvns/cn_030.mp3": {
+      "sha256": "8b4ad032818ecf353d4012217fff7b6661beafab6d531a8e6abfedb7c1d65521",
+      "bytes": 35335
+    },
+    "files/assets/voice/jp/char_4182_oblvns/cn_031.mp3": {
+      "sha256": "444ec425d33a006ec088dd37f39718c7f6c8f15e50ec0e74d67ca510b1519aad",
+      "bytes": 9840
+    },
+    "files/assets/voice/jp/char_4182_oblvns/cn_032.mp3": {
+      "sha256": "64d91c11d629a1a9084db4d62c6396cc2bdd9992e68b93c9fdc8e48e6033935a",
+      "bytes": 31991
+    },
+    "files/assets/voice/jp/char_4183_mortis/cn_019.mp3": {
+      "sha256": "86b227d543c83a184d1e050a37fa6ce46559e2cee53ad90d1535dd82fba34341",
+      "bytes": 6914
+    },
+    "files/assets/voice/jp/char_4183_mortis/cn_020.mp3": {
+      "sha256": "57bdd238f35ec0598d0701f011d7fb483114403ce3fd1093baaabbae50b8368a",
+      "bytes": 15691
+    },
+    "files/assets/voice/jp/char_4183_mortis/cn_021.mp3": {
+      "sha256": "6a0b0c73eba7c301aea3ae8e08ecf56439697bf06c94afa5ed6a7b5c605012a4",
+      "bytes": 14855
+    },
+    "files/assets/voice/jp/char_4183_mortis/cn_022.mp3": {
+      "sha256": "9952bf2b789ad3bbfd6a61389e95c0470fb548fcc6517239384c78c32ad0b0f4",
+      "bytes": 10884
+    },
+    "files/assets/voice/jp/char_4183_mortis/cn_023.mp3": {
+      "sha256": "ce3481f445eb218cbcef3a239db7394577735e8f54863e473b5204cb34449b4c",
+      "bytes": 17363
+    },
+    "files/assets/voice/jp/char_4183_mortis/cn_024.mp3": {
+      "sha256": "7632dd423478daa187d9b7312dac139ab15ea6166538b074f00aa788cb409875",
+      "bytes": 14437
+    },
+    "files/assets/voice/jp/char_4183_mortis/cn_025.mp3": {
+      "sha256": "68e9ae6fa73b0808e058449ad731697cc5c29e722f6876ea23bb230fe1b75c15",
+      "bytes": 9213
+    },
+    "files/assets/voice/jp/char_4183_mortis/cn_026.mp3": {
+      "sha256": "dd4d06c36b621fffc64bf722d75fbc97512222d577dbd66c9997cf3f42447bc3",
+      "bytes": 22796
+    },
+    "files/assets/voice/jp/char_4183_mortis/cn_027.mp3": {
+      "sha256": "8ac7aa53624e8b5f289b6479c2dc3e7bfa6f8acd015c4a68715b9b1cc8783c05",
+      "bytes": 16318
+    },
+    "files/assets/voice/jp/char_4183_mortis/cn_028.mp3": {
+      "sha256": "678274275fd0d6755a2b5c7c24a90efaadd0819560e7ceb58c490da06701f2e8",
+      "bytes": 14437
+    },
+    "files/assets/voice/jp/char_4183_mortis/cn_029.mp3": {
+      "sha256": "3ed2dbfa76222f082b156a252a6e3c0b7ef14d4a2b4698fc2e9a1b215578f1af",
+      "bytes": 7332
+    },
+    "files/assets/voice/jp/char_4183_mortis/cn_030.mp3": {
+      "sha256": "f8031e56c942b24a8700546e0899a5eb255bbfe5232412c44bde5997b4bedd82",
+      "bytes": 26349
+    },
+    "files/assets/voice/jp/char_4183_mortis/cn_031.mp3": {
+      "sha256": "9659145cf9b95eb33b85b19ac4186ad898377970f845aed1efe3f548fe9e7849",
+      "bytes": 25304
+    },
+    "files/assets/voice/jp/char_4183_mortis/cn_032.mp3": {
+      "sha256": "4f9d70b0f276dc74eefa1145dc706b43080abd03eecb6c420980b737fc8c1f43",
+      "bytes": 21333
+    },
+    "files/assets/voice/jp/char_4184_dolris/cn_019.mp3": {
+      "sha256": "564305cec23ac1634cd51c62e55bff3b49ea924dd24587020a2b2f2c80ccd5e3",
+      "bytes": 6078
+    },
+    "files/assets/voice/jp/char_4184_dolris/cn_020.mp3": {
+      "sha256": "6a8de1b29aff3c46caf32b1f52aada4d86d9f1c4c3eab649507461985af6c988",
+      "bytes": 30947
+    },
+    "files/assets/voice/jp/char_4184_dolris/cn_021.mp3": {
+      "sha256": "a458554aaf0c8fc50f6103a2b8ef0c1c459cbf49ce59cd13a0c4dd79b6ae3487",
+      "bytes": 6078
+    },
+    "files/assets/voice/jp/char_4184_dolris/cn_022.mp3": {
+      "sha256": "05e655011de1768c497694b183f7d6fd421d31c074a0d951e3ab4ed24874968d",
+      "bytes": 17363
+    },
+    "files/assets/voice/jp/char_4184_dolris/cn_023.mp3": {
+      "sha256": "de31692e895f65cd885fcec146eb23043815eaa97cfdd379eb9c28cd3f2f2118",
+      "bytes": 21960
+    },
+    "files/assets/voice/jp/char_4184_dolris/cn_024.mp3": {
+      "sha256": "d81508b31357ce6fe968dbd61ef3e1c14a4c314739521400f7ecc9ce98e49986",
+      "bytes": 21333
+    },
+    "files/assets/voice/jp/char_4184_dolris/cn_025.mp3": {
+      "sha256": "e517850e246fd752dad4ad5cc93cf4f5ac4068d3fc4bd8d1dac82d4e9fcf6ab6",
+      "bytes": 5660
+    },
+    "files/assets/voice/jp/char_4184_dolris/cn_026.mp3": {
+      "sha256": "6c0465b101da0bc7fe0da1c43a029e2b0dc4954bf4802307a92ae81e1ef1cb3e",
+      "bytes": 24886
+    },
+    "files/assets/voice/jp/char_4184_dolris/cn_027.mp3": {
+      "sha256": "d08bd2142fc351fbb9471414b57e60d967ccfa5ed6fc57679a59601cfc6abcc4",
+      "bytes": 7959
+    },
+    "files/assets/voice/jp/char_4184_dolris/cn_028.mp3": {
+      "sha256": "aa91eb23fb210d0fa846faa3bd59d924d575d953608f1ba2896262517236844c",
+      "bytes": 8586
+    },
+    "files/assets/voice/jp/char_4184_dolris/cn_029.mp3": {
+      "sha256": "6a7ba8977038985c47294ef43dd21428d5a51bd45adedb812785f982f4d0983c",
+      "bytes": 47874
+    },
+    "files/assets/voice/jp/char_4184_dolris/cn_030.mp3": {
+      "sha256": "2ebefcedeeb095af3ada7372900277e4a656863f182895dcdd6412cbfce4b78c",
+      "bytes": 23005
+    },
+    "files/assets/voice/jp/char_4184_dolris/cn_031.mp3": {
+      "sha256": "1a14f625cc32ab0e94d8fda0ab7325ec601f1db76d87d2fdecb7888771e1f79c",
+      "bytes": 21960
+    },
+    "files/assets/voice/jp/char_4184_dolris/cn_032.mp3": {
+      "sha256": "689c67ef7481f471adf4d458051360fa51806d88e8fde6d22b90b663867c1011",
+      "bytes": 35544
+    },
+    "files/assets/voice/jp/char_4185_amoris/cn_019.mp3": {
+      "sha256": "f44ceef8bd6d91ff3b9aded5854c0801e681e9b87fae498f86c5ed32d158ffb2",
+      "bytes": 15482
+    },
+    "files/assets/voice/jp/char_4185_amoris/cn_020.mp3": {
+      "sha256": "a61e2ba2cd3dbf8368270eb4a0a0bdb657a96f2035755409f021d459264e8bed",
+      "bytes": 17363
+    },
+    "files/assets/voice/jp/char_4185_amoris/cn_021.mp3": {
+      "sha256": "d7e247adda15042b6476792dd4aabeb81b8429947b5e608e82355667d274d0b5",
+      "bytes": 13810
+    },
+    "files/assets/voice/jp/char_4185_amoris/cn_022.mp3": {
+      "sha256": "01bd91b37b029cb2b64ebc136a916f4f18b0c69d73ba270ccc24c7aee3ce0d5f",
+      "bytes": 14228
+    },
+    "files/assets/voice/jp/char_4185_amoris/cn_023.mp3": {
+      "sha256": "2e61ece51bb9f4a5652064bce080f172495460a489e4296b325a27a73bc5db65",
+      "bytes": 10258
+    },
+    "files/assets/voice/jp/char_4185_amoris/cn_024.mp3": {
+      "sha256": "164fa74d2b5d28594230d7c9e0b8d89cd1da5dacd580039020423f41d71f4afe",
+      "bytes": 11929
+    },
+    "files/assets/voice/jp/char_4185_amoris/cn_025.mp3": {
+      "sha256": "e0b0b5a07834cfd0e7099444886308a0f66104f33571554029a388c1fa12fa3a",
+      "bytes": 21542
+    },
+    "files/assets/voice/jp/char_4185_amoris/cn_026.mp3": {
+      "sha256": "cc3852037f82e7a7e3d06031ef57dadd52a7831682b7ca28b3814e728f9c6fe7",
+      "bytes": 5451
+    },
+    "files/assets/voice/jp/char_4185_amoris/cn_027.mp3": {
+      "sha256": "89aa7a6269d3f1b4bb21ef275e4d2cf93f986c8af34fd0b12cfdd80d6b09b0e2",
+      "bytes": 14646
+    },
+    "files/assets/voice/jp/char_4185_amoris/cn_028.mp3": {
+      "sha256": "6d14a009d8810fb2b3d8cff051147e6d89c86384fc52900d18a3f9a88d15bb3e",
+      "bytes": 7959
+    },
+    "files/assets/voice/jp/char_4185_amoris/cn_029.mp3": {
+      "sha256": "5bc71153bc3f63a39136eabb290dccf5794ef6998ec7a287698df6a617e4914a",
+      "bytes": 30320
+    },
+    "files/assets/voice/jp/char_4185_amoris/cn_030.mp3": {
+      "sha256": "e4a281209ab9b7e3ad61eadd383c5120c12197d1f1da02d49ae966dd024cdfdb",
+      "bytes": 46411
+    },
+    "files/assets/voice/jp/char_4185_amoris/cn_031.mp3": {
+      "sha256": "5dd3a8823228a5270bad8fd2efa6dd2592bc58313a6b7aef35008285107b01e9",
+      "bytes": 27394
+    },
+    "files/assets/voice/jp/char_4185_amoris/cn_032.mp3": {
+      "sha256": "d251637abab7f699ababe9a999a68cbf08d381b09db53300c6e24f7bba4c9893",
+      "bytes": 36589
+    },
+    "files/assets/voice/jp/char_4186_tmoris/cn_019.mp3": {
+      "sha256": "26ebaf2485f257af26948f99dba0c0d8e0ef5a6967427e00060256c1ff9e133c",
+      "bytes": 10467
+    },
+    "files/assets/voice/jp/char_4186_tmoris/cn_020.mp3": {
+      "sha256": "0356d32fa316bb812cd2596fd8282095a2664839e17ee5245b59e44dd865cb83",
+      "bytes": 18826
+    },
+    "files/assets/voice/jp/char_4186_tmoris/cn_021.mp3": {
+      "sha256": "e8536bd46a1fbbbbed06bfe4c8fc16bfcda592ca651d96442dc79aca23e90098",
+      "bytes": 3361
+    },
+    "files/assets/voice/jp/char_4186_tmoris/cn_022.mp3": {
+      "sha256": "7c2287c3ebfbdc26e04b6484eb28f23cea0ceb16567e9718152ae016c97a6eb2",
+      "bytes": 7332
+    },
+    "files/assets/voice/jp/char_4186_tmoris/cn_023.mp3": {
+      "sha256": "c0c97e99338a78d3302d7e8db367c0a0982c186400c3d066d4e1393216555f0e",
+      "bytes": 8795
+    },
+    "files/assets/voice/jp/char_4186_tmoris/cn_024.mp3": {
+      "sha256": "f4cf4f578581cd8819278e419c2b1d12205a872b76ef3ed7da9d552280a3845f",
+      "bytes": 10467
+    },
+    "files/assets/voice/jp/char_4186_tmoris/cn_025.mp3": {
+      "sha256": "4c8db6dd092147e4791622e2afbe50bce732a3dcb7c85e6b7ac5e130f0814e10",
+      "bytes": 8168
+    },
+    "files/assets/voice/jp/char_4186_tmoris/cn_026.mp3": {
+      "sha256": "96181e0010941a593488ac0f4ada4a228abe66432b321cdeb5ffda8ff6fe5e85",
+      "bytes": 9631
+    },
+    "files/assets/voice/jp/char_4186_tmoris/cn_027.mp3": {
+      "sha256": "1d295076063a4b909443fb7e037bbf52efbc5d1f612fc6ef700ba76951b12d0d",
+      "bytes": 2943
+    },
+    "files/assets/voice/jp/char_4186_tmoris/cn_028.mp3": {
+      "sha256": "97473954386e299a4496408646a4c744a91820daef2748bdb5b99ce2403f66d8",
+      "bytes": 6914
+    },
+    "files/assets/voice/jp/char_4186_tmoris/cn_029.mp3": {
+      "sha256": "3578501dbb2d8092da50347abb5d5394ab1cb2e39e1286f93b6fb04b4c655e2c",
+      "bytes": 23005
+    },
+    "files/assets/voice/jp/char_4186_tmoris/cn_030.mp3": {
+      "sha256": "18b46dafe28a431e3263f8b3923313d6a4e41d83af07feda6752354bceb5dcf6",
+      "bytes": 21333
+    },
+    "files/assets/voice/jp/char_4186_tmoris/cn_031.mp3": {
+      "sha256": "23f582c92c261e66d3d18009851b81b2b03643dbedcec4c955af265ab4d326d6",
+      "bytes": 25513
+    },
+    "files/assets/voice/jp/char_4186_tmoris/cn_032.mp3": {
+      "sha256": "35ffbf4a400aecce0866a096b44579392190a8b2acdb2a516b7c2fbbfc072371",
+      "bytes": 26767
+    },
+    "plugin.json": {
+      "sha256": "e458c5a9ae9c521cf0235bddb138c756e9b04d447f4dc598c457fb266f34c8a5",
+      "bytes": 1665
+    }
+  },
+  "spine": {
+    "files/assets/spine/op/char_4184_dolris/front/char_4184_dolris.skel": {
+      "sha256": "802f881d6de4c2b3b4a93d15e390ccd19fcf0ea103d776dfcf27f76b78c1fd2c",
+      "anims": {
+        "idle": "Idle",
+        "deploy": "Start",
+        "attack": {
+          "begin": null,
+          "loop": "Skill_1_Loop",
+          "end": null,
+          "via": "skill"
+        },
+        "attackDown": null,
+        "skill": {
+          "begin": "Skill_1_Begin",
+          "loop": "Skill_1_Loop",
+          "end": "Skill_1_End",
+          "index": 0,
+          "idle": null
+        },
+        "die": "Die",
+        "move": null,
+        "stun": null,
+        "skills": {
+          "0": {
+            "begin": "Skill_1_Begin",
+            "loop": "Skill_1_Loop",
+            "end": "Skill_1_End",
+            "index": 0,
+            "idle": null
+          },
+          "1": {
+            "begin": "Skill_2_Begin",
+            "loop": "Skill_2_Loop",
+            "end": "Skill_2_End",
+            "index": 1,
+            "idle": null
+          },
+          "2": {
+            "begin": null,
+            "loop": "Skill_1_Loop",
+            "end": null,
+            "via": "attack",
+            "index": 2,
+            "idle": null
+          }
+        }
+      },
+      "animations": {
+        "Default": 0,
+        "Die": 1,
+        "Idle": 4,
+        "Skill_1_Begin": 1.333,
+        "Skill_1_End": 0.667,
+        "Skill_1_Loop": 3.333,
+        "Skill_2_Begin": 0.333,
+        "Skill_2_End": 1.167,
+        "Skill_2_Loop": 1.333,
+        "Start": 1
+      },
+      "events": [
+        "OnStart"
+      ],
+      "hits": {},
+      "bounds": {
+        "x": -106.383,
+        "y": -1.32,
+        "width": 265.655,
+        "height": 362.132
+      }
+    },
+    "files/assets/skin/op/char_4184_dolris/front/char_4184_dolris_avemujica_1.skel": {
+      "sha256": "6fbd6b38084e727aee6231a3c6284484e4775c8b6617ab5e8324231b6b72af7c",
+      "anims": {
+        "idle": "Idle",
+        "deploy": "Start",
+        "attack": {
+          "begin": null,
+          "loop": "Skill_1_Loop",
+          "end": null,
+          "via": "skill"
+        },
+        "attackDown": null,
+        "skill": {
+          "begin": "Skill_1_Begin",
+          "loop": "Skill_1_Loop",
+          "end": "Skill_1_End",
+          "index": 0,
+          "idle": null
+        },
+        "die": "Die",
+        "move": null,
+        "stun": null,
+        "skills": {
+          "0": {
+            "begin": "Skill_1_Begin",
+            "loop": "Skill_1_Loop",
+            "end": "Skill_1_End",
+            "index": 0,
+            "idle": null
+          },
+          "1": {
+            "begin": "Skill_2_Begin",
+            "loop": "Skill_2_Loop",
+            "end": "Skill_2_End",
+            "index": 1,
+            "idle": null
+          },
+          "2": {
+            "begin": null,
+            "loop": "Skill_1_Loop",
+            "end": null,
+            "via": "attack",
+            "index": 2,
+            "idle": null
+          }
+        }
+      },
+      "animations": {
+        "Default": 0,
+        "Die": 1,
+        "Idle": 2.667,
+        "Skill_1_Begin": 1.333,
+        "Skill_1_End": 0.667,
+        "Skill_1_Loop": 2.667,
+        "Skill_2_Begin": 0.333,
+        "Skill_2_End": 1.167,
+        "Skill_2_Loop": 3.333,
+        "Start": 1
+      },
+      "events": [
+        "OnStart"
+      ],
+      "hits": {},
+      "bounds": {
+        "x": -217.758,
+        "y": -1.432,
+        "width": 326.038,
+        "height": 404.209
+      }
+    },
+    "files/assets/spine/op/char_4185_amoris/front/char_4185_amoris.skel": {
+      "sha256": "b5d7a75ab219cbf9830fb2c4784bbed2fc22af90c873e1e273a161cd0b653cbe",
+      "anims": {
+        "idle": "Idle",
+        "deploy": "Start",
+        "attack": {
+          "begin": null,
+          "loop": "Attack",
+          "end": null
+        },
+        "attackDown": null,
+        "skill": {
+          "begin": null,
+          "loop": "Skill_1",
+          "end": null,
+          "index": 0,
+          "idle": null
+        },
+        "die": "Die",
+        "move": null,
+        "stun": null,
+        "skills": {
+          "0": {
+            "begin": null,
+            "loop": "Skill_1",
+            "end": null,
+            "index": 0,
+            "idle": null
+          },
+          "1": {
+            "begin": null,
+            "loop": "Skill_2",
+            "end": null,
+            "index": 1,
+            "idle": null
+          },
+          "2": {
+            "begin": null,
+            "loop": "Attack",
+            "end": null,
+            "via": "attack",
+            "index": 2,
+            "idle": null
+          }
+        }
+      },
+      "animations": {
+        "Attack": 1.8,
+        "Default": 0,
+        "Die": 1,
+        "Idle": 1,
+        "Skill_1": 1.8,
+        "Skill_2": 1.8,
+        "Start": 1
+      },
+      "events": [
+        "OnAttack",
+        "OnStart"
+      ],
+      "hits": {
+        "Attack": [
+          0.667
+        ],
+        "Skill_1": [
+          0.267,
+          0.867,
+          1.467
+        ],
+        "Skill_2": [
+          0.1,
+          0.333,
+          0.567,
+          0.8,
+          1,
+          1.233,
+          1.467,
+          1.7
+        ]
+      },
+      "bounds": {
+        "x": -1413.23,
+        "y": -11.3,
+        "width": 1550.098,
+        "height": 371.42
+      }
+    },
+    "files/assets/spine/op/char_4185_amoris/back/char_4185_amoris.skel": {
+      "sha256": "77fad82a3f33a24d9be72b40004def3a84d43b316edd0d849b764da5b1d231e4",
+      "anims": {
+        "idle": "Idle",
+        "deploy": "Start",
+        "attack": {
+          "begin": null,
+          "loop": "Attack",
+          "end": null
+        },
+        "attackDown": null,
+        "skill": {
+          "begin": null,
+          "loop": "Skill_1",
+          "end": null,
+          "index": 0,
+          "idle": null
+        },
+        "die": "Die",
+        "move": null,
+        "stun": null,
+        "skills": {
+          "0": {
+            "begin": null,
+            "loop": "Skill_1",
+            "end": null,
+            "index": 0,
+            "idle": null
+          },
+          "1": {
+            "begin": null,
+            "loop": "Skill_2",
+            "end": null,
+            "index": 1,
+            "idle": null
+          },
+          "2": {
+            "begin": null,
+            "loop": "Attack",
+            "end": null,
+            "via": "attack",
+            "index": 2,
+            "idle": null
+          }
+        }
+      },
+      "animations": {
+        "Attack": 1.8,
+        "Default": 0,
+        "Die": 1,
+        "Idle": 1,
+        "Skill_1": 1.8,
+        "Skill_2": 1.8,
+        "Start": 1
+      },
+      "events": [
+        "OnAttack",
+        "OnStart"
+      ],
+      "hits": {
+        "Attack": [
+          0.667
+        ],
+        "Skill_1": [
+          0.267,
+          0.867,
+          1.467
+        ],
+        "Skill_2": [
+          0.1,
+          0.333,
+          0.567,
+          0.8,
+          1,
+          1.233,
+          1.467,
+          1.7
+        ]
+      },
+      "bounds": {
+        "x": -1413.23,
+        "y": -11.3,
+        "width": 1550.098,
+        "height": 371.09
+      }
+    },
+    "files/assets/skin/op/char_4185_amoris/front/char_4185_amoris_avemujica_1.skel": {
+      "sha256": "949e7140fe1403ec972cbd9cc1e394a39a3a5a9f343ea209afac881da94d4368",
+      "anims": {
+        "idle": "Idle",
+        "deploy": "Start",
+        "attack": {
+          "begin": null,
+          "loop": "Attack",
+          "end": null
+        },
+        "attackDown": null,
+        "skill": {
+          "begin": null,
+          "loop": "Skill_1",
+          "end": null,
+          "index": 0,
+          "idle": null
+        },
+        "die": "Die",
+        "move": null,
+        "stun": null,
+        "skills": {
+          "0": {
+            "begin": null,
+            "loop": "Skill_1",
+            "end": null,
+            "index": 0,
+            "idle": null
+          },
+          "1": {
+            "begin": null,
+            "loop": "Skill_2",
+            "end": null,
+            "index": 1,
+            "idle": null
+          },
+          "2": {
+            "begin": null,
+            "loop": "Attack",
+            "end": null,
+            "via": "attack",
+            "index": 2,
+            "idle": null
+          }
+        }
+      },
+      "animations": {
+        "Attack": 1.8,
+        "Default": 0,
+        "Die": 1,
+        "Idle": 1.333,
+        "Skill_1": 1.8,
+        "Skill_2": 1.8,
+        "Start": 1
+      },
+      "events": [
+        "OnAttack",
+        "OnStart"
+      ],
+      "hits": {
+        "Attack": [
+          0.667
+        ],
+        "Skill_1": [
+          0.267,
+          0.867,
+          1.467
+        ],
+        "Skill_2": [
+          0.1,
+          0.333,
+          0.567,
+          0.8,
+          1,
+          1.233,
+          1.467,
+          1.7
+        ]
+      },
+      "bounds": {
+        "x": -1107.96,
+        "y": -1.332,
+        "width": 1383.547,
+        "height": 387.504
+      }
+    },
+    "files/assets/spine/op/char_4186_tmoris/front/char_4186_tmoris.skel": {
+      "sha256": "40dbd12bda928b6ee014e3a356abb1a64dda3b25839d1f1d65655f13cde861fa",
+      "anims": {
+        "idle": "Idle",
+        "deploy": "Start",
+        "attack": {
+          "begin": null,
+          "loop": "Attack",
+          "end": null
+        },
+        "attackDown": null,
+        "skill": {
+          "begin": null,
+          "loop": "Skill_1",
+          "end": null,
+          "index": 0,
+          "idle": null
+        },
+        "die": "Die",
+        "move": null,
+        "stun": null,
+        "skills": {
+          "0": {
+            "begin": null,
+            "loop": "Skill_1",
+            "end": null,
+            "index": 0,
+            "idle": null
+          },
+          "1": {
+            "begin": "Skill_2_Begin",
+            "loop": "Skill_2_Loop",
+            "end": "Skill_2_End",
+            "index": 1,
+            "idle": null
+          },
+          "2": {
+            "begin": null,
+            "loop": "Attack",
+            "end": null,
+            "via": "attack",
+            "index": 2,
+            "idle": null
+          }
+        }
+      },
+      "animations": {
+        "Attack": 1,
+        "Default": 0,
+        "Die": 1,
+        "Idle": 4,
+        "Skill_1": 1.5,
+        "Skill_2_Begin": 0.333,
+        "Skill_2_End": 0.667,
+        "Skill_2_Loop": 2,
+        "Start": 1
+      },
+      "events": [
+        "OnAttack",
+        "OnStart"
+      ],
+      "hits": {
+        "Attack": [
+          0.467
+        ],
+        "Skill_1": [
+          0.367,
+          0.5,
+          0.633,
+          0.767,
+          0.9
+        ]
+      },
+      "bounds": {
+        "x": -201.437,
+        "y": -1.159,
+        "width": 388.26,
+        "height": 361.572
+      }
+    },
+    "files/assets/spine/op/char_4186_tmoris/back/char_4186_tmoris.skel": {
+      "sha256": "3d8634d27f3ed65771b6ea00bfd2c251f5fe2655239e290eef47ccb084b343ea",
+      "anims": {
+        "idle": "Idle",
+        "deploy": "Start",
+        "attack": {
+          "begin": null,
+          "loop": "Attack",
+          "end": null
+        },
+        "attackDown": null,
+        "skill": {
+          "begin": null,
+          "loop": "Skill_1",
+          "end": null,
+          "index": 0,
+          "idle": null
+        },
+        "die": null,
+        "move": null,
+        "stun": null,
+        "skills": {
+          "0": {
+            "begin": null,
+            "loop": "Skill_1",
+            "end": null,
+            "index": 0,
+            "idle": null
+          },
+          "1": {
+            "begin": "Skill_2_Begin",
+            "loop": "Skill_2_Loop",
+            "end": "Skill_2_End",
+            "index": 1,
+            "idle": null
+          },
+          "2": {
+            "begin": null,
+            "loop": "Attack",
+            "end": null,
+            "via": "attack",
+            "index": 2,
+            "idle": null
+          }
+        }
+      },
+      "animations": {
+        "Attack": 1,
+        "Default": 0,
+        "Idle": 4,
+        "Skill_1": 1.5,
+        "Skill_2_Begin": 0.333,
+        "Skill_2_End": 0.667,
+        "Skill_2_Loop": 2,
+        "Start": 1
+      },
+      "events": [
+        "OnAttack",
+        "OnStart"
+      ],
+      "hits": {
+        "Attack": [
+          0.467
+        ],
+        "Skill_1": [
+          0.367,
+          0.5,
+          0.633,
+          0.767,
+          0.9
+        ]
+      },
+      "bounds": {
+        "x": -201.437,
+        "y": -1.144,
+        "width": 298.711,
+        "height": 360.55
+      }
+    },
+    "files/assets/skin/op/char_4186_tmoris/front/char_4186_tmoris_avemujica_1.skel": {
+      "sha256": "155c47ef5ec310d534b4cb3bde9c9687d06476211841d6501590e8a8c58528df",
+      "anims": {
+        "idle": "Idle",
+        "deploy": "Start",
+        "attack": {
+          "begin": null,
+          "loop": "Attack",
+          "end": null
+        },
+        "attackDown": null,
+        "skill": {
+          "begin": null,
+          "loop": "Skill_1",
+          "end": null,
+          "index": 0,
+          "idle": null
+        },
+        "die": "Die",
+        "move": null,
+        "stun": null,
+        "skills": {
+          "0": {
+            "begin": null,
+            "loop": "Skill_1",
+            "end": null,
+            "index": 0,
+            "idle": null
+          },
+          "1": {
+            "begin": "Skill_2_Begin",
+            "loop": "Skill_2_Loop",
+            "end": "Skill_2_End",
+            "index": 1,
+            "idle": null
+          },
+          "2": {
+            "begin": null,
+            "loop": "Attack",
+            "end": null,
+            "via": "attack",
+            "index": 2,
+            "idle": null
+          }
+        }
+      },
+      "animations": {
+        "Attack": 1,
+        "Default": 0,
+        "Die": 1,
+        "Idle": 2.667,
+        "Skill_1": 1.5,
+        "Skill_2_Begin": 0.333,
+        "Skill_2_End": 0.667,
+        "Skill_2_Loop": 2,
+        "Start": 1
+      },
+      "events": [
+        "OnAttack",
+        "OnStart"
+      ],
+      "hits": {
+        "Attack": [
+          0.467
+        ],
+        "Skill_1": [
+          0.367,
+          0.5,
+          0.633,
+          0.767,
+          0.9
+        ]
+      },
+      "bounds": {
+        "x": -245.304,
+        "y": -4.824,
+        "width": 411.741,
+        "height": 1414.259
+      }
+    },
+    "files/assets/spine/op/char_4182_oblvns/front/char_4182_oblvns.skel": {
+      "sha256": "42bd0999dceb3157cdeab8d896163519cd8fafd93d702d10b83014934bafa3d8",
+      "anims": {
+        "idle": "Idle",
+        "deploy": "Start",
+        "attack": {
+          "begin": null,
+          "loop": "Attack",
+          "end": null
+        },
+        "attackDown": null,
+        "skill": {
+          "begin": null,
+          "loop": "Skill_1",
+          "end": null,
+          "index": 0,
+          "idle": null
+        },
+        "die": "Die",
+        "move": null,
+        "stun": null,
+        "skills": {
+          "0": {
+            "begin": null,
+            "loop": "Skill_1",
+            "end": null,
+            "index": 0,
+            "idle": null
+          },
+          "1": {
+            "begin": "Skill_2_Start",
+            "loop": "Skill_2_Idle_A",
+            "end": null,
+            "index": 1,
+            "idle": null
+          },
+          "2": {
+            "begin": "Skill_3_Begin",
+            "loop": "Skill_3_Loop",
+            "end": "Skill_3_End",
+            "index": 2,
+            "idle": "Skill_3_Idle"
+          }
+        }
+      },
+      "animations": {
+        "Attack": 1.3,
+        "Combat": 1.3,
+        "Default": 0,
+        "Die": 1,
+        "Idle": 4,
+        "Skill_1": 1.3,
+        "Skill_2_Idle_A": 4,
+        "Skill_2_Idle_B": 4,
+        "Skill_2_Loop_A": 1.3,
+        "Skill_2_Loop_B": 1.3,
+        "Skill_2_Start": 1,
+        "Skill_2_Trans_A": 0.333,
+        "Skill_2_Trans_B": 0.333,
+        "Skill_3_Begin": 0.333,
+        "Skill_3_End": 0.333,
+        "Skill_3_Idle": 3.667,
+        "Skill_3_Loop": 1.167,
+        "Start": 1
+      },
+      "events": [
+        "OnAttack",
+        "OnStart"
+      ],
+      "hits": {
+        "Attack": [
+          0.267
+        ],
+        "Combat": [
+          0.267
+        ],
+        "Skill_1": [
+          0.267
+        ],
+        "Skill_2_Loop_A": [
+          0.267
+        ],
+        "Skill_2_Loop_B": [
+          0.267
+        ],
+        "Skill_3_Loop": [
+          0.2,
+          0.3
+        ]
+      },
+      "bounds": {
+        "x": -1363.64,
+        "y": -1.919,
+        "width": 2765.07,
+        "height": 692.659
+      }
+    },
+    "files/assets/spine/op/char_4182_oblvns/back/char_4182_oblvns.skel": {
+      "sha256": "27670b2ef314387f4d4b51896e1f67b3d07b32fc858b6ada8bdadecd7169160d",
+      "anims": {
+        "idle": "Idle",
+        "deploy": "Start",
+        "attack": {
+          "begin": null,
+          "loop": "Attack",
+          "end": null
+        },
+        "attackDown": null,
+        "skill": {
+          "begin": null,
+          "loop": "Skill_1",
+          "end": null,
+          "index": 0,
+          "idle": null
+        },
+        "die": "Die",
+        "move": null,
+        "stun": null,
+        "skills": {
+          "0": {
+            "begin": null,
+            "loop": "Skill_1",
+            "end": null,
+            "index": 0,
+            "idle": null
+          },
+          "1": {
+            "begin": "Skill_2_Start",
+            "loop": "Skill_2_Idle_A",
+            "end": null,
+            "index": 1,
+            "idle": null
+          },
+          "2": {
+            "begin": "Skill_3_Begin",
+            "loop": "Skill_3_Loop",
+            "end": "Skill_3_End",
+            "index": 2,
+            "idle": "Skill_3_Idle"
+          }
+        }
+      },
+      "animations": {
+        "Attack": 1.3,
+        "Combat": 1.3,
+        "Default": 0,
+        "Die": 1,
+        "Idle": 4,
+        "Skill_1": 1.3,
+        "Skill_2_Idle_A": 4,
+        "Skill_2_Idle_B": 4,
+        "Skill_2_Loop_A": 1.3,
+        "Skill_2_Loop_B": 1.3,
+        "Skill_2_Start": 1,
+        "Skill_2_Trans_A": 0.333,
+        "Skill_2_Trans_B": 0.333,
+        "Skill_3_Begin": 0.333,
+        "Skill_3_End": 0.333,
+        "Skill_3_Idle": 3.667,
+        "Skill_3_Loop": 1.167,
+        "Start": 1
+      },
+      "events": [
+        "OnAttack",
+        "OnStart"
+      ],
+      "hits": {
+        "Attack": [
+          0.267
+        ],
+        "Combat": [
+          0.267
+        ],
+        "Skill_1": [
+          0.267
+        ],
+        "Skill_2_Loop_A": [
+          0.267
+        ],
+        "Skill_2_Loop_B": [
+          0.267
+        ],
+        "Skill_3_Loop": [
+          0.2,
+          0.3
+        ]
+      },
+      "bounds": {
+        "x": -1363.64,
+        "y": -1.919,
+        "width": 2765.07,
+        "height": 692.659
+      }
+    },
+    "files/assets/skin/op/char_4182_oblvns/front/char_4182_oblvns_avemujica_1.skel": {
+      "sha256": "277efc237e29b944ace1ebdab5214ba0368bce4ec47b18cebf2457727f3d6093",
+      "anims": {
+        "idle": "Idle",
+        "deploy": "Start",
+        "attack": {
+          "begin": null,
+          "loop": "Attack",
+          "end": null
+        },
+        "attackDown": null,
+        "skill": {
+          "begin": null,
+          "loop": "Skill_1",
+          "end": null,
+          "index": 0,
+          "idle": null
+        },
+        "die": "Die",
+        "move": null,
+        "stun": null,
+        "skills": {
+          "0": {
+            "begin": null,
+            "loop": "Skill_1",
+            "end": null,
+            "index": 0,
+            "idle": null
+          },
+          "1": {
+            "begin": "Skill_2_Start",
+            "loop": "Skill_2_Idle_A",
+            "end": null,
+            "index": 1,
+            "idle": null
+          },
+          "2": {
+            "begin": "Skill_3_Begin",
+            "loop": "Skill_3_Loop",
+            "end": "Skill_3_End",
+            "index": 2,
+            "idle": "Skill_3_Idle"
+          }
+        }
+      },
+      "animations": {
+        "Attack": 1.3,
+        "Combat": 1.3,
+        "Default": 0,
+        "Die": 1,
+        "Idle": 4,
+        "Skill_1": 1.3,
+        "Skill_2_Idle_A": 4,
+        "Skill_2_Idle_B": 4,
+        "Skill_2_Loop_A": 1.3,
+        "Skill_2_Loop_B": 1.3,
+        "Skill_2_Start": 1,
+        "Skill_2_Trans_A": 0.333,
+        "Skill_2_Trans_B": 0.333,
+        "Skill_3_Begin": 0.333,
+        "Skill_3_End": 0.333,
+        "Skill_3_Idle": 4,
+        "Skill_3_Loop": 1.167,
+        "Start": 1
+      },
+      "events": [
+        "OnAttack",
+        "OnStart"
+      ],
+      "hits": {
+        "Attack": [
+          0.267
+        ],
+        "Combat": [
+          0.267
+        ],
+        "Skill_1": [
+          0.267
+        ],
+        "Skill_2_Loop_A": [
+          0.267
+        ],
+        "Skill_2_Loop_B": [
+          0.267
+        ],
+        "Skill_3_Loop": [
+          0.2,
+          0.3
+        ]
+      },
+      "bounds": {
+        "x": -241.81,
+        "y": -55.888,
+        "width": 718.844,
+        "height": 516.837
+      }
+    },
+    "files/assets/spine/op/char_4183_mortis/front/char_4183_mortis.skel": {
+      "sha256": "6cd512fb51f9828f678d92a88af9f0467f2ceb6ce210204cd90e9af2a7df4e27",
+      "anims": {
+        "idle": "Idle",
+        "deploy": "Start",
+        "attack": {
+          "begin": null,
+          "loop": "Attack",
+          "end": null
+        },
+        "attackDown": null,
+        "skill": {
+          "begin": null,
+          "loop": "Skill_1",
+          "end": null,
+          "index": 0,
+          "idle": null
+        },
+        "die": "Doll_Die",
+        "move": null,
+        "stun": {
+          "begin": null,
+          "loop": "Stun",
+          "end": null
+        },
+        "skills": {
+          "0": {
+            "begin": null,
+            "loop": "Skill_1",
+            "end": null,
+            "index": 0,
+            "idle": null
+          },
+          "1": {
+            "begin": null,
+            "loop": "Skill_2",
+            "end": null,
+            "index": 1,
+            "idle": null
+          },
+          "2": {
+            "begin": null,
+            "loop": "Attack",
+            "end": null,
+            "via": "attack",
+            "index": 2,
+            "idle": null
+          }
+        }
+      },
+      "animations": {
+        "Attack": 1.2,
+        "Default": 0,
+        "Doll_Default": 0,
+        "Doll_Die": 1,
+        "Doll_Idle": 18.133,
+        "Doll_SwitchOut": 1,
+        "Doll_Switchin": 1,
+        "Idle": 6.667,
+        "Skill_1": 1.2,
+        "Skill_2": 0.9,
+        "Start": 1,
+        "Stun": 1,
+        "SwitchOut": 1
+      },
+      "events": [
+        "OnAttack",
+        "OnStart"
+      ],
+      "hits": {
+        "Attack": [
+          0.433
+        ],
+        "Skill_1": [
+          0.433
+        ],
+        "Skill_2": [
+          0.333
+        ]
+      },
+      "bounds": {
+        "x": -103.376,
+        "y": -1.014,
+        "width": 582.708,
+        "height": 387.679
+      }
+    },
+    "files/assets/spine/op/char_4183_mortis/back/char_4183_mortis.skel": {
+      "sha256": "972fb5a075dcd3df1f83941af06fb5ffa3ff151dd24d897bf7158c24335340fa",
+      "anims": {
+        "idle": "Idle",
+        "deploy": "Start",
+        "attack": {
+          "begin": null,
+          "loop": "Attack",
+          "end": null
+        },
+        "attackDown": null,
+        "skill": {
+          "begin": null,
+          "loop": "Skill_1",
+          "end": null,
+          "index": 0,
+          "idle": null
+        },
+        "die": null,
+        "move": null,
+        "stun": null,
+        "skills": {
+          "0": {
+            "begin": null,
+            "loop": "Skill_1",
+            "end": null,
+            "index": 0,
+            "idle": null
+          },
+          "1": {
+            "begin": null,
+            "loop": "Skill_2",
+            "end": null,
+            "index": 1,
+            "idle": null
+          },
+          "2": {
+            "begin": null,
+            "loop": "Attack",
+            "end": null,
+            "via": "attack",
+            "index": 2,
+            "idle": null
+          }
+        }
+      },
+      "animations": {
+        "Attack": 1.2,
+        "Default": 0,
+        "Doll_Default": 0,
+        "Doll_Idle": 18.133,
+        "Doll_SwitchOut": 1,
+        "Doll_Switchin": 1,
+        "Idle": 6.667,
+        "Skill_1": 1.2,
+        "Skill_2": 0.9,
+        "Start": 1
+      },
+      "events": [
+        "OnAttack",
+        "OnStart"
+      ],
+      "hits": {
+        "Attack": [
+          0.433
+        ],
+        "Skill_1": [
+          0.433
+        ],
+        "Skill_2": [
+          0.333
+        ]
+      },
+      "bounds": {
+        "x": -103.376,
+        "y": -1.014,
+        "width": 582.708,
+        "height": 387.679
+      }
+    },
+    "files/assets/skin/op/char_4183_mortis/front/char_4183_mortis_avemujica_1.skel": {
+      "sha256": "725dc77d31fafdfe5a83018c63dc95973df24e52f6519dd5f62385c68ce867b4",
+      "anims": {
+        "idle": "Idle",
+        "deploy": "Start",
+        "attack": {
+          "begin": null,
+          "loop": "Attack",
+          "end": null
+        },
+        "attackDown": null,
+        "skill": {
+          "begin": null,
+          "loop": "Skill_1",
+          "end": null,
+          "index": 0,
+          "idle": null
+        },
+        "die": "Doll_Die",
+        "move": null,
+        "stun": {
+          "begin": null,
+          "loop": "Stun",
+          "end": null
+        },
+        "skills": {
+          "0": {
+            "begin": null,
+            "loop": "Skill_1",
+            "end": null,
+            "index": 0,
+            "idle": null
+          },
+          "1": {
+            "begin": null,
+            "loop": "Skill_2",
+            "end": null,
+            "index": 1,
+            "idle": null
+          },
+          "2": {
+            "begin": null,
+            "loop": "Attack",
+            "end": null,
+            "via": "attack",
+            "index": 2,
+            "idle": null
+          }
+        }
+      },
+      "animations": {
+        "Attack": 1.2,
+        "Default": 0,
+        "Doll_Default": 0,
+        "Doll_Die": 1,
+        "Doll_Idle": 10,
+        "Doll_SwitchOut": 1,
+        "Doll_Switchin": 1,
+        "Idle": 6.667,
+        "Skill_1": 1.2,
+        "Skill_2": 0.9,
+        "Start": 1,
+        "Stun": 1,
+        "SwitchOut": 1
+      },
+      "events": [
+        "OnAttack",
+        "OnStart"
+      ],
+      "hits": {
+        "Attack": [
+          0.433
+        ],
+        "Skill_1": [
+          0.433
+        ],
+        "Skill_2": [
+          0.333
+        ]
+      },
+      "bounds": {
+        "x": -177.828,
+        "y": -1.109,
+        "width": 764.067,
+        "height": 425.933
+      }
+    }
+  }
+}

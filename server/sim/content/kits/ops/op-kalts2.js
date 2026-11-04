@@ -74,9 +74,10 @@
 //   her S3 gives one and its 70 s redeploy time has passed, on its own tile).
 
 import { num, talentBb, skillRec, batMod, up } from '../shared/tier1.js';
+import { hypot } from '../../../detmath.js';
 import { releaseSkillSummon } from '../../tokens.js';
 import { COLS } from '../../../constants.js';
-import { hypot } from '../../../detmath.js';
+
 
 const S1 = 'skchr_kalts2_1';
 const S2 = 'skchr_kalts2_2';

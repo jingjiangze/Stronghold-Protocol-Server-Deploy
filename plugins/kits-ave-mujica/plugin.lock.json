@@ -1,0 +1,21 @@
+{
+  "lock": 1,
+  "id": "kits-ave-mujica",
+  "version": "1.8.24",
+  "generator": "tools/plugin.mjs pack",
+  "files": {
+    "README.md": {
+      "sha256": "01ac37c8cb0fa7af928b33ee950209cf98e1b92bef9b9c2e5068c244c141a3dd",
+      "bytes": 673
+    },
+    "plugin.json": {
+      "sha256": "977e089fecc29f9b319d73746ad77ebc63673d0f5e9d7520a25755dbc7e98f7e",
+      "bytes": 1640
+    },
+    "sim/index.js": {
+      "sha256": "a562cb1244f88a68eb38d98ee8a87d657bee8539dd9b994596f9c74d57ae41e1",
+      "bytes": 25479
+    }
+  },
+  "spine": {}
+}

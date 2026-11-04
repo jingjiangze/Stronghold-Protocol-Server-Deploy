@@ -185,9 +185,15 @@ function scheduleRng(rng) {
  *   that keep only the factions array (Match: buildNormalWave(gd, rng, this.factions, r)) get the official rounds.
  */
 export function setupMatchWaves(gd, rng) {
-  // stage
+  // stage — 「包含无场景地图」 (Match opts.incompleteMaps → gd.allowIncompleteMaps; off by default): off, only the stages with
+  // an official scene package are drawn (server/match/sceneStages.js; Match puts the Set on the gd as `sceneStages`).
+  // Narrowing to nothing (no manifest, a mode whose stages all lack a scene, a plain tool gd) falls back to the full
+  // pool, so a match never starts without a stage.
   const stageIds = Array.isArray(gd.mode.stages) ? gd.mode.stages : [];
-  const stagePairs = stageIds.map((id) => [id, gd.stage(id)]).filter(([, s]) => s && s.active !== false && Number(s.weight) > 0).map(([id, s]) => [id, s.weight]);
+  const sceneStages = gd.sceneStages instanceof Set ? gd.sceneStages : null;
+  const eligible = gd.allowIncompleteMaps === true || !sceneStages ? stageIds : stageIds.filter((id) => sceneStages.has(id));
+  const pool = eligible.length ? eligible : stageIds;
+  const stagePairs = pool.map((id) => [id, gd.stage(id)]).filter(([, s]) => s && s.active !== false && Number(s.weight) > 0).map(([id, s]) => [id, s.weight]);
   let stageId = stagePairs.length ? weightedPick(rng, stagePairs) : null;
   if (!stageId) {
     const any = Object.keys(gd.raw.stages || {}).filter((id) => gd.stage(id) && gd.stage(id).active);
@@ -281,7 +287,7 @@ export function gateOf(start, leader) {
 
 const isLeaderTemplate = (tpl) => !!tpl && (tpl.kind === 'boss' || tpl.kind === 'hidden');
 
-function previewInfo(gd, key, route, boss = false, leader = undefined) {
+export function previewInfo(gd, key, route, boss = false, leader = undefined) {
   const e = gd.enemy(key);
   const start = route && Array.isArray(route.start) ? route.start.slice(0, 2) : null;
   return { gate: gateOf(start, leader), start, fly: isFlyKey(gd, key), elite: !!(e && e.rank && e.rank !== 'NORMAL'), boss };
@@ -342,7 +348,10 @@ function templateSpawns(gd, tpl, round, pick) {
       // enemy_exclude = enemy_9012_acloon): leader parts take them all; the leader takes ATK / speed but not HP — its HP
       // is the server pool, "领袖单位于服务器的生命值加成不受上述加成影响" (PRTS 下半). `supplyHpMul` (roundMods) rides along for
       // the 器物 hit-count units, which 补给线 / 补给线II leave out (archetypes.js `times`; also a 频次 enemy's death spawn)
-      mods: isBoss ? { atkMul: scale.atkMul, speedMul: scale.speedMul, slot } : { ...roundMods(scale), slot },
+      // template spawns may carry mods of their own (e.g. `suiSide` on the sim's sui_raid escorts): keep them, `slot` last
+      mods: isBoss
+        ? { atkMul: scale.atkMul, speedMul: scale.speedMul, ...(s.mods || {}), slot }
+        : { ...roundMods(scale), ...(s.mods || {}), slot },
       actionIndex: i,
       preview: previewInfo(gd, key, routes[routeIndex], isBoss, leader),
     };
@@ -370,9 +379,14 @@ function entriesView(gd, pick) {
  * @returns {{ templateId: string|null, spawns: object[], routes: object[], extraRoutes: object[], timeLimit: number,
  *   overrides: object, pick: object|null, entries: { ground: object|null, fly: object|null }, actions: object[] }}
  */
-export function buildNormalWave(gd, rng, factions, round) {
+export function buildNormalWave(gd, rng, factions, round, stageId = null) {
   const rc = gd.roundCfg(round);
-  const templateId = rc && typeof rc.template === 'string' ? rc.template : null;
+  // 肉鸽（mode_rogue_*）：每张图自带出怪表 `waves['rogue_<stageId>']`（tools/build-rogue-maps.mjs 生成）；
+  // 有就用它，没有才回落到回合模板（老数据/纯 autochess 内容集不受影响）。
+  const rogueStage = typeof gd.modeId === 'string' && gd.modeId.startsWith('mode_rogue_') && typeof stageId === 'string' && stageId
+    ? `rogue_${String(stageId).replace(/^rogue_/, '')}` : null;
+  const rogueTpl = rogueStage ? gd.wave(rogueStage) : null;
+  const templateId = rogueTpl ? rogueStage : (rc && typeof rc.template === 'string' ? rc.template : null);
   const tpl = templateId ? gd.wave(templateId) : null;
   const timeLimit = gd.combatTimeLimit(round);
   if (!tpl) return { templateId, spawns: [], routes: [], extraRoutes: [], timeLimit, overrides: {}, pick: null, entries: { ground: null, fly: null }, actions: [] };
@@ -395,7 +409,12 @@ export function buildNormalWave(gd, rng, factions, round) {
  * Boss / hidden round template for one boss field; escorts follow the pick of the round's own slot.
  * @param {{ bossId: string, solo: boolean }} opts solo → `_s` template (lone player or solo mode)
  */
-export function buildBossWave(gd, rng, factions, round, { bossId, solo }) {
+export function buildBossWave(gd, rng, factions, round, { bossId, solo }, stageId = null) {
+  // 肉鸽（mode_rogue_*）：每张官方地图自带出怪表，Boss 回合没有「半场」可换 ⇒ 直接按这张图打（用本作已知敌人的基础模板）。
+  if (typeof gd.modeId === 'string' && gd.modeId.startsWith('mode_rogue_') && typeof stageId === 'string' && stageId
+    && gd.wave(`rogue_${String(stageId).replace(/^rogue_/, '')}`)) {
+    return buildNormalWave(gd, rng, factions, round, stageId);
+  }
   const rc = gd.roundCfg(round);
   const map = rc && rc.bossTemplates && typeof rc.bossTemplates === 'object' ? rc.bossTemplates : {};
   let templateId = typeof map[bossId] === 'string' ? map[bossId] : null;
@@ -411,6 +430,9 @@ export function buildBossWave(gd, rng, factions, round, { bossId, solo }) {
   const { spawns, actions } = templateSpawns(gd, tpl, round, pick);
   return {
     templateId,
+    // the template's own battlefield (e.g. the sim's `sui_raid`): the field rect and stage come from it when present
+    stageId: typeof tpl.stageId === 'string' ? tpl.stageId : null,
+    battleRect: tpl.battleRect && typeof tpl.battleRect === 'object' ? tpl.battleRect : null,
     spawns,
     routes: Array.isArray(tpl.routes) ? tpl.routes : [],
     extraRoutes: Array.isArray(tpl.extraRoutes) ? tpl.extraRoutes : [],

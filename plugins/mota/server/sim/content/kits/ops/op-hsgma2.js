@@ -3,7 +3,7 @@
 // Kit contract and the 自选 rules: ../README.md ("How to add an operator (自选)").
 //
 // Forms (data/backups.json units.char_1044_hsgma2, the DIY slot statuses): normal = E2 Lv1, skills at rank 4, no module;
-// elite = E2 Lv60, rank 7, AST-X at stage 1 (tier 5) or 3 (tier 6). Full potential (the owner's decision of 2026-10-07).
+// elite = E2 Lv60, rank 7, AST-X at stage 1 (tier 5) or 3 (tier 6). Potential 0 [ASSUMED: no account].
 // Sources: character_table / skill_table / battle_equip_table (zh_CN, as built into backups.json), gamedata_const
 // ba.berserk 坚忍 ("根据已损失的生命值获得相应比例的属性加成，损失一定比例时达最大加成") and ba.sluggish 停顿, PRTS 斩业星熊 (业火 备注:
 // 负生命值 — "期间持有禁疗，一切生命值变动将先计入负生命值来抵消/增加负生命值…只有负生命值达到上限时才会被正常击倒…负生命值与真实生命值
@@ -180,9 +180,6 @@ export default {
           const capOf = () => num(t0.max_minus_hp_ratio, 2) * unit.s.maxHp;
           const quiet = num(t0['hsgma2_t_1[heal].interval'], 5);
           const regen = num(t0['hsgma2_t_1[heal].hp_recovery_per_sec_by_max_hp_ratio']);
-          // the pool as a share of its cap, read when a snapshot is taken (b.snap `neg`, snapshot.js negView): the green HP bar
-          // sits on the 1-HP floor in 我执, so the client draws the pool as the red bar — display only
-          unit.negFill = () => (unit.mem.hsEgo && unit.mem.hsEgo.pool > 0 ? unit.mem.hsEgo.pool / Math.max(1e-9, capOf()) : 0);
           const enter = (pool) => {
             unit.mem.hsEgo = { pool: Math.max(0, pool), lastHurt: battle.time };
             battle.addBuff(unit, { key: EGO, status: 'healFree', flags: { noHeal: true, healFree: true }, tags: ['talent'] });

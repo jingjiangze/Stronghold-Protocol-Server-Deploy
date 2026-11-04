@@ -1,3 +1,5 @@
+import {isHuntEntry} from '../../../shared/huntProgression.js';
+import {carrySpyInvestigation} from '../../../shared/spyInvestigation.js';
 // server/sim/battle/deploy.js — Battle methods: deployment, death and redeploy: _deploy (home, landing or rest tile; 联防
 // carry), kill / retreat and the removal bookkeeping (_remove, hooks of removed units released at step end), redeploy /
 // automatic redeploys, leaks.
@@ -22,6 +24,7 @@ export class BattleDeploy {
       return false;
     }
     const k = R0 * COLS + C0;
+    if (this._sealedDeployTiles?.has(k)) return false;
     const occ = this._occ[k];
     if (occ && occ !== u && occ.alive && occ.deployed) { this.log(`tile ${R0},${C0} occupied; ${u} not deployed`); return false; }
     // "倒地干员所在地块视为可部署，但所有我方单位在此处的部署行为将被阻止" (PRTS 卫戍协议/帮助 §作战阶段 单位部署)
@@ -60,11 +63,7 @@ export class BattleDeploy {
     const sk = u.skill;
     // "自动操作具有3s冷却，在完成一次操作或作战开始时部署的单位将进入冷却" (PRTS 卫戍协议/帮助; skills.js)
     if (initial) sk.opReadyAt = this.time + this.flags.startOpCooldown;
-    // keepSp (突袭 "保留技力"): the SP / charges before the jump — not for a skill that costs no SP (spCost 0, the
-    // deploy-timed skills), which reset() just re-armed as at every deployment: the retreat ended it, so its snapshot
-    // holds 0 charges, and writing that back took the charge 伊内丝 S3's deploy hook casts with (community report:
-    // 伊内丝激活突袭瞬移以后3技能被吞; those with activateOnDeploy run already, skipped by `!sk.active`)
-    if (keepSp && !sk.noSkill && sk.kind !== 'passive' && !sk.active && sk.spCost > 0) {
+    if (keepSp && !sk.noSkill && sk.kind !== 'passive' && !sk.active) {
       sk.charges = Math.max(0, Math.min(sk.maxCharges, Math.floor(fin(keepSp.charges, 0))));
       sk.sp = Math.max(0, Math.min(sk.spCost, fin(keepSp.sp, 0)));
       if (sk.charges >= sk.maxCharges) sk.sp = sk.spCost;
@@ -85,7 +84,7 @@ export class BattleDeploy {
     if (this._hooks.kill) this.emit('kill', { killer, victim: unit });
     // a nested kill/retreat inside the handlers already removed it: a later handler's hp write must not stick
     if (!unit.alive) { if (!unit.bossPool) unit.hp = 0; return; }
-    if (unit.hp > 0 && !unit.bossPool) { // revived by a kill handler (clamped: a handler may write any number)
+    if (unit.hp > 0 && (!unit.bossPool || unit.bossHpWindow && unit.bossPool.hp > 0)) { // a staged shared leader may revive within its reserved life
       unit.hp = Math.min(unit.hp, unit.s.maxHp);
       return;
     }
@@ -105,7 +104,8 @@ export class BattleDeploy {
   }
 
   _remove(unit, reason, killer = null, permanent = false, dying = false) {
-    this._cutAttackStand(unit);
+    if(this._hooks.beforeUnitExit)this.emit('beforeUnitExit',{unit,reason,killer,permanent,dying});
+    this._cutAttackStand(unit); // display metadata: death can precede the next AI update
     unit.alive = false;
     unit.removeReason = reason;
     unit.deployed = false;
@@ -144,15 +144,19 @@ export class BattleDeploy {
       this._unblock(unit);
       this._enemiesDirty = true;
       if (reason === 'killed') {
-        const pp = this._pp(unit.ownerId);
         if (unit.counted) {
           this.killed++;
+          const pp = this._pp(unit.ownerId);
           if (pp) pp.killed++;
         }
-        // the HUD capsule's numerator (DESIGN §14): only the enemies the stage itself scheduled (`inTotal`) — a split
-        // child / summon / part knocked down here is no 已解决 of the stage's own list and moves the capsule not at all
+        /*
+         * HUD 进度胶囊的分子:只数**本关自己排的**那些(`unit.inTotal`)。
+         * 分裂孩子 / 召唤物 / 部位 / 变身副本在这里被击倒不算"已解决",所以它们不动胶囊进度。
+         * ⚠ 上游 0.2.4 就有、fork 移植时漏了;官方测试基架的 checkInvariants 会校验。
+         */
         if (unit.inTotal) {
           this.killedInTotal++;
+          const pp = this._pp(unit.ownerId);
           if (pp) pp.killedInTotal++;
         }
         if (killer) killer.stats.kills++;
@@ -242,6 +246,7 @@ export class BattleDeploy {
       const cost = u.base.cost;
       if (!ps || ps.dp + 1e-9 < cost) continue;
       const [r, c] = this.restTile(u);
+      if (this._sealedDeployTiles?.has(r * COLS + c)) continue;
       const occ = this._occ[r * COLS + c];
       if (occ && occ.alive && occ !== u) continue;
       if (this.downOn(r, c, u)) continue;
@@ -253,6 +258,10 @@ export class BattleDeploy {
   /** Leak: an enemy reached its goal. */
   leak(e) {
     if (!e || !e.alive || e.side !== 'enemy') return;
+    if(this._hooks.beforeEnemyLeak){const ctx={enemy:e,cancelled:false};this.emit('beforeEnemyLeak',ctx);if(ctx.cancelled||!e.alive)return;}
+    if(e.def.raw?.returnsToOwnField&&(this.kind==='unite'||e.mem.returningBoss?.state!=='flee')){e.moving=false;return;}
+    if(e.isBoss&&e.mods?.contractBossLoop&&e.returnSpawn){this._unblock(e);e.x=e.spawnX;e.y=e.spawnY;this.restoreEnemyRoute(e,e.returnSpawn.route);e.atkStandUntil=-Infinity;this.fx('appear',{id:e.id,x:e.x,y:e.y});return;}
+    if(e.def.raw?.returnsToOwnField)e.returnHpPct=Math.max(0,Math.min(1,e.hp/e.s.maxHp));
     this._recordLeak(e, false);
     this._remove(e, 'leak');
     this._ev(['leak', e.id]);
@@ -260,10 +269,16 @@ export class BattleDeploy {
   }
 
   _recordLeak(e, timeout) {
-    const owner = timeout ? e.ownerId : this._ownerForTile([Math.round(e.y), Math.round(e.x)]) ?? e.ownerId;
+    const owner = e.def.raw?.returnsToOwnField?e.ownerId:timeout ? e.ownerId : this._ownerForTile([Math.round(e.y), Math.round(e.x)]) ?? e.ownerId;
     const pp = this._pp(owner) ?? this._pp(e.ownerId);
     if (pp) {
-      const entry = { enemyKey: e.defId, mods: e.mods ?? null, lpr: e.lpr ?? 1, sourcePlayerId: e.sourcePlayerId ?? e.ownerId, tag: e.tag ?? null, counted: !!e.counted || e.isBoss, boss: e.isBoss || undefined, spawned: true };
+      const entry = { enemyKey: e.defId, mods: carrySpyInvestigation(e.defId,e.mods,{spyInvestigation:e.mem.investigation??e.mods?.spyInvestigation??0,spyStrikeSpent:e.mem.spyStrikeSpent??e.mods?.spyStrikeSpent??false}), lpr: e.lpr ?? 1, sourcePlayerId: e.sourcePlayerId ?? e.ownerId, tag: e.tag ?? null, counted: !!e.counted || e.isBoss, boss: e.isBoss || undefined, spawned: true };
+      if(e.def.raw?.returnsToOwnField){
+        const key=e.sourcePlayerId||e.ownerId||'',used=(this._returningLpSpent||={})[key]||0;
+        entry.lpr=Math.max(0,Math.min(e.lpr??3,10-used));e.lastLeakLpr=entry.lpr;this._returningLpSpent[key]=used+entry.lpr;
+        entry.returningId=e.returningId;entry.returnHpPct=Number.isFinite(e.returnHpPct)?e.returnHpPct:Math.max(0,Math.min(1,e.hp/e.s.maxHp));
+      }
+      if(isHuntEntry(e)){entry.lpr=0;e.lastLeakLpr=0;}
       // born while a 联防 field ran (spawns.js): the leaker never sent it in, so it costs nobody LP and raises no ×N —
       // unite.js uniteSurvivors / spec.js uniteLeft filter it; every other reading keeps counting it as usual
       if (e.uniteRuntime) entry.uniteRuntime = true;

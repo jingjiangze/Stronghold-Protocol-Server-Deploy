@@ -1,0 +1,133 @@
+{
+  "manifest": 2,
+  "id": "room-chat",
+  "name": {
+    "zh": "同盟通讯"
+  },
+  "englishName": "Room Chat",
+  "description": {
+    "zh": "房间级聊天与贴纸：同盟通讯面板、弹幕、交流里的贴纸。全部由本插件提供（code.lobby + code.client）。随机地图开关已拆成独立插件 random-stage。"
+  },
+  "version": "0.1.0",
+  "app": ">=0.3.0 <0.5.0",
+  "api": 2,
+  "authors": [
+    {
+      "name": "jingjiangze"
+    }
+  ],
+  "license": "GPL-3.0-or-later",
+  "class": "trusted",
+  "scope": [
+    "room"
+  ],
+  "permissions": [
+    "trusted.server"
+  ],
+  "entry": {
+    "server": "host/noop.js"
+  },
+  "code": {
+    "lobby": "server/lobby.js",
+    "client": [
+      "js/ui/chatScroll.js",
+      "js/ui/communityChat.js",
+      "js/ui/roomChat.js",
+      "js/ui/roomDanmaku.js",
+      "js/ui/voiceIcons.js",
+      "js/ui/emotes.js",
+      "css/room-chat.css",
+      "community-emotes/011b78a293456c47b7c0.preview.webp",
+      "community-emotes/04ff83d4595672ff6cb1.preview.webp",
+      "community-emotes/0dcc26cd5630ec8f8aa9.preview.webp",
+      "community-emotes/0e36e2e7b84e1ade42c2.preview.webp",
+      "community-emotes/0e432091fa056e2f24d0.preview.webp",
+      "community-emotes/1273c497b6b22499b7b7.preview.webp",
+      "community-emotes/160024c01860cc974030.preview.webp",
+      "community-emotes/18d6ee1ce3054fa36832.preview.webp",
+      "community-emotes/1aae43d2377d84abdd89.preview.webp",
+      "community-emotes/1cc8e623bd85cd1be238.preview.webp",
+      "community-emotes/20c5e2b578d4748f6b3c.preview.webp",
+      "community-emotes/2e51fe46c043295502c2.preview.webp",
+      "community-emotes/3302717d5947a27f392b.preview.webp",
+      "community-emotes/36c30744a526ad7ad6f0.preview.webp",
+      "community-emotes/373418a76c574bb49dd6.preview.webp",
+      "community-emotes/37d9b1777776ac9a4e57.preview.webp",
+      "community-emotes/38672de83effec16688b.preview.webp",
+      "community-emotes/3968ff2c67961837e124.preview.webp",
+      "community-emotes/3d16c9ba8acd0ec577bc.preview.webp",
+      "community-emotes/3e7743455b52242ff04d.preview.webp",
+      "community-emotes/4011929c6e06f50c158d.preview.webp",
+      "community-emotes/47233be735332036061d.preview.webp",
+      "community-emotes/491977db81e5959f475c.preview.webp",
+      "community-emotes/4bb6ff52cb7d8fbf81c8.preview.webp",
+      "community-emotes/4e179bd82de17fd4a903.preview.webp",
+      "community-emotes/4e1db87249e9e1789864.preview.webp",
+      "community-emotes/4ee5c012eedbeb5f5226.preview.webp",
+      "community-emotes/526b7a1134f55d5eee70.preview.webp",
+      "community-emotes/533b364fb30c6afbffab.preview.webp",
+      "community-emotes/55acd08e7ae58d58f568.preview.webp",
+      "community-emotes/5a474e2803638615498d.preview.webp",
+      "community-emotes/5ae49007572fab99b3de.preview.webp",
+      "community-emotes/5ee8108cfce88daa6a37.preview.webp",
+      "community-emotes/623f2dd4d4a9ca086308.preview.webp",
+      "community-emotes/68bb7ce12104deca96db.preview.webp",
+      "community-emotes/6a985871cc9d84baf9d9.preview.webp",
+      "community-emotes/6b6c263d3561732fb006.preview.webp",
+      "community-emotes/6d94f88cc6c0a1e7fc56.preview.webp",
+      "community-emotes/6f9eb86ccbba18bfe33b.preview.webp",
+      "community-emotes/701bf4285a30e6a70a71.preview.webp",
+      "community-emotes/70667e214507611bb202.preview.webp",
+      "community-emotes/778fb03519180aa576bc.preview.webp",
+      "community-emotes/78dbea0468a7944b9122.preview.webp",
+      "community-emotes/791672b4a2ccb8423490.preview.webp",
+      "community-emotes/7e47a3877db181d77679.preview.webp",
+      "community-emotes/811147d26eff1288af89.preview.webp",
+      "community-emotes/86f78d3d0da1e651f525.preview.webp",
+      "community-emotes/86fff6f7123568600580.preview.webp",
+      "community-emotes/8a3be43fb874d4b32384.preview.webp",
+      "community-emotes/8ad32b5bf1801ee5f3d0.preview.webp",
+      "community-emotes/922c3319362a7dfac552.preview.webp",
+      "community-emotes/9385384c3869e743837b.preview.webp",
+      "community-emotes/946dfdf7b106842e79ce.preview.webp",
+      "community-emotes/9a175cac679d01475a84.preview.webp",
+      "community-emotes/9bf8387206057b7fbf0f.preview.webp",
+      "community-emotes/a2740c609a5bb0720995.preview.webp",
+      "community-emotes/a496ba96905df17d5b2f.preview.webp",
+      "community-emotes/badc7bde5e163b5fc169.preview.webp",
+      "community-emotes/c6bf226ddaee8d56d72f.preview.webp",
+      "community-emotes/cce8153ccd40eaeb3b72.preview.webp",
+      "community-emotes/cf0435447c93f883be37.preview.webp",
+      "community-emotes/cfe9f9135400612137a6.preview.webp",
+      "community-emotes/d46286923ad1377060fe.preview.webp",
+      "community-emotes/daaeacf2ca927e535571.preview.webp",
+      "community-emotes/db3746f5290f6f276e50.preview.webp",
+      "community-emotes/de0e0fc533b02932e8b0.preview.webp",
+      "community-emotes/dfef0b682274b9bbe692.preview.webp",
+      "community-emotes/e1e498fbd2a88b86ad2c.preview.webp",
+      "community-emotes/e32acecd795161750a6a.preview.webp",
+      "community-emotes/ea65518afa74cce61d31.preview.webp",
+      "community-emotes/ea7ecdec5c0bdfbdbe2c.preview.webp",
+      "community-emotes/f0466ff8b63b7704d12b.preview.webp",
+      "community-emotes/f0c8a8b7d471090f1872.preview.webp",
+      "community-emotes/f1a3904b902bf7bf9ff5.preview.webp",
+      "community-emotes/f2b81a5bbe8d8cb8e30b.preview.webp",
+      "community-emotes/f4e8ed0a2cfe500a71db.preview.webp",
+      "community-emotes/manifest.json"
+    ]
+  },
+  "csp": {
+    "img": [
+      "https://sp.isomer319.xyz",
+      "https://hk1.bbsmc.cn"
+    ],
+    "connect": [
+      "https://sp.isomer319.xyz"
+    ]
+  },
+  "needs": [
+    "code.lobby",
+    "code.client",
+    "protocol.extend"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "manifest": 2,
+  "id": "upstream-043-content",
+  "name": {
+    "zh": "0.4.3 上游新内容",
+    "en": "Upstream 0.4.3 content"
+  },
+  "description": {
+    "zh": "把 0.4.3 的敌人/干员/驻防/装置/领袖/乐队/效果并入 0.3.3；stages/waves 只并新增，factions 只并 types 池。技能/规则代码需另配 —— 数据本身不代表完整可玩。",
+    "en": "Merges 0.4.3 enemies/operators/garrisons/tokens/bosses/bands/effects into 0.3.3; stages/waves only add new keys; factions only unions type pools. Skill/rule code is separate — data alone is not full playability."
+  },
+  "version": "0.4.3",
+  "app": ">=0.3.0 <0.5.0",
+  "api": 2,
+  "class": "content",
+  "scope": [
+    "room"
+  ],
+  "authors": [
+    "jingjiangze"
+  ],
+  "license": "GPL-3.0-or-later",
+  "permissions": [
+    "data.add"
+  ],
+  "code": {
+    "data": [
+      "data/bands.json",
+      "data/bosses.json",
+      "data/effects.json",
+      "data/enemies.json",
+      "data/factions.json"
+    ]
+  },
+  "needs": [
+    "data.add"
+  ]
+}

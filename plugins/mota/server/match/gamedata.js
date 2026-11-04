@@ -70,13 +70,12 @@ export const DEFAULTS = Object.freeze({
   //                           face count; shares follow the rolls, the remainder goes to the highest roll, the total
   //                           never exceeds that income). Both default off: every existing mode keeps its behaviour.
   teamEconomy: {
-    transfer: { maxPerRequest: 5, requestsPerRound: 1, teamCapPerRound: 8, ttlSec: 30, repayInterest: 0 },
-    deathDividend: { enabled: false, dice: 6 },
-    // coverInterest: the PvE interest a lender earns by holding teammates' leaked enemies (兜底). The rate is
-    // min(capPct, floor(100 × 兜底 kills / the match's planned enemy total)) percent of a repaid principal, accrued
-    // fractionally per lender and paid in whole funds; the first nine rounds cannot fill it, because they can only
-    // spawn ~52% of the match's enemies at all (calibrated 2026-10-07: 125 of 240 in 标准). Off by default.
-    coverInterest: { enabled: false, capPct: 100, lagPremium: 1 },
+    // 业主 2026-10-30「只保留团队储备」：借款额度收紧（队友只是兜底）、利息归零。
+    transfer: { maxPerRequest: 1, requestsPerRound: 2, teamCapPerRound: 4, ttlSec: 30, repayInterest: 0, poolFillBehindOnly: true },
+    // deathDividend 与 coverInterest（兜底利率）已按业主要求删除 —— 两者本来就是无调用者的死码，
+    // 2026-10-30 起连配置也不再提供。
+    // reserve：团队储备的常规收入（防守奖励），数值调低：两档并成 1，每回合最多 1。
+    reserve: { perfectReward: 1, fullDefenceReward: 1, perfectRewardCapPerRound: 1 },
     // botLend: the bot teammate's willingness to answer a borrow request — a seeded roll instead of the flat rule. The
     // chance is basePct, plus a share of weakPct when the borrower's board trails the team's median (the under-developed
     // teammate this mode is meant to carry), plus solventPct when they are safe to repay (units on the board and LP at
@@ -90,20 +89,22 @@ export const DEFAULTS = Object.freeze({
     // cannot buy) rolls `basePct + keyPct`, capped at keyMaxPct (80) — user decision 2026-10-08. Off by default: the old
     // "broke and nothing affordable" ask stays.
     botAsk: { enabled: false, basePct: 8, brokePct: 40, keyPct: 60, maxPct: 50, keyMaxPct: 80 },
-    reserve: { convertPerPlayerMax: 2, perfectReward: 1, fullDefenceReward: 2, perfectRewardCapPerRound: 2 },
+    // 复审计 2026-10-27：convertPerPlayerMax 在改三层资金后已无读者（econSplitLeftover 不再用它），删除
+    // （同一处曾遗留一份旧的 reserve 字面量 `1 / 2 / 2`，与上面第 78 行的 `1 / 1 / 1` 重复定义 ——
+    //   对象字面量重复键后者生效，会把业主 2026-10-30 调低的数值悄悄改回 2/2。已删，只留上面那份。）
     // relief (DESIGN §27, user decision 2026-10-09): the weakest player may take funds straight out of the team reserve
     // — itself, not on anyone's behalf, and one fund at a time (`amount`). Only a player at or below `lpThreshold` that
     // is (tied for) the team's lowest LP may take, capped `perPlayerPerRound` per player and `teamPerRound` for the
     // team. Off by default; a mode that ships it turns it on (协同共竞). lpThreshold defaults to the per-round LP cap,
     // i.e. "one worst-case round from elimination" (config lpCapPerRound 10, defaultStartLp 28).
     relief: { enabled: false, amount: 1, lpThreshold: 10, perPlayerPerRound: 2, teamPerRound: 4 },
-    // projects: the ones a mode lists are the ones it ships (a mode that drops 联合采购 simply does not name it); with
-    // no block at all the whole default set is used. 联合采购 grants free refreshes at the round start, 应急仓储 the
-    // leftover a player keeps at the prep end, 后勤调度 the team transfer cap (and, at Lv3, one more ask per player).
+    // 商店设施（业主 2026-10-30「升级项搬到商店吧（商店也是花协同资金）」）：三项都用团队储备买，
+    // 效果分别是 商店等级上限 +1 / 团队储备每回合收入上限 +1 / 装备价格 −1（下限 2）。
+    // 价格按「14 回合、团队池收入 ≈ 1-4/回合」的规模定：单局最多点满 1.5 棵树，别指望全开。
     projects: {
-      procure: { costs: [4, 8, 12] },
-      storehouse: { costs: [4, 4, 4] },
-      logistics: { costs: [4, 4, 4], teamCapBonus: [4, 8, 12], extraRequestsAtL3: 1 },
+      shopLevel: { costs: [4, 5, 6, 8] },
+      teamIncome: { costs: [3, 5, 7] },
+      equipCost: { costs: [4, 6] },
     },
   },
   // 救援（促融共竞 / DESIGN §29）: a mode turns it on with `mode.revival = { enabled: true }` — 促融共竞 ships it on,
@@ -485,7 +486,7 @@ export class GameData {
 
   // ---- mode -----------------------------------------------------------------------------------------
 
-  get isSolo() { return this.mode.type === 'SINGLE' || /^mode_single_/.test(this.modeId || ''); }
+  get isSolo() { return this.mode.type === 'SINGLE' || this.mode.type === 'LOCAL' || /^mode_single_/.test(this.modeId || ''); }
   get difficulty() { return this.mode.difficulty || (this.modeId ? String(this.modeId).split('_').pop().toUpperCase() : 'NORMAL'); }
   get lastRound() {
     if (Number.isInteger(this.mode.lastRound) && this.mode.lastRound > 0) return this.mode.lastRound;
@@ -537,7 +538,12 @@ export class GameData {
     const v = rc ? rc.combatTimeLimit : undefined;
     if (typeof v === 'number' && Number.isFinite(v) && v > 0) return v;
     const m = this.mode.combatTimeLimit && this.mode.combatTimeLimit[String(r)];
-    return typeof m === 'number' && Number.isFinite(m) && m > 0 ? m : 60;
+    if (typeof m === 'number' && Number.isFinite(m) && m > 0) return m;
+    // R14 / R15 are the boss levels: the data leaves `combatTimeLimit` null there because that level's own
+    // `levelMaxPlayTime` (120) is the countdown — read it before the 60 s generic fallback, or the boss battle gets
+    // a limit 60 s shorter than its level. Rounds that declare a `combatTimeLimit` never reach this line.
+    const lv = rc ? rc.levelMaxPlayTime : undefined;
+    return typeof lv === 'number' && Number.isFinite(lv) && lv > 0 ? lv : 60;
   }
 
   /**
@@ -631,15 +637,22 @@ export class GameData {
   }
   /**
    * 协同经济 (DESIGN §28): the resolved rule set, or null while it is off. Off unless config.economy.team.enabled —
-   * a mode may override the whole block with mode.teamEconomy (the bossHpScale pick pattern) — and never in solo.
+   * a mode may override the whole block with mode.teamEconomy (the bossHpScale pick pattern) — and never in solo,
+   * nor in a single-human rogue room (`econSolo`, set by the Match once it knows the seat list: nobody is there to
+   * lend to, so the reserve / requests / projects would be a control the one human can press against themselves).
    * Every number is clamped here so the match code reads plain ints.
    */
   get teamEconomy() {
     const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
     const mode = obj(this.mode.teamEconomy);
     const conf = obj(this.economy.team);
-    const src = Object.keys(mode).length ? mode : conf;
-    if (src.enabled !== true || this.isSolo) return null;
+    // 肉鸽并入协同（业主 2026-10-30「肉鸽不作为新玩法了，还是加到协同里面」）：肉鸽房的 `modeId` 是
+    // `mode_rogue_*`，config 的 `modes` 里没有这一条 ⇒ `this.mode` 为空、取不到 `teamEconomy`，以前是靠下面
+    // 那道 `matchIsRogue` 闸门把它显式关掉的。现在换成给肉鸽单独一份 `economy.rogueTeam`：它没有熔毁商店
+    // （`meltdown` 只对 `mode_xie_*` 开放），所以那份配置只列 `teamIncome` 一个项目。缺这条配置时仍返回 null。
+    const rogue = obj(this.economy.rogueTeam);
+    const src = Object.keys(mode).length ? mode : (this.matchIsRogue === true ? rogue : conf);
+    if (src.enabled !== true || this.isSolo || this.econSolo === true) return null;
     const d = DEFAULTS.teamEconomy;
     const nn = (v, dflt) => (Number.isInteger(v) && v >= 0 ? v : dflt);
     const pi = (v, dflt) => (Number.isInteger(v) && v > 0 ? v : dflt);
@@ -660,24 +673,30 @@ export class GameData {
       // 协同共竞 (DESIGN §29): borrowing only — the team reserve, its conversion, the perfect rewards and the
       // projects stay off; the request/transfer layer is the whole rule set.
       borrowOnly: src.borrowOnly === true,
+      // 2026-11-01 P1：债务账本独立开关（默认开）——利息两档恒 0/false 时账本以前永不写入，
+      // 还钱/催钱链路全死；`debtLedger: false` 可显式关回。
+      debtLedger: src.debtLedger !== false,
       transfer: {
         maxPerRequest: pi(tr.maxPerRequest, d.transfer.maxPerRequest),
         requestsPerRound: pi(tr.requestsPerRound, d.transfer.requestsPerRound),
         teamCapPerRound: pi(tr.teamCapPerRound, d.transfer.teamCapPerRound),
         ttlSec: pi(tr.ttlSec, d.transfer.ttlSec),
         repayInterest: nn(tr.repayInterest, d.transfer.repayInterest),
+        poolFillBehindOnly: tr.poolFillBehindOnly !== false,
       },
+      // 2026-10-30 业主决定删除「阵亡分红」与「兜底利率」两个机制：结构保留（economy.js 仍会读这几个字段，
+      // 直接删键会让还款路径 TypeError），但 enabled **恒为 false** —— 老配置里写着 true 也打不开。
       deathDividend: (() => {
         const dd = obj(src.deathDividend);
-        return { enabled: dd.enabled === true, dice: Math.max(2, Math.min(100, pi(dd.dice, d.deathDividend.dice))) };
+        return { enabled: false, dice: Math.max(2, Math.min(100, pi(dd.dice, 6))) };
       })(),
       coverInterest: (() => {
         const ci = obj(src.coverInterest);
         return {
-          enabled: ci.enabled === true,
-          capPct: Math.max(0, Math.min(100, nn(ci.capPct, d.coverInterest.capPct))),
+          enabled: false,
+          capPct: Math.max(0, Math.min(100, nn(ci.capPct, 100))),
           // 兜底率分红: what a debt owed by a borrower who was behind the team's median earns on top (1 = off)
-          lagPremium: Math.max(1, Math.min(4, pi(ci.lagPremium, d.coverInterest.lagPremium))),
+          lagPremium: Math.max(1, Math.min(4, pi(ci.lagPremium, 1))),
         };
       })(),
       botAsk: (() => {
@@ -702,7 +721,9 @@ export class GameData {
         const lo = ms(bl.delayMsMin, d.botLend.delayMsMin);
         return {
           enabled: bl.enabled === true,
-          basePct: Math.min(maxPct, pct(bl.basePct, d.botLend.basePct)),
+          // 2026-11-01 P1：basePct 不再预钳到 maxPct（叠加项与最终上限的钳制在 econBotLendChance 里），
+          // 否则配置里 basePct 75 / maxPct 50 会让 basePct 永远失真成 50。
+          basePct: pct(bl.basePct, d.botLend.basePct),
           weakPct: pct(bl.weakPct, d.botLend.weakPct),
           solventPct: pct(bl.solventPct, d.botLend.solventPct),
           coverPct: pct(bl.coverPct, d.botLend.coverPct),
@@ -713,7 +734,6 @@ export class GameData {
         };
       })(),
       reserve: {
-        convertPerPlayerMax: nn(rv.convertPerPlayerMax, d.reserve.convertPerPlayerMax),
         perfectReward: nn(rv.perfectReward, d.reserve.perfectReward),
         // 全员都防住的那一档（业主 2026-10-18）：比「联防没漏」高一档，不是叠加
         fullDefenceReward: nn(rv.fullDefenceReward, d.reserve.fullDefenceReward),

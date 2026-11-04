@@ -26,6 +26,7 @@
 //   are resolved by Battle (getToken(id, owner.defId, owner.def.loadout)), not here.
 // registerAllMeta(registry) — calls each domain module's registerMeta(registry) (prep side, server boot).
 
+import { withOperatorSfxSignals20261101 } from './kits/shared/operatorSfxSignals20261101.js';
 import { genericKit, genericTalents } from './generic.js';
 import { EXTENSIONS, installExtensions } from './extensions.js';
 import { compileDsl } from './dsl/compile.js';
@@ -93,12 +94,12 @@ function registeredKit(def, reg) {
 /** Official kit key or file stem; no path supplied by a plugin is ever imported. */
 export function officialKit(ref) {
   if (Object.hasOwn(KITS, ref)) return KITS[ref];
-  const file = Object.values(KIT_REGISTRY.KIT_FILES || {}).flat().concat(KIT_REGISTRY.STANDIN_KIT_FILES || [], KIT_REGISTRY.OPERATOR_KIT_FILES || [])
+  const file = Object.values(KIT_REGISTRY.KIT_FILES || {}).flat().concat(KIT_REGISTRY.STANDIN_KIT_FILES || [], KIT_REGISTRY.OPERATOR_KIT_FILES || [],KIT_REGISTRY.OWNER_KIT_FILES||[],KIT_REGISTRY.MOD_KIT_FILES||[])
     .find(f => f.replace(/\.js$/, '') === ref);
   if (!file) return undefined;
   const stem = file.replace(/\.js$/, '');
   if (stem.startsWith('chess_')) return KITS[stem.split('-')[0] + '_a'];
-  const code = stem.replace(/^(op|standin)-/, '');
+  const code = stem.replace(/^(op|standin|owner)-/, '');
   return Object.entries(KITS).find(([k]) => k.startsWith('char_') && k.endsWith('_' + code))?.[1];
 }
 
@@ -170,7 +171,7 @@ export function setupUnitKit(battle, unit, mode = 'full') {
     if (typeof f === 'function') {
       try {
         const k = f(bb, raw, def);
-        if (k) return selectSkillSpec(k, bb, raw, def);
+        if (k) return withOperatorSfxSignals20261101(selectSkillSpec(k, bb, raw, def), unit);
       } catch (e) {
         const dslCode = typeof e?.code === 'string' && /^PLUGIN_DSL_[A-Z0-9_]+$/.test(e.code);
         // A record that carries DSL, or a throw whose code is a DSL problem, is a corrupt content set.
@@ -295,21 +296,6 @@ export function selectSkillSpec(kit, bb, raw, def) {
   return out;
 }
 
-/**
- * Whether the kit of `def` has a hand-authored spec for its selected skill (tools/kit-coverage.mjs, tests): `skills`
- * entry, or the kit's `skill` for the default skill when the kit is not the generic fallback. Never throws.
- * @returns {'skills'|'kit'|'generic'|'none'} where the spec comes from ('none' = no kit function at all)
- */
-export function skillSpecSource(def, kits = KITS) {
-  const f = kitOf(def, kits);
-  if (typeof f !== 'function') return 'none';
-  let k = null;
-  try { k = f(def.skill?.bb ?? {}, def.raw ?? def, def); } catch { return 'generic'; }
-  if (!k || k.generic) return 'generic';
-  const id = selectedSkillId(def);
-  if (id && k.skills && Object.prototype.hasOwnProperty.call(k.skills, id)) return 'skills';
-  return skillIsDefault(def) && k.skill !== undefined ? 'kit' : 'generic';
-}
 
 /**
  * Install kits for every ally unit and (mode 'full') every domain module. First, a Battle constructed without the spec
@@ -350,4 +336,15 @@ export function registerAllMeta(registry) {
     if (typeof mod.registerMeta !== 'function') continue;
     try { mod.registerMeta(registry); } catch (e) { console.error(`[content] ${name}.registerMeta failed:`, e); }
   }
+}
+
+export function skillSpecSource(def, kits = KITS) {
+  const f = kitOf(def, kits);
+  if (typeof f !== 'function') return 'none';
+  let k = null;
+  try { k = f(def.skill?.bb ?? {}, def.raw ?? def, def); } catch { return 'generic'; }
+  if (!k || k.generic) return 'generic';
+  const id = selectedSkillId(def);
+  if (id && k.skills && Object.prototype.hasOwnProperty.call(k.skills, id)) return 'skills';
+  return skillIsDefault(def) && k.skill !== undefined ? 'kit' : 'generic';
 }

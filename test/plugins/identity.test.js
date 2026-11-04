@@ -202,7 +202,7 @@ describe('the wire: welcome, room.state, the match, /healthz, /cs/, BattleSpec, 
   let srv;
   const clients = [];
   before(async () => {
-    const { startServer } = await import('../../server/index.js');
+    const { startServer } = await import('../../server/boot-main.js');
     srv = await startServer({ port: 0, host: '127.0.0.1', quiet: true, MatchClass: RecordingStub });
   });
   after(async () => {
@@ -214,12 +214,20 @@ describe('the wire: welcome, room.state, the match, /healthz, /cs/, BattleSpec, 
     const c = await TestClient.connect(srv.url.replace('http', 'ws') + '/ws');
     clients.push(c);
     const w = await c.hello('Amiya');
-    assert.deepEqual(w.content, { vanilla: srv.content.cs });
+    // DESIGN §32: the welcome names the vanilla set, and adds `plugins: n` once unofficial plugins are installed (this
+    // fork ships twelve). Nothing else may ride along.
+    const { vanilla: wVanilla, ...wExtra } = w.content;
+    assert.equal(wVanilla, srv.content.cs, 'welcome.content names the vanilla set');
+    assert.deepEqual(Object.keys(wExtra), wExtra.plugins === undefined ? [] : ['plugins'], 'only the plugin count rides along');
+    if (wExtra.plugins !== undefined) assert.ok(Number.isInteger(wExtra.plugins) && wExtra.plugins > 0, 'a positive plugin count');
     assert.ok(Array.isArray(w.diyKitted), 'welcome keeps diyKitted');
     const r = await c.request({ t: 'room.create', mode: 'solo', difficulty: 'FUNNY' });
     assert.equal(r.t, 'ok', JSON.stringify(r));
     const state = await c.waitFor('room.state', (s) => s.mode === 'solo');
-    assert.deepEqual(state.content, { cs: srv.content.cs, vanilla: true, plugins: [] });
+    // `required` rides along when the policy names any (plugins/config.json): the plugins the host cannot switch off
+    const { required: reqIds, ...contentBase } = state.content;
+    assert.deepEqual(contentBase, { cs: srv.content.cs, vanilla: true, plugins: [] });
+    assert.ok(reqIds === undefined || (Array.isArray(reqIds) && reqIds.every((id) => typeof id === 'string')), 'required — ids only');
     assert.equal((await c.request({ t: 'room.start' })).t, 'ok');
     await c.waitFor('room.state', (s) => s.inMatch === true);
     assert.equal(RecordingStub.last.cs, srv.content.cs, 'lobby → Match opts.cs');
@@ -227,7 +235,10 @@ describe('the wire: welcome, room.state, the match, /healthz, /cs/, BattleSpec, 
 
   test('/healthz names the vanilla content; /cs/<cs16>/index.json is its manifest, cached for good, and only that one', async () => {
     const h = await (await fetch(`${srv.url}/healthz`)).json();
-    assert.deepEqual(h.content, { vanilla: srv.content.cs, sets: 0 });
+    const { vanilla: hVanilla, sets: hSets, ...hExtra } = h.content;
+    assert.equal(hVanilla, srv.content.cs, '/healthz names the vanilla set');
+    assert.equal(hSets, 0, 'no installed content sets');
+    assert.deepEqual(Object.keys(hExtra), hExtra.plugins === undefined ? [] : ['plugins'], 'only the plugin count rides along');
     const url = `${srv.url}/cs/${srv.content.cs.slice(0, 16)}/index.json`;
     const res = await fetch(url);
     assert.equal(res.status, 200);

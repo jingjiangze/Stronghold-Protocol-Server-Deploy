@@ -19,7 +19,7 @@
 // report, ~1 Hz).
 
 import { useEffect, useRef, useState } from '../../vendor/hooks.module.js';
-import { PHASE, TEAMS, TEAM_NAMES } from '../../../shared/constants.js';
+import { PHASE, TEAM_NAMES } from '../../../shared/constants.js';
 import { html, Icon, Tooltip } from './components.js';
 import { PlayerAvatar, LpTower, GIcon, LocalSprite } from './gameComponents.js';
 import { EmoteBubble } from './emotes.js';
@@ -123,15 +123,6 @@ export function TeamPanel({ pub, myId, watching, bubbles, onWatch, compact = fal
   const phaseKey = `${pub?.phase}:${pub?.round}`;
   useEffect(() => { setOpenPid(null); }, [phaseKey, watching, observe?.observing]);
   const players = sortedPlayers(pub);
-  // 队伍筛选（阶段 2）：null = 全部；点了某个队的按钮就只看那个队
-  // 开局默认显示自己的队伍（我是红队就只看红队）
-  const myTeamDefault = (players.find((x) => x.playerId === myId) || {}).team || null;
-  const [teamFilter, setTeamFilter] = useState(myTeamDefault);
-  const [collapsed, setCollapsed] = useState(false);   // 队伍筛选条收起
-  const matchKey = `${pub?.seed}|${pub?.roomCode || ''}`;
-  useEffect(() => { setTeamFilter(myTeamDefault); }, [matchKey]);
-  const teamsPresent = TEAMS.filter((tm) => players.some((x) => (x.team || null) === tm));
-  const shown = teamFilter ? players.filter((x) => (x.team || null) === teamFilter) : players;
   if (!players.length) return null;
   // a boss round: the viewer's pair framed in green from the round's start (item 51 — the official bg_team_border,
   // tinted like the official green; a plain green ring without the local art)
@@ -164,18 +155,8 @@ export function TeamPanel({ pub, myId, watching, bubbles, onWatch, compact = fal
     noteAsked(p);
     onWatch(p);
   };
-  const filterBar = html`<div class=${`team__filters${collapsed ? ' is-collapsed' : ''}`} role="group" aria-label=${t('按队伍筛选')} style="display:flex;gap:4px;flex-wrap:wrap;padding:6px 8px;background:rgba(0,0,0,.55);border-bottom:1px solid rgba(255,255,255,.18);">
-    <button type="button" style="padding:3px 8px;font-size:11px;color:#fff;background:#333;border:1px solid #666;border-radius:3px;cursor:pointer;" class=${cx('team__filter', !teamFilter && 'is-on')} onClick=${() => setTeamFilter(null)}>${t('全部')}</button>
-    ${teamsPresent.map((tm) => html`<button key=${tm} type="button" data-team=${tm}
-      class=${cx('team__filter', 'team__filter--' + tm, teamFilter === tm && 'is-on')}
-      title=${t(TEAM_NAMES[tm])} onClick=${() => setTeamFilter((cur) => (cur === tm ? null : tm))}>
-      <i></i>${t(TEAM_NAMES[tm])}</button>`)}
-    <button type="button" class="team__collapse" onClick=${() => setCollapsed((v) => !v)}
-      title=${collapsed ? t('展开队伍筛选') : t('收起队伍筛选')}>${collapsed ? '»' : '«'}</button>
-  </div>`;
-  return html`<aside class=${cx('team', compact && 'team--compact')} aria-label=${t('同盟成员')}>
-    ${filterBar}
-    ${shown.map((p) => {
+  return html`<aside class=${cx('team', compact && 'team--compact', players.length > 8 && 'team--many')} aria-label=${t('同盟成员')}>
+    ${players.map((p) => {
       const self = p.playerId === myId;
       // 促融共竞 (DESIGN §29): 救援窗口里被扣住的座位是 `alive:false + pendingDeath:true` —— 那是「等待救援」，
       // 不是「已淘汰」。窗口关闭后服务端把 `pendingDeath` 撤掉、`revivalReason` 记下原因，这一行才变回 dead。

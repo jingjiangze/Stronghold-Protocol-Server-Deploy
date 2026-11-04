@@ -1,0 +1,78 @@
+/* plugins/mota/client/css/screens/proto-dock.css — 对抗规则 dock（2026-10-27）。
+ *
+ * 为什么是独立文件：插件客户端覆盖只认 plugin.json `code.client[]` 里登记的同路径文件（server/boot-main.js 的
+ * clientOverlay）。`css/screens/lobby.css` 从未登记，所以那份 192KB 的 lobby.css 覆盖其实是死的——把规则写进去
+ * 也不会下发。这里单独一个文件、单独登记，并由 js/screens/lobby.js 注入一次 <link>（与 game.js 注入 hex.css 同法）。
+ *
+ * 赏金 / 控怪 / AI 对抗 三个按钮从右侧面板移到场景底部，与难度简介 .proto-brief 同一行，横向排列。
+ */
+
+.proto-bottom { position: absolute; left: .1rem; right: 0; bottom: .1rem; z-index: 2; display: flex; align-items: flex-end; justify-content: space-between; gap: .3rem;
+  pointer-events: none; }
+.proto-bottom > * { pointer-events: auto; }
+.proto-bottom > .proto-brief { position: static; left: auto; bottom: auto; flex: 0 1 auto; min-width: 0; }
+.proto-bottom.has-dock > .proto-brief { max-width: min(3.9rem, 38%); }
+.proto-bottom.has-dock > .proto-brief p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+.proto-dock { flex: 1 1 auto; min-width: 0; max-width: min(8.4rem, 100%); display: flex; flex-direction: column; gap: .06rem; padding: .08rem .1rem .07rem;
+  background: linear-gradient(180deg, rgba(13, 15, 16, .62), rgba(7, 8, 9, .88)); border: 1px solid rgba(255, 255, 255, .14); border-radius: .16rem;
+  box-shadow: 0 .06rem .22rem rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .07); backdrop-filter: blur(3px); }
+.proto-dock__row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .08rem; }
+.proto-dock__foot { display: flex; align-items: center; gap: .14rem; min-width: 0; }
+.proto-dock__note { flex: 1 1 auto; min-width: 0; font-size: max(.13rem, 9.5px); line-height: 1.35; color: #98a09d;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* 三档按钮与原生卡同一套语言（2026-11-01）：左竖条 = .fun-card，选中态 = .dpick__opt.is-active 的
+   底边条 + 令牌色边框，两者都不再用自造色值。 */
+.vsopt { --acc: var(--line-3); position: relative; display: flex; align-items: center; gap: .08rem; min-width: 0; height: max(.6rem, 38px); padding: 0 .1rem 0 .14rem;
+  font: inherit; color: #cdd2d0; text-align: left; cursor: pointer; background: linear-gradient(180deg, #232527, #16181a); border: 2px solid #474b4d; border-radius: .12rem;
+  transition: border-color 180ms, box-shadow 180ms, transform 180ms var(--ease-out), background 180ms; }
+.vsopt::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--acc); opacity: .85; transition: opacity 180ms; }
+.vsopt:hover:not(:disabled):not(.is-on) { border-color: color-mix(in srgb, var(--acc) 55%, #474b4d); transform: translateY(-1px); }
+.vsopt:disabled { opacity: .45; filter: grayscale(.6); cursor: default; }
+.vsopt.is-on { color: var(--text-hi); border-color: var(--acc); background: linear-gradient(180deg, color-mix(in srgb, var(--acc) 17%, #1a1c1d), #121415);
+  box-shadow: inset 0 -3px 0 var(--acc), 0 0 .16rem color-mix(in srgb, var(--acc) 26%, transparent); }
+.vsopt.is-on::before { opacity: 1; }
+.vsopt__code { flex: none; display: grid; place-items: center; min-width: max(.34rem, 22px); height: max(.34rem, 22px); padding: 0 .04rem;
+  font: 900 max(.17rem, 11px)/1 var(--font-display, inherit); letter-spacing: .02em; color: var(--acc);
+  background: rgba(0, 0, 0, .5); border: 1px solid color-mix(in srgb, var(--acc) 45%, transparent); border-radius: .06rem; }
+.vsopt.is-on .vsopt__code { color: #101314; background: var(--acc); border-color: var(--acc); }
+.vsopt__text { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.vsopt__text b { font-size: max(.2rem, 13px); font-weight: 900; letter-spacing: .02em; white-space: nowrap; }
+.vsopt__text small { font-size: max(.12rem, 9px); color: #858b89; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vsopt.is-on .vsopt__text small { color: color-mix(in srgb, var(--acc) 55%, #d5dad8); }
+/* 待开放：钉在右下角，不占标题那一行的宽度（窄屏下标题曾被它挤断） */
+.vsopt__lock { position: absolute; right: .03rem; bottom: .03rem; padding: 0 .04rem; font-size: max(.09rem, 7px); font-weight: 800; line-height: 1.4;
+  color: #0e1112; background: #9aa0a2; border-radius: .04rem; }
+
+.proto-versus__alt { flex: none; display: inline-flex; align-items: center; gap: .06rem; padding: .03rem .12rem; font-size: max(.13rem, 10px); color: #cdd2d0; white-space: nowrap;
+  background: rgba(0, 0, 0, .45); border: 1px solid rgba(255, 255, 255, .16); border-radius: 999px; cursor: pointer; }
+.proto-versus__alt input { width: max(.2rem, 13px); height: max(.2rem, 13px); accent-color: var(--mint-500); }
+/* 人数选择（业主 2026-10-27：偶数自定义，最大 20 人 = 每队 10） */
+.proto-team { display: inline-flex; align-items: center; gap: .06rem; font-size: max(.13rem, 10px); color: #cdd2d0; white-space: nowrap; }
+.proto-team select { height: max(.32rem, 20px); padding: 0 .06rem; font: inherit; font-size: max(.13rem, 10px); color: #e9eceb;
+  background: #1b1d1e; border: 1px solid rgba(255, 255, 255, .18); border-radius: .06rem; }
+.proto-team select:disabled { opacity: .5; }
+
+/* 协同资金说明（协同共竞的 xie 模式，右侧面板）：2026-11-01 起这里只承载一段说明文字
+   （.proto-versus--info），曾经的 dpick 选择器已按业主裁决取消——那三条 `.proto-versus .dpick__opt`
+   规则因此从未命中任何 DOM，一并删掉；按钮样式真身在核心 public/css/screens/room.css 的 .dpick__opt。 */
+.proto-versus { display: flex; flex-wrap: wrap; align-items: center; gap: .06rem; padding: .07rem; border: 1px solid var(--line-2);
+  border-radius: .12rem; background: rgba(0, 0, 0, .32); }
+.proto-versus__note { flex: 1 1 100%; font-size: max(.13rem, 9.5px); line-height: 1.4; color: #98a09d; }
+/* 只剩说明文字时（选择器已取消，见 2026-10-27 业主裁决）：整块变成一段说明，不再是按钮组 */
+.proto-versus--info { display: block; padding: .09rem .12rem; }
+.proto-versus--info .proto-versus__note { display: block; }
+
+/* the stage keeps 46px below the scene on short screens — drop the sub line and the note, keep the names */
+@media (max-height: 520px) {
+  .proto-dock { gap: 4px; padding: 5px 6px 4px; }
+  .proto-dock__row { gap: 5px; }
+  .vsopt { height: 34px; gap: 6px; padding: 0 6px 0 9px; }
+  .vsopt__text small { display: none; }
+  .proto-dock__note { display: none; }
+}
+/* a narrow window leaves ~150px per button: the sub line only ever truncated to an ellipsis, so keep the names whole */
+@media (max-width: 900px) {
+  .vsopt__text small { display: none; }
+}

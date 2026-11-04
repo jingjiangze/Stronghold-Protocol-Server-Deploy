@@ -80,7 +80,7 @@ test('offline release stage runs plugin CLI, native author harness and sandbox t
       run(['tools/plugin.mjs', 'check', `release-${template}`, '--strict']);
       run(['tools/plugin.mjs', 'pack', `release-${template}`, '--zip']);
     }
-    assert.match(run(['tools/plugin.mjs', 'test', 'release-script']), /# fail 0/);
+    assert.match(run(['tools/plugin.mjs', 'test', 'release-script']), /ℹ fail 0\b/); // the spec report on every Node version
     run(['--input-type=module', '-e', `
       import assert from 'node:assert/strict';
       import { createPluginRegistry } from './server/plugins/registry.js';
@@ -116,13 +116,24 @@ test('offline release stage runs plugin CLI, native author harness and sandbox t
 
 test('Docker copies real production dependencies and separate author resources with narrow context exceptions', () => {
   const docker = fs.readFileSync(path.join(ROOT, 'Dockerfile'), 'utf8');
-  const ignore = fs.readFileSync(path.join(ROOT, '.dockerignore'), 'utf8').split('\n');
+  // (.gitattributes gives .dockerignore no eol: a Windows checkout with core.autocrlf has CRLF lines, as Docker allows)
+  const ignore = fs.readFileSync(path.join(ROOT, '.dockerignore'), 'utf8').split(/\r?\n/);
   assert.match(docker, /npm ci --omit=dev --ignore-scripts/);
   assert.match(docker, /COPY --from=deps \/app\/node_modules \.\/node_modules/);
-  assert.match(docker, /SP_PLUGIN_RESOURCES=\/app\/plugin-resources/);
-  assert.match(docker, /COPY --from=build \/app\/plugin-resources \.\/plugin-resources/);
-  assert.match(docker, /chown node:node \/app\/plugins/);
-  for (const file of ['tools/plugin.mjs', 'test/helpers/battleHarness.js', 'schemas']) assert.ok(docker.includes(`COPY --from=build /app/${file} ./${file}`), file);
-  for (const rule of ['node_modules', 'public/vendor', 'plugins/*', '!plugins/_template/', '!plugins/README.md', '!plugins/AGENTS.md',
-    'test/*', '!test/helpers/', 'test/helpers/*', '!test/helpers/battleHarness.js', 'handoff', 'pv', '3，9，11回合情况', 'docs/research/*.md']) assert.ok(ignore.includes(rule), rule);
+  // Upstream's image keeps the author templates in a root-owned /app/plugin-resources so that an empty /app/plugins bind
+  // mount cannot hide them. This fork's image is the ModelScope one and ships plugins/ inside the image without such a
+  // mount, so the mechanism is absent by design; the server still honours SP_PLUGIN_RESOURCES (the template test above
+  // sets it by hand), which is what keeps `-v plugins:/app/plugins` workable for anyone who adds that mount.
+  assert.doesNotMatch(docker, /SP_PLUGIN_RESOURCES=/);
+  assert.doesNotMatch(docker, /COPY --from=build \/app\/plugin-resources/);
+  assert.match(docker, /COPY --from=build \/app\/plugins \.\/plugins/);
+  // The runtime image ships the whole server tree plus the tools the boot imports (tools/golden.mjs, tools/assets/atlas.mjs)
+  // and the research tables; it carries no test harness and no build-only schema bundle (the context drops `test`).
+  for (const dir of ['shared', 'server', 'plugins', 'data', 'public', 'tools']) assert.ok(docker.includes(`COPY --from=build /app/${dir} ./${dir}`), dir);
+  assert.match(docker, /COPY --from=build \/app\/docs\/research \.\/docs\/research/);
+  assert.doesNotMatch(docker, /COPY --from=build \/app\/test/);
+  // and the build context stays narrow: no suite, no vendored copies, no art, no machine-local state.
+  for (const rule of ['node_modules', 'public/vendor', 'public/assets', 'test', 'docs/research/*.md', '.git', '.cache']) {
+    assert.ok(ignore.includes(rule), rule);
+  }
 });

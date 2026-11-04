@@ -1,0 +1,50 @@
+{
+  "_comment": "边缘层的分流表。容器的 /assets/** 与 /fonts/** 按这里的顺序 302 出去，字节从不落在容器上。顺序即用户口径（2026-10-21）：**魔搭数据集 → 其他镜像（ghfast-assets、gitcdn-own）→ R2 兜底**。openi 不进 order（浏览器 CORS 不可用，仅 ?sp_source=openi 点名）。",
+  "_order_note": "这是静态顺序，不是实时测速：容器在 ModelScope 机房，玩家在全国各地，容器量出来的链路速度不代表玩家的。真正按玩家网络选最快是客户端 pick.js 的事，两者分工。客户端可用 ?sp_source=<id> 覆盖这里的顺序。",
+  "_order_basis": "顺序按直连实测（本机 --noproxy，非代理）：小文件 TTFB modelscope 0.21s / r2 0.66s；855 KB 大文件 modelscope 0.26s(3.3 MB/s) / r2 1.9s(0.4 MB/s)。",
+  "_order_reason": "2026-10-24 用户指令：R2 退出访问面（域名已解绑，仅保留为上传中转）、gitcdn-own 删除（Worker 吃爆免费档 100k/池）。order = modelscope → ghfast-assets → jsdelivr-assets；openi 仍只作 ?sp_source= 显式通道。（2026-10-30：曾把 speedcdn 插到首位，浏览器链变成 盒子302→speedcdn→ms.show，WAF 把并发下载字节全掐成 (network)；已摘出 order，speedcdn 条目保留 —— 等它自己成为字节源再放回。）",
+  "schemaVersion": 1,
+  "_interface_note": "C 方案（2026-10-22）：/cdn/v1/** 动态清单走容器代理，从这棵数据集的 cdn/v1/ 子树取（带 MODELSCOPE_API_TOKEN 会话）。清单文件是 json/js/bin，走浏览器 302 私有数据集读不了，所以由容器代理转发字节。asset-jump.js 的 jump.interface 与 static.js 的接线都读这一条。",
+  "interfaceBase": "https://www.modelscope.cn/datasets/jingjiangze/Stronghold-Protocol-Assets/resolve/master",
+  "order": [
+    "modelscope",
+    "ghfast-assets",
+    "jsdelivr-assets"
+  ],
+  "sources": [
+    {
+      "id": "speedcdn",
+      "base": "https://speedcdn.jiangjiangze.icu"
+    },
+    {
+      "id": "modelscope",
+      "base": "https://www.modelscope.cn/datasets/jingjiangze/Stronghold-Protocol-Assets/resolve/master/releases/v1-trial",
+      "note": "自建 ModelScope 数据集镜像（**私有**）。匿名 resolve 404，所以浏览器不能直接取这个基址：server/http/asset-jump.js 在容器内用 MODELSCOPE_API_TOKEN 换会话，把这条 resolve 追上一步，拿到 cdn-lfs 的签名直链（auth_key）再 302 给玩家 —— 数据集不必转公开，字节也不经过容器。域名必须是 www.：登录发的 m_session_id 只对 www.modelscope.cn 生效。",
+      "redirects": [
+        "https://cdn-lfs-cn-1.modelscope.cn"
+      ]
+    },
+    {
+      "id": "openi",
+      "base": "https://openi.pcl.ac.cn/jingjiangze/Stronghold-Protocol/raw/branch/assets-raw",
+      "note": "启智镜像（每天四次推送，素材树 915 MiB）。**故意不在 order 里**：它快（TTFB 0.21s）但 ACAO 写死成第三方域 experience.pro.iflyaicloud.com 且不反射请求方，二进制还忽略 Range（png 返 200 而非 206）——浏览器跨域取 WebGL 贴图会被 CORS 拒绝、并把画布污染成白屏（见记忆 web-cdn-art-webgl-taint）。只作**显式指定**的通道：客户端/工具确知自己不需要 CORS 时用 ?sp_source=openi。详见 cdn 仓 docs/audit/openi-cors-bypass.md。"
+    },
+    {
+      "id": "ghfast-assets",
+      "base": "https://ghfast.top/https://raw.githubusercontent.com/jingjiangze/Stronghold-Protocol-CDN/assets-raw",
+      "note": "GitHub 代理挂载 assets-raw 素材树。2026-10-21 实测：ACAO `*`、Range 返 206、12/12 抽样命中最全（与 R2 同字节）。放在数据集之后、r2 之前：数据集私有且受平台网关抖动影响，它是第一个「一定公开」的中间档。"
+    },
+    {
+      "id": "jsdelivr-assets",
+      "base": "https://cdn.jsdelivr.net/gh/jingjiangze/Stronghold-Protocol-CDN@assets-raw",
+      "note": "jsDelivr 挂载本仓 assets-raw 孤儿分支（素材树 2.14 GiB）。2026-10-24 加入 order：数据集 resolve 后端故障期间经实测存活（真 PNG 200/56617B、Range 206、ACAO *）。与 ghfast-assets 同一上游（raw.githubusercontent 的 assets-raw），只是 CDN 门不同——ghfast 面向内地加速、jsDelivr 面向全球多 CDN。"
+    }
+  ],
+  "_exceptions_note": "数据集不是逐字节完整的：ModelScope 的内容审核会拒收个别文件（实测拒了 char_340_shwaz_snow_1/illustration.png，提交被平台 reverted）。这些路径必须落到别的源，否则玩家拿到 404。Stardust 的 material-lb 有同一张表（MATERIAL-SOURCES.md 里是同一个文件的同一条例外），说明这是会复发的类型，不是一次性事故。",
+  "exceptions": {
+    "/assets/skins/char_340_shwaz_snow_1/illustration.png": "r2"
+  },
+  "_prefix_rules_note": "**prefixRules 已于 2026-10-15 删除。** 曾据「2026-10-14 实测 voice 0/15、char 21%、ui 20%、spine 45%…」写下 8 条前缀规避，全部 `skip: [modelscope]`。那次实测是**探针坏了**：`curl -o /dev/null` 在 Windows 上报 `(23) client returned ERROR on write`，异常被 catch 成 FAIL，48 条全 FAIL ⇒ 看起来 100% 缺失。修正后带对照组（5 条确定不存在的路径 → 5/5 正确 404）重测，从 `origin/assets-raw` 权威树按 22 个 `assets/` 前缀各抽 ≤10 条共 205 条：**205/205 全 200**（含 voice 10/10、char 10/10、ui 10/10、spine 10/10、art-index 1/1）。另注意 LFS 对象第一跳是 302 到 `cdn-lfs-cn-1.modelscope.cn`，必须跟到底，单看第一跳会把「有货」读成 302。⇒ 8 条规则全是基于假缺失的死配置，删除。`edge-sidecar.mjs` 的 `prefixBlocked` 机制保留（没错，只是暂无规则可命中）；若将来真出现目录级缺口，先用带对照组的探针复核再写规则。",
+  "prefixRules": [],
+  "_dynamic_note": "动态清单在**魔搭数据集的 `cdn/v1/rank.json`**（rank.yml 每天四次注入）。容器侧的 `asset-jump.js` 会去读它。2026-10-22 起：**speedcdn 不再指向 R2**（R2 订阅停用后它改为 CF Redirect Rule 302 到数据集），所以它在 rank 里映射到 modelscope（同字节），r2 的真实门牌是 weishucdn。`SP_RANK_ORDER` 现为 `on`：rank 头部（ms-dataset/gitcdn-own/speedcdn→modelscope）会参与排序，r2（weishucdn）跑输就自然落到尾部 —— 这正是「R2 永远垫底、等额度恢复」的表达。"
+}

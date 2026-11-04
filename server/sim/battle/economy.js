@@ -1,3 +1,4 @@
+import { WEB_TRAITS } from '../../../shared/arkWebTraits20261101.js';
 // server/sim/battle/economy.js — Battle methods: DP, IN_BATTLE bond layer gains (capped by layerGainRoom) and bounty
 // coins.
 // Installed on Battle.prototype by server/sim/Battle.js (a method container: never instantiated; `this` is the battle).
@@ -5,6 +6,24 @@
 import { layerGainRoom } from '../../../shared/constants.js';
 
 export class BattleEconomy {
+  /** Maintainer 2026-10-26: foresight attrition is a signed battle delta and persists at SETTLE. */
+  removeLayers(playerId, bondId, n) {
+    if (!this.flags.layerGainsEnabled || !(n > 0) || !Number.isFinite(n)) return 0;
+    const ps = this.getPlayer(playerId), pp = this._pp(playerId), bond = ps?.bonds[bondId];
+    if (!bond || !pp) return 0;
+    const loss = Math.min(Math.floor(n), Math.max(0, bond.layers || 0));
+    if (!loss) return 0;
+    bond.layers -= loss;
+    // A loss spends temporary layers first; only its permanent remainder can settle as attrition.
+    const temporaryLoss = Math.min(loss, ps.webTraits?.temporary?.[bondId] || 0);
+    if (temporaryLoss) ps.webTraits.temporary[bondId] -= temporaryLoss;
+    pp.layerGains[bondId] = (pp.layerGains[bondId] || 0) - (loss - temporaryLoss);
+    if (pp.layerGains[bondId] === 0) delete pp.layerGains[bondId];
+    this.emit('layerLoss', { playerId, bondId, n: loss });
+    this._ev(['layer', playerId, bondId, -loss]);
+    return loss;
+  }
+
   addDp(playerId, n) {
     const ps = this.getPlayer(playerId);
     if (!ps || !Number.isFinite(n)) return 0;
@@ -20,18 +39,28 @@ export class BattleEconomy {
    * clamps the persistent count the same way.
    */
   addLayers(playerId, bondId, n, reason = '', opts = {}) {
+    const web = opts.webTrait === true && opts.source?.ownerId === playerId
+      && WEB_TRAITS[opts.source?.def?.charId]?.bond === bondId && reason === 'webTrait';
     if (!this.flags.layerGainsEnabled || !(n > 0) || !Number.isFinite(n) || playerId == null) return 0;
     const pp = this._pp(playerId);
     if (!pp) return 0;
     const ps = this.getPlayer(playerId);
     const live = ps && ps.bonds[bondId] ? (ps.bonds[bondId].layers ?? 0) : (pp.layerGains[bondId] ?? 0);
-    if (!(layerGainRoom(live, Infinity) > 0)) return 0;
+    /*
+     * 危机合约的盟约叠层上限 (`bondLayerCap` / `bondLayerCapAbove`) 由战斗输入带进来
+     * (`Battle.data.contractLayerCap`,`match/match/combat.js newBattle`)——
+     * 战斗里涨的层数和战后 settle 落库的那一份必须用**同一个上限**,否则两边对不上。
+     */
+    const globalCap=this.data?.contractLayerCap?.cap,personal=ps?.input?.contractLayerCap?.cap;
+    const cap=globalCap==null?personal:personal==null?globalCap:Math.min(globalCap,personal),capOpts=cap==null?null:{cap,capAbove:cap};
+    if (!(layerGainRoom(live, Infinity, capOpts) > 0)) return 0;
     const source = opts.source ?? null;
     const ctx = { playerId, bondId, n, reason, source, tile: Array.isArray(opts.tile) ? opts.tile : this._sourceTile(source) };
     if (this._hooks.layerGain) { this.emit('layerGain', ctx); if (!(ctx.n > 0) || !Number.isFinite(ctx.n)) return 0; }
-    const add = layerGainRoom(live, ctx.n);
+    const add = layerGainRoom(live, web ? Math.min(ctx.n, opts.maxAmount, n) : ctx.n, capOpts);
     if (!(add > 0)) return 0;
     pp.layerGains[bondId] = (pp.layerGains[bondId] ?? 0) + add;
+    if (pp.layerGains[bondId] === 0) delete pp.layerGains[bondId];
     if (ps && ps.bonds[bondId]) ps.bonds[bondId].layers = (ps.bonds[bondId].layers ?? 0) + add;
     this._ev(['layer', playerId, bondId, add]);
     return add;
@@ -61,7 +90,7 @@ export class BattleEconomy {
    * 活性源石 included).
    */
   _bountyPayee(unit, killer = null) {
-    if (killer && killer.side === 'ally' && killer.ownerId != null && this._pp(killer.ownerId)) return killer.ownerId;
+    if (killer && (killer.side === 'ally'||killer.mods?.eventTeam===1) && killer.ownerId != null && this._pp(killer.ownerId)) return killer.ownerId;
     const owner = unit.bounty?.ownerPlayerId ?? unit.ownerId;
     if (owner != null && this._pp(owner)) return owner;
     return this._ownerForTile([Math.round(unit.y), Math.round(unit.x)]);

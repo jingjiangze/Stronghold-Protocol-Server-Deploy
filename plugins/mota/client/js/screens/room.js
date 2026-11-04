@@ -30,6 +30,8 @@ import { DIFFICULTIES, DIFFICULTY_NAMES, DIFFICULTY_COLORS, MIN_SEATS, MAX_SPECT
 // seat counts through the namespace: the live constants (before the 10-seat package) have MAX_SEATS 4 and no DEFAULT_SEATS
 import * as SEAT_CONST from '../../../shared/constants.js';
 import { RANDOM_MODE, RANDOM_MODE_NAME } from '../../../shared/randomMode.js';
+// 观战接管的版本门禁：DEFAULT_VERSION / roomVersion 由核心 public/js/versions.js 提供（本插件不覆盖这个文件）
+import { DEFAULT_VERSION, roomVersion } from '../versions.js';
 import {
   html, Button, Icon, MicroLabel, AvatarFrame, DifficultyIcon, Tooltip, confirmDialog, doctorNo, Spinner, Modal,
 } from '../ui/components.js';
@@ -245,7 +247,8 @@ export function seatCapRoomRange(room, serverMax) {
  * @param {{ room: any, isHost: boolean, onPick: (n: number) => Promise<boolean> }} props
  */
 function SeatCapSetter({ room, isHost, onPick }) {
-  const range = isHost ? seatCapRoomRange(room, serverSeatMaxOf()) : null;
+  // 对抗房（2V2 / 4V4）：座位数由 teamSize 锁定成 teamSize*2，不给滑条（服务端 setMaxSeats 也会拒绝）。
+  const range = isHost && room?.mode !== 'versus' ? seatCapRoomRange(room, serverSeatMaxOf()) : null;
   const [asked, setAsked] = useState(null);
   useEffect(() => {
     if (asked != null && room && room.seatCap === asked) setAsked(null);
@@ -320,12 +323,12 @@ function SeatCard({ seat, index, room, facts, myId, busy, onKick, onInvite, sear
       onClick=${() => onKick(index, seat.name, seat.playerId)} title=${t('将该博士移出同盟')} aria-label=${t('移出该博士')}><${Icon} name="user" /><${Icon} name="close" /></button>` : null}
     ${seat.isBot && facts.isHost && onRemoveBot ? html`<button type="button" class="rseat__kick rseat__kick--bot" disabled=${busy === `rm${index}`}
       onClick=${() => onRemoveBot(index)} title=${t('移除 AI 队友')} aria-label=${t('移除 AI 队友')}><${Icon} name="robot" /><${Icon} name="close" /></button>` : null}
-    <div class=${`rseat__plate${seatAccount?.card ? ' has-nc' : ''}`}>
-      <${NameCardLayer} card=${seatAccount?.card} />
+    <div class=${`rseat__plate${seat.nc || seatAccount?.card ? ' has-nc' : ''}`}>
+      <${NameCardLayer} card=${seat.nc ? { skin: seat.nc } : seatAccount?.card} />
       ${isMe ? html`<span class="rseat__me" title=${t('你')}><${Icon} name="info" /></span>` : null}
       <${AvatarFrame} size="sm" name=${seat.name} src=${seatAccount?.avatar || undefined} seat=${index} bot=${seat.isBot} self=${isMe} />
       <span class="rseat__who">
-        <${TrophyBadge} count=${seatAccount?.trophies} class="tbadge--inline" /><b class=${`rseat__name${owner ? ' sp-owner-name' : ''}`}>${seat.name || t('博士')}</b><${AccountTag} playerId=${seat.isBot ? null : seat.playerId} />
+        <${TrophyBadge} count=${seatAccount?.trophies} class="tbadge--inline" /><b class=${`rseat__name${owner ? ' sp-owner-name' : ''}`}>${seat.name || t('博士')}</b>${seat.tag && !seat.isBot ? html`<span class="acct-tag">#${seat.tag}</span>` : null}<${AccountTag} playerId=${seat.isBot ? null : seat.playerId} />
         ${owner ? html`<span class="sp-owner-badge">${t('服主')}</span>` : null}
       </span>
       <small class="rseat__doc">${seat.isBot ? 'AUTONOMOUS UNIT' : `DOCTOR #${doctorNo(seat.playerId)}`}</small>
@@ -337,7 +340,7 @@ function SeatCard({ seat, index, room, facts, myId, busy, onKick, onInvite, sear
 function SpectatorBar({ facts, myId, busy, onRemove, onSit }) {
   if (!facts.spectators.length) return null;
   return html`<section class="specbar" aria-label=${t('观战席')}>
-    <span class="specbar__label"><${Icon} name="eye" />${t('观战席')}<b class="num">${facts.spectators.length}</b><span class="num t-dim">/${MAX_SPECTATORS}</span></span>
+    <span class="specbar__label"><${Icon} name="eye" />${t('观战席')}<b class="num">${facts.spectators.length}</b>${Number.isFinite(MAX_SPECTATORS) ? html`<span class="num t-dim">/${MAX_SPECTATORS}</span>` : null}</span>
     ${facts.spectators.map((s) => html`<span key=${s.playerId} class=${`specbar__who${s.playerId === myId ? ' is-me' : ''}${s.connected === false ? ' is-offline' : ''}`}>
       ${s.connected === false ? html`<${Icon} name="wifiOff" />` : null}${s.name || t('博士')}${s.playerId === myId ? html`<span class="seat__you">${t('你')}</span>` : null}
       ${facts.isHost ? html`<${Button} variant="ghost" size="sm" square=${true} icon="close" loading=${busy === `rs${s.playerId}`}
@@ -359,6 +362,62 @@ function AiLastToggle({ option, busy, onToggle }) {
       </button>
     <//>
     ${option.editable ? null : html`<span class="t-dim">${t('由创建者设置')}</span>`}
+  </div>`;
+}
+
+/** 观战接管 AI (2026-10-31): host opt-in before the match; everyone else sees the state. */
+export function aiTakeoverOption(room, myId) {
+  if (!room || room.mode === 'solo' || roomVersion(room) !== DEFAULT_VERSION) return null;
+  return { on: room.aiTakeoverEnabled === true, editable: room.hostId != null && room.hostId === myId && !room.inMatch };
+}
+
+/** 随机接管 (3–9 回合): only once the handover switch is on (the server refuses it otherwise). */
+export function aiRandomOption(room, myId) {
+  if (!room || room.aiTakeoverEnabled !== true || room.mode === 'solo' || roomVersion(room) !== DEFAULT_VERSION) return null;
+  return { on: room.aiRandomHandover === true, editable: room.hostId != null && room.hostId === myId && !room.inMatch };
+}
+
+function AiTakeoverToggle({ option, busy, onToggle }) {
+  if (!option) return null;
+  return html`<div class="ailast">
+    <${Tooltip} text=${t('默认关闭。开启后，观战者可在休整期经同房间真人投票接替 AI；继承的记录计入接替者的个人统计与奖励。')}>
+      <button type="button" role="switch" aria-checked=${option.on ? 'true' : 'false'} data-testid="room-ai-takeover"
+          class=${`dpick__opt ailast__opt${option.on ? ' is-active' : ''}`} disabled=${!option.editable || !!busy}
+          onClick=${() => option.editable && onToggle(!option.on)}>
+        <${Icon} name="check" class=${option.on ? 'is-on' : ''} />${t('允许观战者接替 AI')}
+      </button>
+    <//>
+    ${option.editable ? null : html`<span class="t-dim">${t('由创建者设置')}</span>`}
+  </div>`;
+}
+
+function AiRandomToggle({ option, busy, onToggle }) {
+  if (!option) return null;
+  return html`<div class="ailast">
+    <${Tooltip} text=${t('默认关闭。开启后，本局会在第 3–9 回合里随机挑一回合，自动替一名在线观战者向一个 AI 席位发起接管申请，仍需队友投票；每局最多一次。')}>
+      <button type="button" role="switch" aria-checked=${option.on ? 'true' : 'false'} data-testid="room-ai-random"
+          class=${`dpick__opt ailast__opt${option.on ? ' is-active' : ''}`} disabled=${!option.editable || !!busy}
+          onClick=${() => option.editable && onToggle(!option.on)}>
+        <${Icon} name="check" class=${option.on ? 'is-on' : ''} />${t('随机接管（3–9 回合）')}
+      </button>
+    <//>
+    ${option.editable ? null : html`<span class="t-dim">${t('由创建者设置')}</span>`}
+  </div>`;
+}
+
+/** 随机地图（业主 2026-10-31）：搬到房间页，所有模式都能开。
+ *  关 = 整局固定一张图；开 = 协同共竞 / 肉鸽每回合换图，其它模式在 boss 关换图。 */
+function RandomStageToggle({ room, host, busy, onToggle }) {
+  const on = room.randomStage === true;
+  return html`<div class="ailast">
+    <${Tooltip} text=${t('默认关闭（整局固定一张战场）。开启后：协同共竞与肉鸽每回合抽一张新图，其它模式在 boss 关换图。房主开局前可随时切换。')}>
+      <button type="button" role="switch" aria-checked=${on ? 'true' : 'false'} data-testid="room-random-stage"
+          class=${`dpick__opt ailast__opt${on ? ' is-active' : ''}`} disabled=${!host || !!busy}
+          onClick=${() => host && onToggle(!on)}>
+        <${Icon} name="check" class=${on ? 'is-on' : ''} />${t('随机地图')}
+      </button>
+    <//>
+    ${host ? null : html`<span class="t-dim">${t('由创建者设置')}</span>`}
   </div>`;
 }
 
@@ -392,7 +451,7 @@ function RoomProtocol({ room, variant, onClose, onPick, busy, leaving = false })
 }
 
 /** ⚙ of the bottom pill: 私密房间, 人数上限 (with the 10-seat constants), AI 队友最后选择, 无限火力 branch. */
-function RoomOptions({ room, facts, myId, busy, online, variant, onPrivate, onSeatCap, onAiLast, onVariant, onClose, leaving = false }) {
+function RoomOptions({ room, facts, myId, busy, online, variant, onPrivate, onSeatCap, onAiLast, onAiTakeover, onAiRandom, onRandomStage, onIncompleteMaps, onVariant, onClose, leaving = false }) {
   const coop = room.mode !== 'solo';
   const host = facts.isHost;
   useEffect(() => {
@@ -407,6 +466,11 @@ function RoomOptions({ room, facts, myId, busy, online, variant, onPrivate, onSe
       <span>${t('私密房间')}<small>${room.private ? t('仅凭同盟密钥或邀请加入，不能搜寻队友') : t('公开大厅可见，可以搜寻队友')}</small></span></label>` : null}
     <${SeatCapSetter} room=${room} isHost=${host} onPick=${onSeatCap} />
     <${AiLastToggle} option=${aiLastOption(room, myId)} busy=${busy} onToggle=${onAiLast} />
+    <${AiTakeoverToggle} option=${aiTakeoverOption(room, myId)} busy=${busy} onToggle=${onAiTakeover} />
+    <${AiRandomToggle} option=${aiRandomOption(room, myId)} busy=${busy} onToggle=${onAiRandom} />
+    <${RandomStageToggle} room=${room} host=${host} busy=${busy} onToggle=${onRandomStage} />
+    <label class="rs-opt"><input type="checkbox" checked=${room.incompleteMaps === true} disabled=${!host || !!busy || !online} onChange=${(e) => onIncompleteMaps(e.currentTarget.checked)} />
+      <span>${t('包含无场景地图')}<small>${t('默认关闭：只在有官方场景包的地图里抽；开启后无第三层的地图也会被抽到，退回程序化棋盘')}</small></span></label>
     ${room.random === true ? html`<div class="rs-opt rs-opt--variant"><span>${t('模式分支')}</span>
       <div class="dpick" role="radiogroup" aria-label=${t('模式分支')}>
         ${[['blitz', t('快速突袭 {totalRounds} 回合', { totalRounds: RANDOM_MODE.totalRounds })], ['endurance', t('持久鏖战 {totalRounds} 回合', { totalRounds: RANDOM_MODE.endurance.totalRounds })], ['marathon', t('最长时赛 {totalRounds} 回合', { totalRounds: RANDOM_MODE.marathon.totalRounds })]].map(([v, label]) => html`
@@ -652,6 +716,21 @@ export function RoomScreen() {
   const removeBot = (seat) => run(`rm${seat}`, () => net.request('room.removeBot', { seat }));
   const setDifficulty = (difficulty) => run('diff', async () => { await net.request('room.setDifficulty', { difficulty }); setPicker(false); });
   const setAiLast = (on) => run('ailast', () => net.request('room.setAiPicksLast', { on }));
+  // 观战接管 AI / 随机接管 (2026-10-31): 本文件是插件里的 room 屏（顶替核心那份），接管开关原先只存在于核心副本
+  // ⇒ 线上房主根本看不到。两个开关必须在这里，核心那边的改动才可能生效。
+  // 潜入需要一个「可接的 AI 席」，而 coop 房默认不填 AI ⇒ 开启「AI 协作」时若一个 AI 席都没有，自动补一个。
+  const setAiTakeover = (on) => run('aihandover', async () => {
+    // 潜入：先保证房里**有可接的 AI 席**（coop 房默认不填 AI），再开接管开关 —— 顺序反了会「开了但没人可接」。
+    if (on) {
+      const hasBot = (room.seats || []).some((s) => s && s.isBot && !s.left);
+      if (!hasBot) await net.request('room.addBot', {});
+    }
+    await net.request('room.setAiTakeover', { on });
+  });
+  const setAiRandom = (on) => run('airandom', () => net.request('room.setAiRandom', { on }));
+  // 随机地图（random-stage 插件提供 C2S）：房主、开局前
+  const setRandomStage = (on) => run('rstage', () => net.request('room.setRandomStage', { randomStage: on }));
+  const setIncompleteMaps = (on) => run('incmaps', () => net.request('room.setIncompleteMaps', { on }));
   // spectator seats: the host frees one; a spectator takes a free player seat with room.join of this room
   const removeSpectator = (playerId) => run(`rs${playerId}`, () => net.request('room.removeSpectator', { playerId }));
   const sit = () => run('sit', () => net.request('room.join', roomMods.buildJoinPayload(room.code)));
@@ -713,8 +792,46 @@ export function RoomScreen() {
       el.scrollLeft += d;
       e.preventDefault();
     };
+    // 按住拖动横向滚动（业主 2026-10-27：20 人房只有滚轮不够，且不想看到滚动条）
+    let drag = null;
+    const onDown = (e) => {
+      if (el.scrollWidth <= el.clientWidth + 1) return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      drag = { x: e.clientX, left: el.scrollLeft, moved: false };
+      el.setPointerCapture?.(e.pointerId);
+      el.classList.add('is-drag');
+    };
+    const onMove = (e) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x;
+      if (Math.abs(dx) > 3) drag.moved = true;
+      el.scrollLeft = drag.left - dx;
+      if (drag.moved) e.preventDefault();
+    };
+    const onUp = (e) => {
+      if (!drag) return;
+      el.classList.remove('is-drag');
+      el.releasePointerCapture?.(e.pointerId);
+      if (drag.moved) {
+        // 拖动结束时吞掉紧随其后的 click，避免误选座位
+        const kill = (ev) => { ev.stopPropagation(); ev.preventDefault(); };
+        el.addEventListener('click', kill, { capture: true, once: true });
+        setTimeout(() => el.removeEventListener('click', kill, { capture: true }), 60);
+      }
+      drag = null;
+    };
     el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
+    el.addEventListener('pointerdown', onDown);
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointercancel', onUp);
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('pointerdown', onDown);
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      el.removeEventListener('pointercancel', onUp);
+    };
   }, [facts.seats.length]);
 
   return html`<div class=${`screen room-screen rs${coop ? '' : ' rs--solo'}${facts.seats.length > DEFAULT_SEATS ? ' rs--big' : ''}${exiting ? ' is-leaving' : ''}`} style=${`--d-color:${DIFFICULTY_COLORS[room.difficulty]}; --n:${facts.seats.length}`}>
@@ -779,7 +896,7 @@ export function RoomScreen() {
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 2h3.4l.5 2.6 1.9.8 2.2-1.5 2.4 2.4-1.5 2.2.8 1.9 2.6.5v3.4l-2.6.5-.8 1.9 1.5 2.2-2.4 2.4-2.2-1.5-1.9.8-.5 2.6h-3.4l-.5-2.6-1.9-.8-2.2 1.5-2.4-2.4 1.5-2.2-.8-1.9L2 13.7v-3.4l2.6-.5.8-1.9-1.5-2.2 2.4-2.4 2.2 1.5 1.9-.8zM12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" fill-rule="evenodd" /></svg>
           </button>
           ${optsShown ? html`<${RoomOptions} room=${room} facts=${facts} myId=${me.playerId} busy=${busy} online=${online} variant=${variant}
-            onPrivate=${setPrivate} onSeatCap=${setSeatCap} onAiLast=${setAiLast} onVariant=${setVariant} onClose=${() => setOpts(false)} leaving=${optsLeaving} />` : null}
+            onPrivate=${setPrivate} onSeatCap=${setSeatCap} onAiLast=${setAiLast} onAiTakeover=${setAiTakeover} onAiRandom=${setAiRandom} onRandomStage=${setRandomStage} onIncompleteMaps=${setIncompleteMaps} onVariant=${setVariant} onClose=${() => setOpts(false)} leaving=${optsLeaving} />` : null}
         </div>
       </div>
       <div class="rs-foot__right">
@@ -842,12 +959,14 @@ export function TrustedNotice() {
     }
   },[cs,seat?.seat,!!trusted?.consent?.[seat?.seat]]);
   if (!trusted) return null;
+  // 服务端已有本人座位的同意（SP_PLUGIN_AUTOCONSENT=1）：不再弹红条/模态
+  const serverConsented = !!trusted.consent?.[seat?.seat];
   // 仅去掉红条：受信任插件由服主钉住，房间页不再显示这条横幅。
   return null;
   return html`<aside class="trusted-banner" data-testid="trusted-banner">
     <strong>${t('受信任插件')}</strong>
     <button onClick=${() => setReview(true)}>${t('查看风险与同意状态')}</button>
-    <${Modal} open=${review || (dismissed !== cs && !hasScriptConsent(cs))} title=${t('受信任插件')} tone="red" closeOnBackdrop=${false}
+    <${Modal} open=${review || (dismissed !== cs && !hasScriptConsent(cs) && !serverConsented)} title=${t('受信任插件')} tone="red" closeOnBackdrop=${false}
       onClose=${() => room.inMatch ? setReview(false) : choose(false)} actions=${html`<${Button} disabled=${busy} onClick=${() => choose(false)} data-testid="script-decline">${t('拒绝')}<//>
         <${Button} disabled=${busy} onClick=${() => choose(true)} data-testid="script-accept">${t('同意运行')}<//>`}>
       <p>${t('它可以完全控制你的游戏页面')}</p>

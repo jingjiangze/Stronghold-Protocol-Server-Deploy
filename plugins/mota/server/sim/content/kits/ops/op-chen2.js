@@ -138,8 +138,6 @@ export function holidayLines(t) {
 /** battle → Map(source unit → Map(tileKey → { until, ms, def })). */
 const SLIME = new WeakMap();
 
-/** A source's slimed tiles (tile key → { until, ms, def }), for tests. */
-export const slimeOf = (battle, src) => SLIME.get(battle)?.get(src) ?? null;
 
 /** The enemy's DEF multiplier from every buff but `key`'s ((1 + Σ defPct) × Π defMul): a FINAL_ADDITION is divided by it. */
 function defFactor(e, key) {
@@ -217,10 +215,11 @@ export default {
           ammo: count(b2['attack@trigger_time'], 8),
           mods: { atkPct: num(b2.atk) },
           attack: {},   // (its attacks are the skill's: isSkill)
-          onStart({ unit, skill }) {
+          onStart({ battle,unit, skill }) {
             // 蓄力: cast with every charge stored (activate took one) ⇒ the charged bullets; any cast spends all the SP
             const charged = skill.maxCharges > 1 && skill.charges + 1 >= skill.maxCharges;
             unit.mem.chen2Charged = charged;
+            battle.fx('skillChargeVisual',{id:unit.id,charged});
             if (charged && s2Charged > skill.ammoLeft) skill.addAmmo(s2Charged - skill.ammoLeft);
             skill.charges = 0;
             skill.sp = 0;
@@ -280,3 +279,5 @@ export default {
     };
   },
 };
+
+export const slimeOf = (battle, src) => SLIME.get(battle)?.get(src) ?? null;

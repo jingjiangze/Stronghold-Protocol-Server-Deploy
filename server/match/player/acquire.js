@@ -6,7 +6,7 @@
 // the player state).
 
 import { hasTraitFor } from '../operatorTraits.js';
-import { pieceDir, parseDir, mergeTile } from '../board.js';
+import { pieceDir, parseDir, mergeTile, rectOfMap } from '../board.js';
 import { MAX_OFFER_SLOTS } from './common.js';
 import { onMerge } from '../botEmotes.js';
 
@@ -106,7 +106,8 @@ export class PlayerAcquire {
     for (const l of consumed) if (l.area !== 'new') l.piece.mergedInto = elite.uid;
     const deployed = consumed.filter((l) => l.key && !this.board.has(l.key)).map((l) => ({ key: l.key, dir: pieceDir(l.piece) }));
     const toTile = (t) => { elite.dir = parseDir(t.dir) || 'RIGHT'; this.board.set(t.key, elite); return 'board'; };
-    const tile = mergeTile(deployed, (r, c) => this._legal(elite, r, c));
+    // the copies' tiles are board tiles of this player's deploy field (a rogue stage's own frame lies off the window)
+    const tile = mergeTile(deployed, (r, c) => this._legal(elite, r, c), rectOfMap(this.deployMap()));
     const where = tile ? toTile(tile) : this.stow(elite, { allowTemp: true });
     for (const it of items) this.stow(it, { allowTemp: true });
     // the returned equipment follows the auto-merge rule like any other gain ("已拥有2件同一初始装备时…自动合并")

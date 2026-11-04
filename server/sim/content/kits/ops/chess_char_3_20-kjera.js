@@ -48,9 +48,9 @@ function acquire(battle, unit, rel) {
  * [ASSUMED] No flight delay. A lock that can no longer be targeted is dropped and the drone retargets. Stun and
  * disarm do not pause the released drones (the skill tick still runs).
  */
-export function kjeraRelease(bb, { restart = false, announce = false } = {}) {
+export function kjeraRelease(bb, { restart = false, announce = false, status = 'cold', includeSkillBody = false } = {}) {
   const n = 1 + Math.max(0, Math.floor(num(bb['attack@cnt'], 0)));
-  const prob = num(bb['attack@prob'], 0), cold = num(bb['attack@cold'], 0);
+  const prob = num(bb['attack@prob'], 0), cold = num(bb['attack@'+status], 0);
   return {
     skill: {
       kind: 'duration',
@@ -90,7 +90,7 @@ export function kjeraRelease(bb, { restart = false, announce = false } = {}) {
             isSkill: true, isAttack: false, tags: ['skill', 'drone', DRONE_TAG],
           });
           if (d.lock.alive && cold > 0 && battle.rng.chance(prob)) {
-            battle.applyStatus(d.lock, 'cold', { duration: cold, source: unit });
+            battle.applyStatus(d.lock, status, { duration: cold, source: unit });
           }
         }
       },
@@ -108,11 +108,11 @@ export function kjeraRelease(bb, { restart = false, announce = false } = {}) {
       // 自身攻击: one cold roll on the ordinary body hit. Drone hits roll in onTick, so they are not rolled again.
       battle.on('damaged', (ctx) => {
         if (!unit.mem.kjeraRel || ctx.source !== unit || !ctx.target?.alive || !ctx.dmg) return;
-        if (!ctx.dmg.isAttack || ctx.dmg.isSkill) return;
+        if (!ctx.dmg.isAttack || ctx.dmg.isSkill && !includeSkillBody) return;
         const tags = ctx.dmg.tags || [];
         if (tags.includes('addition') || tags.includes('funnel') || tags.includes(DRONE_TAG)) return;
         if (!(cold > 0) || !battle.rng.chance(prob)) return;
-        battle.applyStatus(ctx.target, 'cold', { duration: cold, source: unit });
+        battle.applyStatus(ctx.target, status, { duration: cold, source: unit });
       }, { owner: unit });
     },
   };

@@ -4,7 +4,7 @@
 // list (shared/plugins/order.js), then split by class. The lobby (server/lobby.js setPlugins) asks it and holds what it
 // answers:
 //
-//   resolve(ids, { scope, settings, replacing }) → { ok: true, set: { cs, vs?, plugins: [{ id, version, class, hash,
+//   resolve(ids, { scope, settings, replacing, gameplay }) → { ok: true, set: { cs, vs?, plugins: [{ id, version, class, hash,
 //     auto? }], warnings, bytes, dataBytes?, modes?, kitted? } } | { error, detail }
 //     `cs` the content set's (a room with content plugins) or none (cosmetic plugins only: the room's cs stays the vanilla
 //     one); `plugins` in load order; `warnings` the visual set's (override, app) plus `app` for a gameplay plugin made
@@ -15,7 +15,9 @@
 //     server owner's policy: rooms off / fixed, not in `allow`, the class off), PLUGIN_DEPENDENCY / PLUGIN_CONFLICT (the
 //     load order), PLUGIN_INCOMPATIBLE (a gameplay plugin made for other game versions or another plugin API — unless
 //     the policy allows it), PLUGIN_LIMIT (the visual set's art limits), PLUGIN_BUSY (one content set more than the
-//     server runs at once).
+//     server runs at once), VERSION_UNSUPPORTED (`gameplay: false` — a room of another official version, DESIGN §35.23:
+//     a content / script / trusted plugin in the closed list, refused before anything is built; gameplay plugins play
+//     第二期下半 only).
 //   hold / release (vs), holdContent / releaseContent (cs), onStale, unofficial — the visual and content sets'.
 //   defaults() → the ids a new room starts with (the policy's `default`; [] for the original game); fixed() → those ids
 //   when every room must play them (rooms: fixed), else null.
@@ -26,6 +28,7 @@
 import { ERR } from '../../shared/constants.js';
 import { normalizeSettings } from '../../shared/plugins/patch.js';
 import { resolvePluginOrder } from '../../shared/plugins/order.js';
+import { missingCapabilities } from '../../shared/plugins/compat.js';
 
 /**
  * @param {{ registry: { plugin: (id: string) => any, plugins?: () => any[] }, visual: ReturnType<typeof import('./visualSet.js').createVisualSets> | null,
@@ -38,13 +41,20 @@ export function createRoomSets({ registry, visual, contents, policy }) {
     && Array.isArray(p.manifest?.scope) && p.manifest.scope.includes(scope);
   const cosmeticUsable = (p, scope) => !!visual && !!p && p.class === 'cosmetic' && p.status === 'loaded' && !!p.visual
     && Array.isArray(p.manifest?.scope) && p.manifest.scope.includes(scope);
-  const allowed = (p) => (!policy || policy.allows(p.id, p.class)) && (!policy || policy.enabled.includes('*') || policy.enabled.includes(p.id));
+  // `policy` 是管理器（get/allows）；解析出的策略对象里才有 `enabled`。直接读 `policy.enabled` 会让每次 resolve 抛
+  // `undefined.includes`，房间全部退回原版（业主 2026-10-21 实测）。
+  const allowed = (p, pol = null) => {
+    if (!policy) return true;
+    const cur = pol || policy.get();
+    return policy.allows(p.id, p.class) && (cur.enabled.includes('*') || cur.enabled.includes(p.id));
+  };
 
   /**
    * @param {string[]} ids
-   * @param {{ scope?: 'room', settings?: Record<string, Record<string, unknown>>, replacing?: { cs?: string } | null }} [opts]
+   * @param {{ scope?: 'room', settings?: Record<string, Record<string, unknown>>, replacing?: { cs?: string } | null,
+   *   gameplay?: boolean }} [opts] gameplay: false — the room plays another official version (no gameplay plugin)
    */
-  function resolve(ids, { scope = 'room', settings = {}, replacing = null } = {}) {
+  function resolve(ids, { scope = 'room', settings = {}, replacing = null, gameplay = true } = {}) {
     const pol = policy?.get();
     if (pol && pol.rooms === 'off') return { error: ERR.PLUGIN_BLOCKED, detail: 'this server\'s rooms play the original game (plugins/config.json rooms: off)' };
     if (pol && pol.rooms === 'fixed') {
@@ -56,21 +66,30 @@ export function createRoomSets({ registry, visual, contents, policy }) {
       if (!p) return { error: ERR.PLUGIN_UNKNOWN, detail: `${String(id).slice(0, 40)} is not installed` };
       if (p.disabled) return {error:p.disabled.code,detail:`${id}: ${p.disabled.code}`};
       if (!cosmeticUsable(p, scope) && !contentUsable(p, scope)) return { error: ERR.PLUGIN_BLOCKED, detail: `${id} is not a cosmetic or content plugin of scope ${scope} this version loads` };
-      if (!allowed(p)) return { error: ERR.PLUGIN_BLOCKED, detail: `${id} is not allowed on this server (plugins/config.json)` };
+      if (!allowed(p, pol)) return { error: ERR.PLUGIN_BLOCKED, detail: `${id} is not allowed on this server (plugins/config.json)` };
     }
     const lookup = (id) => {
       const p = registry.plugin(id);
-      return p && (cosmeticUsable(p, scope) || contentUsable(p, scope)) && allowed(p) ? { id: p.id, ...p.manifest } : null;
+      return p && (cosmeticUsable(p, scope) || contentUsable(p, scope)) && allowed(p, pol) ? { id: p.id, ...p.manifest } : null;
     };
     const r = resolvePluginOrder(ids, lookup);
     if ('error' in r) return { error: ERR[r.error] || ERR.BAD_MSG, detail: r.detail };
     const entries = r.order.map((id) => registry.plugin(id));
+    if (!gameplay) {
+      const g = entries.find((p) => ['content','script','trusted'].includes(p.class));
+      if (g) return { error: ERR.VERSION_UNSUPPORTED, detail: `${g.id} changes the gameplay: gameplay plugins play the default version (act2autochess) only` };
+    }
     // the art: every cosmetic plugin, and a content plugin's own `assets` (its operators' art: the registry reads it as a
     // visual snapshot like a cosmetic plugin's; DESIGN §32.5) — one visual set
     const cosmeticIds = entries.filter((p) => p.class === 'cosmetic' || (['content','script','trusted'].includes(p.class) && p.visual)).map((p) => p.id);
     const contentIds = entries.filter((p) => ['content','script','trusted'].includes(p.class)).map((p) => p.id);
     const warnings = [];
     for (const p of entries) {
+      // 能力面：插件用 needs 声明它依赖哪些核心能力；本安装没有的，装载阶段就拒绝（而不是运行时静默失效）
+      {
+        const missing = missingCapabilities(p.manifest);
+        if (missing.length) return { error: ERR.PLUGIN_INCOMPATIBLE, detail: `${p.id} needs ${missing.join(', ')} — this build does not offer it` };
+      }
       if (!['content','script','trusted'].includes(p.class) || p.manifest.compatible !== false) continue;
       if (!pol?.allowIncompatible) return { error: ERR.PLUGIN_INCOMPATIBLE, detail: `${p.id} is made for ${p.manifest.app || 'other versions'} (api ${p.manifest.api ?? '?'})` };
       warnings.push({ code: 'app', params: { id: p.id, app: p.manifest.app } });
@@ -108,6 +127,8 @@ export function createRoomSets({ registry, visual, contents, policy }) {
         warnings: [...(vset?.warnings || []), ...warnings],
         bytes: vset ? vset.bytes : 0,
         ...(cset ? { dataBytes: cset.dataBytes, modes: cset.modes, kitted: cset.kitted } : {}),
+        // 无损插件的代码根（含 Match 入口）：房间级 set 是这一层重建的对象，不带上它 → 宿主永远加载上游 Match。
+        ...(cset?.code ? { code: cset.code } : {}),
         ...(cset?.rules ? { rules: cset.rules } : {}),
       },
     };
@@ -125,7 +146,7 @@ export function createRoomSets({ registry, visual, contents, policy }) {
     // Catalogue hint only: language plugins can publish notices even when the unofficial count is zero.
     hasNotices: () => registry.plugins?.().some((p) => p.status === 'loaded' && p.manifest?.notices?.length > 0) || false,
     defaults: () => { const p = policy?.get(); return p && p.rooms !== 'off' ? [...p.default] : []; },
-    /** The plugins every room must keep (plugins/config.json required): a host cannot switch them off. */
+    /** 每个房间都必须保留的插件（plugins/config.json required）：房主不能关掉它们。 */
     required: () => { const p = policy?.get(); return p && p.rooms !== 'off' ? [...(p.required || [])] : []; },
     /** The plugins every room must play (plugins/config.json rooms: fixed), else null. */
     fixed: () => { const p = policy?.get(); return p && p.rooms === 'fixed' ? [...p.default] : null; },

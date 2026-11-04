@@ -6,7 +6,7 @@
 
 import { ERR, GEO } from '../../../shared/constants.js';
 import { morphSlotPolicy, ruleOption } from '../../../shared/plugins/rules.js';
-import { tileKey, inField, parseDir, freeSlot } from '../board.js';
+import { tileKey, inField, rectOfMap, parseDir, freeSlot } from '../board.js';
 import { offsetTile } from '../../sim/dir.js';
 import { itemKey } from '../gamedata.js';
 import { OK, fail } from './common.js';
@@ -38,6 +38,7 @@ export class PlayerItems {
     if (!rec || rec.itemType !== 'EQUIP') return fail(ERR.BAD_TARGET, 'not equipment');
     const tloc = this.find(targetUid);
     if (!tloc || tloc.piece.kind !== 'chess' || tloc.area === 'equipped') return fail(ERR.BAD_TARGET);
+    if (this.gd.config.version?.rules?.benchEquip === false && tloc.area !== 'board') return fail(ERR.BAD_TARGET);
     const item = iloc.piece;
     const target = tloc.piece;
     if (replaceUid != null && !(Number.isInteger(replaceUid) && (target.items || []).some((x) => x.uid === replaceUid))) return fail(ERR.BAD_TARGET, 'replace: not equipped on the target');
@@ -142,7 +143,7 @@ export class PlayerItems {
     if (!loc || loc.piece.kind !== 'item' || (loc.area !== 'hand' && loc.area !== 'temp')) return fail(ERR.BAD_TARGET);
     const rec = this.gd.item(loc.piece.id);
     if (!rec || rec.itemType !== 'MAGIC') return fail(ERR.BAD_TARGET, 'not an art');
-    if (!inField(row, col)) return fail(ERR.BAD_TILE);
+    if (!inField(row, col, rectOfMap(this.deployMap()))) return fail(ERR.BAD_TILE);
     if (this.round.arts >= this.gd.maxArtsPerRound) return fail(ERR.BAD_TARGET, 'art limit');
     const key = 'item:' + itemKey(loc.piece.id);
     if (!this.m.registry.has(key)) return fail(ERR.BAD_TARGET, 'effect not available');

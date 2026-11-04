@@ -2,11 +2,9 @@
 // Conventions of the tier-4 kits: ../shared/tier4.js; kit contract and rules: ../README.md.
 
 import { isHpLoss } from '../../../damage.js';
+import { hypot } from '../../../detmath.js';
 import { holdsUndying } from '../../items/battle.js';
-import {
-  AURA, num, tbb, grid, nationOf, enemiesOnRange, targetsInRange, whileDeployed, reveal, skillActive, isSel, alt,
-  instantKind, withDefaults,
-} from '../shared/tier4.js';
+import { AURA, num, tbb, grid, nationOf, enemiesOnRange, targetsInRange, whileDeployed, reveal, skillActive, isSel, alt, instantKind, withDefaults } from '../shared/tier4.js';
 
 /** Is module `id` the active one? (elites; `'none'` / normal chess ⇒ false) */
 const moduleIs = (def, id) => !!(def?.raw?.module?.active && def.raw.module.id === id);

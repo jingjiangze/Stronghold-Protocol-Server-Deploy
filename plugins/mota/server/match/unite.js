@@ -80,8 +80,11 @@ export function planUnite(m, results) {
     }
   }
   const plan = { helpers, leakers, leaked, notReentered };
-  // 协同共竞 ≥8 名存活者：二段接力（首段两名义工没打完的残余敌人，交给下一对合格的完美玩家）
-  if (m.isXie && alive.length >= 8) {
+  // 业主 2026-10-30「联军长度要接力」：二段接力（首段两名义工没打完的残余敌人，交给下一对合格的完美玩家）。
+  // 原来门槛是 `m.isXie && alive.length >= 8` —— 6 人房永远看不到第二段，而且非 xie 模式（普通合作 mode_multi_*）
+  // 连判据都进不去。现在只看人数：≥4 即允许接力；真正的「有没有人能接」由 relayCandidates（需要 ≥3 名完美者）
+  // 与首段是否留下残余敌人决定，所以放宽门槛不会凭空多打一场。
+  if (alive.length >= 4) {
     plan.uniteRound = 1;
     plan.relayCandidates = perfects.filter((ps) => !helpers.includes(ps));
   }

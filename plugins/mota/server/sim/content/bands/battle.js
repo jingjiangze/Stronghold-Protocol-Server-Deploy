@@ -16,9 +16,8 @@
 //   act1autochess_band13_buff 克莱门莎 崇高牺牲 a <bond_id> operator knocked down ⇒ +its tier (等阶) <bond_id> layers
 //                                               (bond_add_type by_charlevel; no "已激活" in the text ⇒ requireActive false)
 //   act1autochess_band16_buff 大帝 加急调派     "每次部署后再部署时间减少50%": every deployment of an operator stacks one
-//                                               redeploy ×(1 + respawn_time) for the rest of the battle, with no cap (PRTS
-//                                               卫戍协议：盟约 下半 / PRTS盟约记录 备注 "※该策略效果可无限叠加"; a 20-stack cap
-//                                               until 0.2.2 — GitHub #328, PR #329)
+//                                               redeploy ×(1 + respawn_time) for the rest of the battle [ASSUMED cumulative:
+//                                               "每次" — the first redeploy is −50 % under either reading]
 //   act1autochess_band17_buff 桑葚 药枚实验     at combat start the player's units on the front-most (最右边) column: each
 //                                               attack has `prob` to gain 1 shield layer (max 1)
 //   act1autochess_band18_buff 休谟斯 回收利用   a ground (地面) operator's skill ends ⇒ a random operator on its 4
@@ -39,12 +38,10 @@
 //                                               aggroSeq precedes ordinary initial operators; deploySeq stays the runtime spawn
 // Prep-only bands (economy / shop / grants / layers at prep end or round start) live in bands/meta.js.
 
-import {
-  num, buffsOf, bandRecord, isOp, onField, isElite, tierOf, unitBonds, activeBondIds, playerOps, passiveBuff, fxOn,
-  matchBands, gainLayers, alliesAround, N4, baseChessId, isGroundOp, directMods,
-} from '../support/index.js';
+import { num, buffsOf, bandRecord, isOp, onField, isElite, tierOf, unitBonds, activeBondIds, playerOps, passiveBuff, fxOn, matchBands, gainLayers, alliesAround, N4, baseChessId, isGroundOp, directMods } from '../support/index.js';
 import { weaknessRetype, addShieldLayer, PRIO_RESPAWN, reviveNow } from '../items/battle.js';
 import { spawnMapChar } from '../tokens.js';
+import {boostedStrategy} from '../../../../shared/strategyBoost.js';
 
 export const AMEDIC_BAND = 'band_amedic';
 /**
@@ -85,11 +82,16 @@ const BY_KEY = {
     }, { priority: PRIO_BAND_REVIVE });
   },
 
-  // 克莱门莎 崇高牺牲: PRTS requires the 阿戈尔 bond to be active.
+  // 克莱门莎 崇高牺牲
   act1autochess_band13_buff(battle, ps, p, bandId) {
     const bond = typeof p.bond_id === 'string' && p.bond_id ? p.bond_id : null;
     if (!bond) return;
     const byLevel = p.bond_add_type == null || p.bond_add_type === 'by_charlevel';
+    if(p.revive_layers){
+      const pending=new Set();
+      battle.on('death',c=>{if(c.reason==='killed'&&isOp(c.unit)&&c.unit.ownerId===ps.playerId&&unitBonds(c.unit).includes(bond))pending.add(c.unit.id);},{priority:PRIO_RESPAWN+1});
+      battle.on('deploy',c=>{const u=c.unit;if(!pending.delete(u.id))return;gainLayers(battle,{playerId:ps.playerId,bonds:bond,n:tierOf(u),requireActive:true,source:u,reason:'band'});});
+    }
     battle.on('death', (c) => {
       const u = c.unit;
       if (c.reason !== 'killed' || !isOp(u) || u.ownerId !== ps.playerId || !unitBonds(u).includes(bond)) return;
@@ -102,13 +104,14 @@ const BY_KEY = {
 
   // 大帝 加急调派
   act1autochess_band16_buff(battle, ps, p, bandId) {
+    if(p.deploy_cost_mul>0&&p.deploy_cost_mul<1)for(const u of playerOps(battle,ps.playerId))u.base.cost=Math.ceil(u.base.cost*p.deploy_cost_mul);
     const mul = Math.max(0, 1 + num(p.respawn_time, 0));
     if (mul === 1) return;
     const key = keyOf(bandId);
     battle.on('deploy', (c) => {
       const u = c.unit;
       if (!isOp(u) || u.ownerId !== ps.playerId) return;
-      battle.addBuff(u, { key, mods: { redeployMul: mul }, refresh: 'stack', stacks: 1, maxStacks: Infinity, persist: true, allowDead: true });
+      battle.addBuff(u, { key, mods: { redeployMul: mul }, refresh: 'stack', stacks: 1, maxStacks: Number.MAX_SAFE_INTEGER, persist: true, allowDead: true });
     });
   },
 
@@ -233,15 +236,30 @@ export function amedicCharsFor(elites, variants = amedicVariants()) {
   return [];
 }
 
+/**
+ * The map characters a 盟约 puts on the field (band_amedic Touch 外勤医疗).
+ *
+ * Owner override (2026-10-19): all players in the match receive a medic, including other shop squads.
+ * A confirmed selection is required; merely focusing the strategy does not grant it. Each player's own deployed
+ * elite count selects the reserve medic or Touch. The explicit match grant survives its holder leaving.
+ */
 function installMapChars(battle) {
   const variants = amedicVariants();
   if (!variants.length) return;
-  const holders = battle.players.filter((ps) => matchBands(battle, ps.playerId).includes(AMEDIC_BAND));
-  if (!holders.length) return;
+  // Count successful initial deployments, before opening effects can devour/retreat an elite. Reading the live
+  // field in battleStart runs after the bonds' callbacks and incorrectly downgrades a qualified teammate to a medic.
+  // Carried-down unite operators are already absent for this phase; later summons/redeployments do not qualify.
+  const initialElites = new Map(), counted = new Set();
+  battle.on('deploy', ({ unit, initial }) => {
+    if (!initial || !isOp(unit) || !isElite(unit) || unit.carry?.down || counted.has(unit)) return;
+    counted.add(unit);
+    initialElites.set(unit.ownerId, (initialElites.get(unit.ownerId) || 0) + 1);
+  });
   battle.on('battleStart', () => {
     const chars = [];
+    const holders = battle.players.filter((ps) => amedicGrantedTo(battle, ps.playerId));
     for (const ps of holders) {
-      const elites = deployedOps(battle, ps.playerId).filter(isElite).length;
+      const elites = initialElites.get(ps.playerId) || 0;
       for (const id of amedicCharsFor(elites, bandRecord(ps.bandId)?.effectRef === AMEDIC_BAND ? amedicVariants(ps.bandId) : variants)) chars.push({ playerId: ps.playerId, id });
     }
     for (const [i, { playerId, id }] of chars.entries()) {
@@ -254,10 +272,42 @@ function installMapChars(battle) {
   });
 }
 
+/** The `contentInfo` a player's battle input carries (support/meta.js registerSupportMeta); {} when absent. */
+function contentInfoOf(battle, playerId) {
+  try {
+    const p = battle.players.find((x) => x.playerId === playerId);
+    return (p && p.input && p.input.contentInfo) || {};
+  } catch { return {}; }
+}
+
+/** A confirmed Touch strategy grants a medic to every participant, across shop squads. */
+export function amedicGrantedTo(battle, playerId) {
+  const ci = contentInfoOf(battle, playerId);
+  if (typeof ci.mapMedicGranted === 'boolean') return ci.mapMedicGranted;
+  const own = battle.players.find(p => p.playerId === playerId);
+  if (own?.bandId === AMEDIC_BAND) return true;
+  const carriers = [...battle.players, ...(ci.teammates || [])].filter(p => p.bandId === AMEDIC_BAND);
+  return carriers.length > 0 || (ci.matchBands || []).includes(AMEDIC_BAND);
+}
+
+/**
+ * Whether two players draw from the same shop pool (poolIds in `contentInfo`; an unknown id never matches).
+ *
+ * Exported because it is the whole rule of the 盟约's reach and is worth a direct test: the effect must cover the
+ * carrier's pool mates and nobody else.
+ */
+export function samePool(battle, aId, bId) {
+  const poolOf = (list, id) => {
+    if (!Array.isArray(list)) return null;
+    const row = list.find((x) => x && x.playerId === id);
+    return row ? row.poolId : null;
+  };
+  const a = poolOf(contentInfoOf(battle, aId).poolIds, aId);
+  return a != null && a === poolOf(contentInfoOf(battle, bId).poolIds, bId);
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 
-/** Band buff keys with a battle part (tests / tooling). */
-export const BATTLE_BUFF_KEYS = Object.freeze([...Object.keys(BY_KEY), 'auto_chess_change_map']);
 
 /** Does this band have a battle part? */
 export function hasBattlePart(bandId) {
@@ -266,7 +316,7 @@ export function hasBattlePart(bandId) {
 
 export function install(battle) {
   for (const ps of battle.players) {
-    const band = ps.bandId ? bandRecord(ps.bandId) : null;
+    const band = ps.bandId ? boostedStrategy(bandRecord(ps.bandId),!!ps.input?.contentInfo?.strategyBoost) : null;
     if (!band) continue;
     for (const b of buffsOf(band)) {
       const f = b.bbKey ? BY_KEY[b.bbKey] : null;

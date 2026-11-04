@@ -1,0 +1,34 @@
+{
+  "manifest": 2,
+  "id": "roguelike-data-ro4",
+  "name": {
+    "zh": "ro4 肉鸽节点数据",
+    "en": "ro4 roguelike node data"
+  },
+  "description": {
+    "zh": "P0 垂直切片的节点/层/奖励数据。全部为自设计（D 类，非官方）；文件头 selfDesigned=true，禁止对外宣称「按官方」。",
+    "en": "Node/layer/reward data for the P0 vertical slice. All self-designed (class D, not official); the file header carries selfDesigned=true."
+  },
+  "version": "0.1.0",
+  "app": ">=0.3.0 <0.5.0",
+  "api": 2,
+  "class": "content",
+  "scope": [
+    "room"
+  ],
+  "authors": [
+    "jingjiangze"
+  ],
+  "license": "GPL-3.0-or-later",
+  "permissions": [
+    "data.add"
+  ],
+  "code": {
+    "data": [
+      "data/rogue-nodes.json"
+    ]
+  },
+  "needs": [
+    "data.add"
+  ]
+}

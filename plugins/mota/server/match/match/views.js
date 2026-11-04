@@ -4,12 +4,12 @@
 // coming enemies; in a boss round's prep on the player's half of the boss field).
 // Installed on Match.prototype by server/match/Match.js (a method container: never instantiated; `this` is the match).
 
-import { PHASE, GEO } from '../../../shared/constants.js';
+import { PHASE, GEO, VERSUS_CONFRONT } from '../../../shared/constants.js';
 import { TEST_PUBLIC_LOG } from '../../../shared/testMode.js';
 import { boardOrder, pieceDir } from '../board.js';
 import { bondList, offBondCounts } from '../bondsMeta.js';
 import { cardView } from '../choices.js';
-import { bountySpawns, previewOf } from '../waves.js';
+import { bountySpawns, previewOf, gateOf } from '../waves.js';
 import { timelineAt } from '../fields.js';
 import { bossFieldPlacement } from '../finalAssault.js';
 import { battleProgress } from '../../sim/spec.js';
@@ -83,9 +83,29 @@ export class MatchViews {
       serverNow: this.sched.now(),
       modeId: this.modeId,
       difficulty: this.difficulty,
+      // 危机合约 (shared/contracts.js): the room's selection, so the settlement / the HUD can name it. Omitted while
+      // the room had none, so an ordinary match's m.public keeps its keys.
+      ...(this.contracts?.length ? { contracts: this.contracts.slice() } : {}),
       stageId: this.stageId,
       // 下一回合的战场 id（客户端据此在本回合空闲时预热场景包，换图时只重建一次）
       nextStageId: this.nextStageId || this.stageId,
+      // 肉鸽（完整模式，业主 2026-11-01）：本回合词缀 / 是否紧急作战 / 下回合预告 —— 客户端常驻 HUD 直接读。
+      ...(this.isRogue === true ? (() => {
+        const r = Number(this.round) || 1;
+        const aff = typeof this.rogueRoundAffix === 'function' ? this.rogueRoundAffix(r) : null;
+        const nextOf = (pred, span) => {
+          for (let i = 1; i <= span; i++) { const n = r + i; if (typeof pred === 'function' && pred.call(this, n)) return n; }
+          return null;
+        };
+        return { rogue: {
+          affix: aff ? { kind: aff.kind, mul: aff.mul, label: aff.label } : null,
+          emergency: typeof this.rogueEmergencyRound === 'function' ? this.rogueEmergencyRound(r) === true : false,
+          nextEventRound: nextOf(this.rogueEventRound, 3),
+          nextEmergencyRound: nextOf(this.rogueEmergencyRound, 5),
+          // P0 节点图（2026-11-03）：rogue-core 的 mixin 提供；未安装时为 null，客户端不渲染。
+          nodes: typeof this.rogueNodeState === 'function' ? this.rogueNodeState() : null,
+        } };
+      })() : {}),
       setupRevision: this.setupRevision,
       rerollVote: this.setupVote ? {
         id: this.setupVote.id,
@@ -94,6 +114,60 @@ export class MatchViews {
         agreed: [...this.setupVote.agreed],
       } : null,
       factions: this.factions.slice(),
+      // 对抗模式（2V2 / 4V4）：每队人数、对抗期起始回合与事件期回合表（普通房间不带这些键）
+      ...(this.isVersus ? {
+        teamSize: this.teamSize, contestStartRound: this.contestStartRound, eventRounds: this.eventRounds,
+        // 攻防回合：本回合谁进攻/谁防守（非攻防回合 false / null）
+        roleRound: typeof this.isRoleRound === 'function' ? this.isRoleRound() : false,
+        attackingTeam: this.attackingTeam ?? null,
+        defenderTeam: this.defenderTeam ?? null,
+      } : {}),
+      ...(this.isVersus && this.teamLps ? { teamLps: Object.fromEntries(this.teamLps), teamLp: this.teamLp } : {}),
+      // 事件期（R4/R5/R6 起）：EventOverlay 读 pub.event —— eventView() 以前从未被合并，事件期面板永远不显示。
+      ...(this.huntMode ? { event: this.eventView() } : {}),
+      // 狩猎期：只带本队可见的提交（对手由 messaging 屏蔽）；名单公示用 roster.until 播动画
+      ...(this.isVersus && this.confrontActive && this.confrontActive()
+        && (this.phase === PHASE.CONFRONT || (this.confront && this.confront.size)) ? (() => {
+        const src = this.phase === PHASE.CONFRONT ? (this.confrontSubs || new Map()) : (this.confront || new Map());
+        const subs = {};
+        for (const [pid, s2] of src) subs[pid] = s2 ? { group: s2.group, position: s2.position || null, picks: s2.picks || [], total: (s2.picks || []).length, target: s2.target || null, coins: this.confrontBountyOf(s2.picks), committed: s2.committed === true } : null;
+        return {
+          confront: {
+            active: this.phase === PHASE.CONFRONT,
+            stage: this.phase === PHASE.CONFRONT ? (this.confrontStage || 'target') : null,
+            roster: this.phase === PHASE.CONFRONT && this.confrontStage === 'roster' ? { until: this.deadline, ms: VERSUS_CONFRONT.rosterMs } : null,
+            round: this.round,
+            ratio: this.confrontRatio ? this.confrontRatio() : null,
+            budget: this.confrontBudget ? this.confrontBudget() : null,
+            // 2026-11-01 P1（审计 D12/D13/死 UI）：规则档与同盟狩猎标记下发（客户端 conf.hunt 以前读不到）；
+            // 事件期 boss 格下发（池 + 上限），客户端据此渲染选择区 —— boss 不占预算、不计只数上限
+            versusRule: this.versusRule || null,
+            hunt: typeof this.coopHuntActive === 'function' ? this.coopHuntActive() : false,
+            bosses: {
+              open: this.confrontBossOpen ? this.confrontBossOpen() : false,
+              cap: this.confrontBossCap ? this.confrontBossCap() : 0,
+              pool: this.confrontBossOpen && this.confrontBossOpen()
+                ? (this.confrontBossPool ? this.confrontBossPool() : []).map((r) => ({ key: r.key, name: r.name, coin: r.coin }))
+                : [],
+            },
+            // 本回合一次最多放几只：协议硬上限 maxPicks（防一次误提交塞爆消息），真正的约束是 Σ价值 ≤ 预算
+            maxPicks: this.confrontPlaceCap ? this.confrontPlaceCap() : VERSUS_CONFRONT.maxPicks,
+            targets: this.confrontTargets ? Object.fromEntries(this.confrontTargets) : {},
+            groups: (this.confrontGroups ? this.confrontGroups() : []).map((g) => ({ id: g.id, name: g.name, icon: g.icon, desc: g.desc, rows: (g.rows || []).map((r) => ({ key: r.key, name: r.name, value: r.value })) })),
+            // 预设路线（攻方选路线 + 时刻；服务端按公式校验）
+            routes: (this._confrontRoutes ? (this._confrontRoutes().routes || []) : []).map((r, i) => ({
+              i,
+              motion: String(r.motion || '').toUpperCase().startsWith('F') ? 'FLY' : 'WALK',
+              start: Array.isArray(r.start) ? r.start : null,
+              end: Array.isArray(r.end) ? r.end : null,
+              gate: Array.isArray(r.start) ? gateOf(r.start, false) : null,
+            })),
+            subs,
+            // 狩猎期结算后：只在战斗/结算阶段公示名单；守方休整期（PREP）不弹，避免挡住下干员与聊天/观战
+            applied: (this.phase === PHASE.COMBAT || this.phase === PHASE.SETTLE) && !!this.confront && this.confront.size > 0,
+          },
+        };
+      })() : {}),
       disabledBonds: [...new Set([...this.disabledBonds, ...this.staticInactiveBonds])].sort(),
       drawnDisabledBonds: this.disabledBonds.slice(),
       bannedChess: this.bannedChess.slice(),
@@ -169,6 +243,13 @@ export class MatchViews {
     return {
       playerId: ps.playerId,
       seat: ps.seat,
+      // 对抗模式（2V2 / 4V4）：每人所属阵营，队伍面板据此上色（普通房间不带这个键）。
+      // 房间座位用的是 'red'/'blue'（lobby teamOfSeat 分支），这里保持一致；TEAMS 的 yellow/blue 是 20 人分队口径。
+      ...(this.isVersus ? {
+        team: this.teamIdOf(ps) === 0 ? 'red' : 'blue',
+        // 攻防回合的角色：attack=本回合投放怪物，defend=本回合下干员防守；非攻防回合 null
+        role: (typeof this.isRoleRound === 'function' && this.isRoleRound()) ? (this.isAttacker(ps) ? 'attack' : 'defend') : null,
+      } : {}),
       name: ps.name,
       isBot: ps.isBot,
       connected: ps.isBot || (ps.connected && !ps.left),
@@ -276,6 +357,28 @@ export class MatchViews {
     return loss > 0 ? { pendingLp: loss } : {};
   }
 
+  /** 守方私有预告：本回合朝我投来的怪物（怪种/路线/时机）。攻方或非对抗回合返回 []。 */
+  incomingFor(ps) {
+    if (!this.isVersus || !this.confront || !this.confront.size) return [];
+    if (typeof this.isRoleRound === 'function' && this.isRoleRound() && !this.isDefender(ps)) return [];
+    const out = [];
+    for (const [pid, s] of this.confront) {
+      if (!s || s.target !== ps.playerId) continue;
+      for (const p of s.picks || []) {
+        out.push({
+          enemyKey: p.enemyKey,
+          gate: p.gate === 'upper' ? 'upper' : 'lower',
+          from: pid,
+          ...(p.route ? { route: p.route } : {}),
+          ...(Number.isInteger(p.routeIndex) ? { routeIndex: p.routeIndex } : {}),
+          ...(Number.isFinite(p.time) ? { time: p.time } : {}),
+        });
+      }
+      for (const b of s.bosses || []) out.push({ enemyKey: b.enemyKey, boss: true, gate: b.gate === 'upper' ? 'upper' : 'lower', from: pid });
+    }
+    return out;
+  }
+
   /** nextEnemies preview for m.private. */
   nextEnemiesFor(ps) {
     if (!ps.alive) return [];
@@ -286,7 +389,11 @@ export class MatchViews {
     }
     if (!this.wave) return [];
     const bounty = bountySpawns(this.gd, this.round, this.wave, ps.bounties, ps.playerId, { solo: this.isSolo });
-    return previewOf([...this.wave.spawns, ...bounty]);
+    // 2V2 事件期: the round's monster card + 强力属性 subset (the preview's counts/flags must match the battle)
+    // 同盟狩猎: the system's prey is appended last, exactly as _normalOpts inserts it
+    let list = this.foeWaveSpawns([...this.wave.spawns, ...bounty]);
+    if (this.coopHuntActive()) list = this.applyCoopHunt(list, ps);
+    return previewOf(list);
   }
 
   /** A 自选 piece's pick (like the sim's UnitInfo.diy): a scout's card composes the operator from it (shared/diy.js). */

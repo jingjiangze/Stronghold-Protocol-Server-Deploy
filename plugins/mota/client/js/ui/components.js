@@ -19,7 +19,6 @@ import { t } from '../../../shared/i18n.js';
 import { serverNow } from '../store.js';
 import { data, useData, localAsset } from '../data.js';
 import { uiUrl } from './assetUrls.js';
-import { PixBot } from './pixbots.js';
 
 /**
  * h() for htm with its static-subtree cache switched off. htm keeps the vnode it built for a fully static subtree in
@@ -82,6 +81,16 @@ export const ICONS = {
   rotate: { d: 'M7 2h8a2 2 0 0 1 2 2v7h-2V4H7v16h4v2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 12h5a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2zm0 2v4h5v-4z', eo: true },
   book: { d: 'M2 4h7.5A3.5 3.5 0 0 1 12 5.1 3.5 3.5 0 0 1 14.5 4H22v16h-7.5a1.5 1.5 0 0 0-1.5 1.5h-2A1.5 1.5 0 0 0 9.5 20H2zm2 2v12h5.5c.5 0 1 .1 1.5.3V7.5A1.5 1.5 0 0 0 9.5 6zm10.5 0A1.5 1.5 0 0 0 13 7.5v10.8c.5-.2 1-.3 1.5-.3H20V6z', eo: true },
   // 观战 (spectator seats; the same eye as gameComponents.js GIcon 'eye')
+  // 三个**曾被引用但没定义**的图标（2026-11-01 审计：icon 找不到时 Icon 直接 return null，界面上是一块空白）：
+  // 「返回自己」（game.js 观战条）、道具图失效兜底（loadout.js 的 box）、大厅「娱乐模式」入口（lobby.js 的 dice）。
+  back: { d: 'M9 4.6 10.4 6 6.8 9.6H14a6 6 0 0 1 0 12h-3v-2h3a4 4 0 0 0 0-8H6.8l3.6 3.6L9 16.6 2.4 10z' },
+  box: { d: 'M3 7l9-4 9 4v10l-9 4-9-4zM12 4.2 5.4 7.1 12 10l6.6-2.9zM5 8.6v7.2l6 2.7v-7.2zm14 0-6 2.7v7.2l6-2.7z' },
+  dice: { d: 'M4 4h16v16H4zm3.5 3a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2zm9 0a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2zm-9 6a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2zm9 0a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2z', eo: true },
+  // 娱乐模式的四张卡（2026-11-01）：共用一套 24×24 单色字形，和上面的既有图标同风格。
+  joint: { d: 'M9 6a6 6 0 1 1 0 12A6 6 0 0 1 9 6zm0 2a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm9-2a6 6 0 1 1 0 12 6 6 0 0 1 0-12zm0 2a4 4 0 1 0 0 8 4 4 0 0 0 0-8z', eo: true },
+  bounty: { d: 'M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm0 3.5 1.6 3.3 3.6.5-2.6 2.6.6 3.6L12 15.8l-3.2 1.7.6-3.6L6.8 11.3l3.6-.5z', eo: true },
+  confront: { d: 'M11 2h2v3.1a7 7 0 0 1 5.9 5.9H22v2h-3.1a7 7 0 0 1-5.9 5.9V22h-2v-3.1A7 7 0 0 1 5.1 13H2v-2h3.1A7 7 0 0 1 11 5.1zM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 3a2 2 0 1 1 0 4 2 2 0 0 1 0-4z', eo: true },
+  rogue: { d: 'M12 3c4.4 0 8 3.2 8 7.2 0 2.4-1.2 4.2-2.8 5.3V19h-2.4l-.4 2H9.6l-.4-2H6.8v-3.5C5.2 14.4 4 12.6 4 10.2 4 6.2 7.6 3 12 3zM9.4 9a1.9 1.9 0 1 0 0 3.8 1.9 1.9 0 0 0 0-3.8zm5.2 0a1.9 1.9 0 1 0 0 3.8 1.9 1.9 0 0 0 0-3.8z', eo: true },
   eye: { d: 'M12 5c5 0 9 4.5 10 7-1 2.5-5 7-10 7S3 14.5 2 12c1-2.5 5-7 10-7zm0 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4z', eo: true },
 };
 
@@ -805,29 +814,15 @@ export function ResultDialog({ title, sub, micro, tone = 'mint', duration = 2800
   if (gone) return null;
   return html`<div class=${cx('rdialog', `rdialog--${tone}`, leaving && 'is-leaving')} role="status" aria-live="polite">
     <div class="rdialog__box">
-      <div class="rdialog__art" aria-hidden="true">
-        <span class="rdialog__tick rdialog__tick--tl"></span><span class="rdialog__tick rdialog__tick--tr"></span>
-        <span class="rdialog__tick rdialog__tick--bl"></span><span class="rdialog__tick rdialog__tick--br"></span>
-        <i class="rdialog__brk rdialog__brk--l"></i><i class="rdialog__brk rdialog__brk--r"></i>
-        <${PixBot} kind=${tone === 'mint' ? 'cheer' : 'blade'} class="rdialog__bot" />
+      <span class="rdialog__tick rdialog__tick--tl"></span><span class="rdialog__tick rdialog__tick--tr"></span>
+      <span class="rdialog__tick rdialog__tick--bl"></span><span class="rdialog__tick rdialog__tick--br"></span>
+      ${micro ? html`<span class="rdialog__micro">${micro}</span>` : null}
+      <div class="rdialog__row">
+        <${Chevrons} count=${3} tone=${tone} class="rdialog__chev" />
+        <span class="rdialog__title">${title}</span>
+        <${Chevrons} count=${3} tone=${tone} dir="left" class="rdialog__chev" />
       </div>
-      <div class="rdialog__text">
-        ${micro ? html`<span class="rdialog__micro">${micro}</span>` : null}
-        <div class="rdialog__row">
-          <span class="rdialog__title">${title}</span>
-          <${Chevrons} count=${3} tone=${tone} class="rdialog__chev" />
-        </div>
-        <div class="rdialog__text">
-        ${micro ? html`<span class="rdialog__micro">${micro}</span>` : null}
-        <div class="rdialog__row">
-          <span class="rdialog__title">${title}</span>
-          <${Chevrons} count=${3} tone=${tone} class="rdialog__chev" />
-        </div>
-        ${sub ? html`<span class="rdialog__sub">${sub}</span>` : null}
-      </div>
-      <${Chevrons} count=${3} tone=${tone} dir="left" class="rdialog__chev rdialog__chev--trim" />
-      </div>
-      <${Chevrons} count=${3} tone=${tone} dir="left" class="rdialog__chev rdialog__chev--trim" />
+      ${sub ? html`<span class="rdialog__sub">${sub}</span>` : null}
     </div>
   </div>`;
 }

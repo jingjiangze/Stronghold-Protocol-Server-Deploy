@@ -1,7 +1,7 @@
 // Normative message catalogue (DESIGN §8). Used by server (validation) and client (building requests).
 // Every client→server message is `{ t, rid?, ...fields }`. Unknown `t` or invalid fields ⇒ ERR.BAD_MSG.
 
-import { DIFFICULTIES, NAME_MAX_LEN, ROOM_CODE_LEN, MAX_SEATS, EMOTES, GEO } from './constants.js';
+import { DIFFICULTIES, LEGACY_DIFFICULTIES, NAME_MAX_LEN, ROOM_CODE_LEN, MAX_SEATS, EMOTES, GEO, TEAMS, EVENT_TARGETS_ALL } from './constants.js';
 import { isDroppableChess } from './standIn.js';
 import { diySlotIds, validateDiyPicks } from './diy.js';
 import { cultivatedStats, isPotential, isCultivate, POTENTIAL_DEFAULT, CULTIVATE_DEFAULT, hasPotentialData } from './potential.js';
@@ -10,10 +10,16 @@ import { isPluginId } from './plugins/manifest.js';
 import { isTestCommand } from './testMode.js';
 import { PLUGIN_OFFER_SLOTS } from './plugins/limits.js';
 
+// 训练模式（入门协议）的难度名。本插件的数据里没有训练模式记录（它是核心的 solo 模式，见 shared/constants.js
+// TRAINING_DIFFICULTY），所以这份顶替拷贝直接写名字面量，与核心 shared/protocol.js 的放行口径保持同步。
+const TRAINING_DIFFICULTY = 'TRAINING';
+
 // ---- tiny validators -------------------------------------------------------
 const isInt = (v, lo = -Infinity, hi = Infinity) => Number.isInteger(v) && v >= lo && v <= hi;
 const isStr = (v, max = 64) => typeof v === 'string' && v.length <= max;
 const isBool = (v) => typeof v === 'boolean';
+/** 官方版本 id（DESIGN §35.23）：与核心 shared/protocol.js 同一口径 —— 浏览器拿的是这份顶替拷贝，缺了就发不出去。 */
+export const isVersionId = (v) => typeof v === 'string' && v.length <= 40 && /^[a-z0-9]{1,32}(?:@[A-Za-z0-9_]{1,16})?$/.test(v);
 const isId = (v) => typeof v === 'string' && v.length > 0 && v.length <= 64 && /^[A-Za-z0-9_\-.:]+$/.test(v);
 const isUid = (v) => isInt(v, 1, 2 ** 31);
 const isNum = (v, lo = -Infinity, hi = Infinity) => typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi;
@@ -30,6 +36,17 @@ const isMap = (v, max, key, val) => {
 };
 const isList = (v, max, item) => Array.isArray(v) && v.length <= max && v.every(item);
 const isScalar = (v) => isStr(v, 64) || isNum(v) || isBool(v);
+
+// ---- room chat (2026-10-22) ------------------------------------------------------------------------------------
+// 与基座 shared/protocol.js 同口径（浏览器拿到的是这份覆盖拷贝，缺键会让 net.request 在本地就被拒）。
+export const CHAT_LIMITS = Object.freeze({
+  text: 200,
+  inbound: 1024,
+  history: 80,
+  perSec: 2, burst: 6,
+});
+const chatEmoteIdP = (v) => typeof v === 'string' && v.length <= 64 && /^[A-Za-z0-9_]+$/.test(v);
+const chatStickerFileP = (v) => typeof v === 'string' && v.length <= 80 && /^[A-Za-z0-9._-]+$/.test(v);
 
 // ---- client-side combat (DESIGN §14): b.progress / b.result payloads -------------------------------------------
 
@@ -491,6 +508,12 @@ const target = (v) => {
 };
 
 /** @type {Record<string, Record<string, (v:any)=>boolean> & { $optional?: string[] }>} */
+// 包命名空间消息的边界（与基座 shared/protocol.js 同口径）。
+export const PACK_MSG_LIMITS = Object.freeze({ bytes: 4096, perSec: 5, burst: 20 });
+const packMsgBytes = (v) => {
+  try { const s = JSON.stringify(v); return typeof s === 'string' ? s.length : Infinity; } catch { return Infinity; }
+};
+
 export const C2S = {
   // session & lobby
   hello: { name: (v) => isStr(v, NAME_MAX_LEN) && v.trim().length > 0, token: (v) => v == null || isStr(v, 64), version: (v) => v == null || isInt(v, 0, 1e6),
@@ -500,16 +523,30 @@ export const C2S = {
   // string cannot sneak in as "not a test". The server still refuses it unless SP_TEST_MODE is on.
   // variant: a rule-set variant of a co-op room, mode_<variant>_<difficulty> ('xie' = 协同共竞, DESIGN §29);
   // absent ⇒ the plain mode_multi_*. Lobby.create 透传给 Room → Match opts（server/lobby.js）。
-  'room.create': { mode: (v) => v === 'solo' || v === 'coop', difficulty: (v) => DIFFICULTIES.includes(v),
-    variant: (v) => v == null || (typeof v === 'string' && v.length > 0 && v.length <= 64 && /^[A-Za-z0-9_.:-]+$/.test(v)),
-    test: (v) => v === true, $optional: ['test'] },
+  // 2026-11-02：mode 放行独立肉鸽模式；难度接受 N1–N20 或旧 4 档名（**浏览器拿到的是这份顶替拷贝**，
+  // 核心 shared/protocol.js 改了这里也要同步，否则 net.request 在本地就把请求拒了）
+  'room.create': { mode: (v) => v === 'solo' || v === 'coop' || v === 'versus' || v === 'rogue',
+    difficulty: (v) => DIFFICULTIES.includes(v) || LEGACY_DIFFICULTIES.includes(v) || v === TRAINING_DIFFICULTY, private: (v) => v === true || v === false, variant: (v) => v == null || (typeof v === 'string' && v.length > 0 && v.length <= 64 && /^[A-Za-z0-9_.:-]+$/.test(v)), test: (v) => v === true, randomStage: (v) => v == null || isBool(v), teamSize: (v) => v == null || (Number.isInteger(v) && v >= 1 && v <= 10), versusAlt: (v) => v == null || typeof v === 'boolean', version: isVersionId, soloUnlimited: isBool, versusSpeed: (v) => v == null || v === 1 || v === 1.5 || v === 2, $optional: ['versusSpeed', 'test', 'variant', 'private', 'randomStage', 'teamSize', 'version', 'soloUnlimited', 'versusAlt'] },
   'room.join': { $optional: ['testAck'], testAck: (v) => v === true, code: (v) => isStr(v, ROOM_CODE_LEN + 2) && /^[A-Za-z0-9]+$/.test(v) },
   'room.leave': {},
   'room.ready': { ready: isBool },
-  'room.setDifficulty': { difficulty: (v) => DIFFICULTIES.includes(v) },
+  'room.setDifficulty': { difficulty: (v) => DIFFICULTIES.includes(v) || LEGACY_DIFFICULTIES.includes(v) || v === TRAINING_DIFFICULTY },
   // the co-op room option 「AI 队友最后选择」 (GitHub #338; host, before the match): the strategy and 机变 drafts order every
   // human seat before every AI seat (server/match/match/phases.js humansFirst); room.state.aiPicksLast
   'room.setAiPicksLast': { on: isBool },
+  // 以下 4 键原先整组缺失（核心有、本顶替拷贝没有 ⇒ 客户端一发包就在本地 BAD_MSG，服务端收不到）：
+  // - room.card：名片干员（ui/seatArt.js 的 pick 上报；本插件的 room.js 早已在发，只是被 CARD_SYNC 探测静默挡住）
+  // - state.resync：public/js/net.js:551 requestResync —— 断线重连后的状态补帧，**这份缺失等于重连永远不同步**
+  // - room.setAiTakeover / room.aiRequest / room.aiVote：观战席接管 AI 席位（server/lobby.js 均有 handler）
+  'room.setAiTakeover': { on: isBool },
+  // 随机交接（3–9 回合）：要先把 room.setAiTakeover 打开
+  'room.setAiRandom': { on: isBool },
+  'room.aiRequest': { botId: isId },
+  // 潜入：直接接管一个 AI 席（无投票）
+  'room.aiTakeover': { botId: isId },
+  'room.aiVote': { voteId: (v) => typeof v === 'string' && v.length <= 16, approve: isBool },
+  'room.card': { charId: (v) => v === '' || isCharId(v) },
+  'state.resync': {},
   'room.addBot': {},
   'room.removeBot': { seat: (v) => isInt(v, 0, MAX_SEATS - 1) },
   // the host removes another human before the match (server/lobby.js kick; community report #17); playerId = the one the
@@ -550,13 +587,63 @@ export const C2S = {
   // 只含公开房间；私密房间只能凭邀请码加入，不出现在任何列表里。
   // 房间人数上限（客户端滑条）：code 防陈旧标签页改到别的房间；4 的倍数由服务端再校验一次
   'room.setSeatCap': { code: (v) => isStr(v, ROOM_CODE_LEN + 2) && /^[A-Za-z0-9]+$/.test(v), seatCap: (v) => isInt(v, 1, MAX_SEATS) },
+  // 20 人分组（mod）：换队（team=null 清空；seat 只有房主能给）与房间座位上限
+  'room.setTeam': { $optional: ['seat'], team: (v) => v === null || (typeof v === 'string' && TEAMS.includes(v)), seat: (v) => v === undefined || isInt(v, 0, MAX_SEATS - 1) },
+  'room.setMaxSeats': { n: (v) => isInt(v, 1, MAX_SEATS) },
   'room.list': {},
   // 私密开关（房主、非对局中）：默认公开，勾上后从公开列表消失。
   'room.setPrivate': { private: (v) => typeof v === 'boolean' },
+  // 官方版本切换（DESIGN §35.23，核心 0.3.2 起；本顶替拷贝原先整组缺失 ⇒ 客户端一发包就被判 BAD_MSG）：
+  // 房主提案 → 在座人类投票（全票通过才切；单人房立即切）；room.state.version / versionVote
+  'room.proposeVersion': { version: isVersionId },
+  'room.versionVote': { voteId: (v) => isInt(v, 1, 2 ** 31), agree: isBool },
+  'room.cancelVersionVote': { voteId: (v) => isInt(v, 1, 2 ** 31) },
+  // 「不限时」（§35.23.10）：只对 mode==='solo' 且该版本单人计时（config.version.rules.soloTimed）的房间生效；
+  // 缺省关，room.state 只在开启时带 soloUnlimited: true
+  'room.setSoloUnlimited': { on: isBool },
+  // 「包含无场景地图」（房主、非对局中；缺省关）。核心 shared/protocol.js 同名键同步新增：浏览器拿到的是这份顶替
+  // 拷贝，缺了就在本地 BAD_MSG，发不到服务端。false = 抽图池只留有官方 scene 包的 stage；true = 全部 stage。
+  'room.setIncompleteMaps': { on: isBool },
+  // 对抗模式（2V2 / 4V4，2026-10-24）：狩猎期目标 / 布阵 / 悬赏提取、事件期选择
+  'g.confrontTarget': { targetPlayerId: isId },
+  'g.hex': { hexId: (v) => typeof v === 'string' && v.length > 0 && v.length <= 64 },
+  'g.hexReroll': { slot: (v) => Number.isInteger(v) && v >= 0 && v <= 8 },
+  'g.meltOpen': {},
+  'g.meltPick': { slot: (v) => Number.isInteger(v) && v >= 0 && v <= 8,
+    // 支付方式（业主 2026-10-26）：缺省/'debuff' = 吃敌人属性代价；'funds' = 花个人资金
+    pay: (v) => v == null || v === 'funds' || v === 'debuff' },
+  // 目录式商店（业主 2026-10-27）：按 itemId 购买，一次一件
+  'g.meltBuy': { itemId: (v) => isId(v) },
+  // 藏品页签（业主 2026-10-27）：按 relicId 购买；数据为空时客户端不显示该页签
+  'g.meltBuyRelic': { relicId: (v) => isId(v) },
+  // 藏品三选一（业主 2026-10-27）：只能选自己 offer 里的 id
+  'g.relicPick': { relicId: (v) => isId(v) },
+  // 肉鸽随机事件（2026-10-27）：选一个选项
+  'g.roguePick': { choiceId: (v) => typeof v === 'string' && v.length > 0 && v.length <= 32 },
+  // 肉鸽节点三选一（2026-11-04）：选中当前层/下一层的一个节点 id（rogue-core 的 mixin 处理）
+  'g.rogueNode': { nodeId: (v) => typeof v === 'string' && v.length > 0 && v.length <= 32 },
+  'g.meltClose': {},
+  'g.confront': { group: nullable((v) => isInt(v, 1, 16)), position: (v) => typeof v === 'string' && ['front', 'mid', 'back'].includes(v), picks: (v) => isList(v, 128, (p) => isPlain(p) && isId(p.enemyKey) && (p.gate === undefined || p.gate === 'upper' || p.gate === 'lower') && (p.routeIndex === undefined || isInt(p.routeIndex, 0, 63)) && (p.time === undefined || (typeof p.time === 'number' && Number.isFinite(p.time) && p.time >= 0 && p.time <= 1e6))), bosses: (v) => isList(v, 32, (p) => isPlain(p) && isId(p.enemyKey) && (p.gate === undefined || p.gate === 'upper' || p.gate === 'lower')), commit: isBool, $optional: ['bosses', 'commit'] },
+  'g.confront.withdraw': { gold: (v) => isInt(v, 1, 100000) },
+  'g.event.pick': { target: (v) => EVENT_TARGETS_ALL.includes(v) },
+  // 随机地图开关（2026-10-22；房主，开局前）
+  'room.setRandomStage': { randomStage: isBool },
+  // 房间聊天（2026-10-22）：text / emote / sticker 至少一个
+  'room.chat': { text: optional((v) => isStr(v, CHAT_LIMITS.inbound)), emote: optional(chatEmoteIdP), sticker: optional(chatStickerFileP) },
+  'room.chat.history': { code: (v) => isStr(v, ROOM_CODE_LEN + 2) && /^[A-Za-z0-9]+$/.test(v) },
   // the page has loaded and checked the room's content set (DESIGN §32.6): `cs` = the room.state.content.cs it checked —
   // every data file's bytes against /cs/<cs16>/index.json, that manifest's composition against `cs`; `ok: false` = it
   // could not (the seat shows it). A room with gameplay plugins starts only once every player's page sent it for its cs
   'room.consent': { cs: isContentHash, accept: isBool },
+  // 断线重建：页面把它保管的 `b.snapshot` 送回来（服务端重启后 room 还在、match 没了）。
+  'b.snapshot': { snapshot: (v) => v !== null && typeof v === 'object' && !Array.isArray(v) },
+  // 包通道（§1.9.6）：pack 是包 id，channel 由包声明；data 有界（引擎不解释载荷）。
+  'pack.msg': { pack: (v) => typeof v === 'string' && /^[a-z0-9][a-z0-9-]{1,31}$/.test(v), channel: (v) => typeof v === 'string' && /^[a-z][a-z0-9_-]{0,63}$/.test(v), data: (v) => v === undefined || packMsgBytes(v) <= PACK_MSG_LIMITS.bytes, $optional: ['data'] },
+  // WebRTC 信令（transport 插件）：服务端只做**同房间**点对点转发，SDP/ICE 不解析、不落库。
+  'p2p.offer': { to: isId, sdp: (v) => typeof v === 'string' && v.length > 0 && v.length <= 20000 },
+  'p2p.answer': { to: isId, sdp: (v) => typeof v === 'string' && v.length > 0 && v.length <= 20000 },
+  'p2p.ice': { to: isId, candidate: (v) => v === null || (typeof v === 'object' && !Array.isArray(v)) },
+  'p2p.bye': { to: isId },
   'room.contentReady': { cs: isContentHash, ok: isBool, $optional: ['ok'] },
 
   // match
@@ -622,6 +709,9 @@ export const C2S = {
   // 救济 (user decision 2026-10-09): the weakest player takes one fund out of the team reserve. No arguments — who may
   // take is the server's decision (it must be the (tied) lowest LP, hurt enough, in PREP, not ready).
   'g.econ.relief': {},
+  // 主动存入（业主 2026-10-30）：把本回合 1 点资金存进团队储备。无参数 —— 金额恒为 1，每人每回合最多一次，
+  // 由服务端（econDepositedBy）判上限，客户端多传反而会被协议拒。
+  'g.econ.deposit': {},
   // 赏金加时 (业主 2026-10-18：「赏金机制，花钱买时间」): 休整期用协同资金给全队买一段准备时间。
   // 无参数——买多少秒、多少钱由服务端按本回合已买次数决定（BOUNTY_COSTS 递增）。
   'g.econ.bounty': {},
@@ -670,7 +760,8 @@ export const C2S = {
 // Server → client message types (documentation + client dispatch table keys).
 export const S2C = [
   'welcome', 'ok', 'error', 'pong',
-  'room.state', 'room.closed',
+  'room.state', 'room.closed', 'b.snapshot', 'b.snapshotRequest',
+  'room.chat', 'room.chat.history',
   'm.public', 'm.private', 'm.field', 'm.toast', 'm.ticker', 'm.emote', 'm.result',
   // m.layer { playerId, bondId, add } — own live prep layer gain; ephemeral, never replayed on resync.
   'm.layer',
@@ -688,6 +779,30 @@ export const S2C = [
   // server-run combat streaming (legacy / SP_COMBAT=server only)
   'b.snap', 'b.ev',
 ];
+
+/**
+ * 头像 id 的**形状白名单**(`hello.avatar`)。
+ *
+ * 合法形状有两类 —— 这个函数是它们**唯一**的定义,业务层(`shared/avatars.js`)与协议层共用:
+ *
+ *   · 官方立绘 chessId: `char_1041_angel2` / `chess_char_6_13_a` → 纯字母数字下划线
+ *   · 自定义头像:       `custom:hat`、玩家上传的 `custom:u/<账号>`
+ *
+ * ⚠ 长度上限 48:`custom:` 7 字符 + 上传那条 `u/<账号≤32>` = 最多 41,
+ *   留一点余量。上限必须真的挡住超长输入(它会进档案 blob 并广播给同房间的人)。
+ *
+ * ⚠ `custom:` 后面**不做细粒度校验** —— 那是 `shared/avatars.js parseAvatarId` 的职责
+ *   (它还要判路径穿越、账号名字符集)。这里只管"形状像不像一个 id",
+ *   免得把两套规则写两遍又写漂(这正是原来那个 bug 的成因)。
+ *
+ * @param {unknown} v
+ */
+export function isAvatarIdStr(v) {
+  if (typeof v !== 'string' || v.length > 48) return false;
+  if (v === '') return true;                                   // 空串 = 用默认
+  if (/^custom:[A-Za-z0-9_/-]+$/.test(v)) return true;         // 自定义(含玩家上传)
+  return /^[A-Za-z0-9_]+$/.test(v);                            // 官方立绘 chessId
+}
 
 /**
  * Validate a decoded client message. Returns `null` when valid, otherwise a short reason string.

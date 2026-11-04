@@ -37,6 +37,7 @@ import './ui/compat.js';
 import { render } from '../vendor/preact.module.js';
 import { useErrorBoundary } from '../vendor/hooks.module.js';
 import { html, UiHosts, Button, MicroLabel, closeAllDialogs } from './ui/components.js';
+import { AccountDock } from './ui/account.js';
 import { ConnectionBanner } from './ui/connBanner.js';
 import { ToastHost, toast, toastError, describeError } from './ui/toasts.js';
 import { net, identity, NetError } from './net.js';
@@ -56,12 +57,15 @@ import { LoadoutHost } from './screens/loadout.js';
 import { StatsHost } from './screens/stats.js';
 import { installRehearsal } from './battle/rehearsal.js';
 import { recordResult, installStatsRecorder } from './ui/stats.js';
-import { installLoadoutSync, installOwnershipSync, installDiySync, installSkinsSync } from './ui/loadoutSync.js';
+import { installLoadoutSync, installOwnershipSync, installDiySync, installSkinsSync, installSettingsViews } from './ui/loadoutSync.js';
 import { startBuildGuard } from './ui/buildGuard.js';
 import { initLang, useLang, tickerText } from './ui/lang.js';
 import { t, N_, translateWire } from '../../shared/i18n.js';
 import { recordError, installTrafficMeter } from './diag.js';
 import { installContent, installContentSet } from './content.js';
+// 官方版本列表（DESIGN §35.23）：核心 main.js 在这里写 store.versions；插件版 main.js 顶替了它，
+// 少这一句房间页就拿不到版本清单（版本 pill / VersionPicker 会是空的）。
+import { sanitizeVersions } from './versions.js';
 import { cosmetics } from './cosmetics.js';
 
 const RESTORE_GRACE_MS = 1500;
@@ -70,6 +74,18 @@ const TICKER_KEEP = 20;
 const EMOTE_KEEP = 20;
 
 const SCREENS = { title: TitleScreen, lobby: LobbyScreen, room: RoomScreen, game: GameScreen };
+
+// 同盟聊天由独立插件 room-chat 提供（code.client 覆盖 js/ui/roomChat.js）。
+// **动态导入**：插件没装/没启用时这里只是 catch 掉，基座 main.js 照样启动（不把宿主和插件绑死）。
+void import('./ui/roomChat.js')
+  .then(({ mountRoomChat }) => {
+    if (typeof mountRoomChat !== 'function') return;
+    const disposeRoomChat = mountRoomChat();
+    globalThis.addEventListener?.('pagehide', disposeRoomChat, { once: true });
+  })
+  .catch(() => { /* room-chat 插件未安装：没有同盟通讯面板 */ });
+
+
 
 /** Copy of a server message without transport fields. */
 function payload(msg) {
@@ -179,6 +195,8 @@ function onWelcome(msg) {
     installedPlugins: pluginCount(msg.content),
     installedNotices: msg.content?.notices === true,
     testMode: msg.testMode === true,
+    // the official versions the server enables (protocol §2; absent: the switch is off — versions.js)
+    versions: sanitizeVersions(msg.versions),
   });
   welcomeAt = Date.now();
 
@@ -225,7 +243,7 @@ function onRoomState(msg) {
   store.set({ room });
   identity.rememberMatch(room.inMatch && seats.some((seat) => seat?.playerId === myId)
     ? { name: store.get().me.name, code: room.code || '' } : null);
-  if (room.mode === 'coop' && typeof room.code === 'string') rememberRoom(room.code, room.test === true);
+  if ((room.mode === 'coop' || room.mode === 'rogue') && typeof room.code === 'string') rememberRoom(room.code, room.test === true);
   maybeFinishRestore();
 }
 
@@ -252,7 +270,22 @@ function wireNet() {
     toastError(err);
   });
   net.on('replaced', () => toast(t('该身份已在其他页面登录，本页已断开'), 'warn', { ttl: 6000 }));
-  net.on('unhandledError', (err) => toastError(err));
+  // 良性竞态（离开房间时的 b.progress / room.card / 观战切换等 fire-and-forget）：弹 toast 只会打扰玩家，
+  // 但诊断仍要留痕 —— 只记日志，不弹提示。真错误照旧 toast。
+  const BENIGN_PUSH = new Set(['NOT_IN_ROOM', 'RATE', 'SPECTATOR', 'ALREADY', 'ROOM_STARTED']);
+  net.on('unhandledError', (err) => {
+    if (err && BENIGN_PUSH.has(err.code)) { recordError('request', err, 'unhandled push (quiet)'); return; }
+    toastError(err);
+  });
+  // 大厅快照（人数 / 房间数 / 公开房间列表）。
+  // ⚠️ 线上 `/js/main.js` 是**这份插件副本**（overlay 顶替核心 public/js/main.js），所以处理函数必须放在这里，
+  // 放核心那份等于没写（2026-11-01：真机 counts 恒 0、房间列表永不渲染就是这么来的）。
+  net.on('lobby.state', (m) => store.set({ lobbyStats: {
+    online: Number(m && m.online) || 0,
+    roomsCount: Number(m && m.rooms) || 0,
+    matchesCount: Number(m && m.matches) || 0,
+    rooms: Array.isArray(m && m.list) ? m.list : [],
+  } }));
   net.on('room.state', onRoomState);
   // 断线重建：服务端每回合把这一局交给我们保管；它重启后（房间还在、对局没了）会来要回去。
   net.on('b.snapshot', (msg) => { const p = payload(msg); if (p && p.snapshot && typeof p.snapshot === 'object') { matchSnapshot = p.snapshot; try { globalThis.__spSnapshot = matchSnapshot; } catch { /* debug hook */ } } });
@@ -294,8 +327,22 @@ function wireNet() {
     const priority = Number.isFinite(msg.priority) ? msg.priority : 0;
     store.set((s) => ({ ticker: [...s.ticker.slice(-(TICKER_KEEP - 1)), { id: ++seq, text, at: Date.now(), type, playerId, round: s.match?.public?.round ?? null, priority }] }));
   });
-  net.on('m.emote', (msg) => {
-    store.set((s) => ({ emotes: [...s.emotes.slice(-(EMOTE_KEEP - 1)), { seq: ++seq, playerId: msg.playerId, id: msg.id, at: Date.now() }] }));
+  // One event per (player, emote) even when both paths deliver it: the server broadcast (`m.emote`) and the
+  // peer side channel (`p2p.data`, instant, only in a room whose content set runs p2p-webrtc).
+  const pushEmote = (playerId, id) => {
+    if (typeof playerId !== 'string' || typeof id !== 'string') return;
+    store.set((s) => {
+      const now = Date.now();
+      const last = s.emotes[s.emotes.length - 1];
+      if (last && last.playerId === playerId && last.id === id && now - last.at < 900) return {};
+      return { emotes: [...s.emotes.slice(-(EMOTE_KEEP - 1)), { seq: ++seq, playerId, id, at: now }] };
+    });
+  };
+  net.on('m.emote', (msg) => pushEmote(msg.playerId, msg.id));
+
+  net.on('p2p.data', (msg) => {
+    const d = msg && msg.data;
+    if (d && d.kind === 'emote') pushEmote(msg.from, d.id);
   });
 
   // Entering (title → lobby) while already online also needs the deep-link join.
@@ -410,6 +457,9 @@ async function boot() {
 
   wireNet();
   installStatsRecorder(store); // follows the match on screen, so a 放弃模拟 can be recorded (ui/stats.js)
+  // 官方 0.3.2 起的派生视图：存档真值按干员存（byChar / notOwnedChars），entries / notOwned 由数据重算 ——
+  // 不接这个，切内容集 / 版本后屏幕会一直显示旧版本的派生视图。
+  installSettingsViews();
   installLoadoutSync({ net });
   installOwnershipSync({ net });
   installDiySync({ net });
@@ -446,7 +496,8 @@ async function boot() {
   const langReady = initLang().catch((err) => console.warn('[app] language setup failed', err));
   await Promise.all([waitForFonts(1200), connectWhenReady, langReady]);
   const root = document.getElementById('app');
-  render(html`<${App} />`, root);
+  // 账号 / 公告入口（P2）：核心 ui/account.js（插件不覆盖它，运行时回退到 public/js/ui/account.js）
+  render(html`<${App} /><${AccountDock} />`, root);
 
   const splash = document.getElementById('boot');
   if (splash) {

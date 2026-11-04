@@ -1,11 +1,10 @@
 // server/sim/content/kits/ops/chess_char_6_16-halo2.js — 溯光星源 (char_1047_halo2) kit, tier 6.
 // Conventions of the tier-6 kits: ../shared/tier6.js; kit contract and rules: ../README.md.
 
+import { installHalo2Module20261101 } from '../shared/ark-update-modules-20261101.js';
 import { canTargetEnemy } from '../../../targeting.js';
 import { bodyDist, bodyInRange } from '../../../body.js';
-import {
-  num, bv, tbb, moduleBb, live, ANY, enemiesIn, onDefaultSkill, selectedSkill, batOf, pullToward, aura,
-} from '../shared/tier6.js';
+import { num, bv, tbb, moduleBb, live, ANY, enemiesIn, onDefaultSkill, selectedSkill, batOf, pullToward, aura } from '../shared/tier6.js';
 
 // ------------------------------------------------------------------------------------------------------------------
 // 溯光星源 chess_char_6_16 (凝滞师) — S3 并流连锁; 数据建模; 能源解析
@@ -69,6 +68,7 @@ function halo2(bb, chess, def) {
   return {
     skills,
     install(battle, unit) {
+      installHalo2Module20261101(battle, unit, chess);
       if (sid !== 'skchr_halo2_2') return;
       battle.on('beforeAttack', (ctx) => { // "选择攻击范围内距离目标点最远的1个敌人为目标"
         if (ctx.attacker !== unit || !unit.skill?.active || !unit.skill.pending) return;
