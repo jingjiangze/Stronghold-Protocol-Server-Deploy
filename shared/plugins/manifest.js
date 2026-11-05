@@ -46,8 +46,9 @@
 //                matchMixin (a match entry and mixes over it), client, data, lobby and static — read by
 //                server/plugins/contentSet.js, lobbyModules.js, staticModules.js and the registry's ui frame. A plain
 //                object; any other shape is ignored with a warning. Not a permission: the paths are the manifest's.
-//   slots        ui only: hud.right, result.tab, stats.tab, room.panel (UI_SLOT_IDS). Absent or []: a warning, the
-//                plugin still loads but the host grants no slot. A bad list, or slots on another class: a problem.
+//   slots        ui only: hud.right, result.tab, stats.tab, room.panel, title.login (UI_SLOT_IDS). Absent or [],
+//                a warning: the plugin still loads but the host grants no slot. A bad list, or slots on another
+//                class: a problem.
 //   lang class   the language fields of manifest 1 (lang, base, fallback, complete, machineTranslated, numberUnits —
 //                shared/i18nPacks.js) and files { ui (required), data }, both .json
 //
@@ -212,10 +213,10 @@ export const isPackId = (v) => typeof v === 'string' && /^[A-Za-z0-9][A-Za-z0-9.
 export const isPluginId = (v) => typeof v === 'string' && /^[a-z0-9][a-z0-9-]{1,31}$/.test(v);
 
 /**
- * The slots a ui plugin may ask the host for (DESIGN §32.8). [ASSUMED] these four. The protocol table grants one
+ * The slots a ui plugin may ask the host for (DESIGN §32.8). [ASSUMED] these five. The protocol table grants one
  * plugin per slot at a time; the match shows tabs when several ask for the same one (public/js/ui/pluginFrame.js).
  */
-export const UI_SLOT_IDS = Object.freeze(['hud.right', 'result.tab', 'stats.tab', 'room.panel']);
+export const UI_SLOT_IDS = Object.freeze(['hud.right', 'result.tab', 'stats.tab', 'room.panel', 'title.login']);
 
 /**
  * A path inside a pack or plugin folder ('ui.json', 'img/a.png'): relative, '/'-separated, no '.' / '..' / hidden /
