@@ -1,6 +1,6 @@
 {
   "trusted": {
-    "mota": "62bdb579f91b8c0c1bc65b981ada141a94e8dbb18616c8989d0b0119cfd15517",
+    "mota": "678f79c970cb2ddb93a47f2789961e671b070024d347ef86d56eeed1bf19b926",
     "ai-scoring": "669b316f3b254101ecdc9743354f85f6a5f38c18b27efc1cbf7f2c83f208cc17",
     "operator-skins": "3967efa673a839faf99fecdeeec6409c73cc1647cb19bebc0d4eda8c537abde3",
     "alliance-20": "c3f41920f07ca9d919db8b2994e5fa4292aa8f7810067db5e7411086ce6cec89",
@@ -18,10 +18,11 @@
     "roguelike-data-ro4": "1a54ac8ab941a976977a66b2e9a51af16dec7185c4c2b29715aa929ce4ba765d",
     "ave-mujica": "05ef9b5ad8bdeb9c843afe141df17f0babf7160b08567537f3878dbeb90c3a78",
     "kits-ave-mujica": "26a60db8b46d2a735c930cca3facdea954b0bf63eafe94c89b9581e77e65362f",
-    "avemujica-look": "0d7ceb845fe6db3babd36e125dd033152102b6817948b900fcb94d217fda6e56"
+    "avemujica-look": "cf4f0fb3c36a7190c4317eb16a1cd1173a6eda772b1af290923d831a173f9294"
   },
   "default": [
     "mota",
+    "loan-pledge",
     "operator-skins",
     "alliance-20",
     "ai-scoring",

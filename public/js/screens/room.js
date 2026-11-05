@@ -23,11 +23,12 @@
 // Spectator seats (community report #26, a remake feature): a co-op room with spectators shows the 观战席 strip under
 // the seats — names, offline marks, the host's ✕ (room.removeSpectator) — and a spectator's own view swaps the ready
 // button for 观战中 and offers 入座 (room.join of the room) while a player seat is free.
-// Plugins (DESIGN §32 P1a): the tag under the title — 「原版」 or 「插件 ×N」 — opens the 插件 panel (ui/pluginPanel.js:
-// the host switches the room's plugins, everybody else reads them). With gameplay plugins (§32.6: a content set of its
-// own — the tag reads 「非官方」 too) every seat shows whether its page has loaded and checked the room's content
-// (seats[].content: 载入中 / 就绪 / 校验失败), 准备就绪 and 开始模拟 wait for it (the server refuses them before:
-// CONTENT_NOT_READY), and a plugin mode the host chose shows beside the mode name in the top bar (the orange chip).
+// Plugins (DESIGN §32 P1a): the room shows no plugin tag or panel entry — this server ships its plugins default-on
+// (plugins/config.json `default`), so ui/pluginTag.js PluginTag is no longer rendered here (ui/pluginPanel.js stays the
+// host's panel code, just without that entry). With gameplay plugins (§32.6: a content set of its own) every seat shows
+// whether its page has loaded and checked the room's content (seats[].content: 载入中 / 就绪 / 校验失败), 准备就绪 and
+// 开始模拟 wait for it (the server refuses them before: CONTENT_NOT_READY), and a plugin mode the host chose shows beside
+// the mode name in the top bar (the orange chip).
 // 名片干员 (PR #643 split 6): a doctor's seat card shows an operator's portrait — the one the player picked (更换立绘 on
 // one's own seat opens the picker: search, rarity, 默认; kept as a pref — ui/seatArt.js cardStore — and sent as
 // room.card by ui/loadoutSync.js installCardSync, so the room sees it as seats[].card), else one of the 5★/6★ operators
@@ -66,7 +67,7 @@ import { GuideButton } from '../ui/guide.js';
 import { openStats } from './stats.js';
 import { SettingsButton } from '../ui/settings.js';
 import { LoadoutButton } from './loadout.js';
-import { PluginTag, VersionTag, isModdedRoom } from '../ui/pluginTag.js';
+import { VersionTag, isModdedRoom } from '../ui/pluginTag.js';
 import { VersionVote, versionVoteOf } from '../ui/versionVote.js';
 import { VersionPicker } from '../ui/versionPicker.js';
 import { ContractChips, ContractPicker, contractsOption } from '../ui/contractPicker.js';
@@ -780,7 +781,6 @@ export function RoomScreen() {
           <${SettingsButton} class="room-settings" variant="secondary" square=${true} />
           <${GuideButton} class="room-guide" variant="secondary" square=${true} />
         </div>
-        <${PluginTag} room=${room} myId=${me.playerId} />
       </div>
       <div class="rs-top__right">
         <${LoadoutButton} from="room" size="md" class="hub-plate hub-plate--loadout rs-loadout room-loadout" label=${t('干员调配')} />

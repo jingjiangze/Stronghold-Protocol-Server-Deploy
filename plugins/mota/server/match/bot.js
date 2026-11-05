@@ -1520,6 +1520,34 @@ export function diyOpensAt(ps, lv) {
   return false;
 }
 
+/**
+ * Whether this prep wants the next 调度中心 level-up (the `want` judgement of levelUp, factored out because
+ * botEconKeyMoment also asks it to size a team request's price gap).
+ *
+ * 2026-10-31 `cheapestAffordable` 的同类事故复发：botEconKeyMoment 按名调用 wantsLevelUp，而当时该判定只存在于
+ * levelUp 的局部作用域，全仓无定义 → ReferenceError 被 prep 的 catch 吞掉，bot 只 ready 不布阵。凡是会被别处按名
+ * 调用的判定，必须定义在模块级，不能只在某个函数体内算局部变量。
+ *
+ * Only the want judgement lives here — levelUp keeps its own funds/max-level guards and side effects, so the call
+ * order (and the `tryDo(() => ps.levelUp())` once per iteration) is unchanged.
+ */
+function wantsLevelUp(m, ps, { spare = false } = {}) {
+  const price = Math.max(0, ps.shop.upgradePrice);
+  const r = m.round;
+  const target = LEVEL_TARGET[Math.min(LEVEL_TARGET.length - 1, r)];
+  const nextTarget = LEVEL_TARGET[Math.min(LEVEL_TARGET.length - 1, r + 1)];
+  // early levels only once the board is full (units first); later a 6-unit core is enough
+  const boardReady = ps.allChess().length >= (r <= 4 ? ps.deployCap : Math.min(ps.deployCap, 6));
+  let want = price === 0;
+  if (!want && ps.shop.level < target && (boardReady || r >= 6)) want = true;
+  // a human's 自选 slots of the next level (AI 托管): that step one round earlier (DIY_PIECE_BONUS)
+  if (!want && boardReady && ps.shop.level < nextTarget && diyOpensAt(ps, ps.shop.level + 1)) want = true;
+  if (!want && ps.shop.level < nextTarget && price <= 2 && boardReady) want = true;
+  if (!want && spare && ps.funds >= price + 1 + fundsReserve(m, ps) && ps.shop.level < nextTarget + 1 && boardReady) want = true;
+  if (!want && ps.funds >= price + 14) want = true;
+  return want;
+}
+
 /** The 调度中心 level-ups of a bot's prep (exported for tests). */
 export function levelUp(m, ps, { spare = false } = {}) {
   const gd = ps?.gd || m.gd;
@@ -1527,19 +1555,7 @@ export function levelUp(m, ps, { spare = false } = {}) {
     if (ps.shop.level >= gd.maxShopLevel) return;
     const price = Math.max(0, ps.shop.upgradePrice);
     if (ps.funds < price) return;
-    const r = m.round;
-    const target = LEVEL_TARGET[Math.min(LEVEL_TARGET.length - 1, r)];
-    const nextTarget = LEVEL_TARGET[Math.min(LEVEL_TARGET.length - 1, r + 1)];
-    // early levels only once the board is full (units first); later a 6-unit core is enough
-    const boardReady = ps.allChess().length >= (r <= 4 ? ps.deployCap : Math.min(ps.deployCap, 6));
-    let want = price === 0;
-    if (!want && ps.shop.level < target && (boardReady || r >= 6)) want = true;
-    // a human's 自选 slots of the next level (AI 托管): that step one round earlier (DIY_PIECE_BONUS)
-    if (!want && boardReady && ps.shop.level < nextTarget && diyOpensAt(ps, ps.shop.level + 1)) want = true;
-    if (!want && ps.shop.level < nextTarget && price <= 2 && boardReady) want = true;
-    if (!want && spare && ps.funds >= price + 1 + fundsReserve(m, ps) && ps.shop.level < nextTarget + 1 && boardReady) want = true;
-    if (!want && ps.funds >= price + 14) want = true;
-    if (!want || !tryDo(() => ps.levelUp())) return;
+    if (!wantsLevelUp(m, ps, { spare }) || !tryDo(() => ps.levelUp())) return;
   }
 }
 

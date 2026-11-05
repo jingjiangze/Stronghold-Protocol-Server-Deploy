@@ -11,11 +11,10 @@
 // pack lives (assetCache.js), and 清理旧版本素材 deletes the imported copies this server's version no longer uses
 // (assetPack.js pruneImportedAssets; both the maintainer's requests of 2026-10-17). The lobby and the room open it from a 设置 button next to 玩法说明
 // (SettingsButton, GitHub #238); the title screen and the match have their own gear.
-// 外观插件 (DESIGN §32 P1a, the design study's §7.5): a switch for each cosmetic plugin of scope `personal` the server's
-// catalogue lists (content.js) — kept in this browser (`sp.pref.cosmetics`), never sent, seen by this player alone and
-// never part of a battle; the section is left out when the server has none. The switched-on ones form a set like a
-// room's (content.js personalSet): one another needs is on as 「自动」 and cannot be switched off alone, a switch that
-// would make a conflict is refused with the room's message, and a chosen one left out (it conflicts now) says so.
+// 外观 (DESIGN §32 P1a, the design study's §7.5): the 显示其他玩家的皮肤 switch only. This server ships its plugins
+// default-on (plugins/config.json `default`), so the modal lists no cosmetic / ui plugin and their switches, and this
+// change adds no new setting — the one switch stays in this browser (`sp.pref.settings`), never sent, seen by this player
+// alone.
 //
 // 文字大小 (textSize, applied by applyTextSize): the interface text root `--t` of css/theme.css — a phone clamps the
 // layout root `1rem` at 40 px (theme.css), which left the .18rem body text at 7.2 CSS px while the browser's own font
@@ -38,8 +37,7 @@ import { LangToggle, machineTranslationNote } from './lang.js';
 import { t, tc, tParts, N_ } from '../../../shared/i18n.js';
 import { errorCount, currentBattle, diagnosticsText } from '../diag.js';
 import { copyText } from './clipboard.js';
-import { catalog, loadCatalog, cosmeticPlugins, installedCount, isPersonalCosmetic, personal, personalApplied, personalSet, pluginName, setPersonalPlugin } from '../content.js';
-import { resolveThemeVars, themeVarsOf } from '../../../shared/plugins/theme.js';
+import { catalog, loadCatalog, installedCount, personalApplied, pluginName } from '../content.js';
 import { setUiPlugin, uiPluginEntries, uiPlugins } from './uiPlugins.js';
 import { UI_LIMITS } from '../../../shared/plugins/ui.js';
 import { toast, describeError } from './toasts.js';
@@ -272,59 +270,21 @@ function DiagSection() {
 }
 
 /**
- * 外观插件 (see the header): the server's cosmetic plugins of scope `personal`, each with its switch; nothing when there
- * is none. The catalogue is fetched again when the section opens (a plugin dropped in meanwhile shows) — on a server that
- * has plugins only (content.js installedCount: a server without any is never asked for it).
+ * 外观 (see the header): the 显示其他玩家的皮肤 switch alone. It is on screen with or without a plugin — an appearance
+ * can also come from a set the player is not in (a watched match's cosmetics are the watcher's own layers), and a switch
+ * that appears only when the catalogue happens to have loaded would look like a bug. It follows the same GLOBAL rule the
+ * 皮肤 section does (ui/skins.js hasAnySkinChoices: at least one operator of the composed manifest has a wear-able skin),
+ * so a session with no such appearance draws nothing here — an installation without a cosmetic layer keeps exactly the
+ * settings it had before this feature, the switch included (test/ui/plugins.e2e.test.js asserts the section is absent
+ * on a server without plugins). The plugin list that used to sit under it is not rendered: this server's plugins are
+ * default-on (plugins/config.json `default`), so there is nothing to switch.
  */
 function CosmeticSection() {
-  const cat = useStore((s) => s, Object.is, catalog);
-  const ids = useStore((s) => s.ids, Object.is, personal);
-  const installed = useStore(installedCount);
   const s = useSettings();
-  useEffect(() => { if (installed) loadCatalog({ force: true }); }, [installed]);
-  const entries = installed ? cosmeticPlugins(cat.plugins, 'personal') : [];
-  const list = entries.filter(isPersonalCosmetic);
-  // The 显示其他玩家的皮肤 switch is on screen with or without a PERSONAL plugin — an appearance can also come from a
-  // set the player is not in (a watched match's cosmetics are the watcher's own layers), and a switch that appears only
-  // when the catalogue happens to have loaded would look like a bug. It follows the same GLOBAL rule the 皮肤 section
-  // does (ui/skins.js hasAnySkinChoices: at least one operator of the composed manifest has a wear-able skin), so a
-  // session with no such appearance draws nothing here — an installation without a cosmetic layer keeps exactly the
-  // settings it had before this feature, the switch included (test/ui/plugins.e2e.test.js asserts the section is absent
-  // on a server without plugins). The list below is NOT gated: it is where a switched-off plugin is switched back on.
-  if (!list.length) {
-    if (!hasAnySkinChoices()) return null;
-    return html`<section class="set-plugins" aria-labelledby="set-skins-title" data-testid="personal-plugins">
-      <div class="set-keys__head"><span class="set-row__label" id="set-skins-title">${t('外观插件')}<${MicroLabel}>COSMETIC PLUGINS<//></span></div>
-      <${OtherSkinsRow} value=${s.otherSkins !== false} onSet=${(v) => updateSettings({ otherSkins: v })} />
-    </section>`;
-  }
-  const set = personalSet(ids, entries);
-  const applied = new Set(set.order);
-  const auto = new Set(set.auto);
-  const winners = resolveThemeVars(set.order.map((id) => {
-    const p = entries.find((x) => x.id === id);
-    return { id, vars: themeVarsOf(p) };
-  }));
-  const flip = (id, on) => { const r = setPersonalPlugin(id, on); if ('error' in r) toast(describeError(r.error), 'warn'); };
-  return html`<section class="set-plugins" aria-labelledby="set-plugins-title" data-testid="personal-plugins">
-    <div class="set-keys__head">
-      <span class="set-row__label" id="set-plugins-title">${t('外观插件')}<${MicroLabel}>COSMETIC PLUGINS<//></span>
-    </div>
-    <p class="set-hint">${t('只改变你自己看到的画面和声音，不影响其他博士，也不影响战斗；插件为非官方制作。')}</p>
+  if (!hasAnySkinChoices()) return null;
+  return html`<section class="set-plugins" aria-labelledby="set-skins-title" data-testid="personal-plugins">
+    <div class="set-keys__head"><span class="set-row__label" id="set-skins-title">${t('外观')}<${MicroLabel}>APPEARANCE<//></span></div>
     <${OtherSkinsRow} value=${s.otherSkins !== false} onSet=${(v) => updateSettings({ otherSkins: v })} />
-    ${winners.map((w) => html`<p key=${w.name} class="set-hint set-theme-win">${t('{token} 由「{name}」生效', { token: w.name, name: pluginName(list.find((p) => p.id === w.pluginId) || { id: w.pluginId }) })}</p>`)}
-    ${list.map((p) => {
-      // on: applied (chosen, or 「自动」: another one needs it) — or chosen but left out now (a conflict): switch it off
-      const skipped = set.skipped.includes(p.id);
-      const on = applied.has(p.id) || skipped;
-      const isAuto = auto.has(p.id);
-      return html`<div key=${p.id} class="set-row" data-plugin=${p.id}>
-        <span class="set-row__label">${pluginName(p)}${isAuto ? html` <span class="plugrow__badge">${t('自动')}</span>` : null}<${MicroLabel}>${pluginMicro(p)}<//>
-          ${skipped ? html`<span class="set-hint is-warn">${t('与其他已开启的插件冲突或缺少所需插件，没有生效')}</span>` : null}</span>
-        <button type="button" class=${`set-toggle${on ? ' is-on' : ''}`} role="switch" aria-checked=${on ? 'true' : 'false'} aria-label=${pluginName(p)}
-          disabled=${isAuto && !ids.includes(p.id)} onClick=${() => flip(p.id, !on)}><i></i><span>${on ? tc('toggle', '开启') : tc('toggle', '关闭')}</span></button>
-      </div>`;
-    })}
   </section>`;
 }
 
@@ -346,6 +306,9 @@ function OtherSkinsRow({ value, onSet }) {
 /**
  * 界面插件 (DESIGN §32.8): each loaded ui plugin of scope `personal`, switched on in this browser only
  * (`sp.pref.ui-plugins`). It cannot play the match and it does not change what anyone else sees.
+ *
+ * Not rendered by SettingsModal: this server's plugins are default-on (plugins/config.json `default`), so the modal shows
+ * no plugin list. The component is kept (dead code) for a server that wants these switches back.
  */
 function UiPluginSection() {
   const cat = useStore((s) => s, Object.is, catalog);
@@ -541,7 +504,6 @@ export function SettingsModal({ open, onClose }) {
       <${ScreenFitSection} />
       <${HotkeySection} keys=${s.keys} touchUi=${touchUi} />
       <${CosmeticSection} />
-      <${UiPluginSection} />
       <${StorageSection} />
       <${DiagSection} />
       <p class="set-hint">${touchUi ? t('触屏操作：点击单位选中（撤退 / 出售）· 长按单位或卡牌查看详情 · 拖动部署后滑动选择朝向') : t('右键查看详情')}</p>
