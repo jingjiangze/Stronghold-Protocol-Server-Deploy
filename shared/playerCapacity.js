@@ -14,49 +14,13 @@ import { BASE_SEATS, MAX_SEATS, MAX_DRAFT_CARDS } from './constants.js';
 export const MIN_COOP_DRAFT_CARDS = 6;
 /** Cards offered on top of the live player count, so a pick is a choice rather than a formality. */
 export const DRAFT_SPARE_CARDS = 2;
-/** From this many players the shop pool is split (below it everyone shares one, as the original game did). */
-export const GROUPED_POOL_MIN_PLAYERS = 5;
-
 /**
- * 分队人数表 (v0.2.2 基准,取自 `feat/IncreasePlayerCapacity` 的 `POOL_GROUP_LAYOUTS`)。
+ * From this many players the shop pool is split into groups (below it everyone shares one, as the original game did).
  *
- * 为什么是**固定表**而不是均分公式 —— 这是「牌库不够分」的根因。
- *
- * 商店池的份数按 `poolCopyScale = size / BASE_SEATS` 缩放,**只有 5 人组会扩容(1.25×)**。均分公式
- * 永远算出 3 或 4 人组,于是 scale 恒为 1:20 人分成五组,每组拿的都是**同一份原始 4 人池** ——
- * 组越多,同样的池被越多组各拿一遍,组内一抢就空。
- *
- * 固定表只在 9 / 13 / 17 人时派出一个 5 人组,让那一组拿到扩容池;其余人数刻意让组**尽量少、尽量满**
- * (14 人 4 组而不是 5 组),避免把池切碎。
- *
- * 表里的顺序就是座位分配顺序。
+ * Kept as the published "is the pool split at all" threshold; `poolGroupSizes` no longer branches on it, because the
+ * 4-player chunking loop yields the single group [players] on its own for 4 players and fewer.
  */
-const POOL_GROUP_LAYOUTS = Object.freeze({
-  /*
-   * ⚠ 5 人也在表里:owner 的规则是 5 人房就分队([3,2]),不是"一人一队 5 人共享"。
-   *
-   * 分队**不缩小**牌库 —— `poolCopyScale = max(1, size/4)`,3 人和 2 人的队都是 scale 1,各自拿到与 4 人房
-   * 完全相同的**完整**牌库。全房份数因此高于旧的「一队 5 人 scale 1.25」:旧做法给 1.25 份,新做法给 2 份。
-   * 这也是注释开头说的"固定表而非均分公式"的由来 —— 均分在 5 人时同样给 [3,2],所以两种算法在这里一致;
-   * 分歧从 9 / 13 / 17 人开始(那里刻意派一个 5 人组去拿扩容池)。
-   */
-  5: [3, 2],
-  6: [3, 3],
-  7: [4, 3],
-  8: [4, 4],
-  9: [4, 5],
-  10: [4, 3, 3],
-  11: [4, 4, 3],
-  12: [4, 4, 4],
-  13: [5, 4, 4],
-  14: [4, 4, 3, 3],
-  15: [4, 4, 4, 3],
-  16: [4, 4, 4, 4],
-  17: [5, 4, 4, 4],
-  18: [4, 4, 4, 3, 3],
-  19: [4, 4, 4, 4, 3],
-  20: [4, 4, 4, 4, 4],
-});
+export const GROUPED_POOL_MIN_PLAYERS = 5;
 
 /**
  * How many draft cards this many live participants are offered.
@@ -72,34 +36,35 @@ export function coopDraftCardCount(players) {
 /**
  * 分队人数上限。
  *
- * 4 是原版牌库经济的设计基准(BASE_SEATS),但**不是硬上限** —— 5 人组是刻意的:它让 `poolCopyScale`
- * 变成 1.25,那一组才能拿到扩容池(见 POOL_GROUP_LAYOUTS)。所以这里报的是"基准",不是"不得超过"。
+ * 4 是原版牌库经济的设计基准(BASE_SEATS),自 owner 2026-11-05「每四人一个分组牌库」起也是分队的实际人数上限:
+ * 每队最多 4 人,所以每队都拿**完整的一份原始 4 人池**,没有队伍会因为人多而要扩容。
  */
 export const MAX_SQUAD_SIZE = BASE_SEATS;
 
 /**
- * 分队人数(BASE_SEATS 上限,小于 GROUPED_POOL_MIN_PLAYERS 时不再单独成队)。
+ * 分队人数(按 seat 顺序每 4 人一队,保序切块,最后一块是余数)。
  *
- * **5 人起就分队**(owner:「目前5个人6个人都会进入a分队 不会多个b分队」)—— 5 → [3,2],6 → [3,3],7 起查上面那张表。
+ * owner 2026-11-05「每四人一个分组牌库」:20 人房 = 5 队各 4 人,5 人房 = [4, 1],6 人房 = [4, 2],
+ * 8 人房 = [4, 4]。4 人及以下只有一队 —— 全场共享原版牌库,行为与旧版一致。
+ *
+ * 每队都不超过 BASE_SEATS,所以 `poolCopyScale` 恒为 1:每队各拿一份完整 4 人份牌库,组与组之间不共用库存。
  *
  * @param {number} players 1..MAX_SEATS
- * @returns {number[]} e.g. 5 players → [3, 2], 9 → [4, 5], 20 → [4, 4, 4, 4, 4]
+ * @returns {number[]} e.g. 5 players → [4, 1], 8 → [4, 4], 20 → [4, 4, 4, 4, 4]
  */
 export function poolGroupSizes(players) {
   if (!Number.isInteger(players) || players < 1 || players > MAX_SEATS) throw new RangeError('invalid player count');
-  if (players < GROUPED_POOL_MIN_PLAYERS) return [players];
-  /*
-   * 返回**副本**:调用方(`Match`、`pool.js`)会把结果存下来,共享同一个数组迟早被谁就地改掉。
-   */
-  return POOL_GROUP_LAYOUTS[players].slice();
+  const out = [];
+  for (let left = players; left > 0; left -= BASE_SEATS) out.push(Math.min(BASE_SEATS, left));
+  return out;
 }
 
 /**
  * How much a shared pool's contents are multiplied by.
  *
- * A group of exactly BASE_SEATS keeps the complete original pool; a group of three keeps it too (the original game
- * already worked at three), and only a group larger than four expands — otherwise five players would share the copies
- * four players used to, and the shop would run dry.
+ * A group of BASE_SEATS or fewer keeps the complete original pool; only a group larger than four expands — otherwise
+ * five players would share the copies four players used to, and the shop would run dry. Grouped pools chunk every
+ * room into ≤4-player groups (`poolGroupSizes`), so this is 1 for every group today.
  * @param {number} groupSize
  */
 export const poolCopyScale = (groupSize) => Math.max(1, groupSize / BASE_SEATS);

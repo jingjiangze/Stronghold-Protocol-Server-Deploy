@@ -96,13 +96,22 @@ export class MatchInfra {
 
   nextUid() { return ++this.uidSeq; }
 
+  /**
+   * The chess pool a seat draws from: its 4-player group's pool (owner 2026-11-05 分组牌库, PlayerState.poolGroup).
+   * Falls back to `this.pool` for a seat without a poolId and for a match built before `this.pools` existed.
+   * @param {{ poolId?: number } | null | undefined} ps
+   */
+  poolFor(ps) { return this.pools?.[ps?.poolId] ?? this.pool; }
+
   alivePlayers() { return this.order.filter((p) => p.alive); }
 
   /** Whether any chess of a bond is in this match's pool (a 驰援 card of a fully banned bond is never offered). */
   bondInPool(bondId) {
-    for (const id of this.pool.entries.keys()) {
-      const c = this.gd.chess(id);
-      if (c && Array.isArray(c.bonds) && c.bonds.includes(bondId)) return true;
+    for (const pool of this.pools || [this.pool]) {
+      for (const id of pool.entries.keys()) {
+        const c = this.gd.chess(id);
+        if (c && Array.isArray(c.bonds) && c.bonds.includes(bondId)) return true;
+      }
     }
     return false;
   }

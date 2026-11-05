@@ -371,7 +371,7 @@ function bondPoolStats(m, ps, owned) {
   const reach = new Map();
   const supply = new Map();
   const maxTier = Math.min(6, ps.shop.level + 1);
-  for (const [id, e] of m.pool.entries) {
+  for (const [id, e] of ps.poolGroup().entries) {
     if (!(e.left > 0)) continue;
     const c = m.gd.chess(id);
     if (!c || !Array.isArray(c.bonds)) continue;
@@ -762,7 +762,7 @@ function buyScore(m, ps, id, ctx) {
   // [ASSUMED] A soft 18-point cooperation weight (PR #407), not an official rule or a reserved card.
   // Leave high-tier shared chess to living teammates whose opening strategy needs its faction.
   // Humans and bots count equally; a single soft penalty still allows valuable own merges.
-  if (c.tier >= 5 && !c.isGolden && !c.diyFor && m.pool.has(base) && m.alivePlayers().some((mate) =>
+  if (c.tier >= 5 && !c.isGolden && !c.diyFor && ps.poolGroup().has(base) && m.alivePlayers().some((mate) =>
     mate !== ps && gd.bandBondIds(mate.bandId).some((b) => !gd.modeInactiveBonds.has(b) && c.bonds.includes(b)))) s -= 18;
   return s + (ctx.policy?.buyBonus(m, ps, id, ctx) || 0);
 }
@@ -1571,12 +1571,12 @@ function copyCounts(m, ps) {
 function refreshValue(m, ps, ctx) {
   const L = ps.shop.level;
   let total = 0;
-  for (const e of m.pool.entries.values()) if (e.left > 0 && e.tier <= L) total += e.left;
+  for (const e of ps.poolGroup().entries.values()) if (e.left > 0 && e.tier <= L) total += e.left;
   if (!(total > 0)) return 0;
   const slots = m.gd.shopSlots(L).chess;
   let v = 0;
   for (const [b, k] of ctx.copies) {
-    const e = m.pool.entries.get(b);
+    const e = ps.poolGroup().entries.get(b);
     if (!e || e.left <= 0 || e.tier > L) continue;
     const pShop = 1 - (1 - e.left / total) ** slots;
     if (k + 1 >= mergeNeed(m, b)) v += pShop * MERGE_HIT;
@@ -1585,7 +1585,7 @@ function refreshValue(m, ps, ctx) {
   // §35.63: a refresh may also show a missing member of the focus core bond on its way to the top threshold
   if (coreGap(m, ctx.focus, ctx.owned)) {
     let miss = 1;
-    for (const [id, e] of m.pool.entries) {
+    for (const [id, e] of ps.poolGroup().entries) {
       if (!(e.left > 0) || e.tier > L || ctx.owned.bases.has(id)) continue;
       const c = m.gd.chess(id);
       if (c && (c.bonds || []).includes(ctx.focus)) miss *= (1 - e.left / total) ** slots;
@@ -1670,7 +1670,7 @@ export function sellJunk(m, ps, policy = null) {
     const base = m.gd.baseIdOf(p.id);
     const copies = c.isGolden ? 0 : ctx.copies.get(base) || 0;
     // a pair whose third copy can still come (the merge's reward is worth it for any pair)
-    const pairLive = copies + 1 >= mergeNeed(m, base) && (m.pool.left(base) > 0 || !m.pool.has(base));
+    const pairLive = copies + 1 >= mergeNeed(m, base) && (ps.poolGroup().left(base) > 0 || !ps.poolGroup().has(base));
     const coreReady = (c.bonds || []).some((b) => m.gd.bond(b)?.isCore && (ctx.owned.counts.get(b) || 0) >= CORE_KEEP_OWNED);
     const useful = c.isGolden || pairLive || ctx.keep.has(base) || coreReady || (copies >= 2 && m.round <= 6);
     (useful ? keep : junk).push({ p, v: pieceValue(m, ps, p, ctx) + (pairLive ? 150 : useful ? 100 : 0) });
@@ -2107,7 +2107,7 @@ export function* advisorSpendSteps(m, ps) {
       && advisorFreezeTarget(m, ps, s.id));
     if (preserve) maybeFreeze(m, ps);
     // Official draws require remaining eligible stock. Use effective prices, including free/discounted operators.
-    const eligible = [...m.pool.entries].filter(([, e]) => e.left > 0 && e.tier <= ps.shop.level).map(([id]) => id);
+    const eligible = [...ps.poolGroup().entries].filter(([, e]) => e.left > 0 && e.tier <= ps.shop.level).map(([id]) => id);
     eligible.push(...(ps.diyRollEntries() || []).map(([id]) => id));
     const minPrice = Math.min(...eligible.map(id => ps.priceOf({ kind: 'chess', id, basePrice: gd.chessPrice(id) })), Infinity);
     const refreshPrice = ps.shop.freeRefreshes > 0 ? 0 : gd.refreshPrice;
@@ -2120,7 +2120,7 @@ export function* advisorSpendSteps(m, ps) {
     // [ASSUMED] Bank only spare, non-merge singles with available shared stock; cheapest first.
     const bank = offers.filter(({ s }) => ps.priceOf(s) <= ps.funds && gd.sellPrice(s.id) > 0
       && !ps.allChess().some(p => gd.baseIdOf(p.id) === gd.baseIdOf(s.id))
-      && (!m.pool.has(s.id) || m.pool.left(s.id) > 0))
+      && (!ps.poolGroup().has(s.id) || ps.poolGroup().left(s.id) > 0))
       .sort((a, b) => ps.priceOf(a.s) - ps.priceOf(b.s) || a.slot - b.slot)[0];
     if (countFree(ps.hand) <= 1 || !bank) return;
     const before = new Set(ps.allChess().map(p => p.uid));

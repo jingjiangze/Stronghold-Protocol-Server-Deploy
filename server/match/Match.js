@@ -214,6 +214,7 @@
 import { PHASE, modeIdFor } from '../../shared/constants.js';
 import { isContentHash } from '../../shared/plugins/identity.js';
 import { DEFAULT_VERSION, versionById } from '../../shared/versions.js';
+import { poolGroupSizes, poolCopyScale } from '../../shared/playerCapacity.js';
 import { Battle } from '../sim/Battle.js';
 import { DataSource } from '../sim/simdata.js';
 import { createRng, deriveSeed } from '../sim/rng.js';
@@ -482,7 +483,21 @@ export class Match {
     this.disabledBonds = bans.drawn;
     this.staticInactiveBonds = bans.staticOff;
     this.bannedChess = bans.banned;
-    this.pool = new SharedPool(this.gd, { banned: bans.banned });
+    /**
+     * 分组牌库 (owner 2026-11-05「每四人一个分组牌库」): one SharedPool per group of ≤4 seats, in seat order
+     * (shared/playerCapacity.js poolGroupSizes / poolCopyScale). Every group gets the complete original 4-player stock,
+     * so groups no longer draw down one shared map; each seat's `poolId` picks its group (poolFor, PlayerState.poolGroup).
+     * `this.pool` stays the first group for the paths that still read the single pool.
+     */
+    const groupSizes = poolGroupSizes(this.order.length);
+    this.pools = groupSizes.map((size) => new SharedPool(this.gd, {
+      banned: bans.banned,
+      copyScale: poolCopyScale(size),
+    }));
+    this.pool = this.pools[0];
+    const groupOfSeat = [];
+    groupSizes.forEach((size, gi) => { for (let k = 0; k < size; k++) groupOfSeat.push(gi); });
+    this.order.forEach((ps, i) => { ps.poolId = groupOfSeat[i] ?? 0; });
     this.itemPool = new SharedItemPool(this.gd, () => this.order);
     // 自选编队 (0.2.0): each human's slotted DIY pieces get their own stock — none for one whose bonds are all off this
     // match (player/diy.js initDiyStock); no randomness is drawn here

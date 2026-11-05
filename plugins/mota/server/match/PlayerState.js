@@ -146,6 +146,8 @@ export class PlayerState {
     this.gd = m.gd;
     this.playerId = seat.playerId;
     this.seat = seat.seat;
+    /** 分组牌库的组号 (owner 2026-11-05「每四人一个分组牌库」): 0 until `Match` assigns it from poolGroupSizes. */
+    this.poolId = 0;
     this.name = seat.name;
     this.isBot = !!seat.isBot;
     this.connected = this.isBot ? true : !!seat.connected;
@@ -297,6 +299,9 @@ export class PlayerState {
     this._botPrepToken = 0;
     this.bonds = computeBonds(this.gd, this);
   }
+
+  /** The shared chess pool of this player's 4-player group (single pool before the match assigns poolId). */
+  poolGroup() { return this.m.pools?.[this.poolId] ?? this.m.pool; }
 }
 
 // the method modules, in this order (a name defined twice is an error, never a silent override)

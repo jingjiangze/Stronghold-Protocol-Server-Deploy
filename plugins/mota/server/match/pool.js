@@ -72,17 +72,22 @@ function sample(arr, n, rng) {
 
 export class SharedPool {
   /**
+   * One pool instance now backs ONE group of at most BASE_SEATS players (`Match.pools`, grouped by
+   * shared/playerCapacity.js poolGroupSizes), so every group gets the complete original 4-player stock.
+   * `copyScale` is the grouping multiplier (`poolCopyScale`): 1 for every group of ≤4 players; a larger group would
+   * scale its copies (5 players → 1.25×) instead of sharing the 4-player stock. Non-finite / non-positive values
+   * fall back to 1.
    * @param {import('./gamedata.js').GameData} gd
-   * @param {{ banned?: Iterable<string> }} [opts]
+   * @param {{ banned?: Iterable<string>, copyScale?: number }} [opts]
    */
-  constructor(gd, { banned = [] } = {}) {
+  constructor(gd, { banned = [], copyScale = 1 } = {}) {
     this.gd = gd;
     const ban = new Set(banned);
     /** @type {Map<string, { cap: number, left: number, tier: number }>} */
     this.entries = new Map();
     for (const id of gd.visibleChess) {
       if (ban.has(id)) continue;
-      const cap = gd.poolCopies(id);
+      const cap = Math.max(0, Math.round(gd.poolCopies(id) * (Number.isFinite(copyScale) && copyScale > 0 ? copyScale : 1)));
       if (cap <= 0) continue;
       this.entries.set(id, { cap, left: cap, tier: gd.tierOf(id) });
     }
