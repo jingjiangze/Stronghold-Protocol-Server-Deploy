@@ -18,6 +18,7 @@ import { Img, RichText } from './gameComponents.js';
 import { factionTypes } from './gameLogic.js';
 import { enemyIconUrl, factionIconUrl } from './assetUrls.js';
 import { t, tParts } from '../../../shared/i18n.js';
+import { stageDisplayName } from './stageName.js';
 
 /**
  * The id of a 特训敌人 type's description (its icon's aria-describedby): `scope` keeps the briefing's and the draft
@@ -68,7 +69,11 @@ export function MatchEnemies({ pub, gd, idScope = 'brief' }) {
   const stage = pub.stageId ? gd.stage(pub.stageId) : null;
   // the mode's battlefield pool (config.json modes[].stages): 标准 is always 战场#01, 险境+ draw one at random
   const poolN = Array.isArray(mode?.stages) ? mode.stages.length : 0;
-  const pool = poolN > 1 ? t('战场随机（共{poolN}张）', { poolN }) : poolN === 1 ? t('战场固定') : '';
+  // 肉鸽每回合按节点 tier 换图，setup 抽图池(527)与 mode.stages(545)都不是「本局战场数」，
+  // 显示任何一个数字都是假的（plugins/roguelike-core/server/match/NodeMixin.js:233-283）。
+  // 非肉鸽池长度就是真实池长，保留原有三分支。
+  const isRogue = pub.rogue != null;
+  const pool = isRogue ? '' : poolN > 1 ? t('战场随机（共{poolN}张）', { poolN }) : poolN === 1 ? t('战场固定') : '';
   const types = factionTypes(pub.factions);
   const factions = gd.factions?.types || {};
   const m = gd.m;
@@ -89,7 +94,7 @@ export function MatchEnemies({ pub, gd, idScope = 'brief' }) {
         ${Array.isArray(boss?.abilities) && boss.abilities.length ? html`<ul class="brief-boss__abil">
           ${boss.abilities.slice(0, 3).map((a, i) => html`<li key=${i}><${RichText} text=${a} /></li>`)}
         </ul>` : null}
-        <span class="brief-stage"><${Icon} name="rook" /><b class="brief-stage__name">${stage?.name || pub.stageId || '—'}</b>${pool ? html`<span class="brief-stage__pool">${pool}</span>` : null}</span>
+        <span class="brief-stage"><${Icon} name="rook" /><b class="brief-stage__name">${stageDisplayName(pub.stageId, stage) || '—'}</b>${pool ? html`<span class="brief-stage__pool">${pool}</span>` : null}</span>
       </div>
       <div class="brief-factions">
         ${types.length ? types.map((type) => factionCell({ type, info: factions[type], m, scope: idScope }))

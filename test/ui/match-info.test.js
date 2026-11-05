@@ -380,3 +380,44 @@ test('the briefing, the strategy draft and the in-game 本局信息 tab all read
   assert.match(drawer, /matchInfoModel\(pub, \{\s*bonds: data\.list\('bonds'\), chess: \(id\) => data\.lookup\('chess', id\), mode: data\.get\('config'\)\?\.modes\?\.\[pub\?\.modeId\],/);
   assert.doesNotMatch(drawer, /bannedPerBond|disabledBondSets/, 'the drawer derives nothing on its own');
 });
+
+// 肉鸽's 战场 line: data/stages.json gives every rogue_* record name === id, so the briefing printed the internal id.
+// ui/stageName.js maps it to the plugin's short label (plugins/roguelike-core … mapLabel) and ui/matchEnemies.js drops
+// the 战场随机（共N张） count for 肉鸽: the 545-entry pool (config.json modes[].stages) is not this match's battlefield count.
+test('肉鸽 id → 短名（与插件 mapLabel 同格式），非肉鸽保留数据名', async () => {
+  const { rogueStageLabel, stageDisplayName } = await import('../../public/js/ui/stageName.js');
+  const gd = makeLookups();
+  assert.equal(rogueStageLabel('rogue_ro5_3-3_dlc1'), 'RO5 · 3-3 · DLC1');
+  assert.equal(rogueStageLabel('rogue_ro4_b-1'), 'RO4 · b-1');
+  assert.equal(rogueStageLabel('act1autochess_m01'), '');
+  const ids = data.list('stages').map((s) => s.id).filter((i) => i.startsWith('rogue_'));
+  assert.equal(ids.length, 545);
+  const labels = ids.map(rogueStageLabel);
+  assert.ok(labels.every(Boolean), 'every rogue id has a label');
+  assert.equal(new Set(labels).size, labels.length, 'labels stay unique (dlc/boss tiers included)');
+  assert.ok(ids.every((id, i) => labels[i] !== id), 'never the raw id');
+  assert.equal(stageDisplayName('act1autochess_m05', gd.stage('act1autochess_m05')), '战场#05(上半) 涨潮/特制水上平台');
+  assert.equal(stageDisplayName('rogue_ro5_3-3_dlc1', gd.stage('rogue_ro5_3-3_dlc1')), 'RO5 · 3-3 · DLC1');
+});
+
+test('肉鸽简报不露出内部 stage id', () => {
+  const gd = makeLookups();
+  const pub = { modeId: 'mode_rogue_n8', bossId: null, stageId: 'rogue_ro5_3-3_dlc1', lastRound: 14, factions: [], rogue: { nodes: null } };
+  assert.equal(gd.stage(pub.stageId).name, pub.stageId, 'BASELINE: 数据里 name 就是 id');
+  const name = textOf([...walk(MatchEnemies({ pub, gd }))].find((v) => hasClass(v, 'brief-stage__name')));
+  assert.equal(name, 'RO5 · 3-3 · DLC1');
+  assert.doesNotMatch(name, /rogue_/);
+});
+
+test('肉鸽简报不显示战场张数，非肉鸽池文案不变', () => {
+  const gd = makeLookups();
+  const poolOf = (pub) => [...walk(MatchEnemies({ pub, gd }))].find((v) => hasClass(v, 'brief-stage__pool'));
+  const rogue = { modeId: 'mode_rogue_n8', bossId: null, stageId: 'rogue_ro5_3-3_dlc1', lastRound: 14, factions: [], rogue: { nodes: null } };
+  assert.equal(poolOf(rogue), undefined, '肉鸽：池(545)不是本局战场数，不显示');
+  // 非肉鸽：池长就是真实池长（config.json modes[].stages），三分支照旧
+  const normal = { modeId: 'mode_single_normal', bossId: null, stageId: 'act1autochess_m05', lastRound: 14, factions: [] };
+  assert.equal(textOf(poolOf(normal)), '战场随机（共8张）');
+  assert.equal(textOf(poolOf({ ...normal, modeId: 'mode_multi_funny' })), '战场固定');
+  assert.equal(poolOf({ ...normal, modeId: undefined }), undefined, 'no mode: no pool line');
+  assert.equal(textOf([...walk(MatchEnemies({ pub: normal, gd }))].find((v) => hasClass(v, 'brief-stage__name'))), '战场#05(上半) 涨潮/特制水上平台');
+});

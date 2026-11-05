@@ -12,6 +12,7 @@ import { Img, UnitThumb, BondGlyph, BandIcon, RichText, GIcon } from './gameComp
 import { groupEnemies, factionTypes, briefingBondTip } from './gameLogic.js';
 import { matchInfoModel, DiyBannedLine } from './matchInfo.js';
 import { factionIconUrl } from './assetUrls.js';
+import { stageDisplayName } from './stageName.js';
 import { data } from '../data.js';
 import { t, tParts, N_ } from '../../../shared/i18n.js';
 
@@ -79,7 +80,7 @@ function InfoTab({ pub, priv, onChess, bandId = null, bandOwner = null }) {
       <div><${MicroLabel} tone="mint">STRATEGY // ${bandOwner ? t('{bandOwner} 的策略', { bandOwner }) : t('我的策略')}</${MicroLabel}><b>${band.name} <small class="t-lo">${band.effectName}</small></b>
         <${RichText} text=${band.descRaw || band.desc} class="iband__desc" /></div>
     </div>` : null}
-    ${stage ? html`<p class="istage"><${Icon} name="rook" />${t('战场：')}<b>${stage.name || stage.id}</b></p>` : null}
+    ${stage ? html`<p class="istage"><${Icon} name="rook" />${t('战场：')}<b>${stageDisplayName(pub?.stageId, stage) || '—'}</b></p>` : null}
     <h4 class="ihead">${t('本局禁用干员情况')} <small class="num">${banned.length}</small></h4>
     <div class="ibonds">
       ${withBans.length ? withBans.map((b) => html`<span key=${b.bondId} class=${cx('ibond', disabled.has(b.bondId) && 'is-off')} title=${briefingBondTip(b.name, stateOf(b.bondId), perBond.get(b.bondId) || 0)}>
