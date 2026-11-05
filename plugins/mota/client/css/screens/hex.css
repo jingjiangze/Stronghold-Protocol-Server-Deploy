@@ -482,6 +482,8 @@
 }
 .hxd__icon--gold::before { background: linear-gradient(160deg, rgba(255, 233, 168, .95), rgba(240, 192, 74, .55) 45%, rgba(201, 150, 46, .9)); }
 .hxd__icon--prismatic::before { background: linear-gradient(160deg, #bfe6ff, #f4f8ff 30%, #ffe9a8 64%, #f0c04a); }
+/* 藏品三选一：位图浮在六边形伪元素之上（hex.css 是 mota overlay 实际加载的样式） */
+.hxd__icon > img { position: relative; z-index: 1; width: calc(.56 * var(--t)); height: calc(.62 * var(--t)); object-fit: contain; }
 .hxd__glyph { position: relative; z-index: 1; width: calc(.52 * var(--t)); height: calc(.56 * var(--t)); display: grid; place-items: center; color: #dbeaff; }
 .hxd__card--gold .hxd__glyph { color: var(--hxd-gold-hi); }
 .hxd__card--prismatic .hxd__glyph { color: #eaf6ff; }

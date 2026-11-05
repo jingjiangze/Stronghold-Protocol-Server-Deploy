@@ -5,8 +5,8 @@
   "generator": "tools/plugin.mjs pack",
   "files": {
     "config/sources.json": {
-      "sha256": "b0b514e80fd2b9559813272692b8c4426e586f0720456b19ce83a79e62196dad",
-      "bytes": 6492
+      "sha256": "61157ca91ed666afa9fde9e14e3d43947f2192e298917e8c0e4b2c8326eb4612",
+      "bytes": 6563
     },
     "host/noop.js": {
       "sha256": "7dcdfff1a2f403f005d3858857ea490881355e4b5aa0f87fe91632907d51af4f",
