@@ -39,7 +39,7 @@ import { GuideButton } from '../ui/guide.js';
 import { openStats } from './stats.js';
 import { openFriends } from '../ui/friends.js';
 import { NameCardLayer } from '../ui/namecards.js';
-import { PluginTag, VersionTag, isModdedRoom } from '../ui/pluginTag.js';
+import { VersionTag, isModdedRoom } from '../ui/pluginTag.js';
 import { hasScriptConsent, rememberScriptConsent, pageVersion } from '../content.js';
 // 官方版本切换（DESIGN §35.23）：核心 room.js 一直在用，20 人房这个叉把它整块漏掉了 —— 顶替之后就既没有版本 pill、
 // 也没有切换投票条与「版本数据载入中/就绪」标签，切到别的官方版本的房间连开赛闸门都没有。
@@ -893,7 +893,6 @@ export function RoomScreen() {
           <b>${modeName}<span class="rs-clock__sep"></span>${t('同盟已等待')} <span class="num">${clock((Date.now() - since) / 1000)}</span></b>
           ${room.content?.modeId ? html`<span class="room-mode" data-testid="room-mode">${(room.content.modes || []).find((m) => m.id === room.content.modeId)?.name || room.content.modeId}</span>` : null}
           <div class="rs-mode-row">
-            ${isModdedRoom(room) ? html`<${PluginTag} room=${room} myId=${me.playerId} />` : null}
             <${VersionTag} room=${room} class="rs-clock__ver" />
             <${RandomStageToggle} room=${room} isHost=${facts.isHost} busy=${busy} onToggle=${setRandomStage} />
           </div>
