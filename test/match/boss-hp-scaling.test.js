@@ -1,5 +1,5 @@
 // The Final Assault / Hidden Core leader pool = bloodPoint[difficulty] × the players alive when the fight starts (solo
-// × 1) — the owner's decision of 2026-10-06, adopting PR #209 by @qingjingshenghuo (these tests are ported from it);
+// × 1). 0.4.3 (owner 2026-10-18) changed the co-op share to coop × (1 + 0.5 × min(alive, 20)): 4 alive = 3 ×, 9 = 5.5 ×;
 // it replaces the fixed pool of 「保持固定血量」 (DESIGN §20.9 / §20.10), which config bossHpScale still restores
 // (DESIGN §25.13.4, server/match/gamedata.js bossPoolShareOf).
 import { test } from 'node:test';
@@ -10,14 +10,17 @@ import { bossPoolHp, SharedBossPool } from '../../server/match/finalAssault.js';
 import { makeBattle } from '../helpers/battleHarness.js';
 
 const DIFFS = ['FUNNY', 'NORMAL', 'HARD', 'ABYSS'];
+/** 0.4.3 co-op share: coop × (1 + 0.5 × min(alive, 20)). */
+const share = (alive) => 1 + 0.5 * Math.min(alive, 20);
 
-test('every leader and difficulty: bloodPoint × the players alive (co-op), × 1 solo', () => {
+test('every leader and difficulty: bloodPoint × (1 + 0.5 × min(alive, 20)) (co-op), × 1 solo', () => {
   for (const difficulty of DIFFS) {
     const gd = new GameData(DATA, `mode_multi_${difficulty.toLowerCase()}`);
     const solo = new GameData(DATA, `mode_single_${difficulty.toLowerCase()}`);
     for (const id of Object.keys(DATA.bosses)) {
       const base = DATA.bosses[id].bloodPoint[difficulty];
-      for (const n of [1, 2, 3, 4]) assert.equal(bossPoolHp(gd, id, n), base * n, `${id} ${difficulty} ×${n}`);
+      for (const n of [1, 2, 3, 4, 9]) assert.equal(bossPoolHp(gd, id, n), base * share(n), `${id} ${difficulty} ${n} alive ×${share(n)}`);
+      assert.equal(bossPoolHp(gd, id), base * share(20), `${id} ${difficulty}: no count = a full 20-seat pool`);
       assert.equal(bossPoolHp(solo, id, 1), base, `${id} ${difficulty} solo`);
     }
   }
@@ -39,7 +42,7 @@ for (const hidden of [false, true]) {
     m._planBossWaves();
     m.startFinalAssault(hidden);
     const id = hidden ? m.hiddenBossId : m.bossId;
-    assert.equal(m.bossPool.maxHp, DATA.bosses[id].bloodPoint.HARD * 2);
+    assert.equal(m.bossPool.maxHp, DATA.bosses[id].bloodPoint.HARD * share(2), '2 alive → ×2');
     m.dispose();
   });
 }
@@ -53,7 +56,7 @@ test('disconnected players (AI 托管) and bots count; an eliminated player does
   h.m._planBossWaves();
   h.m.startFinalAssault(false);
   assert.equal(h.m.alivePlayers().length, 3);
-  assert.equal(h.m.bossPool.maxHp, h.m.gd.boss(h.m.bossId).bloodPoint.NORMAL * 3);
+  assert.equal(h.m.bossPool.maxHp, h.m.gd.boss(h.m.bossId).bloodPoint.NORMAL * share(3), '3 alive → ×2.5');
   h.m.dispose();
 });
 
@@ -72,10 +75,10 @@ test('config restores the fixed pool of 0.1.x (perPlayer false, solo 0.25) — G
       assert.equal(bossPoolHp(plain, 'boss_8', n), expected);
     }
   }
-  // and the per-player rule through the same fallback
+  // and the per-player rule through the same fallback (3 alive → ×2.5 under 0.4.3)
   const gd = new GameData(DATA, 'mode_multi_abyss');
   const plain = { boss: (id) => gd.boss(id), difficulty: gd.difficulty, mode: gd.mode, config: gd.config, isSolo: false };
-  assert.equal(bossPoolHp(plain, 'boss_8', 3), DATA.bosses.boss_8.bloodPoint.ABYSS * 3);
+  assert.equal(bossPoolHp(plain, 'boss_8', 3), DATA.bosses.boss_8.bloodPoint.ABYSS * share(3));
 });
 
 test('only the leader\'s pool scales: escorts and the Hidden Core\'s parts keep their stats', () => {

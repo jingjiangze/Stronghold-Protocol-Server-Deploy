@@ -13,7 +13,7 @@ test('co-op pool doubles the measured single-player capacities; only visible, un
   const pool = new SharedPool(gd, { banned: [] });
   const caps = { 1: 12, 2: 14, 3: 18, 4: 16, 5: 8, 6: 5 };
   assert.equal(pool.entries.size, gd.visibleChess.length);
-  assert.equal(pool.entries.size, 112);
+  assert.equal(pool.entries.size, 137, '0.4.3 roster: 137 visible chess (incl. the 4 Ave Mujica)');
   for (const [id, e] of pool.entries) {
     const expect = 2 * (DATA.config.economy.poolCopiesOverrides[id] ?? caps[e.tier]);
     assert.equal(e.cap, expect, id);
@@ -22,7 +22,7 @@ test('co-op pool doubles the measured single-player capacities; only visible, un
   }
   const banned = [gd.visibleChess[0], gd.visibleChess[5]];
   const p2 = new SharedPool(gd, { banned });
-  assert.equal(p2.entries.size, 110);
+  assert.equal(p2.entries.size, gd.visibleChess.length - 2);
   assert.ok(!p2.has(banned[0]) && p2.left(banned[0]) === 0 && p2.take(banned[0]) === 0);
 });
 
@@ -59,9 +59,9 @@ test('odds sanity: level L rolls only tiers ≤ L; level 1 only tier 1; shares �
     const shares = pool.tierShares(level);
     for (const [t, n] of Object.entries(seen)) assert.ok(Math.abs(n / 4000 - shares[t]) < 0.035, `L${level} T${t} ${n / 4000} vs ${shares[t]}`);
   }
-  // research table (full pools, no bans): L6 ≈ 14.0 / 17.4 / 25.0 / 25.7 / 11.1 / 6.9 %
+  // 0.4.3 137-chess roster (full pools, no bans): L6 ≈ 14.4 / 17.4 / 24.7 / 25.7 / 12.4 / 5.4 %
   const s6 = pool.tierShares(6);
-  const want = { 1: 0.14, 2: 0.174, 3: 0.25, 4: 0.257, 5: 0.111, 6: 0.069 };
+  const want = { 1: 0.144, 2: 0.174, 3: 0.247, 4: 0.257, 5: 0.124, 6: 0.054 };
   for (const t of Object.keys(want)) assert.ok(Math.abs(s6[t] - want[t]) < 0.01, `T${t} ${s6[t]}`);
   const s2 = pool.tierShares(2);
   assert.ok(Math.abs(s2[1] - 0.447) < 0.01 && Math.abs(s2[2] - 0.553) < 0.01);
@@ -174,11 +174,14 @@ test('洛洛 and 焰尾 use the measured eight-item and 10/10/3 subsets; exhaust
   m.dispose();
 });
 
-test('per-match disabled bonds: 3 core + 4 add-on (NORMAL+), FUNNY static + 0 + 1; weight-0 never drawn; subset ban rule', () => {
+test('per-match disabled bonds: 3 core + 4 add-on (NORMAL+), FUNNY static + 0 + 1; weight-0 never drawn; subset ban rule + 7 extra', () => {
+  const PROTECTED = DATA.config.bans.extraProtectedCoreChars;
+  assert.equal(PROTECTED.length, 17, '17 protected core operators');
   for (const [modeId, core, addon] of [['mode_multi_hard', 3, 4], ['mode_single_abyss', 3, 4], ['mode_multi_funny', 0, 1], ['mode_single_normal', 3, 4]]) {
     const gd = new GameData(DATA, modeId);
+    const firstTier1 = gd.visibleChess.find((id) => gd.tierOf(id) === 1);
     for (let seed = 1; seed <= 20; seed++) {
-      const { drawn, staticOff, banned } = drawDisabledBonds(gd, createRng(seed));
+      const { drawn, staticOff, banned, extra } = drawDisabledBonds(gd, createRng(seed));
       const nCore = drawn.filter((b) => DATA.bonds[b].isCore).length;
       assert.equal(nCore, core, `${modeId} core`);
       assert.equal(drawn.length - nCore, addon, `${modeId} addon`);
@@ -189,13 +192,26 @@ test('per-match disabled bonds: 3 core + 4 add-on (NORMAL+), FUNNY static + 0 + 
       const off = new Set([...drawn, ...staticOff]);
       for (const id of gd.visibleChess) {
         const bonds = DATA.chess[id].bonds;
-        assert.equal(banned.includes(id), bonds.length > 0 && bonds.every((b) => off.has(b)), id);
+        const bondBanned = bonds.length > 0 && bonds.every((b) => off.has(b));
+        assert.equal(banned.includes(id), bondBanned || extra.includes(id), `${modeId} seed ${seed} ${id}`);
+      }
+      // 0.4.3: after the bond bans, 7 more visible chess are sampled out — never a protected core operator (the list
+      // holds charIds: char_2015_dusk …), never the first 1-cost starter (the opening keeps a 1-cost buy), never a
+      // duplicate.
+      assert.equal(extra.length, 7, `${modeId} seed ${seed}: extra.length`);
+      assert.equal(new Set(extra).size, extra.length, `${modeId} seed ${seed}: no duplicate extra`);
+      for (const id of extra) {
+        assert.ok(!PROTECTED.includes(id), `${modeId} seed ${seed}: ${id} is protected`);
+        assert.ok(!PROTECTED.includes(DATA.chess[id].charId), `${modeId} seed ${seed}: ${id} (${DATA.chess[id].charId}) is protected`);
+        assert.notEqual(id, firstTier1, `${modeId} seed ${seed}: the first 1-cost starter stays`);
       }
     }
   }
-  // FUNNY: the static list alone removes many operators
+  // FUNNY: the static list alone removes many operators, then 1 add-on bond + 7 extra
   const f = drawDisabledBonds(new GameData(DATA, 'mode_multi_funny'), createRng(1));
   assert.equal(f.staticOff.length, 10);
+  assert.equal(f.drawn.length, 1);
+  assert.equal(f.extra.length, 7);
   assert.ok(f.banned.length >= 20);
 });
 
@@ -205,7 +221,7 @@ test('the match pool excludes banned chess; m.public lists disabled bonds and ba
   assert.equal(pub.drawnDisabledBonds.length, 7);
   assert.ok(pub.bannedChess.length > 0);
   for (const id of pub.bannedChess) assert.ok(!h.m.pool.has(id), `${id} should not be in the pool`);
-  assert.equal(h.m.pool.entries.size + pub.bannedChess.length, 112);
+  assert.equal(h.m.pool.entries.size + pub.bannedChess.length, h.m.gd.visibleChess.length);
   checkInvariants(h.m);
   h.m.dispose();
 });

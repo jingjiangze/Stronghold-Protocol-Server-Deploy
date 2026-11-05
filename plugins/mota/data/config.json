@@ -367,7 +367,7 @@
             "boss_5": "act2autochess_h07_05_s",
             "boss_6": "act1autochess_h07_06_s",
             "boss_7": "act1autochess_h07_07_s",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -516,7 +516,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -757,7 +757,7 @@
             "boss_5": "act2autochess_h07_05_s",
             "boss_6": "act1autochess_h07_06_s",
             "boss_7": "act1autochess_h07_07_s",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -980,7 +980,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -1206,7 +1206,7 @@
             "boss_5": "act2autochess_h07_05_s",
             "boss_6": "act1autochess_h07_06_s",
             "boss_7": "act1autochess_h07_07_s",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -1429,7 +1429,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -1655,7 +1655,7 @@
             "boss_5": "act2autochess_h07_05_s",
             "boss_6": "act1autochess_h07_06_s",
             "boss_7": "act1autochess_h07_07_s",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -1878,7 +1878,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -2124,7 +2124,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -2316,7 +2316,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -2557,7 +2557,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -2781,7 +2781,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -3007,7 +3007,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -3230,7 +3230,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -3456,7 +3456,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -3690,7 +3690,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -3876,7 +3876,7 @@
             "boss_5": "act2autochess_h07_05_s",
             "boss_6": "act1autochess_h07_06_s",
             "boss_7": "act1autochess_h07_07_s",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -4025,7 +4025,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -7020,7 +7020,7 @@
             "boss_5": "act2autochess_h07_05_s",
             "boss_6": "act1autochess_h07_06_s",
             "boss_7": "act1autochess_h07_07_s",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -7243,7 +7243,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -7488,7 +7488,7 @@
             "boss_5": "act2autochess_h07_05_s",
             "boss_6": "act1autochess_h07_06_s",
             "boss_7": "act1autochess_h07_07_s",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -7711,7 +7711,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -7956,7 +7956,7 @@
             "boss_5": "act2autochess_h07_05_s",
             "boss_6": "act1autochess_h07_06_s",
             "boss_7": "act1autochess_h07_07_s",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -8179,7 +8179,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -8424,7 +8424,7 @@
             "boss_5": "act2autochess_h07_05_s",
             "boss_6": "act1autochess_h07_06_s",
             "boss_7": "act1autochess_h07_07_s",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -8647,7 +8647,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -8892,7 +8892,7 @@
             "boss_5": "act2autochess_h07_05_s",
             "boss_6": "act1autochess_h07_06_s",
             "boss_7": "act1autochess_h07_07_s",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -9115,7 +9115,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -9360,7 +9360,7 @@
             "boss_5": "act2autochess_h07_05_s",
             "boss_6": "act1autochess_h07_06_s",
             "boss_7": "act1autochess_h07_07_s",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -9583,7 +9583,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -9809,7 +9809,7 @@
             "boss_5": "act2autochess_h07_05_s",
             "boss_6": "act1autochess_h07_06_s",
             "boss_7": "act1autochess_h07_07_s",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -10032,7 +10032,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -10258,7 +10258,7 @@
             "boss_5": "act2autochess_h07_05_s",
             "boss_6": "act1autochess_h07_06_s",
             "boss_7": "act1autochess_h07_07_s",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -10481,7 +10481,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -10707,7 +10707,7 @@
             "boss_5": "act2autochess_h07_05_s",
             "boss_6": "act1autochess_h07_06_s",
             "boss_7": "act1autochess_h07_07_s",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -10930,7 +10930,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -11156,7 +11156,7 @@
             "boss_5": "act2autochess_h07_05_s",
             "boss_6": "act1autochess_h07_06_s",
             "boss_7": "act1autochess_h07_07_s",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -11379,7 +11379,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -11605,7 +11605,7 @@
             "boss_5": "act2autochess_h07_05_s",
             "boss_6": "act1autochess_h07_06_s",
             "boss_7": "act1autochess_h07_07_s",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -11828,7 +11828,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -12054,7 +12054,7 @@
             "boss_5": "act2autochess_h07_05_s",
             "boss_6": "act1autochess_h07_06_s",
             "boss_7": "act1autochess_h07_07_s",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -12277,7 +12277,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -12503,7 +12503,7 @@
             "boss_5": "act2autochess_h07_05_s",
             "boss_6": "act1autochess_h07_06_s",
             "boss_7": "act1autochess_h07_07_s",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -12726,7 +12726,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -12972,7 +12972,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -13164,7 +13164,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -13406,7 +13406,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -13622,7 +13622,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -13868,7 +13868,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -14084,7 +14084,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -14330,7 +14330,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -14546,7 +14546,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -14792,7 +14792,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -15008,7 +15008,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -15254,7 +15254,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -15470,7 +15470,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -15716,7 +15716,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -15932,7 +15932,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -16177,7 +16177,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -16401,7 +16401,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -16646,7 +16646,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -16870,7 +16870,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -17115,7 +17115,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -17339,7 +17339,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -17584,7 +17584,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -17808,7 +17808,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -18053,7 +18053,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -18277,7 +18277,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -18522,7 +18522,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -18746,7 +18746,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -18972,7 +18972,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -19195,7 +19195,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -19421,7 +19421,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -19655,7 +19655,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -19881,7 +19881,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -20115,7 +20115,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -20341,7 +20341,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -20575,7 +20575,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -20801,7 +20801,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -21035,7 +21035,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -21261,7 +21261,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -21495,7 +21495,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -21721,7 +21721,7 @@
             "boss_5": "act2autochess_h07_05",
             "boss_6": "act1autochess_h07_06",
             "boss_7": "act1autochess_h07_07",
-            "boss_11": "act3autochess_h08_04",
+            "boss_11": "act3autochess_h08_04_s",
             "boss_patriot": "patriot_raid",
             "boss_pursuer": "pursuer_raid",
             "boss_sui": "sui_raid"
@@ -21955,7 +21955,7 @@
         "boss_5": 10,
         "boss_6": 5,
         "boss_7": 5,
-        "boss_11": 6,
+        "boss_11": 5,
         "boss_patriot": 6,
         "boss_pursuer": 6,
         "boss_sui": 4
@@ -45966,11 +45966,11 @@
   "bossOvertimeAfter": 150,
   "bossOvertimeDrainPerSec": 1,
   "bossHpScale": {
-    "formula": "one pool for every boss field (\"所有人将一起对敌方领袖造成伤害\"; the mirrored copies of a pair field share it, \"两侧的敌方领袖共享生命值（敌方领袖的总生命值不变）\") = bloodPoint[difficulty] × share. perPlayer true (the owner's decision of 2026-10-06, PR #209): co-op share = coop × the players alive when the fight starts (bots and AI 托管 seats count, eliminated and departed seats do not), at most aliveFull; solo share = solo (1). perPlayer false (the fixed pool of 0.1.x, 「保持固定血量」): co-op share = coop whatever the count (× alive / aliveFull with aliveScaling, the alive / 4 proportion [ASSUMED]: 巴哈姆特 12294); solo was 0.25 [ASSUMED]",
+    "formula": "Owner 2026-10-18: co-op pool = bloodPoint × coop × (1 + 0.5 × min(alive players, 20)); solo unchanged. Contract boss rounds 8 and 10 retain coop × min(alive, aliveFull override or legacy aliveFull). perPlayer false retains the fixed-pool compatibility mode.",
     "perPlayer": true,
     "coop": 1,
     "solo": 1,
-    "aliveFull": 4,
+    "aliveFull": 8,
     "aliveScaling": false,
     "aliveAssumed": true,
     "unaffectedByEnemyScale": true
@@ -46059,104 +46059,148 @@
   "bans": {
     "FUNNY": {
       "core": 0,
-      "addon": 1
+      "addon": 1,
+      "extraChess": 7
     },
     "NORMAL": {
       "core": 3,
-      "addon": 4
+      "addon": 4,
+      "extraChess": 7
     },
     "HARD": {
       "core": 3,
-      "addon": 4
+      "addon": 4,
+      "extraChess": 7
     },
     "ABYSS": {
       "core": 3,
-      "addon": 4
+      "addon": 4,
+      "extraChess": 7
     },
     "TRAINING": {
       "core": 0,
-      "addon": 0
+      "addon": 0,
+      "extraChess": 0
     },
     "rule": "banned iff every bond of a visible non-DIY chess is in (drawn set D ∪ mode.inactiveBondIds); core = isCore bonds, addon = other bonds with weight > 0; uniform draw",
+    "extraProtectedCoreChars": [
+      "char_2015_dusk",
+      "char_249_mlyss",
+      "char_4056_titi",
+      "char_1012_skadi2",
+      "char_1023_ghost2",
+      "char_1019_siege2",
+      "char_1032_excu2",
+      "char_4193_lemuen",
+      "char_1045_svash2",
+      "char_1014_nearl2",
+      "char_1038_whitw2",
+      "char_264_f12yin",
+      "char_4146_nymph",
+      "char_1047_halo2",
+      "char_291_aglina",
+      "char_358_lisa",
+      "char_350_surtr"
+    ],
     "N1": {
       "core": 0,
-      "addon": 1
+      "addon": 1,
+      "extraChess": 7
     },
     "N2": {
       "core": 0,
-      "addon": 1
+      "addon": 1,
+      "extraChess": 7
     },
     "N3": {
       "core": 1,
-      "addon": 2
+      "addon": 2,
+      "extraChess": 7
     },
     "N4": {
       "core": 1,
-      "addon": 2
+      "addon": 2,
+      "extraChess": 7
     },
     "N5": {
       "core": 2,
-      "addon": 3
+      "addon": 3,
+      "extraChess": 7
     },
     "N6": {
       "core": 2,
-      "addon": 3
+      "addon": 3,
+      "extraChess": 7
     },
     "N7": {
       "core": 3,
-      "addon": 4
+      "addon": 4,
+      "extraChess": 7
     },
     "N8": {
       "core": 3,
-      "addon": 4
+      "addon": 4,
+      "extraChess": 7
     },
     "N9": {
       "core": 3,
-      "addon": 4
+      "addon": 4,
+      "extraChess": 7
     },
     "N10": {
       "core": 3,
-      "addon": 4
+      "addon": 4,
+      "extraChess": 7
     },
     "N11": {
       "core": 3,
-      "addon": 4
+      "addon": 4,
+      "extraChess": 7
     },
     "N12": {
       "core": 3,
-      "addon": 4
+      "addon": 4,
+      "extraChess": 7
     },
     "N13": {
       "core": 3,
-      "addon": 4
+      "addon": 4,
+      "extraChess": 7
     },
     "N14": {
       "core": 3,
-      "addon": 4
+      "addon": 4,
+      "extraChess": 7
     },
     "N15": {
       "core": 3,
-      "addon": 4
+      "addon": 4,
+      "extraChess": 7
     },
     "N16": {
       "core": 3,
-      "addon": 4
+      "addon": 4,
+      "extraChess": 7
     },
     "N17": {
       "core": 3,
-      "addon": 4
+      "addon": 4,
+      "extraChess": 7
     },
     "N18": {
       "core": 3,
-      "addon": 4
+      "addon": 4,
+      "extraChess": 7
     },
     "N19": {
       "core": 3,
-      "addon": 4
+      "addon": 4,
+      "extraChess": 7
     },
     "N20": {
       "core": 3,
-      "addon": 4
+      "addon": 4,
+      "extraChess": 7
     }
   },
   "bandDraft": {

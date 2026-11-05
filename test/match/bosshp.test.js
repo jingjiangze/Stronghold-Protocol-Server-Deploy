@@ -67,12 +67,12 @@ test('leader HP data = the current official bossInfoDict for every leader and di
 const SYSTEM_KEY = /^(bond|item|band|choice):/;
 const MUL_STATS = ['atkMul', 'defMul', 'hpMul'];
 
-test('终极 Final Assault (+200 layers per active bond): one pool (bloodPoint × 4 alive) for both fields, bonuses additive, each hit once', () => {
+test('终极 Final Assault (+200 layers per active bond): one pool (bloodPoint × 3, 0.4.3 four alive) for both fields, bonuses additive, each hit once', () => {
   const h = toFinalAssault({ difficulty: 'ABYSS', seed: 2, bossId: 'boss_1', layers: 200 });
   const m = h.m;
   const pool = m.bossPool;
   assert.equal(m.alivePlayers().length, 4);
-  assert.equal(pool.maxHp, DATA.bosses.boss_1.bloodPoint.ABYSS * 4, 'four alive: 4 × the data value (14 400 000)');
+  assert.equal(pool.maxHp, DATA.bosses.boss_1.bloodPoint.ABYSS * 3, 'four alive: coop × (1 + 0.5 × 4) = ×3 (10 800 000)');
   const fields = m.fields.filter((f) => f.battle);
   assert.equal(fields.length, 2, 'two pair fields');
   // one second into the fight: every operator's stats
@@ -101,8 +101,8 @@ test('终极 Final Assault (+200 layers per active bond): one pool (bloodPoint �
 test('绝境 Final Assault: both pair fields drain the one pool, every hit exactly once', () => {
   const h = toFinalAssault({ difficulty: 'HARD', seed: 3, bossId: 'boss_5' });
   const m = h.m;
-  assert.equal(m.bossPool.maxHp, DATA.bosses.boss_5.bloodPoint.HARD * 4, 'four alive: 4 × the data value');
-  assert.equal(m.gd.bossPoolHp('boss_5', 2), DATA.bosses.boss_5.bloodPoint.HARD * 2, 'two alive: 2 × the data value');
+  assert.equal(m.bossPool.maxHp, DATA.bosses.boss_5.bloodPoint.HARD * 3, 'four alive: coop × (1 + 0.5 × 4) = ×3');
+  assert.equal(m.gd.bossPoolHp('boss_5', 2), DATA.bosses.boss_5.bloodPoint.HARD * 2, 'two alive: ×2');
   const pool = m.bossPool;
   const fields = m.fields.filter((f) => f.battle);
   assert.equal(fields.length, 2);
@@ -165,7 +165,7 @@ test('终极 Final Assault vs 假想敌：胄 (seeded bot match): both players\'
   assert.ok(withArcane > 100, `the leader carried 奥术 (${withArcane} samples)`);
   assert.ok(links.length >= 1, 'drones were shot down');
   for (const x of links) assert.equal(x, m.bossPool.maxHp * 0.02, 'drone link = 2 % × the pool');
-  assert.equal(m.bossPool.maxHp, DATA.bosses.boss_1.bloodPoint.ABYSS * 4, 'the 14 400 000 pool of 4 alive players');
+  assert.equal(m.bossPool.maxHp, DATA.bosses.boss_1.bloodPoint.ABYSS * 3, 'the 10 800 000 pool of 4 alive players (coop × (1 + 0.5 × 4))');
   m.dispose();
 });
 
@@ -198,7 +198,7 @@ test('绝境 Hidden Core vs 假想敌：铳 (隐秘核心): a 碎铳之簧 passe
   assert.equal(m.phase, PHASE.HIDDEN_CORE, 'reached the Hidden Core');
   assert.ok(specs.length >= 1);
   const pool = new SharedBossPool(m.bossPool.maxHp);
-  assert.equal(pool.maxHp, DATA.bosses.boss_9.bloodPoint.HARD * m.alivePlayers().length, 'the hidden 铳 pool = bloodPoint × the players alive at its start');
+  assert.equal(pool.maxHp, DATA.bosses.boss_9.bloodPoint.HARD * (1 + 0.5 * m.alivePlayers().length), 'the hidden 铳 pool = bloodPoint × (1 + 0.5 × the players alive at its start)');
   const b = createBattleFromSpec(specs[0], new DataSource(DATA, null), { sharedBoss: pool, recordEvents: false, quiet: true });
   // the springs stand from the start, 铳 enters ≈ 10 game s later
   for (let i = 0; i < 1200 && !b.enemies.some((e) => e.alive && e.isBoss); i++) b.step();

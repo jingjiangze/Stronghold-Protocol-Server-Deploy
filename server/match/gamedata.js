@@ -49,7 +49,7 @@ export const DEFAULTS = Object.freeze({
   dp: { init: 10, perSec: 1, max: 99 },
   unite: { maxHelpers: 2, templates: { 1: 'act1autochess_escaped_single', 2: 'act1autochess_escaped_multi' } },
   timers: { infoCheck: 25, bandDraft: 50, bandTurn: 30, battleCheck: 3, spFirst: 30, spTurn: 16 },
-  bans: { FUNNY: { core: 0, addon: 1 }, NORMAL: { core: 3, addon: 4 }, HARD: { core: 3, addon: 4 }, ABYSS: { core: 3, addon: 4 } },
+  bans: { FUNNY: { core: 0, addon: 1, extraChess: 7 }, NORMAL: { core: 3, addon: 4, extraChess: 7 }, HARD: { core: 3, addon: 4, extraChess: 7 }, ABYSS: { core: 3, addon: 4, extraChess: 7 } },
   bandDraft: { skipsPerPlayer: 1, timeoutBandId: 'band_bldsk' },
   leftoverFundsKeptByBands: ['band_cannot'],
 });
@@ -57,15 +57,20 @@ export const DEFAULTS = Object.freeze({
 /** Game seconds per real second of a battle (forced 2×): combat limits in data are real seconds (combatTimeLimit). */
 export const COMBAT_TIME_SCALE = 2;
 
+/** Alive players the 0.4.3 co-op leader pool counts at most: coop × (1 + 0.5 × min(alive, 20)); omitted count ⇒ 20. */
+export const PER_PLAYER_ALIVE_CAP = 20;
+
 /**
  * Multiplier of bloodPoint[difficulty] for the shared leader pool (DESIGN §20.10, §25.13.4), from config bossHpScale —
- * each key from the mode's entry first, then the global one; the defaults are the current rule:
+ * each key from the mode's entry first, then the global one; the defaults are the current rule (0.4.3):
  *   solo   `solo` (1: the table value — one player's share);
- *   co-op  `perPlayer` true (the owner's decision of 2026-10-06, adopting PR #209 by @qingjingshenghuo): `coop` (1) × the
- *          players alive when the fight starts — bots and AI 托管 seats count, eliminated and departed seats do not —
- *          at most `aliveFull` (4); a count left out means a full team;
- *          `perPlayer` false: the fixed pool of 0.1.x (「保持固定血量」, restorable with `solo` 0.25): `coop` whatever the
- *          count, × min(alive, aliveFull) / aliveFull with `aliveScaling`.
+ *   co-op  `perPlayer` true (0.4.3, owner 2026-10-18 — it replaces the 2026-10-06 per-player count of PR #209):
+ *          `coop` (1) × (1 + 0.5 × min(players alive, 20)) — bots and AI 托管 seats count, eliminated and departed
+ *          seats do not; a count left out means a full 20-seat pool. Contract boss rounds 8 and 10 may override the
+ *          ceiling with their own `aliveFull` (coop × min(alive, aliveFull override or legacy aliveFull)), so the cap
+ *          lives in config rather than only here;
+ *          `perPlayer` false keeps the fixed-pool compatibility mode of 0.1.x (「保持固定血量」, restorable with
+ *          `solo` 0.25): `coop` whatever the count, × min(alive, aliveFull) / aliveFull with `aliveScaling`.
  * @param {object|null|undefined} modeScale config.modes[modeId].bossHpScale
  * @param {object|null|undefined} cfgScale config.bossHpScale
  * @param {boolean} isSolo
@@ -78,10 +83,12 @@ export function bossPoolShareOf(modeScale, cfgScale, isSolo, aliveCount) {
   const pick = (k, d) => (Number.isFinite(ms[k]) && ms[k] > 0 ? ms[k] : Number.isFinite(cs[k]) && cs[k] > 0 ? cs[k] : d);
   const flag = (k, d) => (typeof ms[k] === 'boolean' ? ms[k] : typeof cs[k] === 'boolean' ? cs[k] : d);
   if (isSolo) return pick('solo', 1);
+  const cap = PER_PLAYER_ALIVE_CAP;
   const full = Math.max(1, Math.floor(pick('aliveFull', 4)));
   const n = Number(aliveCount);
-  const alive = Number.isFinite(n) && n >= 1 ? Math.min(full, Math.floor(n)) : full;
-  if (flag('perPlayer', true)) return pick('coop', 1) * alive;
+  const counted = Number.isFinite(n) && n >= 1 ? Math.floor(n) : cap;
+  if (flag('perPlayer', true)) return pick('coop', 1) * (1 + 0.5 * Math.min(counted, cap));
+  const alive = Math.min(full, counted);
   return pick('coop', 1) * (flag('aliveScaling', false) ? alive / full : 1);
 }
 
@@ -514,8 +521,13 @@ export class GameData {
   bans(difficulty) {
     const b = this.config.bans && this.config.bans[difficulty];
     const d = DEFAULTS.bans[difficulty] || { core: 0, addon: 0 };
-    if (!b || typeof b !== 'object') return { ...d };
-    return { core: Number.isInteger(b.core) && b.core >= 0 ? b.core : d.core, addon: Number.isInteger(b.addon) && b.addon >= 0 ? b.addon : d.addon };
+    if (!b || typeof b !== 'object') return { ...d, extraChess: Number.isInteger(d.extraChess) ? d.extraChess : 0 };
+    return {
+      core: Number.isInteger(b.core) && b.core >= 0 ? b.core : d.core,
+      addon: Number.isInteger(b.addon) && b.addon >= 0 ? b.addon : d.addon,
+      // 0.4.3: after the bond bans, `extraChess` more visible chess are sampled out (pool.js drawDisabledBonds)
+      extraChess: Number.isInteger(b.extraChess) && b.extraChess >= 0 ? b.extraChess : (Number.isInteger(d.extraChess) ? d.extraChess : 0),
+    };
   }
   get bandDraft() {
     const b = this.config.bandDraft && typeof this.config.bandDraft === 'object' ? this.config.bandDraft : {};

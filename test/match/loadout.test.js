@@ -33,7 +33,7 @@ function place(m, ps, chessId, row, col) {
 // ---- shared checks -------------------------------------------------------------------------------------------------
 
 test('data carries the §16 choices every visible chess needs (skills at both statuses, elite modules + none)', () => {
-  assert.equal(visible.length, 112);
+  assert.equal(visible.length, 137, '137 visible chess in 0.4.3 (incl. the 4 Ave Mujica)');
   for (const c of visible) {
     const g = chess(c.goldenId);
     const o = loadoutOptions(c, g);

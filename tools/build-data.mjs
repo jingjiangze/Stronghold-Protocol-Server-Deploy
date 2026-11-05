@@ -3039,11 +3039,12 @@ function buildConfig(ctx, waves, stages, bands, chess, items) {
     },
     lpCapPerRound: act.constData.costPlayerHpLimit ?? 10,
     bossOvertimeAfter: 150, bossOvertimeDrainPerSec: 1,
-    // DESIGN §25.13.4: the owner's decision of 2026-10-06 adopts PR #209 by @qingjingshenghuo — bloodPoint is one player's
-    // share; it replaces the fixed pool of 「保持固定血量」 (perPlayer false + solo 0.25 restore it)
+    // 0.4.3 (owner 2026-10-18): co-op pool = bloodPoint × coop × (1 + 0.5 × min(alive players, 20)); solo unchanged.
+    // The fixed pool of 「保持固定血量」 remains restorable (perPlayer false + solo 0.25); contract boss rounds 8 / 10 keep
+    // their own aliveFull override.
     bossHpScale: {
-      formula: 'one pool for every boss field ("所有人将一起对敌方领袖造成伤害"; the mirrored copies of a pair field share it, "两侧的敌方领袖共享生命值（敌方领袖的总生命值不变）") = bloodPoint[difficulty] × share. perPlayer true (the owner\'s decision of 2026-10-06, PR #209): co-op share = coop × the players alive when the fight starts (bots and AI 托管 seats count, eliminated and departed seats do not), at most aliveFull; solo share = solo (1). perPlayer false (the fixed pool of 0.1.x, 「保持固定血量」): co-op share = coop whatever the count (× alive / aliveFull with aliveScaling, the alive / 4 proportion [ASSUMED]: 巴哈姆特 12294); solo was 0.25 [ASSUMED]',
-      perPlayer: true, coop: 1, solo: 1, aliveFull: 4, aliveScaling: false, aliveAssumed: true, unaffectedByEnemyScale: true,
+      formula: 'Owner 2026-10-18: co-op pool = bloodPoint × coop × (1 + 0.5 × min(alive players, 20)); solo unchanged. Contract boss rounds 8 and 10 retain coop × min(alive, aliveFull override or legacy aliveFull). perPlayer false retains the fixed-pool compatibility mode.',
+      perPlayer: true, coop: 1, solo: 1, aliveFull: 8, aliveScaling: false, aliveAssumed: true, unaffectedByEnemyScale: true,
     },
     // minTeamLpExclusive 1 = LP > 1 (at least 2 left): PRTS's user-contributed text, which the community's measurement
     // (Bilibili 路标月报#2, cited on GitHub #645) matches — kept by the owner on 2026-10-15
@@ -3063,8 +3064,11 @@ function buildConfig(ctx, waves, stages, bands, chess, items) {
       chatCd: ac.constData?.chatCD ?? 1, chatBubble: ac.constData?.chatTime ?? 3, broadcastDelay: ac.constData?.broadcastBeginDelay ?? 1,
       enterSteps: (Array.isArray(ac.enterStepList) ? ac.enterStepList : Object.values(ac.enterStepList || {})).map((s) => ({ step: s.stepType, time: s.time, hint: s.hintTime, title: s.title })),
     },
-    bans: { FUNNY: { core: 0, addon: 1 }, NORMAL: { core: 3, addon: 4 }, HARD: { core: 3, addon: 4 }, ABYSS: { core: 3, addon: 4 }, TRAINING: { core: 0, addon: 0 },
-      rule: 'banned iff every bond of a visible non-DIY chess is in (drawn set D ∪ mode.inactiveBondIds); core = isCore bonds, addon = other bonds with weight > 0; uniform draw' },
+    bans: { FUNNY: { core: 0, addon: 1, extraChess: 7 }, NORMAL: { core: 3, addon: 4, extraChess: 7 }, HARD: { core: 3, addon: 4, extraChess: 7 }, ABYSS: { core: 3, addon: 4, extraChess: 7 }, TRAINING: { core: 0, addon: 0, extraChess: 0 },
+      rule: 'banned iff every bond of a visible non-DIY chess is in (drawn set D ∪ mode.inactiveBondIds); core = isCore bonds, addon = other bonds with weight > 0; uniform draw',
+      // 0.4.3: `extraChess` more visible chess are sampled out after the bond bans; these 17 core chars are never picked
+      // (ids are chess charIds as shipped in data/config.json, in its order)
+      extraProtectedCoreChars: ['char_2015_dusk', 'char_249_mlyss', 'char_4056_titi', 'char_1012_skadi2', 'char_1023_ghost2', 'char_1019_siege2', 'char_1032_excu2', 'char_4193_lemuen', 'char_1045_svash2', 'char_1014_nearl2', 'char_1038_whitw2', 'char_264_f12yin', 'char_4146_nymph', 'char_1047_halo2', 'char_291_aglina', 'char_358_lisa', 'char_350_surtr'] },
     bandDraft: { skipsPerPlayer: 1, order: 'random', duplicatesAllowed: true, timeoutBandId: 'band_bldsk' },
     titles: Object.values(act.playerTitleDataDict || {}).map((t) => ({ id: t.id, picId: t.picId, name: t.txt, ...(titleRules[t.id] || {}) })),
     titleRule: 'each player gets at most one title; each title is used at most once per match; assign by the category where the player ranks best relative to teammates [ASSUMED]',

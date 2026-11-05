@@ -42,7 +42,7 @@ test('room.loadout ops: structure (≤ 256 charIds → { potential 1–6?, culti
     { [VENDLA_CHAR]: { potential: 1, trust: 100 } }]) assert.ok(!ok(bad), JSON.stringify(bad));
   const many = Object.fromEntries(Array.from({ length: LOADOUT_LIMITS.ops + 1 }, (_, i) => [`char_${i}`, { potential: 1 }]));
   assert.ok(!isLoadoutOps(many));
-  // the operators one may set: the 112-chess roster's charIds (hidden twins share them) and the 71 owned 自选 picks
+  // the operators one may set: the 137-chess roster's charIds (hidden twins share them) and the 71 owned 自选 picks
   assert.ok(IDS.has(VENDLA_CHAR) && IDS.has(KALTS) && IDS.has(WANG));
   assert.ok(!IDS.has(SHARP) && !IDS.has(GRANI.backup.charId), 'a prototype / stand-in character is no setting');
   assert.ok(IDS.size >= 180 && IDS.size <= 200, `${IDS.size}`);

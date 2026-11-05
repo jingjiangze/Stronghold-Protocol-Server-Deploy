@@ -497,8 +497,8 @@
       "bytes": 4250193
     },
     "data/config.json": {
-      "sha256": "f4cbbf3e490a40052e1eae74eac3a05374dc9459c5c4bc38945b5e06b2da8f44",
-      "bytes": 1177151
+      "sha256": "e0a628a7205502274cf6c5f9a3f5b2f242ff9076b15ceb1a3e417b26c2194a91",
+      "bytes": 1177826
     },
     "data/local-assets.json": {
       "sha256": "e25fe65d5205abbb7ea94a539ee0acd9991b52d1e58c2975e9355143861dc63d",
@@ -693,8 +693,8 @@
       "bytes": 9682
     },
     "server/match/gamedata.js": {
-      "sha256": "dc931c3fe167f474f1fd78c8033c70c0a1179b4345af16600ca0e08510c0641a",
-      "bytes": 52587
+      "sha256": "7f677fcd6440ce918d0c1830c6fb91f07f77f58f6ddeb54deb360ceaff965c95",
+      "bytes": 53021
     },
     "server/match/host/childHost.js": {
       "sha256": "436eb37702cb1d8d10de75d228a780b807842031004bdb771a73ec8f14bc3033",
@@ -909,12 +909,12 @@
       "bytes": 11428
     },
     "server/match/pool.js": {
-      "sha256": "5b5df53dab81523125f0a9e1e0a062d69ad33f04aff11a8f8dab433ced053adf",
-      "bytes": 12625
+      "sha256": "7e773a659703974961e98cce64775f50b5b22f065a8052f02bdbba9b56248a5f",
+      "bytes": 14222
     },
     "server/match/preview.js": {
-      "sha256": "31846fa7eb8ce60cfb9c3798e506d0ae40e0b3dd2072595ff5011f16df52cd2c",
-      "bytes": 3289
+      "sha256": "5aff3c9719ac83a34e0a662c4dc5d28337e9c855846f8c4a79140cb8f9299c9e",
+      "bytes": 3299
     },
     "server/match/results.js": {
       "sha256": "aae3a155daa162b6dc6351160cc627d416064b1bf95cf1d47724bfe70b80b156",

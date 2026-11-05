@@ -13,7 +13,7 @@ import {
 
 const RAW = withoutTuning(DATA);
 
-test('no custom balance: legacy tuning multipliers are ignored; enemy scale = the PRTS table; leader pool = bloodPoint × alive players', () => {
+test('no custom balance: legacy tuning multipliers are ignored; enemy scale = the PRTS table; leader pool = bloodPoint × coop × (1 + 0.5 × min(alive, 20))', () => {
   const tuning = {
     modes: {
       '*': { enemyHpMul: 0.5, enemyAtkMul: 0.9 },
@@ -28,14 +28,15 @@ test('no custom balance: legacy tuning multipliers are ignored; enemy scale = th
     assert.deepEqual(hard.enemyScale(r), { hpMul: e.hp, atkMul: e.atk, speedMul: e.speed }, `R${r}: the config (PRTS) table`);
   }
   assert.equal(hard.bossHpMul('boss_1'), 1);
-  // co-op: one pool = bloodPoint[difficulty] × the players alive at the fight's start; solo × 1 (DESIGN §25.13.4, the
-  // owner's decision of 2026-10-06 adopting PR #209 — it replaces the fixed pool of DESIGN §20.10)
+  // co-op: one pool = bloodPoint[difficulty] × coop × (1 + 0.5 × min(alive, 20)) (0.4.3, owner 2026-10-18); solo × 1
+  // (DESIGN §25.13.4 — it replaces the fixed pool of DESIGN §20.10)
+  const share = (alive) => 1 + 0.5 * Math.min(alive, 20);
   for (const [modeId, key] of [['mode_multi_funny', 'FUNNY'], ['mode_multi_normal', 'NORMAL'], ['mode_multi_hard', 'HARD'], ['mode_multi_abyss', 'ABYSS']]) {
     const gd = new GameData(RAW, modeId);
     for (const b of ['boss_1', 'boss_5', 'boss_8']) {
-      assert.equal(gd.bossPoolHp(b), DATA.bosses[b].bloodPoint[key] * 4, `${modeId} ${b}: no count, a full team`);
-      assert.equal(gd.bossPoolHp(b, 4), DATA.bosses[b].bloodPoint[key] * 4, `${modeId} ${b} four alive`);
-      assert.equal(gd.bossPoolHp(b, 2), DATA.bosses[b].bloodPoint[key] * 2, `${modeId} ${b} two alive: twice the data value`);
+      assert.equal(gd.bossPoolHp(b), DATA.bosses[b].bloodPoint[key] * share(20), `${modeId} ${b}: no count, a full 20-seat pool`);
+      assert.equal(gd.bossPoolHp(b, 4), DATA.bosses[b].bloodPoint[key] * share(4), `${modeId} ${b} four alive: ×3`);
+      assert.equal(gd.bossPoolHp(b, 2), DATA.bosses[b].bloodPoint[key] * share(2), `${modeId} ${b} two alive: ×2`);
     }
   }
   assert.equal(DATA.config.bossHpScale.perPlayer, true);
