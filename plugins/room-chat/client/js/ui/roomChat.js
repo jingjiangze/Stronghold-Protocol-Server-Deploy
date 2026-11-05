@@ -66,7 +66,7 @@ export function mountRoomChat() {
   document.body.append(root);
   const disposeStickers = installRoomStickers(root, input, form, message => { hint.textContent = message; });
 
-  let identity = null, expanded = true, pending = false, inMatch = false;
+  let identity = null, expanded = true, pending = false, inMatch = false, lastPhase = null;
   let composing = false, unread = 0, desired = null, position = null;
   let dragging = null, alive = true;
   let historyRequest = null;
@@ -115,7 +115,7 @@ export function mountRoomChat() {
     const corner = wheel?.closest('.gm__corner') || wheel;
     if (!corner) return null;
     const box = corner.getBoundingClientRect();
-    if (!box.width || !box.height) return null;   // 还没布局出来（HUD 未挂上/被隐藏）：算没量到，交给 settleLayout 补帧
+    if (!box.width || !box.height) return null;   // 还没布局出来（HUD 未挂上/被隐藏）：算没量到，交给 settleLayout 的限时重试 + HUD 观察器
     const btn = (wheel || corner).getBoundingClientRect();
     const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     return {
@@ -124,6 +124,24 @@ export function mountRoomChat() {
       top: Math.min(box.top, btn.top - 2.33 * rem),        // .02rem 间隙 + 2.31rem 面板高
       bottom: box.bottom,
     };
+  }
+
+  const guardKey = g => `${Math.round(g.left)},${Math.round(g.top)},${Math.round(g.right)},${Math.round(g.bottom)}`;
+  let measuredGuardKey = '';   // 上一次 layout() 用到的「真实量到」的轮盘盒子（观察器据此判断是否要重排）
+
+  // 轮盘还没挂进 DOM（HUD 晚于 room.state、或在挂载窗口期被隐藏）时的保底禁区，按 CSS 常量估：
+  //   高：底距 .24rem + 面板 2.31rem（粗指针下 scale:1.3，public/css/devices.css:95）+ .56rem 按钮 + .02rem 间隙 ≈ 3.3rem，
+  //       窄屏 wrap-reverse 折行（public/css/devices.css:128）最多再叠两行 .56rem + 间隙，仍在 3.4rem 之内。
+  //   宽：交流按钮最小 1.51rem + 最多 4 个 .gm__gear 各 .56rem + 4 个 .1rem 间隙 ≈ 4.15rem（public/css/emotes.css:19-25、
+  //       public/css/screens/game.css:624-628）；角区还可能再多一个「肉鸽」/配装按钮，所以这里只当「别停在这块」的下界，
+  //       真正的落点用高度判定（抬到禁区上方），与角区实际宽度无关。
+  // 只用于「量不到」的那段窗口：宁可把左侧下沿整块让出去，也不能像旧默认落点那样正好落在「交流」按钮上。
+  const WHEEL_ZONE_W_REM = 4.15, WHEEL_ZONE_H_REM = 3.4;
+  function estimatedWheelGuard(v) {
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const bottom = v.y + v.h - 0.24 * rem;
+    const left = v.x + 0.24 * rem - 0.15 * rem;
+    return { left, right: left + WHEEL_ZONE_W_REM * rem, top: bottom - WHEEL_ZONE_H_REM * rem, bottom };
   }
 
   function hits(guard, x, y, w, h) {
@@ -137,13 +155,17 @@ export function mountRoomChat() {
     const w = Math.max(1, Math.min(230, v.w - 16));
     const h = Math.max(1, Math.min(220, v.h - 16));
     const sx = Math.max(0, v.w - 52), sy = Math.max(0, v.h - 52);
-    const guard = inMatch ? wheelGuard() : null;
+    const measured = inMatch ? wheelGuard() : null;
+    measuredGuardKey = measured ? guardKey(measured) : '';
+    // 局内量不到真实盒子时用估算禁区顶替（默认落点因此不会再压在左下角）。
+    const guard = measured || (inMatch ? estimatedWheelGuard(v) : null);
     let fabHome = fabRatio
       ? { x: v.x + 8 + fabRatio.x * sx, y: v.y + 8 + fabRatio.y * sy }
       : { x: v.x + 16, y: v.y + v.h - 52 };
     if (guard && hits(guard, fabHome.x, fabHome.y, 36, 36))
-      // 轮盘展开盒右侧放得下就横移过去（默认落点正好压在「交流」按钮上），放不下就叠到它上方。
-      fabHome = guard.right + 44 <= v.x + v.w - 8
+      // 轮盘展开盒右侧放得下就横移过去（默认落点正好压在「交流」按钮上），放不下就叠到它上方；
+      // 量不到真实盒子时一律抬到估算禁区上方（横向判定依赖角区宽度，估算给不出上界）。
+      fabHome = measured && guard.right + 44 <= v.x + v.w - 8
         ? { x: guard.right + 8, y: v.y + v.h - 52 }
         : { x: guard.left, y: guard.top - 44 };
     fabPosition = clamp(fabHome, v, 36, 36);
@@ -151,11 +173,14 @@ export function mountRoomChat() {
       left: fabPosition.x + 'px', top: fabPosition.y + 'px',
     });
     let initial = { x: v.x + 16, y: v.y + v.h - h - 170 };   // 抬高：不压住左下角的「交流」按钮（面板可拖）
-    if (guard) {
+    if (measured) {
       // 局内：整块面板放到轮盘展开盒的右侧（纵向沿用抬高的落点），右侧放不下就放到它上方。
-      initial = guard.right + 8 + w <= v.x + v.w - 8
-        ? { x: guard.right + 8, y: Math.max(v.y + 8, v.y + v.h - h - 170) }
-        : { x: Math.max(v.x + 8, guard.left), y: guard.top - 8 - h };
+      initial = measured.right + 8 + w <= v.x + v.w - 8
+        ? { x: measured.right + 8, y: Math.max(v.y + 8, v.y + v.h - h - 170) }
+        : { x: Math.max(v.x + 8, measured.left), y: measured.top - 8 - h };
+    } else if (guard) {
+      // 量不到轮盘：面板也抬到估算禁区上方，不与角区抢位置。
+      initial = { x: v.x + 16, y: Math.max(v.y + 8, guard.top - 8 - h) };
     } else if (fabRatio) {
       initial = { x: fabPosition.x + 44, y: fabPosition.y - h + 36 };
       if (initial.x + w > v.x + v.w - 8)
@@ -169,14 +194,73 @@ export function mountRoomChat() {
     });
   }
 
-  // 局内 HUD（.gm__corner 里的「交流」轮盘）可能比房间状态晚一帧挂上：拿不到轮盘盒子时补几帧重排，
-  // 免得面板先落在轮盘上。观战席本来就没有轮盘，最多空转 30 帧（约 0.5s）后放弃。
-  let guardRetry = 0;
-  function settleLayout(attempt = 0) {
+  // 局内 HUD（.gm__corner 里的「交流」轮盘）由 Preact 在 room.state 之后才挂进 DOM。旧做法是「补 30 帧（约 .5s）」，
+  // HUD 晚到就没有第二次重排机会：线上实测 1600×900 时聊天浮标停在默认落点 {x:16, y:h-52}，与轮盘按钮 (20,834)
+  // 完全重合，浮标中心 (34,866) 的顶层元素就是 toggle 自己，点击被吃掉。现在双保险：
+  //   ① MutationObserver 盯 body 子树里 .gm__corner / .ewheel 的增删（只在局内挂），HUD 一出现或角区内部变化就在下一帧重排；
+  //   ② 限时重试兜底：观察不到的变化（盒子先以 0 尺寸存在、靠 class 切换显示）用 16→250ms 退避追，总时限 8s，量到立即停。
+  // 不用 setInterval：观察器负责「出现即重排」，退避链只在量不到的那段窗口里跑，量到就彻底收工。
+  const GUARD_DEADLINE_MS = 8000;
+  let guardTimer = 0, guardStartedAt = 0, guardDelay = 0;
+  let hudObserver = null, hudRaf = 0;
+
+  function guardMissing() { return inMatch && !wheelGuard(); }
+
+  function stopGuardRetry() { clearTimeout(guardTimer); guardTimer = 0; }
+
+  function retryGuard() {
+    guardTimer = 0;
+    if (!alive || !identity || !inMatch) return;
+    layout();                                  // 重试本身就是重排（HUD 可能刚好挂上）
+    if (!guardMissing()) return;
+    if (performance.now() - guardStartedAt >= GUARD_DEADLINE_MS) return;
+    guardDelay = guardDelay ? Math.min(guardDelay * 2, 250) : 16;
+    guardTimer = setTimeout(retryGuard, guardDelay);
+  }
+
+  function settleLayout() {
+    if (!alive) return;
+    stopGuardRetry();
     layout();
-    cancelAnimationFrame(guardRetry);
-    if (alive && inMatch && attempt < 30 && !wheelGuard())
-      guardRetry = requestAnimationFrame(() => settleLayout(attempt + 1));
+    if (!guardMissing()) return;
+    guardStartedAt = performance.now();
+    guardDelay = 0;
+    guardTimer = setTimeout(retryGuard, 16);
+  }
+
+  // 只认「HUD 角区」的变化：`.gm__corner` 整体增删（HUD 挂上 / 拆掉）、角区内部子节点增删（齿轮按钮增减会改变换行与尺寸）、
+  // `.ewheel` 自身增删。其它 body 子树变化（战斗 HUD 每帧重绘）一概不计，避免重排风暴。
+  function hudTouched(records) {
+    const relevant = node => node.nodeType === 1 &&
+      (node.matches?.('.gm__corner, .ewheel') || node.querySelector?.('.gm__corner, .ewheel'));
+    for (const record of records) {
+      if (record.target?.nodeType === 1 && record.target.closest?.('.gm__corner')) return true;
+      for (const node of record.addedNodes) if (relevant(node)) return true;
+      for (const node of record.removedNodes) if (relevant(node)) return true;
+    }
+    return false;
+  }
+
+  function scheduleHudCheck() {
+    if (hudRaf || !alive) return;
+    hudRaf = requestAnimationFrame(() => {
+      hudRaf = 0;
+      if (!alive || !identity || !inMatch) return;
+      const measured = wheelGuard();
+      if ((measured ? guardKey(measured) : '') === measuredGuardKey) return;   // 轮盘没出现 / 没动：不重排
+      layout();
+    });
+  }
+
+  function observeHud(on) {
+    if (!on || typeof MutationObserver !== 'function') {
+      if (hudObserver) { hudObserver.disconnect(); hudObserver = null; }
+      cancelAnimationFrame(hudRaf); hudRaf = 0;
+      return;
+    }
+    if (hudObserver) return;
+    hudObserver = new MutationObserver(records => { if (hudTouched(records)) scheduleHudCheck(); });
+    hudObserver.observe(document.body, { childList: true, subtree: true });
   }
 
   function controls() {
@@ -214,9 +298,15 @@ export function mountRoomChat() {
     const seat = room?.seats?.find(s => s?.playerId === playerId);
     const spectator = room?.spectators?.find(s => s?.playerId === playerId);
     const member = (seat && !seat.isBot && !seat.left) || spectator;
-    // 身份在局内也保留（弹幕要照常收）；房间聊天是「房间级」能力（服务端 plugins/room-chat/server/lobby.js 不按模式过滤）：对抗房同样要收弹幕，
-    // 否则身份为 null ⇒ receive() 直接丢弃，玩家发出去了却看不到任何回显。
-    const next = state.session?.entered && (room?.mode === 'coop' || room?.mode === 'versus') && playerId && member
+    // 相位来自比赛推送（m.public.phase）；房间状态本身不带 phase，插件若通过 ext.state 平铺了同名键也认。
+    const phase = state.match?.public?.phase || room?.phase || null;
+    const phaseChanged = phase !== lastPhase;
+    lastPhase = phase;
+    // 身份在局内也保留（弹幕要照常收）；房间聊天是「房间级」能力（服务端 plugins/room-chat/server/lobby.js 不按模式过滤）。
+    // 2026-11-05 去掉 mode 白名单：原先只放行 coop / versus，`mode:'rogue'` 的肉鸽房整个 root 常驻 hidden（线上实测
+    // BSKR 房 PREP 阶段 chat rect 0×0、data-in-match="0"），将来新增的房型也会同样哑掉。只要「已进入 + 在房里 + 有座位」即可。
+    // `member` 仍保留：不在座位的旁观第三人没有身份（服务端也按座位校验 sender），`entered` 判断同样保留。
+    const next = state.session?.entered && room && playerId && member
       ? { code: room.code, playerId } : null;
     const match = !!(next && room.inMatch === true);
 
@@ -227,6 +317,10 @@ export function mountRoomChat() {
         root.dataset.inMatch = match ? '1' : '0';
         desired = null;
         dragging = null;
+        observeHud(match);
+        settleLayout();
+      } else if (inMatch && phaseChanged) {
+        // 相位切换（如 ROUND_START → PREP）会重挂局内 HUD 角区，轮盘可能整体换节点：再排一次。
         settleLayout();
       }
       return;
@@ -251,7 +345,9 @@ export function mountRoomChat() {
     controls();
     open(true);
     requestHistory();
+    observeHud(inMatch);
     if (inMatch) settleLayout();
+    else stopGuardRetry();
   }
 
   function receive(msg, historical = false) {
@@ -480,7 +576,8 @@ export function mountRoomChat() {
 
   return () => {
     alive = false;
-    cancelAnimationFrame(guardRetry);
+    stopGuardRetry();
+    observeHud(false);   // 断开 MutationObserver 并取消挂起的那一帧重排
     scroll.dispose();
     for (const fn of cleanup) fn();
     disposeStickers();
