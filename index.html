@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="dark" />
+<meta name="theme-color" content="#0c0f0e" />
+<meta name="referrer" content="no-referrer" />
+<title>卫戍协议：盟约 · STRONGHOLD PROTOCOL</title>
+<link rel="icon" href="https://jingjiangze-stronghold-protocol.ms.show/icons/favicon.ico" />
+<link rel="preconnect" href="https://jingjiangze-stronghold-protocol.ms.show" />
+<style>
+  html, body { margin: 0; height: 100%; background: #0c0f0e; overflow: hidden; }
+  #app { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; display: block; z-index: 1; }
+</style>
+</head>
+<body>
+<!-- 默认 src 保证无 JS 也能进游戏；下面的脚本再按深链覆盖（如 /?room=CODE）。 -->
+<iframe id="app"
+        src="https://jingjiangze-stronghold-protocol.ms.show/"
+        title="卫戍协议：盟约"
+        allow="fullscreen; autoplay; clipboard-write; gamepad; screen-wake-lock"
+        allowfullscreen
+        referrerpolicy="no-referrer"></iframe>
+<script>
+  (function () {
+    var GAME_ORIGIN = 'https://jingjiangze-stronghold-protocol.ms.show';
+    var frame = document.getElementById('app');
+
+    // 深链透传（静态托管改为客户端完成）：/ 与 ?room=CODE 这类路径/查询串原样带给游戏。
+    // 引号/尖括号百分号转义，避免拼进 src 时破口（与 Worker 版同一策略）。
+    var path = location.pathname === '/' ? '/' : location.pathname;
+    var target = (GAME_ORIGIN + path + location.search)
+      .replace(/[<>"']/g, function (c) { return '%' + c.charCodeAt(0).toString(16).toUpperCase(); });
+    if (target !== frame.src) frame.src = target;
+
+    // 页面不显示任何加载/失败文案（2026-10-14 去掉加载字样，2026-10-17 去掉兜底提示行）：
+    // 慢或不显示时，诊断只写控制台，仍可区分「服务器不可达」与「页面被拦」。
+    setTimeout(function () {
+      // 同源探测：走我们自己的 /healthz（CORS 不开，别让浏览器跨域直连 ms.show）
+      fetch('/healthz', { cache: 'no-store', referrerPolicy: 'no-referrer' })
+        .then(function (r) { console.info('[superbig] 12s 未载入；healthz ok=' + r.ok); })
+        .catch(function () { console.info('[superbig] 12s 未载入；healthz 不可达'); });
+    }, 12000);
+  })();
+</script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4d734cf4f6bf7d3',t:'MTc5MjQ5MDc0OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"e2eb491874d94483af39a8ec2ec33b21","r":1,"spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
