@@ -5,8 +5,8 @@
   "generator": "tools/plugin.mjs pack",
   "files": {
     "client/css/components.css": {
-      "sha256": "cad003bcff56ecc52d0137c8f63a2ec58c8c104f226963b2bc4d9611bf1220c1",
-      "bytes": 54802
+      "sha256": "e1e6bc437dd9ec4102f9503d092e9ab2529dce54943930286baebdb70e5882e6",
+      "bytes": 60240
     },
     "client/css/screens/draft.css": {
       "sha256": "5889207f20424202cb91938f5d8b3cca65941f9910129f60a04ebabcffd32fec",
@@ -93,8 +93,8 @@
       "bytes": 5601
     },
     "client/js/render/app.js": {
-      "sha256": "d8e2162b9372a2b67bb246a91ce32fc31fbd7c997f6a5d18814a1daa56b1f9a2",
-      "bytes": 142309
+      "sha256": "96020543b6593bc776e19d53cbc6a4b849b3c85107b8d9b825038820c1fc3cc3",
+      "bytes": 143569
     },
     "client/js/render/fx/arrivals.js": {
       "sha256": "617f94b266e3349b5d99f6d12423cd6573fdc32c56902e5af7b6fa6d8bcd7efe",
@@ -161,16 +161,16 @@
       "bytes": 98875
     },
     "client/js/screens/lobby.js": {
-      "sha256": "35d20d75019e174235e1ce23e79c4e9e748bb4d0be2b1d039632b334c81feb11",
-      "bytes": 82889
+      "sha256": "0e81103828e0afcfbe4c87a0756f4a284ff3c636da66c7c06deada7bb746169c",
+      "bytes": 83264
     },
     "client/js/screens/lobbyLinks.js": {
       "sha256": "9bc64d256ebfa569878082119b997dc5f99f2b9cbdef52e7b9013aa429c9a953",
       "bytes": 2473
     },
     "client/js/screens/room.js": {
-      "sha256": "17b9a2ac76b3e9079fd4b56bc17f1c15f082868729aa18cf3cf09ecf6035ac29",
-      "bytes": 67211
+      "sha256": "1a3647d163951daa3080c93b72016acbcf7c44e00ecb2bc08b62516accdc89fc",
+      "bytes": 63360
     },
     "client/js/screens/settle.js": {
       "sha256": "b24be7296acfddff02d34011becb8f5c9d2eed0796d6cdacb235d924e8471d61",

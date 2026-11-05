@@ -49,6 +49,9 @@ import {
 } from '../ui/announcements.js';
 import { t, tc, N_ } from '../../../shared/i18n.js';
 import { NoticesButton } from '../ui/notices.js';
+// 官方版本（DESIGN §35.23）：与核心 screens/lobby.js 同一个 chip。插件不覆盖 ui/versionPicker.js 与 versions.js，
+// 所以这里拿到的是核心组件；它只读 store 的 versions / lobbyVersion 与 content.js 的 contentSet（本插件 store.js 同口径）。
+import { VersionSwitch } from '../ui/versionPicker.js';
 import { C2S as SERVER_C2S } from '../../../shared/protocol.js';
 import { DEFAULT_DIFFICULTY, parsePlaytestParam } from './lobbyLinks.js';   // 协同共竞: xieRoom 与深链共用（Forge 转发层）
 
@@ -1177,6 +1180,7 @@ export function LobbyScreen() {
         </div>
       </div>
       <div class="topbar__right">
+        <${VersionSwitch} />
         <span class="hub-online"><span class="online-pill__dot"></span><span class="num">${onlineCount}</span><span>${t('名博士在线')}</span></span>
         <${ResumeMatchButton} />
         <${AccountMeChip} player=${me} onStats=${openStats} />

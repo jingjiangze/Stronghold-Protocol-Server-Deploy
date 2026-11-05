@@ -1,11 +1,19 @@
 .spchat[hidden], .spchat [hidden] { display: none !important; }
 .spchat { font: 12px/1.35 system-ui,sans-serif; color: #e4e4e7; }
+/* 聊天层不吞点击：容器与状态行穿透，只有面板 / FAB 自己接收。
+   局内实测左下角「交流」轮盘（.gm__corner > .ewheel）的可点区域曾被 .spchat__hint 截走。 */
+.spchat { pointer-events: none; }
+.spchat__panel, .spchat__toggle { pointer-events: auto; }
+.spchat__hint { pointer-events: none; }
 .spchat__panel {
   position: fixed; z-index: 160; display: flex; flex-direction: column;
   width: 230px; height: 220px; box-sizing: border-box;
   background: #18181b; border: 1px solid #27272a; border-radius: 9px;
   box-shadow: 0 8px 28px #0008; overflow: hidden; pointer-events: auto;
 }
+/* 局内（roomChat.js 写 root.dataset.inMatch）：位置由 JS 按「交流」轮盘的实测盒子避让，
+   这里只在该状态下压一下面板高度，免得 230×220 的框在矮屏上盖掉太多战场。 */
+.spchat[data-in-match="1"] .spchat__panel { max-height: min(220px, 44vh); }
 .spchat__header {
   display: flex; align-items: center; justify-content: space-between;
   flex: 0 0 30px; padding: 0 9px; color: #34d399;

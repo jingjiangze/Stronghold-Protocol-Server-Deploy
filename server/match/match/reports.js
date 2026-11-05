@@ -1,7 +1,8 @@
 // server/match/match/reports.js — Match methods: the battle reports of client-side combat (DESIGN §14) — b.progress
-// (field progress, boss credits, the 联防 counts) and b.result (validated against the spec; an implausible one is
-// replaced by the server's run; a boss field's 'cleared' result may wait for the budget, `heldResult`), SP_VERIFY
-// re-simulation.
+// (field progress, boss credits, the 联防 counts) and b.result (validated against the spec; since 2026-11-05 only a
+// malformed payload — 'shape' — or a foreign content set is refused: any other implausible result is kept with a warning,
+// the server forwards and does not compute; a boss field's 'cleared' result may wait for the budget, `heldResult`),
+// SP_VERIFY re-simulation.
 // Installed on Match.prototype by server/match/Match.js (a method container: never instantiated; `this` is the match).
 
 import { ERR } from '../../../shared/constants.js';
@@ -49,7 +50,7 @@ export class MatchReports {
     return OK;
   }
 
-  /** b.result from a field's authority: validated against the spec; an implausible one is replaced by the server's run. */
+  /** b.result from a field's authority: validated against the spec; only a malformed payload or a foreign content set is replaced by the server's run. */
   _onResult(ps, msg) {
     if (!this.clientCombat) return fail(ERR.WRONG_PHASE, 'server-run combat');
     const f = this._fieldByBattle(msg.battleId);
@@ -57,11 +58,29 @@ export class MatchReports {
     const bossLike = f.kind === 'boss' || f.kind === 'hidden';
     // a room with gameplay plugins (opts.requireCs, DESIGN §32.6): the result must name the content set the battle runs
     // on — one without `cs`, or with another, came from a page that did not run this content: refused like an
-    // implausible result (the server simulates the battle)
+    // implausible result (the server simulates the battle). `hard`: this one is never downgraded (see below).
     const v = this.requireCs && msg.cs !== this.cs
-      ? { ok: false, reason: `its content ${typeof msg.cs === 'string' ? msg.cs.slice(0, 8) : 'is not named'} is not the room's ${this.cs.slice(0, 8)}` }
+      ? { ok: false, hard: true, reason: `its content ${typeof msg.cs === 'string' ? msg.cs.slice(0, 8) : 'is not named'} is not the room's ${this.cs.slice(0, 8)}` }
       : validateClientResult(f.spec, msg.result, { gd: this.gd });
-    if (!v.ok) {
+    // 2026-11-05 (owner: 「服务器仅转发」 — the server relays, it does not compute): a client result that fails only a
+    // plausibility check is kept as the field's result (a warning, `downgraded`) instead of being thrown away and
+    // replaced by a server re-simulation. Two failures stay hard — they are not plausibility, they are correctness of
+    // the payload itself:
+    //   • `reason === 'shape'` — validateClientResult's structural guard (no result / no `perPlayer`): adopting it
+    //     would store junk in the field record / settlement;
+    //   • `hard === true` — `msg.cs` is not the room's content set (DESIGN §32.6): that battle ran other content.
+    // Everything else (time, players, kill credit, counts, leak / leak key / leak multiset / leak source / unite
+    // runtime, perfect, layer bound / layers disabled / layer bond / bond, coins, unit state, unspawned, 'trait layers
+    // require server authority', an exception thrown while validating) is downgraded: the raw client result is adopted.
+    // shared/protocol.js isBattleResult already bounded its types, sizes and ranges (it is the same payload), so what
+    // the match now trusts is the client's account of its own battle.
+    let result = v.ok ? v.result : null;
+    if (!v.ok && !(v.hard === true || v.reason === 'shape')) {
+      this.verifyStats.downgraded = (this.verifyStats.downgraded || 0) + 1;
+      this.log.warn?.(`[match ${this.roomCode}] ${f.fieldId}: client result from ${ps.playerId} failed validation (${v.reason}) — kept as the field's result (server forwards only; downgraded ${this.verifyStats.downgraded})`);
+      result = msg.result;
+    }
+    if (result == null) {
       this.verifyStats.rejected++;
       this.log.warn?.(`[match ${this.roomCode}] ${f.fieldId}: rejected client result from ${ps.playerId} (${v.reason}) — server re-simulation`);
       if (bossLike && this._finalEnding) { f.result = syntheticResult(f.players, { bossBy: f.bossBy, time: this._fieldElapsed(f) }); this._fieldDone(f); this._checkFinalEnd(); }
@@ -69,7 +88,6 @@ export class MatchReports {
       else this._runOnServer(f, 'invalid');
       return OK;
     }
-    const result = v.result;
     if (bossLike) {
       // the final b.progress normally carried everything; the result's per-player damage is a lower bound
       const by = {};

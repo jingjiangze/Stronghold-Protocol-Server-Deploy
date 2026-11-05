@@ -595,11 +595,19 @@ export async function createFieldView(host, options = {}) {
     return { top: h * 0.13, bottom: h * 0.12, left: Math.min(170, w * 0.09), right: w * 0.05 };
   }
 
-  // 肉鸽官方小图 (stage.rogueFrame)：官方 1280×720 战斗半场 ≈ 102.5 px/格（0.14231 × 视口高），小图按它的 0.9 倍
-  // 显示（≈92 px/格）——取景只拟合棋盘四角，再用这个专用的小 padding 把棋盘放进 HUD 之间。
-  const ROGUE_TILE_PX = 0.9 * 0.14231;
-  function roguePadding(sz) {
-    return { top: sz.height * 0.08, bottom: sz.height * 0.06, left: sz.width * 0.02, right: sz.width * 0.02 };
+  // 肉鸽官方小图 (stage.rogueFrame)：缩放锚官方休整相机 left_shop_camera_param（1280×720 → 74.3 px/格 =
+  // 0.75 × 0.14231 × 视口高），取景只拟合棋盘四角，再用这个专用 padding 取景（上下各 10%、左右各 6%，
+  // 底部再按 HUD 实测的商店栏带 + 0.6rem 兜底），默认地图的缩放因此更小。
+  const ROGUE_TILE_PX = 0.75 * 0.14231;
+  // 视口 rem 基准（与 ui/fieldHost.js hudBands 同源），给 HUD 兜底留出 0.6rem 余量
+  function rootRem() { try { return parseFloat(getComputedStyle(document.documentElement).fontSize) || 100; } catch { return 100; } }
+  function roguePadding(sz, hud) {
+    // 顶部只留 10% 视口高：整条顶部 HUD 带不再从棋盘高度里扣掉（px/格 由这里 + ROGUE_TILE_PX 的缩放上限共同定）。
+    // 底部让开商店栏实测带：候选区（整备区）在第 7 行且贴着视口底部，底部 padding 不得窄于商店栏实测带，
+    // 否则棋盘会压在候选区上
+    const p = { top: sz.height * 0.10, bottom: sz.height * 0.10, left: sz.width * 0.06, right: sz.width * 0.06 };
+    if (hud && typeof hud === 'object') p.bottom = Math.max(p.bottom, (Number(hud.bottom) || 0) + 0.6 * rootRem());
+    return p;
   }
 
   // the HUD bands the prep cameras keep the bench / field clear of (projection.js clearHud; user playtest #5 item 9):
@@ -653,7 +661,9 @@ export async function createFieldView(host, options = {}) {
     // 肉鸽官方小图嵌在 19×21 画框里：取景用 stageRec.rogueFrame（clamp 到画框），没有 frame 才退回整张 mapSize
     if (!stdField()) {
       const frame = rogueFrameRect();
-      if (frame) return frame;
+      // 候选区固定在 GEO.HAND_ROW：frame 起点在它上面（同一列方向更靠下）时把第 7 行一并纳入取景，
+      // 这样 3D 取景不会把整备区留在矩形外（只扩取景，不动 stage.rogueFrame / 放置用的 rect）
+      if (frame) return { ...frame, r0: Math.min(frame.r0, GEO.HAND_ROW) };
       const [h, w] = mapSize();
       return { r0: 0, r1: h - 1, c0: 0, c1: w - 1 };
     }
@@ -678,10 +688,12 @@ export async function createFieldView(host, options = {}) {
     // — `shop: false` (the folded shop, public issue #5) = the official shop-collapsed camera, clear of the folded
     // shop's HUD band (re-evaluated on resize: camOpts keep the flag)
     const vk = viewKind(kind, o); // (a 'prep' camera on the boss rows = the Final Assault prep)
-    return presetCamera(k, { width: sz.width, height: sz.height, padding: o.padding || (rogue ? roguePadding(sz) : defaultPadding(k, sz)) }, {
+    // the HUD bands the camera keeps clear of — the rogue padding below reuses this exact result (no second measure)
+    const hud = hudBands(vk, sz, { shop: o.shop !== false });
+    return presetCamera(k, { width: sz.width, height: sz.height, padding: o.padding || (rogue ? roguePadding(sz, hud) : defaultPadding(k, sz)) }, {
       rect, side: o.side, half: !!o.half, shop: o.shop, fit: !!o.fit || !stdField(), config: stageRec?.config || null,
-      hud: hudBands(vk, sz, { shop: o.shop !== false }),
-      // 肉鸽官方小图：只拟合棋盘四角（不留 margin / headroom），缩放上限 = 官方半场 px/格 × 0.9
+      hud,
+      // 肉鸽官方小图：只拟合棋盘四角（不留 margin / headroom），缩放上限 = 官方休整相机 px/格 × 0.75
       ...(rogue ? { boardOnly: true, targetTilePx: ROGUE_TILE_PX * sz.height } : null),
     });
   }
