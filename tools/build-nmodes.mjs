@@ -117,7 +117,8 @@ function tablesFor(config, n) {
   const hidden = (config.hiddenCore && config.trophies && config.trophies.hiddenCore) || {};
   const bansA = bans[a.difficulty] || { core: 0, addon: 0 };
   const bansB = bans[b.difficulty] || bansA;
-  const ban = { core: Math.round(lerp(bansA.core, bansB.core, t)), addon: Math.round(lerp(bansA.addon, bansB.addon, t)) };
+  // 0.4.3: extraChess (the extra post-bond bans) is 7 in every difficulty tier, so it is not interpolated; core/addon are.
+  const ban = { core: Math.round(lerp(bansA.core, bansB.core, t)), addon: Math.round(lerp(bansA.addon, bansB.addon, t)), extraChess: 7 };
   const rA = Number(rewards[a.difficulty] ?? 1), rB = Number(rewards[b.difficulty] ?? rA);
   const hA = hidden[a.difficulty], hB = hidden[b.difficulty];
   let trophy = null;

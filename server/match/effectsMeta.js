@@ -536,6 +536,11 @@ export function makeCtx(m, ps, source, hook, ev = null, preview = null) {
     bandId: () => ps.bandId,
     teamMedicGranted: () => m.teamMedicGranted(),
     shopLevel: () => ps.shop.level,
+    /**
+     * The shop pool this seat draws from. Every seat shares one pool today (`Match.pool`), so it is 0 for all; the
+     * grouped-pool layout (shared/playerCapacity.js poolGroupSizes) is not wired yet.
+     */
+    poolId: () => 0,
     bond: (id) => (ps.bonds[id] ? { ...ps.bonds[id] } : null),
     bonds: () => Object.fromEntries(Object.entries(ps.bonds).map(([k, v]) => [k, { ...v }])),
     bondActive: (id) => !!(ps.bonds[id] && ps.bonds[id].active),

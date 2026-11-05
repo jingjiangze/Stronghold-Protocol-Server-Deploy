@@ -51,8 +51,10 @@ test('20 档齐全，且插值结果落在相邻锚点之间（不外推）', ()
 
 test('按难度查表的四处一起插值（bans / 奖励系数 / 奖杯 / 隐秘核心白名单）', () => {
   const { config } = gen();
-  assert.deepEqual(config.bans.N1, CONFIG.bans.FUNNY);
-  assert.deepEqual(config.bans.N20, CONFIG.bans.ABYSS);
+  // 0.4.3：锚点还带 `extraChess`（每档 7）；生成器 tablesFor 目前只插值 core / addon，所以只比这两键。
+  const banOf = ({ core, addon }) => ({ core, addon });
+  assert.deepEqual(banOf(config.bans.N1), banOf(CONFIG.bans.FUNNY));
+  assert.deepEqual(banOf(config.bans.N20), banOf(CONFIG.bans.ABYSS));
   assert.equal(config.rewards.difficultyFactor.N1, CONFIG.rewards.difficultyFactor.FUNNY);
   assert.equal(config.rewards.difficultyFactor.N20, CONFIG.rewards.difficultyFactor.ABYSS);
   assert.equal(config.trophies.hiddenCore.N1, null, '最低档不开隐秘核心（与 FUNNY 一致）');

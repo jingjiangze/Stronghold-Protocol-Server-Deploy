@@ -25,12 +25,19 @@
  * Per-match disabled bond set D and banned chess (research 01 A2): D = uniform sample of `core` core bonds and `addon`
  * add-on bonds among weight > 0 bonds that are active in the mode. A visible chess is banned iff every one of its
  * bonds is in D ∪ mode.inactiveBondIds.
+ *
+ * 0.4.3 (owner 2026-10-18) adds `config.bans.<difficulty>.extraChess` extra bans per mode (7 in every difficulty but
+ * TRAINING): 先按上面的债券规则禁人，再从未被禁的 visible 干员里均匀追加抽 `extraChess` 名，`banned` = 债券规则禁的
+ * ∪ 这些额外禁的（额外禁的即使没有 bonds 也出池）。追加抽样排除 `config.bans.extraProtectedCoreChars`（17 个核心
+ * 干员的 charId，抽不到）与第一个 1 费干员（排序后第一个 tier 1），保证开局仍有 1 费可买；已在 off（债券规则禁）的不重复抽。
  * @param {import('./gamedata.js').GameData} gd
  * @param {Function} rng seeded rng (createRng)
- * @returns {{ drawn: string[], staticOff: string[], banned: string[] }}
+ * @returns {{ drawn: string[], staticOff: string[], banned: string[], extra: string[] }} extra = the chess banned
+ *          beyond the bond rule this match
  */
 export function drawDisabledBonds(gd, rng) {
   const { core: nCore, addon: nAddon } = gd.bans(gd.difficulty);
+  const extraN = gd.bans(gd.difficulty).extraChess | 0;
   const staticOff = [...gd.modeInactiveBonds].filter((b) => gd.bond(b)).sort();
   const eligible = gd.bondIds.filter((b) => {
     const bond = gd.bond(b);
@@ -40,13 +47,21 @@ export function drawDisabledBonds(gd, rng) {
   const addon = eligible.filter((b) => !gd.bond(b).isCore);
   const drawn = [...sample(core, nCore, rng), ...sample(addon, nAddon, rng)].sort();
   const off = new Set([...drawn, ...staticOff]);
+  // 额外禁人：跳过已禁、受保护的核心干员与第一个 1 费开局干员。保护名单写的是干员 charId（如 char_2015_dusk），
+  // 而 visibleChess 的键是 chess_char_*_a，所以 id 与 chess.charId 都比对。
+  const protectedIds = new Set(Array.isArray(gd.config?.bans?.extraProtectedCoreChars) ? gd.config.bans.extraProtectedCoreChars : []);
+  const isProtected = (id) => protectedIds.has(id) || protectedIds.has(gd.chess(id)?.charId);
+  const firstTier1 = gd.visibleChess.find((id) => gd.tierOf(id) === 1) || null;
+  const extra = sample(gd.visibleChess.filter((id) => !off.has(id) && !isProtected(id) && id !== firstTier1), extraN, rng);
+  const extraSet = new Set(extra);
+  // banned = 债券规则禁的 ∪ 额外禁的：额外禁的即使没有 bonds（债券规则不禁）也要出池。
   const banned = [];
   for (const id of gd.visibleChess) {
     const c = gd.chess(id);
     const bonds = Array.isArray(c.bonds) ? c.bonds : [];
-    if (bonds.length > 0 && bonds.every((b) => off.has(b))) banned.push(id);
+    if ((bonds.length > 0 && bonds.every((b) => off.has(b))) || extraSet.has(id)) banned.push(id);
   }
-  return { drawn, staticOff, banned };
+  return { drawn, staticOff, banned, extra };
 }
 
 function sample(arr, n, rng) {
