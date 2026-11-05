@@ -661,8 +661,8 @@
       "bytes": 12635
     },
     "server/match/bot.js": {
-      "sha256": "7df2e91930ddde779faec53fec31389b08d3b50980d13f5e2db681928a2c9bd5",
-      "bytes": 113748
+      "sha256": "213ac6cf9ecf76c48f4c6fa2186c26ad3e640146545b9ed3321b717525d318a9",
+      "bytes": 114646
     },
     "server/match/botEmotes.js": {
       "sha256": "d617b26a4db1606cbd6c9d478f5f8c7c53026526b6f13dc7c8d808a735457bf7",

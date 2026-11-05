@@ -273,9 +273,10 @@ export function wavesOf(lv, stageId, routes = null) {
   const groups = [];
   for (const w of (lv && Array.isArray(lv.waves) ? lv.waves : [])) {
     const wPre = Number(w && w.preDelay) || 0;
-    for (const f of (w && Array.isArray(w.fragments) ? w.fragments : [])) {
-      groups.push({ preDelay: wPre + (Number(f && f.preDelay) || 0), actions: (f && Array.isArray(f.actions) ? f.actions : []) });
-    }
+    (w && Array.isArray(w.fragments) ? w.fragments : []).forEach((f, fi) => {
+      // 与 build-rogue-maps-v2 一致：w.preDelay 只加到第一个 fragment，后续 fragment 只算自己的 preDelay。
+      groups.push({ preDelay: (fi === 0 ? wPre : 0) + (Number(f && f.preDelay) || 0), actions: (f && Array.isArray(f.actions) ? f.actions : []) });
+    });
   }
   const spawns = [];
   let cursor = 0;
@@ -288,11 +289,14 @@ export function wavesOf(lv, stageId, routes = null) {
       const count = Math.max(1, Math.min(50, Number.isInteger(a.count) ? a.count : 1));
       const interval = Math.max(0, Number(a.interval) || 0);
       const e = { time, key: a.key, count, interval, routeIndex: Number.isInteger(a.routeIndex) ? a.routeIndex : 0 };
-      if (a.actionType !== 'SPAWN') e.action = a.actionType;
+      const isSpawn = a.actionType === 'SPAWN';
+      if (!isSpawn) e.action = a.actionType;
       if (a.isUnharmfulAndAlwaysCountAsKilled || a.randomSpawnGroupKey) e.tag = 'part';
       if (a.randomSpawnGroupKey) { e.group = a.randomSpawnGroupKey; e.pack = a.randomSpawnGroupPackKey; e.weight = a.weight; }
       spawns.push(e);
-      end = Math.max(end, time + Math.max(0, count - 1) * interval);
+      // 游标只由真正写出的 SPAWN 推进（2026-11-05 修，同 build-rogue-maps-v2）：非 SPAWN 行虽保留在 spawns 里，
+      // 但不占时间轴，否则会把后面的 SPAWN 推到回合时限之外。
+      if (isSpawn) end = Math.max(end, time + Math.max(0, count - 1) * interval);
     }
     cursor = end;
   }

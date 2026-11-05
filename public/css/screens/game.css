@@ -1171,3 +1171,6 @@
 
 .ai-vote { display:flex; flex-wrap:wrap; gap:.12rem; align-items:center; margin:.15rem 0; padding:.1rem; border:1px solid #426055; }
 .ai-participation-entry { flex:none; }
+
+/* 藏品三选一：位图必须浮在 .hxd__icon 的六边形伪元素之上（::before/::after 是 z-index:auto 的定位盒子） */
+.hxd__icon > img { position: relative; z-index: 1; width: calc(.56 * var(--t)); height: calc(.62 * var(--t)); object-fit: contain; }

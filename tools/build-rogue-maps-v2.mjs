@@ -67,6 +67,8 @@ const cleanNum = (v) => {
   if (Number.isInteger(v) || Math.abs(v) >= 1e6) return v;
   return Math.round(v * 1e6) / 1e6;
 };
+/** 出怪时间保留两位小数（fitTimeline 用，避免压缩后出现长尾小数）。 */
+const round2 = (v) => Math.round(Number(v) * 100) / 100;
 /** 官方 `{m_defined, m_value}` 包装取真值；未定义返回 undefined（= 该字段没被覆盖）。 */
 const defined = (v) => (v && typeof v === 'object' && 'm_defined' in v ? (v.m_defined ? v.m_value : undefined) : v);
 
@@ -593,8 +595,65 @@ function prefabMapOf(lv) {
 }
 
 /**
+ * 肉鸽回合的允许出怪时限（秒）= 该回合 combatTimeLimit × COMBAT_TIME_SCALE(=2)。
+ * 依据 `plugins/mota/data/config.json`：R1/R2 45 → 90；R3–R5 55 → 110；R6 70 → 140；R11 115 → 230；R14 120 → 240。
+ * tier 来自 stage id（`rogue_ro4_1-2` → `1`；`t` 精英 / `ev` 事件 / `d` 补给 / `b` 首领）。
+ */
+export const TIER_SPAWN_LIMITS = Object.freeze({
+  1: 90, 2: 90, 3: 90,
+  4: 140, 5: 140,
+  6: 230, 7: 230,
+  t: 110, ev: 110, d: 110, b: 240,
+});
+
+/** `rogue_ro<主题号>_<tier>-<编号>` → tier 字符串；ro5 的 `_dlc1` 后缀主题是 `ro5_dlc1`，正则只锚 `ro\d+_`。 */
+export function tierOfStageId(stageId) {
+  const m = /^rogue_ro\d+_([^-]+)-/.exec(String(stageId || ''));
+  return m ? m[1] : null;
+}
+
+/** tier → 时限；未知 tier（sv/fs/c/dv/s 等）返回 null（调用方跳过，不改时间）。 */
+export function spawnLimitForTier(tier) {
+  const t = String(tier);
+  return Object.hasOwn(TIER_SPAWN_LIMITS, t) ? TIER_SPAWN_LIMITS[t] : null;
+}
+
+/**
+ * 把一张图的出怪时间压进本回合时限（2026-11-05 审计修）：
+ *   · first = min(time)，end = max(time + (count-1)×interval)；
+ *   · first ≤ 0.1L 且 end ≤ L → 不动；
+ *   · 否则 anchor = min(first, 0.1L)，k = min(1, (0.9L-anchor)/(end-first))，
+ *     time' = round2(anchor + (time-first)×k)，interval' = round2(interval×k)。
+ * `tag:'boss'` 的 0 秒行原样保留（Boss 仍从 0 秒进场）。就地改写 spawns，返回 {k, before, after}。
+ * @param {Array<{time:number,count?:number,interval?:number,tag?:string}>} spawns
+ * @param {number} limit 允许的最晚出怪秒数；<=0 / 非数字时不改
+ */
+export function fitTimeline(spawns, limit) {
+  const L = Number(limit);
+  const rows = (Array.isArray(spawns) ? spawns : []).filter((s) => s && Number.isFinite(Number(s.time)));
+  if (!rows.length || !(L > 0)) return null;
+  const timeOf = (s) => Number(s.time);
+  const endOf = (s) => timeOf(s) + Math.max(0, (Number(s.count) || 1) - 1) * Math.max(0, Number(s.interval) || 0);
+  const first = Math.min(...rows.map(timeOf));
+  const end = Math.max(...rows.map(endOf));
+  const before = { first: round2(first), end: round2(end) };
+  if (first <= 0.1 * L + 1e-9 && end <= L + 1e-9) return { k: 1, before, after: before };
+  const anchor = Math.min(first, 0.1 * L);
+  const k = end > first ? Math.min(1, (0.9 * L - anchor) / (end - first)) : 1;
+  for (const s of rows) {
+    if (s.tag === 'boss' && timeOf(s) === 0) continue;   // 0 秒 Boss 行保持不动
+    s.time = round2(anchor + (timeOf(s) - first) * k);
+    s.interval = round2(Math.max(0, Number(s.interval) || 0) * k);
+  }
+  const after = { first: round2(Math.min(...rows.map(timeOf))), end: round2(Math.max(...rows.map(endOf))) };
+  return { k: round2(k), before, after };
+}
+
+/**
  * actions 摊平成绝对时间 SPAWN 列表（同 build-data.expandActions 的时序：上一段最后一波之后接下一段）。
  * 只取 SPAWN；其它 actionType 只计数。未知 enemy key 不写入 spawns（映射表 + unmapped 记录）。
+ * 游标只由**真正写出**的 spawn 推进（2026-11-05 修）：非 SPAWN / 未知敌人 / 无路线的行不占时间轴，
+ * 否则它们会把后面的 SPAWN 推到时限之外（如 ro4_1-2 首怪被推迟到 118s）。
  */
 function expandActions(groups, routePlan, ctx) {
   const spawns = [];
@@ -616,7 +675,7 @@ function expandActions(groups, routePlan, ctx) {
       const time = cleanNum(Math.max(0, start + numOr(a.preDelay, 0)));
       const count = Math.max(1, Math.floor(numOr(a.count, 1)) || 1);
       const interval = Math.max(0, numOr(a.interval, 0));
-      end = Math.max(end, time + Math.max(0, count - 1) * interval);
+      const rowEnd = time + Math.max(0, count - 1) * interval;
       if (a.actionType !== 'SPAWN') {
         stats.nonSpawn += 1;
         const t = String(a.actionType || '<none>');
@@ -640,6 +699,7 @@ function expandActions(groups, routePlan, ctx) {
       if (ctx.bossKeys.has(resolved.key)) rec.tag = 'boss';
       else if (a.isUnharmfulAndAlwaysCountAsKilled || a.randomSpawnGroupKey) rec.tag = 'part';
       spawns.push(rec);
+      end = Math.max(end, rowEnd);
       stats.emitted += count;
     }
     cursor = end;
@@ -780,6 +840,11 @@ export function convertLevel(lv, file, ctx) {
     bossKeys,
   };
   const main = expandActions(groups, plan, waveCtx);
+  // Boss 节点（b-*）：先在 spawns 上补 1 条 0 秒 tag:'boss' 行，再统一压时间（组装 wave 前）。
+  // 传临时 holder 只为复用注入逻辑；`wave` 本体在下面才建，`spawns` 仍是同一个数组。
+  const bossSpawn = injectBossSpawn(idn.code, { spawns: main.spawns }, plan.routes, grid, ctx.enemies);
+  // 出怪时间压进本回合时限：tier 取 stage id（rogue_ro4_1-2 → '1'）；未知 tier（sv/fs/c/dv/s）不改。
+  const timing = fitTimeline(main.spawns, spawnLimitForTier(tierOfStageId(idn.id)));
   const branches = buildBranches(lv, extraPlan, waveCtx);
   const overStats = { count: 0, skippedUnknownRef: 0 };
   const overrides = buildOverrides(lv, ctx.enemies, overStats);
@@ -807,9 +872,8 @@ export function convertLevel(lv, file, ctx) {
     slotCounts: {},
     usedBy: [],
   };
-  // Boss 节点（b-*）：追加 1 条 tag:'boss' 的 spawn；kind 仍是 'normal'，bossId 仍为 null。
-  const bossSpawn = injectBossSpawn(idn.code, wave, plan.routes, grid, ctx.enemies);
-  if (bossSpawn) wave.totalCount += 1;
+  // Boss 节点（b-*）已在上方注入（totalCount 已含这条 boss spawn）：kind 仍是 'normal'，bossId 仍为 null。
+  if (timing) wave.timing = timing;
 
   const report = {
     id: idn.id,

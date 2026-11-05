@@ -152,6 +152,44 @@
         }
       }
     },
+    "char_4182_oblvns": {
+      "avatar": "files/assets/char/avatar/char_4182_oblvns.png",
+      "avatarE2": "files/assets/char/avatar/char_4182_oblvns_2.png",
+      "portrait": "files/assets/char/portrait/char_4182_oblvns.png",
+      "portraitE2": "files/assets/char/portrait/char_4182_oblvns_2.png",
+      "spine": {
+        "front": {
+          "skel": "files/assets/spine/op/char_4182_oblvns/front/char_4182_oblvns.skel",
+          "atlas": "files/assets/spine/op/char_4182_oblvns/front/char_4182_oblvns.atlas",
+          "textures": [
+            "files/assets/spine/op/char_4182_oblvns/front/char_4182_oblvns.png"
+          ]
+        },
+        "back": {
+          "skel": "files/assets/spine/op/char_4182_oblvns/back/char_4182_oblvns.skel",
+          "atlas": "files/assets/spine/op/char_4182_oblvns/back/char_4182_oblvns.atlas",
+          "textures": [
+            "files/assets/spine/op/char_4182_oblvns/back/char_4182_oblvns.png"
+          ]
+        }
+      },
+      "skins": {
+        "avemujica-oblvns": {
+          "name": "旋律的主人",
+          "avatar": "files/assets/skin/op/char_4182_oblvns/avatar.png",
+          "portrait": "files/assets/skin/op/char_4182_oblvns/portrait.png",
+          "spine": {
+            "front": {
+              "skel": "files/assets/skin/op/char_4182_oblvns/front/char_4182_oblvns_avemujica_1.skel",
+              "atlas": "files/assets/skin/op/char_4182_oblvns/front/char_4182_oblvns_avemujica_1.atlas",
+              "textures": [
+                "files/assets/skin/op/char_4182_oblvns/front/char_4182_oblvns_avemujica_1.png"
+              ]
+            }
+          }
+        }
+      }
+    },
     "char_x_ave_mujica_char_5_25": {
       "avatar": "files/assets/char/avatar/char_4183_mortis.png",
       "avatarE2": "files/assets/char/avatar/char_4183_mortis_2.png",
@@ -273,6 +311,26 @@
         "resultLose": "files/assets/voice/jp/char_4186_tmoris/cn_032.mp3"
       },
       "char_x_ave_mujica_char_6_30": {
+        "start": "files/assets/voice/jp/char_4182_oblvns/cn_019.mp3",
+        "faceEnemy": "files/assets/voice/jp/char_4182_oblvns/cn_020.mp3",
+        "select": [
+          "files/assets/voice/jp/char_4182_oblvns/cn_021.mp3",
+          "files/assets/voice/jp/char_4182_oblvns/cn_022.mp3"
+        ],
+        "place": [
+          "files/assets/voice/jp/char_4182_oblvns/cn_023.mp3",
+          "files/assets/voice/jp/char_4182_oblvns/cn_024.mp3"
+        ],
+        "skill1": "files/assets/voice/jp/char_4182_oblvns/cn_025.mp3",
+        "skill2": "files/assets/voice/jp/char_4182_oblvns/cn_026.mp3",
+        "skill3": "files/assets/voice/jp/char_4182_oblvns/cn_027.mp3",
+        "skill4": "files/assets/voice/jp/char_4182_oblvns/cn_028.mp3",
+        "resultFour": "files/assets/voice/jp/char_4182_oblvns/cn_029.mp3",
+        "resultThree": "files/assets/voice/jp/char_4182_oblvns/cn_030.mp3",
+        "resultTwo": "files/assets/voice/jp/char_4182_oblvns/cn_031.mp3",
+        "resultLose": "files/assets/voice/jp/char_4182_oblvns/cn_032.mp3"
+      },
+      "char_4182_oblvns": {
         "start": "files/assets/voice/jp/char_4182_oblvns/cn_019.mp3",
         "faceEnemy": "files/assets/voice/jp/char_4182_oblvns/cn_020.mp3",
         "select": [

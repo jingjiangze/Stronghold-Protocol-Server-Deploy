@@ -8,8 +8,8 @@
   "interfaceBase": "https://www.modelscope.cn/datasets/jingjiangze/Stronghold-Protocol-Assets/resolve/master",
   "order": [
     "modelscope",
-    "ghfast-assets",
-    "jsdelivr-assets"
+    "jsdelivr-assets",
+    "ghfast-assets"
   ],
   "sources": [
     {
@@ -45,6 +45,8 @@
     "/assets/skins/char_340_shwaz_snow_1/illustration.png": "r2"
   },
   "_prefix_rules_note": "**prefixRules 已于 2026-10-15 删除。** 曾据「2026-10-14 实测 voice 0/15、char 21%、ui 20%、spine 45%…」写下 8 条前缀规避，全部 `skip: [modelscope]`。那次实测是**探针坏了**：`curl -o /dev/null` 在 Windows 上报 `(23) client returned ERROR on write`，异常被 catch 成 FAIL，48 条全 FAIL ⇒ 看起来 100% 缺失。修正后带对照组（5 条确定不存在的路径 → 5/5 正确 404）重测，从 `origin/assets-raw` 权威树按 22 个 `assets/` 前缀各抽 ≤10 条共 205 条：**205/205 全 200**（含 voice 10/10、char 10/10、ui 10/10、spine 10/10、art-index 1/1）。另注意 LFS 对象第一跳是 302 到 `cdn-lfs-cn-1.modelscope.cn`，必须跟到底，单看第一跳会把「有货」读成 302。⇒ 8 条规则全是基于假缺失的死配置，删除。`edge-sidecar.mjs` 的 `prefixBlocked` 机制保留（没错，只是暂无规则可命中）；若将来真出现目录级缺口，先用带对照组的探针复核再写规则。",
-  "prefixRules": [],
+  "prefixRules": [
+    { "prefix": "/assets/local/scene/", "skip": ["ghfast-assets"] }
+  ],
   "_dynamic_note": "动态清单在**魔搭数据集的 `cdn/v1/rank.json`**（rank.yml 每天四次注入）。容器侧的 `asset-jump.js` 会去读它。2026-10-22 起：**speedcdn 不再指向 R2**（R2 订阅停用后它改为 CF Redirect Rule 302 到数据集），所以它在 rank 里映射到 modelscope（同字节），r2 的真实门牌是 weishucdn。`SP_RANK_ORDER` 现为 `on`：rank 头部（ms-dataset/gitcdn-own/speedcdn→modelscope）会参与排序，r2（weishucdn）跑输就自然落到尾部 —— 这正是「R2 永远垫底、等额度恢复」的表达。"
 }
