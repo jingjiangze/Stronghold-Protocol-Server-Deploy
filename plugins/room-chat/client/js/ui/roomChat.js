@@ -66,7 +66,7 @@ export function mountRoomChat() {
   document.body.append(root);
   const disposeStickers = installRoomStickers(root, input, form, message => { hint.textContent = message; });
 
-  let identity = null, expanded = true, pending = false;
+  let identity = null, expanded = true, pending = false, inMatch = false;
   let composing = false, unread = 0, desired = null, position = null;
   let dragging = null, alive = true;
   let historyRequest = null;
@@ -106,29 +106,77 @@ export function mountRoomChat() {
       fabRatio = saved;
   } catch {}
 
+  // 局内避让左下角的「交流」轮盘：它就在 .gm__corner 里（left/bottom 各 .24rem，
+  // plugins/mota/client/css/screens/game.css:708），按钮高 .56rem，展开面板从按钮左上角再向左 .15rem、
+  // 向上 .02rem + 2.31rem 溢出（public/css/emotes.css:50-57）。这里量它的实际盒子，不写死像素：
+  // 根字号会随 HUD 缩放变（1rem = 100 设计 px），写死 px 换个屏幕就不准了。
+  function wheelGuard() {
+    const wheel = document.querySelector('.gm__corner .ewheel') || document.querySelector('.ewheel');
+    const corner = wheel?.closest('.gm__corner') || wheel;
+    if (!corner) return null;
+    const box = corner.getBoundingClientRect();
+    if (!box.width || !box.height) return null;   // 还没布局出来（HUD 未挂上/被隐藏）：算没量到，交给 settleLayout 补帧
+    const btn = (wheel || corner).getBoundingClientRect();
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    return {
+      left: Math.min(box.left, btn.left - 0.15 * rem),
+      right: Math.max(box.right, btn.left + 2.98 * rem),   // 面板 3.13rem 宽，左移 .15rem 后的右边界
+      top: Math.min(box.top, btn.top - 2.33 * rem),        // .02rem 间隙 + 2.31rem 面板高
+      bottom: box.bottom,
+    };
+  }
+
+  function hits(guard, x, y, w, h) {
+    return x < guard.right + 8 && x + w > guard.left - 8 &&
+      y < guard.bottom + 8 && y + h > guard.top - 8;
+  }
+
   function layout() {
     if (!alive || !identity) return;
     const v = viewport();
     const w = Math.max(1, Math.min(230, v.w - 16));
     const h = Math.max(1, Math.min(220, v.h - 16));
     const sx = Math.max(0, v.w - 52), sy = Math.max(0, v.h - 52);
-    fabPosition = clamp(fabRatio
+    const guard = inMatch ? wheelGuard() : null;
+    let fabHome = fabRatio
       ? { x: v.x + 8 + fabRatio.x * sx, y: v.y + 8 + fabRatio.y * sy }
-      : { x: v.x + 16, y: v.y + v.h - 52 }, v, 36, 36);
+      : { x: v.x + 16, y: v.y + v.h - 52 };
+    if (guard && hits(guard, fabHome.x, fabHome.y, 36, 36))
+      // 轮盘展开盒右侧放得下就横移过去（默认落点正好压在「交流」按钮上），放不下就叠到它上方。
+      fabHome = guard.right + 44 <= v.x + v.w - 8
+        ? { x: guard.right + 8, y: v.y + v.h - 52 }
+        : { x: guard.left, y: guard.top - 44 };
+    fabPosition = clamp(fabHome, v, 36, 36);
     Object.assign(toggle.style, {
       left: fabPosition.x + 'px', top: fabPosition.y + 'px',
     });
     let initial = { x: v.x + 16, y: v.y + v.h - h - 170 };   // 抬高：不压住左下角的「交流」按钮（面板可拖）
-    if (fabRatio) {
+    if (guard) {
+      // 局内：整块面板放到轮盘展开盒的右侧（纵向沿用抬高的落点），右侧放不下就放到它上方。
+      initial = guard.right + 8 + w <= v.x + v.w - 8
+        ? { x: guard.right + 8, y: Math.max(v.y + 8, v.y + v.h - h - 170) }
+        : { x: Math.max(v.x + 8, guard.left), y: guard.top - 8 - h };
+    } else if (fabRatio) {
       initial = { x: fabPosition.x + 44, y: fabPosition.y - h + 36 };
       if (initial.x + w > v.x + v.w - 8)
         initial.x = fabPosition.x - w - 8;
     }
-    position = clamp(desired || initial, v, w, h);
+    const target = desired || initial;
+    position = clamp(guard && desired && hits(guard, desired.x, desired.y, w, h) ? initial : target, v, w, h);
     Object.assign(panel.style, {
       left: position.x + 'px', top: position.y + 'px',
       width: w + 'px', height: h + 'px',
     });
+  }
+
+  // 局内 HUD（.gm__corner 里的「交流」轮盘）可能比房间状态晚一帧挂上：拿不到轮盘盒子时补几帧重排，
+  // 免得面板先落在轮盘上。观战席本来就没有轮盘，最多空转 30 帧（约 0.5s）后放弃。
+  let guardRetry = 0;
+  function settleLayout(attempt = 0) {
+    layout();
+    cancelAnimationFrame(guardRetry);
+    if (alive && inMatch && attempt < 30 && !wheelGuard())
+      guardRetry = requestAnimationFrame(() => settleLayout(attempt + 1));
   }
 
   function controls() {
@@ -166,16 +214,31 @@ export function mountRoomChat() {
     const seat = room?.seats?.find(s => s?.playerId === playerId);
     const spectator = room?.spectators?.find(s => s?.playerId === playerId);
     const member = (seat && !seat.isBot && !seat.left) || spectator;
-    // 身份在局内也保留（弹幕要照常收）；局内只把面板收起来 —— 左下角是「交流」轮盘，
-    // 面板会挡住它的页签/贴纸（实测 pointer events 被 .spchat__hint 拦截）。
-    // 房间聊天是「房间级」能力（服务端 plugins/room-chat/server/lobby.js 不按模式过滤）：对抗房同样要收弹幕，
+    // 身份在局内也保留（弹幕要照常收）；房间聊天是「房间级」能力（服务端 plugins/room-chat/server/lobby.js 不按模式过滤）：对抗房同样要收弹幕，
     // 否则身份为 null ⇒ receive() 直接丢弃，玩家发出去了却看不到任何回显。
     const next = state.session?.entered && (room?.mode === 'coop' || room?.mode === 'versus') && playerId && member
       ? { code: room.code, playerId } : null;
+    const match = !!(next && room.inMatch === true);
 
-    if (next?.code === identity?.code && next?.playerId === identity?.playerId) return;
+    if (next?.code === identity?.code && next?.playerId === identity?.playerId) {
+      // 同一间房进出局内（身份不变）也要重新定位：局内要避让左下角「交流」轮盘。
+      if (match !== inMatch) {
+        inMatch = match;
+        root.dataset.inMatch = match ? '1' : '0';
+        desired = null;
+        dragging = null;
+        settleLayout();
+      }
+      return;
+    }
+
     identity = next;
-    root.hidden = !next || room.inMatch === true;   // 局内只收面板，弹幕继续
+    inMatch = match;
+    root.dataset.inMatch = match ? '1' : '0';
+    // 局内不再藏面板（原先 `|| room.inMatch === true` 把整个 root 连悬浮按钮一起藏了，玩家以为聊天没了）。
+    // 现在靠 layout() 按「交流」轮盘的实测盒子把面板 / 悬浮按钮挪到它右侧（放不下则挪到上方），
+    // 容器只做命中避让（.spchat pointer-events: none，见 room-chat.css），不再靠隐藏躲避点击冲突。
+    root.hidden = !next;
     received.clear();
     danmaku.clear();
     historyRequest = null;
@@ -188,6 +251,7 @@ export function mountRoomChat() {
     controls();
     open(true);
     requestHistory();
+    if (inMatch) settleLayout();
   }
 
   function receive(msg, historical = false) {
@@ -416,6 +480,7 @@ export function mountRoomChat() {
 
   return () => {
     alive = false;
+    cancelAnimationFrame(guardRetry);
     scroll.dispose();
     for (const fn of cleanup) fn();
     disposeStickers();

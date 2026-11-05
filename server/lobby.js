@@ -401,8 +401,8 @@ export class Room {
      * put every human seat before every AI seat (Match opts.aiPicksLast). Kept across the room's matches.
      */
     this.aiPicksLast = false;
-    // [ASSUMED] Remake cooperation option, approved 2026-10-24; host opt-in before the match.
-    this.aiTakeoverEnabled = false;
+    // 2026-11-05 业主口径：默认开启，不再提供开关。
+    this.aiTakeoverEnabled = true;
     /**
      * 随机交接 (room.setAiRandom, 2026-10-31; needs aiTakeoverEnabled): the match picks one round in 3–9 and opens a
      * handover request for an online spectator by itself (server/aiTakeover.js maybeRandomAiTakeover). Host opt-in.
@@ -502,7 +502,9 @@ export class Room {
   toState(now = Date.now()) {
     return {
       t: 'room.state',
-      ...(this.aiTakeoverEnabled ? { aiTakeoverEnabled: true, aiTakeoverVotes: this.aiTakeoverVotes || [] } : {}),
+      // 2026-11-05：aiTakeoverEnabled 恒下发（客户端按 `=== true` 判面板），投票列表仍只在开启时带上。
+      aiTakeoverEnabled: this.aiTakeoverEnabled === true,
+      ...(this.aiTakeoverEnabled ? { aiTakeoverVotes: this.aiTakeoverVotes || [] } : {}),
       ...(this.aiRandomHandover ? { aiRandomHandover: true } : {}),
       code: this.code,
       hostId: this.hostId,
@@ -646,6 +648,12 @@ export class Lobby {
      * @type {((room: { code: string, hostId: string, humans: number, inMatch: boolean }) => boolean) | null}
      */
     this.autoApplyPlugins = null;
+    /**
+     * 默认插件集的启动预热（server/boot-main.js warmContentForRoom，端口打开后由那份代码挂上来）：建房要用的插件集
+     * 正被预热构建时返回同一个 Promise，否则 null。没挂（单元测试直接 new Lobby、没有插件层的进程）就一律现算。
+     * @type {((ids: string[], version: string) => Promise<unknown> | null) | null}
+     */
+    this.warmContent = null;
     this.offContentStale = plugins?.onContentStale?.((cs, ids) => this.pluginsChanged(cs, ids, 'content')) || null;
   }
 
@@ -1072,6 +1080,17 @@ export class Lobby {
     let initial = this.contentWithRequired(this.baseContent(version));
     const defaults = this.plugins?.defaults?.() || [];
     if (defaults.length) {
+      // 默认插件集可能正被启动预热构建（server/boot-main.js：首次构建要 6-9 s，contentSets 的 memo 键是 ids +
+      // 归一化 settings，建完后这里的 resolveContent 直接命中）。所以正是那一套时就等同一个 Promise，而不是把
+      // 同一套插件再算一遍。create 保持同步签名（dispatch 层不改）：只有这个冷启动窗口返回 Promise —— server/net.js
+      // 本来就按「答案稍后到达」处理 onMessage 的返回值（见那里 res.then 分支）。等待期间房间/配额可能变了，因此
+      // 等完重建一次 create；前一轮检查都是只读的（genCode 只挑一个当前未占用的码），重跑会把它们重新校验。
+      const warming = this.warmContent?.(defaults, version) || null;
+      if (warming) {
+        return warming.then(() => this.create(session, {
+          mode, difficulty: asked, test, version: askedVersion, soloUnlimited, teamSize, variant, versusAlt, versusSpeed,
+        }));
+      }
       const r = this.resolveContent(null, defaults, {}, version, leaving ? cur.content : null);
       if ('error' in r) {
         const fixed = (() => { try { return this.plugins?.fixed?.() || null; } catch { return null; } })();

@@ -392,46 +392,6 @@ function AiLastToggle({ option, busy, onToggle }) {
   </div>`;
 }
 
-/** 观战接管 AI (2026-10-31): host opt-in before the match; everyone else sees the state. */
-export function aiTakeoverOption(room, myId) {
-  if (!room || room.mode === 'solo' || roomVersion(room) !== DEFAULT_VERSION) return null;
-  return { on: room.aiTakeoverEnabled === true, editable: room.hostId != null && room.hostId === myId && !room.inMatch };
-}
-
-/** 随机接管 (3–9 回合): only once the handover switch is on (the server refuses it otherwise). */
-export function aiRandomOption(room, myId) {
-  if (!room || room.aiTakeoverEnabled !== true || room.mode === 'solo' || roomVersion(room) !== DEFAULT_VERSION) return null;
-  return { on: room.aiRandomHandover === true, editable: room.hostId != null && room.hostId === myId && !room.inMatch };
-}
-
-function AiTakeoverToggle({ option, busy, onToggle }) {
-  if (!option) return null;
-  return html`<div class="ailast">
-    <${Tooltip} text=${t('默认关闭。开启后，观战者可在休整期经同房间真人投票接替 AI；继承的记录计入接替者的个人统计与奖励。')}>
-      <button type="button" role="switch" aria-checked=${option.on ? 'true' : 'false'} data-testid="room-ai-takeover"
-          class=${`dpick__opt ailast__opt${option.on ? ' is-active' : ''}`} disabled=${!option.editable || !!busy}
-          onClick=${() => option.editable && onToggle(!option.on)}>
-        <${Icon} name="check" class=${option.on ? 'is-on' : ''} />${t('允许观战者接替 AI')}
-      </button>
-    <//>
-    ${option.editable ? null : html`<span class="t-dim">${t('由创建者设置')}</span>`}
-  </div>`;
-}
-
-function AiRandomToggle({ option, busy, onToggle }) {
-  if (!option) return null;
-  return html`<div class="ailast">
-    <${Tooltip} text=${t('默认关闭。开启后，本局会在第 3–9 回合里随机挑一回合，自动替一名在线观战者向一个 AI 席位发起接管申请，仍需队友投票；每局最多一次。')}>
-      <button type="button" role="switch" aria-checked=${option.on ? 'true' : 'false'} data-testid="room-ai-random"
-          class=${`dpick__opt ailast__opt${option.on ? ' is-active' : ''}`} disabled=${!option.editable || !!busy}
-          onClick=${() => option.editable && onToggle(!option.on)}>
-        <${Icon} name="check" class=${option.on ? 'is-on' : ''} />${t('随机接管（3–9 回合）')}
-      </button>
-    <//>
-    ${option.editable ? null : html`<span class="t-dim">${t('由创建者设置')}</span>`}
-  </div>`;
-}
-
 /** The 「不限时」 switch (a timed solo; DESIGN §35.23.10): the host toggles it, everybody else sees its state. */
 function SoloUnlimitedToggle({ option, busy, onToggle }) {
   if (!option) return null;
@@ -500,7 +460,7 @@ function RoomProtocol({ room, variant, onClose, onPick, busy, leaving = false })
 }
 
 /** ⚙ of the bottom pill: 私密房间, 人数上限 (with the 10-seat constants), AI 队友最后选择, 不限时, 无限火力 branch. */
-function RoomOptions({ room, facts, myId, busy, online, variant, onPrivate, onSeatCap, onAiLast, onAiTakeover, onAiRandom, onVariant, soloOption, onSoloUnlimited, incompleteOption, onIncompleteMaps, onClose, leaving = false }) {
+function RoomOptions({ room, facts, myId, busy, online, variant, onPrivate, onSeatCap, onAiLast, onVariant, soloOption, onSoloUnlimited, incompleteOption, onIncompleteMaps, onClose, leaving = false }) {
   const coop = room.mode !== 'solo';
   const host = facts.isHost;
   useEffect(() => {
@@ -515,11 +475,9 @@ function RoomOptions({ room, facts, myId, busy, online, variant, onPrivate, onSe
       <span>${t('私密房间')}<small>${room.private ? t('仅凭同盟密钥或邀请加入，不能搜寻队友') : t('公开大厅可见，可以搜寻队友')}</small></span></label>` : null}
     <${SeatCapSetter} room=${room} isHost=${host} onPick=${onSeatCap} />
     <${AiLastToggle} option=${aiLastOption(room, myId)} busy=${busy} onToggle=${onAiLast} />
-    <${AiTakeoverToggle} option=${aiTakeoverOption(room, myId)} busy=${busy} onToggle=${onAiTakeover} />
-    <${AiRandomToggle} option=${aiRandomOption(room, myId)} busy=${busy} onToggle=${onAiRandom} />
     <${SoloUnlimitedToggle} option=${soloOption} busy=${busy} onToggle=${onSoloUnlimited} />
-    <label class="rs-opt"><input type="checkbox" checked=${room.incompleteMaps === true} disabled=${!host || !!busy || !online} onChange=${(e) => onIncompleteMaps(e.currentTarget.checked)} />
-      <span>${t('包含无场景地图')}<small>${t('默认关闭：只在有官方场景包的地图里抽；开启后无第三层的地图也会被抽到，退回程序化棋盘')}</small></span></label>
+    ${room.mode === 'rogue' ? html`<label class="rs-opt"><input type="checkbox" checked=${room.incompleteMaps === true} disabled=${!host || !!busy || !online} onChange=${(e) => onIncompleteMaps(e.currentTarget.checked)} />
+      <span>${t('包含无场景地图')}<small>${t('默认关闭：只在有官方场景包的地图里抽；开启后无第三层的地图也会被抽到，退回程序化棋盘')}</small></span></label>` : null}
     ${room.random === true ? html`<div class="rs-opt rs-opt--variant"><span>${t('模式分支')}</span>
       <div class="dpick" role="radiogroup" aria-label=${t('模式分支')}>
         ${[['blitz', t('快速突袭 {totalRounds} 回合', { totalRounds: RANDOM_MODE.totalRounds })], ['endurance', t('持久鏖战 {totalRounds} 回合', { totalRounds: RANDOM_MODE.endurance.totalRounds })], ['marathon', t('最长时赛 {totalRounds} 回合', { totalRounds: RANDOM_MODE.marathon.totalRounds })]].map(([v, label]) => html`
@@ -774,10 +732,6 @@ export function RoomScreen() {
   const removeBot = (seat) => run(`rm${seat}`, () => net.request('room.removeBot', { seat }));
   const setDifficulty = (difficulty) => run('diff', async () => { await net.request('room.setDifficulty', { difficulty }); setPicker(false); });
   const setAiLast = (on) => run('ailast', () => net.request('room.setAiPicksLast', { on }));
-  // 观战接管 AI / 随机接管 (2026-10-31): 本插件在加载顺序上排在 mota 之后 ⇒ 它的 room 屏才是线上真正被下发的
-  // 那一份（插件树同名文件顶替核心）。开关必须加在这里。
-  const setAiTakeover = (on) => run('aihandover', () => net.request('room.setAiTakeover', { on }));
-  const setAiRandom = (on) => run('airandom', () => net.request('room.setAiRandom', { on }));
   // 随机地图开关（2026-10-22）：房主开局前切换
   const setRandomStage = (on) => run('stagerf', () => net.request('room.setRandomStage', { randomStage: on }));
   // 官方版本切换（DESIGN §35.23）：房主提案 → 在座人类投票（单人房立即切）。RATE 时重试一次，与上游同口径。
@@ -952,7 +906,7 @@ export function RoomScreen() {
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 2h3.4l.5 2.6 1.9.8 2.2-1.5 2.4 2.4-1.5 2.2.8 1.9 2.6.5v3.4l-2.6.5-.8 1.9 1.5 2.2-2.4 2.4-2.2-1.5-1.9.8-.5 2.6h-3.4l-.5-2.6-1.9-.8-2.2 1.5-2.4-2.4 1.5-2.2-.8-1.9L2 13.7v-3.4l2.6-.5.8-1.9-1.5-2.2 2.4-2.4 2.2 1.5 1.9-.8zM12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" fill-rule="evenodd" /></svg>
           </button>
           ${optsShown ? html`<${RoomOptions} room=${room} facts=${facts} myId=${me.playerId} busy=${busy} online=${online} variant=${variant}
-            onPrivate=${setPrivate} onSeatCap=${setSeatCap} onAiLast=${setAiLast} onAiTakeover=${setAiTakeover} onAiRandom=${setAiRandom} onVariant=${setVariant}
+            onPrivate=${setPrivate} onSeatCap=${setSeatCap} onAiLast=${setAiLast} onVariant=${setVariant}
             soloOption=${soloOpt} incompleteOption=${{ on: room.incompleteMaps === true, editable: facts.isHost }} onIncompleteMaps=${setIncompleteMaps} onSoloUnlimited=${setSoloUnlimited} onClose=${() => setOpts(false)} leaving=${optsLeaving} />` : null}
         </div>
       </div>

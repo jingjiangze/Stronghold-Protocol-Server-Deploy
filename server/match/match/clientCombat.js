@@ -82,9 +82,12 @@ export class MatchClientCombat {
 
   /** The connected human who simulates a field: lowest seat among its players (normal: the owner). */
   _authorityFor(f, exclude = null) {
-    // [ASSUMED] Layer traits require an authoritative run, even with SP_VERIFY=off.
-    // Use the existing sliced server path (also for shared boss pools) before assigning any client.
-    if (requiresTraitLayerAuthority(f.spec, this.gd)) return null;
+    // 2026-11-05 (owner: 「服务器仅转发」 — the server relays, it does not compute): layer traits no longer force an
+    // authoritative server run. The gate is kept (the same switch that already means "the server re-simulates and
+    // outranks the client", SP_VERIFY → `all`, _verifyResult), so with the default 'off' / 'sample' a trait field is
+    // assigned to its client like any other field. fields.js validateClientResult still reports the trait layers
+    // ('trait layers require server authority'); reports.js downgrades that reason to a warning instead of a takeover.
+    if (this.verifyMode === 'all' && requiresTraitLayerAuthority(f.spec, this.gd)) return null;
     let best = null;
     for (const pid of f.players) {
       if (pid === exclude || (f.demoted && f.demoted.has(pid))) continue;

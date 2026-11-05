@@ -61,7 +61,7 @@ import { mountLobbyPlugins } from './plugins/lobbyModules.js';
 import { createStaticModules } from './plugins/staticModules.js';
 import { createMatchHosts } from './match/host/index.js';
 import { createVersionSets } from './versions.js';
-import { versionById } from '../shared/versions.js';
+import { DEFAULT_VERSION, versionById } from '../shared/versions.js';
 import { t } from '../shared/i18n.js';
 import { createTrustedRuntime } from './plugins/trustedRuntime.js';
 import { trustedHostAllowed } from './plugins/trusted.js';
@@ -85,6 +85,74 @@ export {
   ROOT, WS_MAX_PAYLOAD, DATA_SHIM_JS, MIME, COMPRESSIBLE, BUILD_INPUTS, computeBuildTag, buildTag, resetBuildTag,
   acceptsGzip, pickEncoding, parseRange, createStaticHandler, lanUrls, parseTrustProxy,
 };
+
+// ---------------------------------------------------------------------------------------------------
+// 默认内容集的预热：一次进程只构建一次，启动与建房等同一个 Promise
+// ---------------------------------------------------------------------------------------------------
+//
+// 默认插件集（plugins/config.json `default`）的第一次构建要现算（~6-9 s：server/plugins/roomSets.js →
+// visualSet.js 每次重算 mergePluginOps，contentSets.js 未命中 memo 才 build）。这份工作
+//
+//   * 不能放在监听之前（容器平台按端口就绪判断启动成功，监听前的同步预热会被判成启动失败）；
+//   * 也不该延后：以前 setTimeout 500 ms 才开始，头几秒建的房正好落在冷路径上，自己再付一次同样的构建；
+//   * 更不能让启动预热与建房各算一遍 —— 所以两边共用下面这个一次性的 Promise。
+//
+// startServer 在端口打开之后立刻调用 warmRoomContent()；server/lobby.js 的 create 通过 warmContentForRoom 拿到
+// 同一个 Promise（正是预热的那一套才等），建完后 contentSets 的 memo 命中（键 = ids + 归一化 settings），
+// resolveContent 直接返回，不再重复构建。
+
+/** 预热要构建的那一套（ids）+ 怎么构建 + 往哪记日志；startServer 在端口打开后设置，没插件层/默认集为空时留 null。 */
+/** @type {{ ids: string[], log: { info: Function, warn?: Function }, resolve: () => any } | null} */
+let warmState = null;
+/** 当前（或最近一次成功的）预热：并发调用共享它 —— 同一套插件只构建一次。 */
+let warmPromise = null;
+/** 预热还没结束：true 期间建房才等它；结束后建房直接走 memo 命中，谁也不等。 */
+let warmPending = false;
+
+/**
+ * 构建默认插件集（端口打开后立即调用；并发调用共享同一个 Promise，只构建一次）。
+ * 抛错或结果不是 ok 时把这次结果忘掉（warmPromise 清空），下一次调用重试 —— 建房那条路径自己会把错误报给建房者。
+ * @returns {Promise<{ ok?: boolean, error?: string, detail?: string } | null>} null: 这个进程没有可预热的一套
+ */
+export function warmRoomContent() {
+  if (warmPromise) return warmPromise;
+  if (!warmState) return Promise.resolve(null);
+  const { resolve } = warmState;
+  const log = warmState.log;
+  warmPending = true;
+  warmPromise = Promise.resolve()
+    .then(() => {
+      const t0 = Date.now();
+      const warmed = resolve();
+      const took = Date.now() - t0;
+      if (warmed && warmed.ok) log.info(`[plugins] warm-up: default content set ready in ${took} ms`);
+      else log.info(`[plugins] warm-up: default content set not warmable (${(warmed && (warmed.error || warmed.detail)) || '?'})`);
+      return warmed || null;
+    })
+    .catch((e) => { log.warn?.('[plugins] warm-up failed', e); return null; })
+    .then((warmed) => {
+      // 建完（或失败）就从「等它」切到「memo 命中」；没热起来的这一次忘掉，免得之后每次建房都等一个空结果
+      warmPending = false;
+      if (!warmed || !warmed.ok) warmPromise = null;
+      return warmed;
+    });
+  return warmPromise;
+}
+
+/**
+ * server/lobby.js create 用：要建的房间正是预热的那一套插件（同一批 id、默认版本）且预热还没结束时，返回同一个
+ * Promise（等它建完，contentSets 的 memo 随即命中）；否则 null —— 按原来的路径现算。别的插件组合、别的版本照旧。
+ * @param {string[]} ids @param {string} version
+ * @returns {Promise<{ ok?: boolean } | null> | null}
+ */
+export function warmContentForRoom(ids, version) {
+  if (!warmPending || !warmPromise || !warmState) return null;
+  if (version !== DEFAULT_VERSION) return null;
+  const warm = warmState.ids;
+  if (ids.length !== warm.length) return null;
+  for (let i = 0; i < ids.length; i++) if (ids[i] !== warm[i]) return null;
+  return warmPromise;
+}
 
 /**
  * Build and start the HTTP + WebSocket server.
@@ -123,6 +191,11 @@ export async function startServer(opts = {}) {
   // A release ignores external-AI settings (one log line) and keeps the built-in bot (§35.66).
   // An unknown strategy id still fails here, before data is loaded or the port is opened.
   const log = opts.log || makeLogger(!!opts.quiet);
+  // 预热状态是模块级的（一个进程可以多次 startServer，例如测试）：这一次启动只认本次要构建的那一套，
+  // 上一次留下的 Promise 不能顶替它 —— 否则第二次启动会「等」一个早就 settle 的 Promise，等于没有预热。
+  warmState = null;
+  warmPromise = null;
+  warmPending = false;
   if (releaseIgnoresExternalAi()) noteLlmIgnored(log);
   try {
     const strategy = getBotStrategy(process.env.SP_BOT_STRATEGY);
@@ -171,6 +244,9 @@ export async function startServer(opts = {}) {
   log.info(`[versions] enabled: ${versions.ids.map((id) => `${id} (${t(/** @type {any} */ (versionById(id)).label)}${id === versions.defaultId ? ', default' : ''})`).join(', ')}`);
   const simPool = createRoomWorkerPool({ data });
   const { registry, lobby, network } = createSessionStack(opts, { data, log, content, plugins: roomSets, hosts, versions, versionHosts, simPool });
+  // 默认插件集的预热是一个共享的一次性 Promise（见本文件顶部「默认内容集的预热」）：建房（server/lobby.js create）
+  // 等它，不再把同一套插件构建一遍。没有预热的一套、或没挂这条钩子（单元测试直接 new Lobby）时房建走老路径。
+  lobby.warmContent = warmContentForRoom;
 
 
   // Main-thread event-loop delay sampling (server/health/eventLoop.js): opt-in with SP_LOOP_SAMPLE=1, no worker pool involved, and a
@@ -304,19 +380,22 @@ export async function startServer(opts = {}) {
     if (bound === null) throw lastError;
     boundHost = bound;
 
-    // 内容集预热：默认插件集首次构建要现算（~6-9 s）。放在**端口打开之后**异步做 ——
-    // 容器平台按端口就绪判断启动成功，监听前的同步预热会被判成启动失败。
-    setTimeout(() => {
-      try {
-        const warmIds = policy.get().default || [];
-        if (!warmIds.length) return;
-        const t0 = Date.now();
-        const warmed = roomSets.resolve(warmIds, { scope: 'room' });
-        const took = Date.now() - t0;
-        if (warmed && warmed.ok) log.info(`[plugins] warm-up: default content set ready in ${took} ms`);
-        else log.info(`[plugins] warm-up: default content set not warmable (${(warmed && (warmed.error || warmed.detail)) || '?'})`);
-      } catch (e) { log.warn?.('[plugins] warm-up failed', e); }
-    }, 500).unref?.();
+    // 内容集预热：默认插件集首次构建要现算（~6-9 s）。放在**端口打开之后**（容器平台按端口就绪判断启动成功，监听前
+    // 的同步预热会被判成启动失败），而且**立刻**开始 —— 以前延后 500 ms，那段时间里建的房正好落在这条冷路径上。
+    // 现在启动预热与建房（server/lobby.js create）等同一个 Promise（warmRoomContent / warmContentForRoom），
+    // 不再各算一遍。读策略失败只影响预热（建房时自己会再读一次并报错），不拖垮启动。
+    let warmIds = [];
+    try { warmIds = [...(policy.get().default || [])]; } catch { warmIds = []; }
+    if (warmIds.length) {
+      warmState = {
+        ids: warmIds,
+        log,
+        // 按默认版本构建：与建房时 version === DEFAULT_VERSION 的那条（resolveContent 的 gameplay）一致
+        resolve: () => roomSets.resolve(warmIds, { scope: 'room' }),
+      };
+      // 监听已经触发；这里只是下一段微任务里开始构建 —— 不占监听调用栈，也不等定时器
+      warmRoomContent();
+    }
     // Check the kernel's address too: aliases/DNS and bind fallback cannot weaken the owner gate.
     const actual = server.address();
     const scriptHost = actual && typeof actual === 'object' ? actual.address : '';

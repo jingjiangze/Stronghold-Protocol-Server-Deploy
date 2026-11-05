@@ -1371,6 +1371,10 @@ function buildItems(ctx, effects) {
 
 // ===== bands (策略) ===============================================================================
 
+// 2026-11-05 (owner): 可露希尔 / 黍 / 郁金香 三个策略下线 —— 它们是官方 band 表里的条目，
+// 不从数据源剔除的话 build-data 每次重新生成都会把它们加回来（data/bands.json 已手工删除）。
+const BAND_RETIRED = Object.freeze(['band_closur', 'band_shu', 'band_tulip']);
+
 /**
  * Build data/bands.json: the 40 season strategies. `bondIds` (the bonds a strategy is built around: shared/bandBonds.js
  * over its text and blackboards, needing bonds.json and choices.json pools) is added in main() once those are built.
@@ -1378,7 +1382,8 @@ function buildItems(ctx, effects) {
 function buildBands(ctx, effects) {
   const { act, ac } = ctx;
   const out = {};
-  const ids = Object.keys(act.bandDataListDict);
+  const retired = new Set(BAND_RETIRED);
+  const ids = Object.keys(act.bandDataListDict).filter((id) => !retired.has(id));
   ids.sort((a, b) => (act.bandDataListDict[a].sortId ?? 0) - (act.bandDataListDict[b].sortId ?? 0) || naturalCmp(a, b));
   for (const bandId of ids) {
     const b = act.bandDataListDict[bandId];

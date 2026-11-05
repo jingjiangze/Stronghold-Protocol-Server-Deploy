@@ -6,7 +6,7 @@
 //       meshes: { crate?, box?, platform?, blower?, bgPlane?, gate: { startDown?, startUp?, startBack?, endDown?, endUp? } },
 //       tiles, uv, materials: { theme?, fx?, trap? } }
 //   const scene = await loadScenePack(assets, stageId)   // the stage's official scene (tools/local-extract/scenes.py),
-//   → { key, stage, doc, chunks: [{ material, lightmap, group, bounds, position, uv, uv1, normal, color, index }],
+//   → { key, stage, aliasOf, doc, chunks: [{ material, lightmap, group, bounds, position, uv, uv1, normal, color, index }],
 //       groups: { name: [x0, y0, x1, y1] }, images: { tex: { name: img }, lm: [img|null] } }     null when not extracted
 //
 // Everything is optional except the diffuse atlas: a missing map or mesh only drops that feature (e.g. no normal
@@ -173,6 +173,35 @@ export const SCENE_VERSION = 1;
 /** Bytes per vertex of a scene chunk: position f32×3, uv f32×2, lightmap uv f32×2, normal i8×4, colour u8×4. */
 export const SCENE_VERTEX_BYTES = 36;
 
+/** A stage id ending in a one-letter field suffix: `foo-4-b` → `foo-4` (its base map's scene directory). */
+const SCENE_ALIAS_TAIL = /^(.+)-[a-z]$/;
+/** A stage id of a DLC copy: `foo_dlc2` → `foo` (the base map was extracted instead). */
+const SCENE_ALIAS_DLC = /^(.+)_dlc[1-3]$/;
+
+/**
+ * Ids whose scene directory a stage without a package of its own may reuse: `foo-4-b` / `-c` / `-d` are field variants
+ * of the map `foo-4` and `foo_dlc2` is its DLC copy, so the base map's scene (same rows / rogueFrame) fits. Ordered,
+ * deduped, and never the id itself. Only these two literal rules: no `_` / `-` swap (directory names equal stage ids
+ * byte for byte, so a swap would hit a different map) and no repeated stripping (`ro5_b-9-a` → `ro5_b-9`, no further).
+ * Mirrored by server/match/sceneStages.js (`sceneAliases`): change both.
+ * @param {string} stageId
+ * @returns {string[]} alias ids, most specific first
+ */
+export const sceneAliases = (stageId) => {
+  if (typeof stageId !== 'string' || !stageId) return [];
+  const out = [];
+  const add = (id) => { if (id && id !== stageId && !out.includes(id)) out.push(id); };
+  const dlc = SCENE_ALIAS_DLC.exec(stageId);
+  if (dlc) {
+    add(dlc[1]);
+    const inner = SCENE_ALIAS_TAIL.exec(dlc[1]);
+    if (inner) add(inner[1]);
+  }
+  const tail = SCENE_ALIAS_TAIL.exec(stageId);
+  if (tail) add(tail[1]);
+  return out;
+};
+
 /**
  * Typed-array views of the chunks of a scene.bin (scenes.py pack_chunk); null when a record does not fit the buffer.
  * @param {object} doc scene.json
@@ -306,11 +335,23 @@ async function fetchBuffer(url) {
 
 const sceneCache = new Map();
 
-/** Does the local-art manifest list the official scene of `stageId`? (manifest only) */
+/**
+ * The id whose scene package the manifest actually lists for `stageId`: the stage's own, else the first alias that is
+ * listed (`sceneAliases`). Both scene.json and scene.bin must be listed — a half-extracted directory is no scene.
+ * @returns {string|null}
+ */
+function listedSceneKey(assets, stageId) {
+  if (typeof stageId !== 'string' || !stageId || !assets || typeof assets.localUrl !== 'function') return null;
+  const listed = (id) => !!assets.localUrl(sceneGroup(id), 'scene') && !!assets.localUrl(sceneGroup(id), 'bin');
+  for (const id of [stageId, ...sceneAliases(stageId)]) if (listed(id)) return id;
+  return null;
+}
+
+/** Does the local-art manifest list the official scene of `stageId` (its own, or an alias's scene)? (manifest only) */
 export async function sceneListed(assets, stageId) {
   if (!stageId || !assets || typeof assets.local !== 'function' || typeof assets.localUrl !== 'function') return false;
   try { await assets.local(); } catch { return false; }
-  return !!assets.localUrl(sceneGroup(stageId), 'scene') && !!assets.localUrl(sceneGroup(stageId), 'bin');
+  return listedSceneKey(assets, stageId) !== null;
 }
 
 /**
@@ -318,6 +359,8 @@ export async function sceneListed(assets, stageId) {
  * (`images.tex`, sRGB) and normal / metallic-gloss (`images.data`, linear) textures + the reflection atlas
  * `images.env`). A missing texture, lightmap page or atlas only drops that map; a missing or malformed scene
  * gives null (→ the procedural board). scene.json `version` stays the mesh layout (SCENE_VERSION).
+ * A stage without a package of its own loads the scene of its base map (`sceneAliases`): `key` then names that
+ * directory and `aliasOf` carries the requested stage id.
  * @returns {Promise<object|null>}
  */
 export function loadScenePack(assets, stageId) {
@@ -326,7 +369,9 @@ export function loadScenePack(assets, stageId) {
   const pending = (async () => {
     if (!(await sceneListed(assets, stageId)) || typeof assets.image !== 'function') return null;
     const url = (g, n) => { const u = assets.localUrl(g, n); return typeof u === 'string' && u ? encodeURI(u) : null; };
-    const group = sceneGroup(stageId);
+    const sceneId = listedSceneKey(assets, stageId);
+    if (!sceneId) return null;
+    const group = sceneGroup(sceneId);
     const [doc, buf] = await Promise.all([fetchJson(url(group, 'scene')), fetchBuffer(url(group, 'bin'))]);
     if (!isObj(doc) || doc.version !== SCENE_VERSION || !buf) return null;
     const chunks = parseSceneChunks(doc, buf);
@@ -349,7 +394,7 @@ export function loadScenePack(assets, stageId) {
     const tex = {}, data = {};
     names.forEach((n, i) => { if (texList[i]) tex[n] = texList[i]; });
     dataNames.forEach((n, i) => { if (dataList[i]) data[n] = dataList[i]; });
-    return { key: `${url(group, 'scene')}#${doc.binBytes | 0}`, stage: stageId, doc, chunks, groups: sceneGroupRects(chunks), images: { tex, data, lm, env } };
+    return { key: `${url(group, 'scene')}#${doc.binBytes | 0}`, stage: stageId, aliasOf: sceneId === stageId ? null : stageId, doc, chunks, groups: sceneGroupRects(chunks), images: { tex, data, lm, env } };
   })().catch((err) => { console.warn('[board3d] scene load failed', err); return null; }).then((pack) => {
     if (!pack && sceneCache.get(stageId) === pending) sceneCache.delete(stageId);
     return pack;

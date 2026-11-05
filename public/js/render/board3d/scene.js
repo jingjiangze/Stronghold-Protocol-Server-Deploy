@@ -35,40 +35,74 @@ import {
 import { syncThreeCamera } from '../projection.js';
 import { mergeSceneChunks, sceneMaterialKey, sceneWaterInfo, isSceneWater } from './load.js';
 
-/** 肉鸽小图场景的裁剪外扩量（格）：画框四边各多留这么多，保住画框边缘的平台与第三层装饰。 */
+/** 肉鸽小图场景的裁剪外扩量（格）：画框四边各多留这么多，保住画框边缘的平台与第三层装饰。
+ *  近侧（−y，相机一侧）也外扩：只砍近侧整段会让跨边界的地面三角形整块丢掉，画框近边露底；
+ *  近侧真正要清走的高体（官方背景墙 / 岩壁，MT_RLhall_background，z≈4.66）由 `ROGUE_SCENE_NEAR_OCCLUDER_Z` 单独判。 */
 export const ROGUE_SCENE_CLIP_MARGIN = 3.5;
 
-/** 肉鸽小图场景裁剪的高度上限：三个顶点 z 全部高于它的三角形丢弃（只丢纯顶盖）。 */
-export const ROGUE_SCENE_CLIP_MAX_Z = 6;
+/** 肉鸽小图场景裁剪的高度上限（格）：整个三角形都在画框外时，任一顶点 z 高于它就丢弃。
+ *  实测官方顶盖 z≈6.3 / 12.3、外景岩壁 z≈4.66；旧判据（三顶点 z 全 > 6）挡不住 4.66 的岩壁，故降到 3 并改成任一顶点，
+ *  且只管整个三角形都在画框外的，碰着画框的瓦檐 / 树冠不削。 */
+export const ROGUE_SCENE_CLIP_MAX_Z = 3.0;
+
+/** 近侧高体（背景墙 / 岩壁）阈值（格）：高于它的近侧几何会糊住棋盘；0.45 ≈ 半格高。 */
+export const ROGUE_SCENE_NEAR_OCCLUDER_Z = 0.45;
+
+/** 所有顶点都在棋盘平面之下（`z <= 0`）？纯远景的 background 大平面靠它免裁。 */
+const allBehind = (p) => {
+  if (p.length < 3) return false;
+  for (let i = 2; i < p.length; i += 3) if (p[i] > 0) return false;
+  return true;
+};
 
 /**
- * 按 `stage.rogueFrame` 裁剪官方场景的一个 chunk（肉鸽小图）：保留画框附近的平台 / 第三层装饰，丢弃外景岩壁与
- * 背景大面。官方 scene 含整张大地图外景，小图放大到官方 0.9× 后这些几何会穿进视野。
- * 本地画框是半格偏移的 `x ∈ [-0.5, w-0.5]`、`y ∈ [-0.5, h-0.5]`，四边各外扩 `margin`；z 另按 `ROGUE_SCENE_CLIP_MAX_Z`
- * 丢掉纯顶盖（三个顶点 z 全超限才丢）。
+ * 按 `stage.rogueFrame` 裁剪官方场景的一个 chunk（肉鸽小图）：保留画框附近的平台 / 第三层装饰，丢弃外景岩壁。
+ * 官方 scene 含整张大地图外景，小图放大到官方 0.9× 后这些几何会穿进视野。
+ * 本地画框是半格偏移的 `x ∈ [-0.5, w-0.5]`、`y ∈ [-0.5, h-0.5]`：四边（左右 / 远侧 +y / 近侧 −y，相机在
+ * `ty − dist·sin tilt`，projection.js「row 0 = bottom = nearest to the camera」）各外扩 `margin`。
+ * 近侧外扩带里另丢高体：任一顶点 `y < fy0` 且三顶点 z 最大值 > `ROGUE_SCENE_NEAR_OCCLUDER_Z` 的三角形丢弃 —— 官方背景墙 /
+ * 岩壁（z≈4.66）横在棋盘前面，而跨边界的地面（maxZ≈0）必须留着，否则画框近边露底。
+ * z 另按 `ROGUE_SCENE_CLIP_MAX_Z` 丢框外的高几何：只作用于三个顶点全在画框外的三角形
+ * （任一顶点超高就丢），碰着画框的瓦檐 / 树冠 / 地形不动。
+ * `material` 含 `_BG` 的背景大面整块保留：它本来就在画框外当远景，裁掉会让场景悬空（有官方场景时不建程序化背景）；
+ * `material` 含 `background` 且全部顶点 `z <= 0` 的纯远景平面同样整块保留。
  * 三个顶点都在框内的三角形才保留，索引类型与原数组一致。
  * 全部保留 → 原样返回 `c`（不复制，scene.bin 的视图仍共享）；全部丢弃 → null；否则 `{ ...c, index }`（不改 c.index，
  * pack 会被缓存）。
- * @param {{ position: Float32Array, index: Uint16Array|Uint32Array }} c mergeSceneChunks 之前的单个 chunk
+ * @param {{ material?: string, position: Float32Array, index: Uint16Array|Uint32Array }} c mergeSceneChunks 之前的单个 chunk
  * @param {number} w 画框宽（格）
  * @param {number} h 画框高（格）
- * @param {number} [margin] 外扩（格）
+ * @param {number} [margin] 四边（左右 / 远侧 / 近侧）的外扩（格）
  */
 export function clipSceneChunkToFrame(c, w, h, margin = ROGUE_SCENE_CLIP_MARGIN) {
   const pos = c?.position, idx = c?.index;
   if (!pos || !idx || idx.length < 3) return c;
-  const x0 = -0.5 - margin, x1 = w - 0.5 + margin;
-  const y0 = -0.5 - margin, y1 = h - 0.5 + margin;
+  if (typeof c.material === 'string' && c.material.includes('_BG')) return c; // 背景大面：整块留作远景
+  // 纯远景 background 大平面（全部顶点 z <= 0）也整块留：裁掉会让场景后面空掉；z > 0 的同类面（近侧景墙）仍走下面的近侧判据
+  if (typeof c.material === 'string' && c.material.includes('background') && allBehind(pos)) return c;
+  const fx0 = -0.5, fx1 = w - 0.5, fy0 = -0.5, fy1 = h - 0.5;
+  const x0 = fx0 - margin, x1 = fx1 + margin;
+  const y0 = fy0 - margin, y1 = fy1 + margin;
   const inside = (v) => {
     const x = pos[v], y = pos[v + 1];
     return x >= x0 && x <= x1 && y >= y0 && y <= y1;
   };
+  const inFrame = (v) => {
+    const x = pos[v], y = pos[v + 1];
+    return x >= fx0 && x <= fx1 && y >= fy0 && y <= fy1;
+  };
+  const nearBand = (v) => pos[v + 1] < fy0;
+  const high = (v) => pos[v + 2] > ROGUE_SCENE_CLIP_MAX_Z;
   const keep = [];
   for (let i = 0; i + 2 < idx.length; i += 3) {
     const a = idx[i] * 3, b = idx[i + 1] * 3, d = idx[i + 2] * 3;
     if (inside(a) && inside(b) && inside(d)) {
-      // 顶棚/树海顶盖（如 ro5 z≈6.3、ro6 z≈12.3）整块在画框内，x/y 裁不掉；高度阈值只丢纯顶盖，保留瓦檐/树冠/地形
-      if (pos[a + 2] > ROGUE_SCENE_CLIP_MAX_Z && pos[b + 2] > ROGUE_SCENE_CLIP_MAX_Z && pos[d + 2] > ROGUE_SCENE_CLIP_MAX_Z) continue;
+      // 近侧外扩带里的高体（背景墙 / 岩壁 z≈4.66）会横在棋盘前面：任一顶点越过画框近边且三顶点 z 最大超过阈值就丢；
+      // 低平地面（maxZ≈0）跨过近边界时保留，否则画框近边露底
+      if ((nearBand(a) || nearBand(b) || nearBand(d))
+        && Math.max(pos[a + 2], pos[b + 2], pos[d + 2]) > ROGUE_SCENE_NEAR_OCCLUDER_Z) continue;
+      // 顶棚 / 树海顶盖（如 ro5 z≈6.3、ro6 z≈12.3）x/y 裁不掉；高度阈值只管整个三角形都在画框外的，任一顶点超高就丢
+      if (!inFrame(a) && !inFrame(b) && !inFrame(d) && (high(a) || high(b) || high(d))) continue;
       keep.push(idx[i], idx[i + 1], idx[i + 2]);
     }
   }
@@ -119,9 +153,26 @@ export function gatePulse(t, [from, mid] = GATE_TINT.start.alpha) {
 }
 
 /**
- * Is a named part of an official scene (its ground rect [x0, y0, x1, y1]) shown with the built `areas`? The official
- * scene keeps each field as a sub-graphic it switches on (HIDDEN@n: the left / right normal field, the boss field);
- * a part is shown when its centre lies in one of the areas.
+ * A named part's ground rect `[x0, y0, x1, y1]` moved from scene-local to stage coordinates (add the frame's origin):
+ * `f` = `stage.rogueFrame` (`{ row, col, h, w }`), null for a scene drawn at the stage origin (no rogue frame).
+ * @param {number[]|null|undefined} r
+ * @param {{ row?: number, col?: number }|null|undefined} f
+ * @returns {number[]|null|undefined} the translated rect, or `r` itself when there is nothing to move
+ */
+export function translateRect(r, f) {
+  if (!Array.isArray(r) || r.length < 4 || !f) return r;
+  const dx = Number(f.col) || 0, dy = Number(f.row) || 0;
+  if (!dx && !dy) return r;
+  return [r[0] + dx, r[1] + dy, r[2] + dx, r[3] + dy];
+}
+
+/**
+ * Is a named part of an official scene (its ground rect [x0, y0, x1, y1], in STAGE tiles) shown with the built `areas`?
+ * The official scene keeps each field as a sub-graphic it switches on (HIDDEN@n: the left / right normal field, the
+ * boss field); a part is shown when its centre lies in one of the areas.
+ * The group rects in `pack.groups` are SCENE-LOCAL (load.js `sceneGroupRects` takes them from the chunks' bounds), so
+ * translate them with `translateRect(rect, stage.rogueFrame)` before comparing: a rogue scene is drawn shifted by
+ * (col, row) (`_buildScene`).
  */
 export function sceneGroupVisible(rect, areas) {
   if (!Array.isArray(rect) || rect.length < 4) return true;
@@ -476,7 +527,7 @@ export class BoardScene {
     // 肉鸽官方小图（stage.rogueFrame）嵌在 19×21 画框里：场景几何以官方小图 (0,0) 为原点，
     // 整组平移到画框左上角；设备 / 门 / 场界 / 地形已是 stage 坐标，不参与这次平移。
     const f = this.stage?.rogueFrame;
-    // 画框尺寸（格）：有的话按它裁掉画框外的外景岩壁 / 背景大面（见 clipSceneChunkToFrame）
+    // 画框尺寸（格）：有的话按它裁掉画框外的外景岩壁与近侧景墙（见 clipSceneChunkToFrame）
     const fw = f ? Number(f.w) || 0 : 0;
     const fh = f ? Number(f.h) || 0 : 0;
     const sceneRoot = f ? new T.Group() : this.root;
@@ -488,7 +539,8 @@ export class BoardScene {
     for (const c0 of pack.chunks || []) {
       const c = f && fw > 0 && fh > 0 ? clipSceneChunkToFrame(c0, fw, fh) : c0;
       if (!c) continue;
-      if (c.group && !sceneGroupVisible(pack.groups?.[c.group], this.area)) continue;
+      // group 矩形是场景局部坐标（load.js sceneGroupRects 取自 chunk.bounds），先平移到画框原点再比 stage 的 area
+      if (c.group && !sceneGroupVisible(translateRect(pack.groups?.[c.group], f), this.area)) continue;
       const info = infos[c.material] || null;
       const mk = sceneMaterialKey(c, info);
       let bucket = buckets.get(mk);

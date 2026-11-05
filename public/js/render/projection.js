@@ -396,6 +396,25 @@ export function officialCamera(param, viewport, opts) {
 const HUD_TOLERANCE = 0.5;
 /** Gap (px) an adjusted camera leaves between the kept band and the HUD when there is room (no seam under an edge). */
 const HUD_GAP = 1;
+/** Minimum usable height (px) between the HUD bands; below it the HUD wins and the framing stays as it is. */
+const HUD_MIN_BAND = 16;
+
+/**
+ * The viewport band left between the HUD edges, in CSS px: `{ top, bottom }` (`top` and `bottom` = distance from the
+ * viewport's top edge), or null when `hud` is missing or the HUD leaves less than HUD_MIN_BAND between its bands.
+ * `hud` = { top, bottom }: CSS px the HUD covers along the viewport's top edge (top bar + bond strip) and bottom edge
+ * (the shop bar). The one place that turns the HUD's edge insets into a band: both the official cameras (`clearHud`)
+ * and the fitted fallback (its padding) keep their framing inside it.
+ * @param {{ top?: number, bottom?: number }|null} hud
+ * @param {{ width: number, height: number }} viewport CSS px
+ * @returns {{ top: number, bottom: number }|null}
+ */
+export function hudBandRect(hud, viewport) {
+  if (!hud || typeof hud !== 'object') return null;
+  const H = Math.max(1, finite(viewport?.height, 1));
+  const top = Math.max(0, finite(hud.top, 0)), bottom = H - Math.max(0, finite(hud.bottom, 0));
+  return bottom - top > HUD_MIN_BAND ? { top, bottom } : null; // no usable space: keep the plain framing
+}
 
 /**
  * Keep a band of the board clear of the HUD (see the header). `hud` = { top, bottom }: CSS px the HUD covers along
@@ -413,9 +432,10 @@ const HUD_GAP = 1;
  */
 export function clearHud(cam, hud, keep, viewport) {
   if (!cam || !hud || typeof hud !== 'object' || !keep) return cam;
-  const W = Math.max(1, finite(viewport?.width, 1)), H = Math.max(1, finite(viewport?.height, 1));
-  const top = Math.max(0, finite(hud.top, 0)), bottom = H - Math.max(0, finite(hud.bottom, 0));
-  if (!(bottom - top > 16)) return cam; // no usable space: keep the official framing
+  const W = Math.max(1, finite(viewport?.width, 1));
+  const band = hudBandRect(hud, viewport);
+  if (!band) return cam; // no usable space: keep the official framing
+  const top = band.top, bottom = band.bottom;
   const yNear = cam.project(cam.tx, keep.near, finite(keep.zNear, 0)).y;
   const yFar = cam.project(cam.tx, keep.far, finite(keep.zFar, 0)).y;
   if (!Number.isFinite(yNear) || !Number.isFinite(yFar) || !(yNear > yFar)) return cam;
@@ -442,9 +462,11 @@ const sameRect = (a, b) => !!a && !!b && a.r0 === b.r0 && a.r1 === b.r1 && a.c0 
  * fitted into the padded viewport (`fitCamera`). `opts.side` 'L'|'R' picks the side's param (right boss half);
  * `opts.half` frames only that half of a unite/boss field; `opts.shop === false` uses the shop-collapsed prep camera.
  * `opts.hud` = { top, bottom } (CSS px of HUD along the top / bottom edge): the official prep / Final Assault prep
- * camera keeps the bench and the field clear of it (`clearHud`, the preset's `keep` band).
- * `opts.boardOnly` / `opts.targetTilePx` reach the fitted fallback only (`fitCamera`): frame the rect's corners alone
- * (no margin / headroom) and cap the zoom at that many CSS px per tile.
+ * camera keeps the bench and the field clear of it (`clearHud`, the preset's `keep` band); a fitted camera takes the
+ * band on its **bottom** edge only when it frames a whole board alone (`opts.boardOnly`, the rogue maps — their own
+ * padding reserves the top by design, 10% of the viewport), so a custom-rect / portrait fitted camera keeps the framing
+ * it always had. `opts.boardOnly` / `opts.targetTilePx` reach the fitted fallback only (`fitCamera`): frame the rect's
+ * corners alone (no margin / headroom) and cap the zoom at that many CSS px per tile.
  */
 export function presetCamera(kind, viewport, options) {
   const opts = options && typeof options === 'object' ? options : {};
@@ -481,7 +503,20 @@ export function presetCamera(kind, viewport, options) {
   // a narrow rect (e.g. a solo boss half) keeps the normal optics; wide ones use the preset's wider lens
   const wide = rect.c1 - rect.c0 >= 14;
   const base = wide ? preset : CAMERA_PRESETS[k === 'prep' || k === 'bossPrep' ? 'prep' : 'normal'];
-  return fitCamera(rect, viewport, {
+  // a fitted camera keeps its bottom edge clear of the shop bar as the official ones do (clearHud) — and only when it
+  // frames a whole board alone (`boardOnly`, the rogue maps): that padding reserves the top by design (10% of the
+  // viewport, the smaller-map framing) and already covers the shop band, so this is the standing guarantee for the
+  // bottom edge, not a second top inset. Every other fitted camera (custom rect, portrait viewport) keeps the plain
+  // framing it had before this band existed.
+  let vp = viewport;
+  if (opts.boardOnly === true && opts.hud) {
+    const band = hudBandRect(opts.hud, { width: W, height: H });
+    if (band) {
+      const pad = viewport?.padding || {};
+      vp = { width: W, height: H, padding: { ...pad, bottom: Math.max(finite(pad.bottom, 0), H - band.bottom) } };
+    }
+  }
+  return fitCamera(rect, vp, {
     tilt: finite(opts.tilt, base.tilt), dist: finite(opts.dist, base.dist),
     margin: finite(opts.margin, preset.margin), headroom: finite(opts.headroom, preset.headroom),
     maxTilePx: opts.maxTilePx, minTilePx: opts.minTilePx,

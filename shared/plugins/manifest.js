@@ -189,7 +189,7 @@ const SETTING_TYPES = ['boolean', 'integer', 'number', 'enum'];
 /** Top-level fields of manifest 2 (anything else is warned about and ignored). */
 const V2_FIELDS = new Set(['$schema', 'manifest', 'id', 'name', 'englishName', 'description', 'version', 'app', 'api', 'class', 'scope',
   'authors', 'credits', 'license', 'homepage', 'sourceLang', 'requires', 'optional', 'conflicts', 'loadAfter', 'loadBefore', 'priority',
-  'settings', 'permissions', 'overrides', 'rules', 'entry', 'code', 'slots', 'notices', 'files', 'lang', 'base', 'fallback', 'complete', 'machineTranslated', 'numberUnits', ...Object.keys(PARTS)]);
+  'settings', 'permissions', 'overrides', 'rules', 'entry', 'code', 'csp', 'slots', 'notices', 'files', 'lang', 'base', 'fallback', 'complete', 'machineTranslated', 'numberUnits', ...Object.keys(PARTS)]);
 /** Those fields, sorted, for the frozen API table (docs/PLUGIN-API.md). */
 export const MANIFEST_FIELDS = Object.freeze([...V2_FIELDS].sort());
 /** Fields only a lang plugin has. */
@@ -610,6 +610,15 @@ export function readPluginManifest(raw, ctx) {
     if (isObj(m.code)) code = JSON.parse(JSON.stringify(m.code));
     else list.warning('PLUGIN_FIELD_UNKNOWN', `"code": ${short(m.code)} is not an object (ignored)`, { at: ['code'] });
   }
+  // `csp` (2026-11-05): the cross-origin sources a plugin needs merged into the site CSP — the consumer is
+  // server/boot-main.js, which re-validates every entry against an https-origin regex, so this only has to keep the
+  // object (a string such as "off" is not one and is dropped, exactly as the field documented nothing else).
+  /** @type {Record<string, any> | undefined} */
+  let csp;
+  if (m.csp !== undefined) {
+    if (isObj(m.csp)) csp = JSON.parse(JSON.stringify(m.csp));
+    else list.warning('PLUGIN_FIELD_UNKNOWN', `"csp": ${short(m.csp)} is not an object (ignored)`, { at: ['csp'] });
+  }
 
   const cls = typeof m.class === 'string' ? m.class : '';
   const kind = has(PLUGIN_CLASSES, cls) ? PLUGIN_CLASSES[cls] : null;
@@ -777,6 +786,7 @@ export function readPluginManifest(raw, ctx) {
     authors: authorsOf(m.authors), credits: str(m.credits, 500), license: str(m.license, 100), homepage, sourceLang: sourceLang || SOURCE_LANG,
     requires, optional, conflicts, loadAfter, loadBefore, priority, settings, permissions, parts, entry, slots, files: {},
     ...(code ? { code } : {}),
+    ...(csp ? { csp } : {}),
     ...(m.overrides !== undefined ? { overrides } : {}),
     ...(parts.theme?.themeVars ? { themeVars: parts.theme.themeVars } : {}),
     ...(notices ? { notices } : {}),
