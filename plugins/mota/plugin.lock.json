@@ -637,20 +637,20 @@
       "bytes": 4401
     },
     "server/match/Match.js": {
-      "sha256": "39968b932f6098af1ef78aeb5c0367645e7b6d8f2398e08aac0f727d7c0666c2",
-      "bytes": 58000
+      "sha256": "1832f213d4d20befd926f7283312983412f62311b527da1406be64f375fc338f",
+      "bytes": 59053
     },
     "server/match/PlayerState.js": {
-      "sha256": "15d92ddbf47f7175183220bb6e8297c6c9b824a05fae440efec999b28c45a5af",
-      "bytes": 23730
+      "sha256": "07b91abb93a84998988d75623cbea98c5610239aff56bdb89cc592e9374b2860",
+      "bytes": 24065
     },
     "server/match/StubMatch.js": {
       "sha256": "b0b3821046b37d2591dfb12efe7c55f72a1c5eb75400bf5292022cb21d9fa259",
       "bytes": 13536
     },
     "server/match/audit.js": {
-      "sha256": "67e752708ce966f23d000b75f46eda2ff56d496b5bcf5467c91d95cda5faf8ca",
-      "bytes": 31569
+      "sha256": "958e191f4b0786969097f4a8f6fe6d07ea2ab849de210f826fdd19d92f4b54cc",
+      "bytes": 31577
     },
     "server/match/board.js": {
       "sha256": "f2b669d1cbe223184349968f729d6f0d674f7c6908f3b31e507bac7301194f3e",
@@ -661,8 +661,8 @@
       "bytes": 12635
     },
     "server/match/bot.js": {
-      "sha256": "dd27eb25429f92c1a2c0c32eee95f745eb8dd183869bc578a549ce938f696015",
-      "bytes": 113700
+      "sha256": "7df2e91930ddde779faec53fec31389b08d3b50980d13f5e2db681928a2c9bd5",
+      "bytes": 113748
     },
     "server/match/botEmotes.js": {
       "sha256": "d617b26a4db1606cbd6c9d478f5f8c7c53026526b6f13dc7c8d808a735457bf7",
@@ -673,8 +673,8 @@
       "bytes": 20187
     },
     "server/match/choices.js": {
-      "sha256": "be3deb37978d48de739e25698fc2b0bf4bbfc8fbc0d57a562ccc4f0a3b2a2fef",
-      "bytes": 31958
+      "sha256": "794d05d63703fc480ee155c8525802199060c9f9f3a827d9cd66f12cf472baf8",
+      "bytes": 31974
     },
     "server/match/dslMeta.js": {
       "sha256": "b04d17ed59aa1b6de13ea55c429e5d70edd2a3aefa6ddfce7d603316bed93a72",
@@ -717,8 +717,8 @@
       "bytes": 11896
     },
     "server/match/invariants.js": {
-      "sha256": "c9d3008ddaba1a19300f355dce4405d5188acd6a09dc22a4f6dbaf1e8b7ed47b",
-      "bytes": 24937
+      "sha256": "53bd1a7ea58915935db4b332549cd4fd45b3cd9137b2cdefce8f7a832a1e98b7",
+      "bytes": 25812
     },
     "server/match/match/bossRounds.js": {
       "sha256": "ea3dca5ff92b3c974fc0f508788a536561a26d21cd31eb98691ad39089bab881",
@@ -765,8 +765,8 @@
       "bytes": 68606
     },
     "server/match/match/infra.js": {
-      "sha256": "9e2431b9a017e41ce6ac8c8285efb1fd1668201770610895757f3bc10f51fea4",
-      "bytes": 11680
+      "sha256": "67e73a9bbf3fcdca072ffea0d1e54ad2592666292c09d6e2db66ddc6d7e8adc6",
+      "bytes": 12105
     },
     "server/match/match/intents.js": {
       "sha256": "ba26cb562aa39ec79e2bd2eb3662ea1ca2e4c0f6a8c602c924ff142c71c35f5c",
@@ -793,8 +793,8 @@
       "bytes": 35371
     },
     "server/match/match/platform.js": {
-      "sha256": "229a7f02263d8a2b5a1c5bf3dd16de656a7bc143fff8ee23973f3cbc1db93249",
-      "bytes": 21073
+      "sha256": "3ae49bab6d84b40493644a0eb3eb5f432c2a70d8abbd442edd370f7cee70c4f4",
+      "bytes": 21107
     },
     "server/match/match/poolFill.js": {
       "sha256": "51cf6a09ec0fcfc1ed981d3a8723645d49f94dd9ac613a9b994d21cabf958df3",
@@ -833,8 +833,8 @@
       "bytes": 5181
     },
     "server/match/match/spDraft.js": {
-      "sha256": "02fe5ab934998fefc7af30ae17b455404abed08fb480e459d41f6422dee945f8",
-      "bytes": 14394
+      "sha256": "60c211d892c4bd07e382d48606fd2bc1cf2a338dfa65aaa337e1cdf260cf4820",
+      "bytes": 14579
     },
     "server/match/match/testCommands.js": {
       "sha256": "7bf0688a11bb26038220a270361f13d9a7d3cd6dfc1f9f3c029ad082e6dc0013",
@@ -861,8 +861,8 @@
       "bytes": 4231
     },
     "server/match/player/acquire.js": {
-      "sha256": "5e118e84a3ee1ffa7d03bc674868c1a7cfeed41ec747f1a734710234c6324d37",
-      "bytes": 21122
+      "sha256": "09a6dc1189b021f5a5f513a8fb823d52c585f113c81bc071505eedc2042e097d",
+      "bytes": 21127
     },
     "server/match/player/basics.js": {
       "sha256": "47379557236bb1157636df32d0670d7e151d1c2eeb71c48de72d420c773f253e",
@@ -873,12 +873,12 @@
       "bytes": 537
     },
     "server/match/player/diy.js": {
-      "sha256": "d4c14e22c4cfd2cfb30e9985234737a160c9aab66868b9e642e8b115f8fa49f5",
-      "bytes": 14789
+      "sha256": "29bed0db8e62c503e202c58c401473cdf2992c195ca9b281da7b2b261b4370d9",
+      "bytes": 14794
     },
     "server/match/player/economy.js": {
-      "sha256": "7ac62141878ff09cc8bd50c9fd14ddeecd46a556274c8cdf0bfa889ac330d73f",
-      "bytes": 16055
+      "sha256": "63d6aef488f34a6df3e65a47310a6d096477970bce122835df1caef8cf9febab",
+      "bytes": 16060
     },
     "server/match/player/items.js": {
       "sha256": "b952e33a26fc94b95437fd3bc2b347ca69972d3f9733bdca272f2caaf8bf562e",
@@ -909,8 +909,8 @@
       "bytes": 11428
     },
     "server/match/pool.js": {
-      "sha256": "7e773a659703974961e98cce64775f50b5b22f065a8052f02bdbba9b56248a5f",
-      "bytes": 14222
+      "sha256": "b1dd5c0812778b3bfb7848826422e1c9ccc3b881cbf3bd3cee0fc83e6c53ff72",
+      "bytes": 14808
     },
     "server/match/preview.js": {
       "sha256": "5aff3c9719ac83a34e0a662c4dc5d28337e9c855846f8c4a79140cb8f9299c9e",

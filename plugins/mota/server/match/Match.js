@@ -215,6 +215,8 @@ import { mergeBehaviourDecls } from '../../shared/behaviour.js';
 import { morphPairingOf } from '../../shared/morph.js';
 import { formView, isEliteForm } from '../../shared/formProjection.js';
 import { layoutOf } from '../../shared/layout.js';
+// 分组牌库的人数规律只有根树一份 (plugins/mota/shared 没有 playerCapacity.js，与 results.js 引 crisisScore 同一条根路径)
+import { poolGroupSizes, poolCopyScale } from '../../../../shared/playerCapacity.js';
 import { Battle } from '../sim/Battle.js';
 import { DataSource } from '../sim/simdata.js';
 import { createRng, deriveSeed } from '../sim/rng.js';
@@ -647,7 +649,20 @@ export class Match {
       .sort();
     // 上游 0.2.4（DESIGN §31.8 共享库存）与我们的助战供给落在同一行，两者互不相干，故并存：
     // 助战多一份拷贝走 SharedPool 的 support 选项；共享装备库存是另一个池，由 SharedItemPool 表达。
-    this.pool = new SharedPool(this.gd, { banned: bans.banned, support: this.supportSupply });
+    // 分组牌库 (owner 2026-11-05「每四人一个分组牌库」): one SharedPool per ≤4-seat group, in seat order
+    // (root shared/playerCapacity.js poolGroupSizes / poolCopyScale); `this.pool` stays the first group, each seat's
+    // `poolId` picks its own group.
+    // 百卫 100 座 variant 保持原来的单池语义（poolGroupSizes 只接受 ≤MAX_SEATS）
+    const groupSizes = this.variant ? [this.order.length] : poolGroupSizes(this.order.length);
+    this.pools = groupSizes.map((size) => new SharedPool(this.gd, {
+      banned: bans.banned,
+      copyScale: poolCopyScale(size),
+      ...(this.supportSupply ? { support: this.supportSupply } : {}),
+    }));
+    this.pool = this.pools[0];
+    const groupOfSeat = [];
+    groupSizes.forEach((size, gi) => { for (let k = 0; k < size; k++) groupOfSeat.push(gi); });
+    this.order.forEach((ps, i) => { ps.poolId = groupOfSeat[i] ?? 0; });
     this.itemPool = new SharedItemPool(this.gd, () => this.order);
     // 自选编队 (0.2.0): each human's slotted DIY pieces get their own stock — none for one whose bonds are all off this
     // match (player/diy.js initDiyStock); no randomness is drawn here

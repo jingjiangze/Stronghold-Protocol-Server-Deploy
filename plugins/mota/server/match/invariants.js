@@ -288,14 +288,29 @@ export function collectViolations(m, { limit = 25 } = {}) {
     for (const [base, n] of diyHeld) if (!(ps.diyStock && ps.diyStock.has(base)) && n !== 0) fail(`${id}: 自选 slot ${base} without stock holds ${n} copies`);
   }
 
-  // shared pool accounting
+  // shared pool accounting, per 4-player pool group (owner 2026-11-05 分组牌库): a group's stock balances against the
+  // copies its own seats hold — `held` spans the whole room and must not be used here. ≤ 4 seats is one group, which
+  // keeps the original statement (and its messages) unchanged.
   if (!independent) {
-    for (const [base, e] of m.pool.entries) {
-      if (!(Number.isInteger(e.left) && e.left <= e.cap)) fail(`pool ${base}: balance ${e.left} cap ${e.cap}`);
-      const h = held.get(base) || 0;
-      if (e.left + h !== e.cap) fail(`pool ${base}: left ${e.left} + held ${h} != cap ${e.cap}`);
+    const pools = m.pools && m.pools.length ? m.pools : [m.pool];
+    const heldOfGroup = new Map();
+    for (const ps of m.players.values()) {
+      const gid = ps.poolId ?? 0;
+      let g = heldOfGroup.get(gid);
+      if (!g) heldOfGroup.set(gid, g = new Map());
+      for (const [base, n] of heldOf.get(ps.playerId) || []) g.set(base, (g.get(base) || 0) + n);
     }
-    for (const [base, n] of held) if (!m.pool.has(base) && n !== 0) fail(`non-pool chess ${base} holds ${n} copies`);
+    for (let gid = 0; gid < pools.length; gid++) {
+      const pool = pools[gid];
+      const gheld = heldOfGroup.get(gid) || new Map();
+      const tag = pools.length > 1 ? `[${gid}]` : '';
+      for (const [base, e] of pool.entries) {
+        if (!(Number.isInteger(e.left) && e.left <= e.cap)) fail(`pool${tag} ${base}: balance ${e.left} cap ${e.cap}`);
+        const h = gheld.get(base) || 0;
+        if (e.left + h !== e.cap) fail(`pool${tag} ${base}: left ${e.left} + held ${h} != cap ${e.cap}`);
+      }
+      for (const [base, n] of gheld) if (!pool.has(base) && n !== 0) fail(`non-pool chess${tag} ${base} holds ${n} copies`);
+    }
   } else {
     // 100-seat variant: the shared pool is the canonical CATALOG — its `entries` are the authoritative id set and its
     // caps the copy ceilings (audit.js, platform.js, the shop), but no copies are taken from it, so only its balance
