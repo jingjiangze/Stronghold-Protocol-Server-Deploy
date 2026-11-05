@@ -169,8 +169,8 @@
       "bytes": 2473
     },
     "client/js/screens/room.js": {
-      "sha256": "1dd2200a85c2ec637525db44db89d6ee28a90206317b99f12ed611b909b06266",
-      "bytes": 67370
+      "sha256": "17b9a2ac76b3e9079fd4b56bc17f1c15f082868729aa18cf3cf09ecf6035ac29",
+      "bytes": 67211
     },
     "client/js/screens/settle.js": {
       "sha256": "b24be7296acfddff02d34011becb8f5c9d2eed0796d6cdacb235d924e8471d61",
@@ -189,8 +189,8 @@
       "bytes": 28200
     },
     "client/js/screens/title.js": {
-      "sha256": "8ff9e4a91faa912ef24144be981f2af8075b1cf16d3fc594dbd0a0ac4e30f235",
-      "bytes": 15069
+      "sha256": "65172de01c0e01c47309fabbdb6525e532eaa708429d1845a4659795530b5913",
+      "bytes": 14147
     },
     "client/js/screens/xieRoom.js": {
       "sha256": "4b5c66db5a7306bf455f1b1e8b664b296e6b809105c2ab2fd0b6b10084c377fd",
@@ -437,8 +437,8 @@
       "bytes": 3725
     },
     "client/js/ui/settings.js": {
-      "sha256": "f5442353725239dc0c42b2cca6658716ca914488c1104054d59230f992a88d2f",
-      "bytes": 40486
+      "sha256": "f52d89496663b5576c223ca0c46024ac73e952a66ce2d80ee6132b29e3e172c5",
+      "bytes": 37209
     },
     "client/js/ui/shopBar.js": {
       "sha256": "7a2d96353ee26181281c0f91192061654bbaaae0b2d37860fc45eae84ceb1c0b",
