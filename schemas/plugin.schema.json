@@ -937,7 +937,7 @@
       },
       "uniqueItems": true,
       "minItems": 1,
-      "maxItems": 4,
+      "maxItems": 5,
       "description": "ui: the places the page asks for (DESIGN §32.8). One slot per plugin is granted; absent or empty, the plugin loads and the host grants none (a warning)."
     },
     "files": {},
