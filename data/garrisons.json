@@ -6807,5 +6807,1471 @@
     "owners": [
       "chess_char_6_20_b"
     ]
+  },
+  "garrison_c_amiya_a": {
+    "garrisonId": "garrison_c_amiya_a",
+    "desc": "<获得时>获得1件“精打细算玩偶”",
+    "eventType": "SERVER_GAIN",
+    "effectType": "CUSTOM",
+    "effectKey": "custom_grant_item_on_acquire",
+    "charLevel": 0,
+    "bb": {
+      "count": 1
+    },
+    "bbStr": {
+      "key": "custom_grant_item_on_acquire",
+      "item": "chess_item_2_05_e_a"
+    },
+    "owners": [
+      "chess_char_9_14_a"
+    ],
+    "eventTypeDesc": "整备能力",
+    "eventTypeIcon": "icon_gold",
+    "descRaw": "<获得时>获得1件“精打细算玩偶”",
+    "battleRuneKey": null
+  },
+  "garrison_c_amiya_b": {
+    "garrisonId": "garrison_c_amiya_b",
+    "desc": "<获得时>获得2件“精打细算玩偶”",
+    "eventType": "SERVER_GAIN",
+    "effectType": "CUSTOM",
+    "effectKey": "custom_grant_item_on_acquire",
+    "charLevel": 0,
+    "bb": {
+      "count": 2
+    },
+    "bbStr": {
+      "key": "custom_grant_item_on_acquire",
+      "item": "chess_item_2_05_e_a"
+    },
+    "owners": [
+      "chess_char_9_14_b"
+    ],
+    "eventTypeDesc": "整备能力",
+    "eventTypeIcon": "icon_gold",
+    "descRaw": "<获得时>获得2件“精打细算玩偶”",
+    "battleRuneKey": null
+  },
+  "garrison_c_ascln_k_a": {
+    "garrisonId": "garrison_c_ascln_k_a",
+    "desc": "<战斗中>攻击范围内每有2个敌人被击倒时自身所属盟约层数+3（每场战斗最多24层）",
+    "eventType": "IN_BATTLE",
+    "effectType": "CUSTOM",
+    "effectKey": "custom_gain_on_kills",
+    "charLevel": 0,
+    "bb": {
+      "per_kills": 2,
+      "gain": 3,
+      "max": 24
+    },
+    "bbStr": {
+      "key": "custom_gain_on_kills"
+    },
+    "owners": [
+      "chess_char_9_09_a"
+    ],
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "descRaw": "<战斗中>攻击范围内每有2个敌人被击倒时自身所属盟约层数<@ba.vup>+3</>（每场战斗最多24层）",
+    "battleRuneKey": null
+  },
+  "garrison_c_ascln_k_b": {
+    "garrisonId": "garrison_c_ascln_k_b",
+    "desc": "<战斗中>攻击范围内每有2个敌人被击倒时自身所属盟约层数+6（每场战斗最多48层）",
+    "eventType": "IN_BATTLE",
+    "effectType": "CUSTOM",
+    "effectKey": "custom_gain_on_kills",
+    "charLevel": 0,
+    "bb": {
+      "per_kills": 2,
+      "gain": 6,
+      "max": 48
+    },
+    "bbStr": {
+      "key": "custom_gain_on_kills"
+    },
+    "owners": [
+      "chess_char_9_09_b"
+    ],
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "descRaw": "<战斗中>攻击范围内每有2个敌人被击倒时自身所属盟约层数<@ba.vup>+6</>（每场战斗最多48层）",
+    "battleRuneKey": null
+  },
+  "garrison_c_durnar_a": {
+    "garrisonId": "garrison_c_durnar_a",
+    "desc": "<战斗中>开启技能时，使已激活的【罗德岛】层数+2",
+    "eventType": "IN_BATTLE",
+    "effectType": "CUSTOM",
+    "effectKey": "custom_gain_on_skill",
+    "charLevel": 0,
+    "bb": {
+      "gain": 2
+    },
+    "bbStr": {
+      "key": "custom_gain_on_skill"
+    },
+    "owners": [
+      "chess_char_9_13_a"
+    ],
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "descRaw": "<战斗中>开启技能时，使已激活的【罗德岛】层数<@ba.vup>+2</>",
+    "battleRuneKey": null
+  },
+  "garrison_c_durnar_b": {
+    "garrisonId": "garrison_c_durnar_b",
+    "desc": "<战斗中>开启技能时，使已激活的【罗德岛】层数+4",
+    "eventType": "IN_BATTLE",
+    "effectType": "CUSTOM",
+    "effectKey": "custom_gain_on_skill",
+    "charLevel": 0,
+    "bb": {
+      "gain": 4
+    },
+    "bbStr": {
+      "key": "custom_gain_on_skill"
+    },
+    "owners": [
+      "chess_char_9_13_b"
+    ],
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "descRaw": "<战斗中>开启技能时，使已激活的【罗德岛】层数<@ba.vup>+4</>",
+    "battleRuneKey": null
+  },
+  "garrison_c_frostl_a": {
+    "garrisonId": "garrison_c_frostl_a",
+    "desc": "<战斗中>每次攻击不同的敌人时，使已激活的【罗德岛】层数+1（每场战斗至多10层）",
+    "eventType": "IN_BATTLE",
+    "effectType": "CUSTOM",
+    "effectKey": "custom_gain_on_new_target",
+    "charLevel": 0,
+    "bb": {
+      "gain": 1,
+      "max": 10
+    },
+    "bbStr": {
+      "key": "custom_gain_on_new_target"
+    },
+    "owners": [
+      "chess_char_9_11_a"
+    ],
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "descRaw": "<战斗中>每次攻击不同的敌人时，使已激活的【罗德岛】层数<@ba.vup>+1</>（每场战斗至多10层）",
+    "battleRuneKey": null
+  },
+  "garrison_c_frostl_b": {
+    "garrisonId": "garrison_c_frostl_b",
+    "desc": "<战斗中>每次攻击不同的敌人时，使已激活的【罗德岛】层数+2（每场战斗至多20层）",
+    "eventType": "IN_BATTLE",
+    "effectType": "CUSTOM",
+    "effectKey": "custom_gain_on_new_target",
+    "charLevel": 0,
+    "bb": {
+      "gain": 2,
+      "max": 20
+    },
+    "bbStr": {
+      "key": "custom_gain_on_new_target"
+    },
+    "owners": [
+      "chess_char_9_11_b"
+    ],
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "descRaw": "<战斗中>每次攻击不同的敌人时，使已激活的【罗德岛】层数<@ba.vup>+2</>（每场战斗至多20层）",
+    "battleRuneKey": null
+  },
+  "garrison_c_hodrer_a": {
+    "garrisonId": "garrison_c_hodrer_a",
+    "desc": "<战斗中>受到治疗和伤害后使自身已激活的盟约层数+1，最多20层",
+    "eventType": "IN_BATTLE",
+    "effectType": "CUSTOM",
+    "effectKey": "custom_gain_on_hurt_or_heal",
+    "charLevel": 0,
+    "bb": {
+      "gain": 1,
+      "max": 20
+    },
+    "bbStr": {
+      "key": "custom_gain_on_hurt_or_heal"
+    },
+    "owners": [
+      "chess_char_9_06_a"
+    ],
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "descRaw": "<战斗中>受到治疗和伤害后使自身已激活的盟约层数<@ba.vup>+1</>，最多20层",
+    "battleRuneKey": null
+  },
+  "garrison_c_hodrer_b": {
+    "garrisonId": "garrison_c_hodrer_b",
+    "desc": "<战斗中>受到治疗和伤害后使自身已激活的盟约层数+2，最多40层",
+    "eventType": "IN_BATTLE",
+    "effectType": "CUSTOM",
+    "effectKey": "custom_gain_on_hurt_or_heal",
+    "charLevel": 0,
+    "bb": {
+      "gain": 2,
+      "max": 40
+    },
+    "bbStr": {
+      "key": "custom_gain_on_hurt_or_heal"
+    },
+    "owners": [
+      "chess_char_9_06_b"
+    ],
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "descRaw": "<战斗中>受到治疗和伤害后使自身已激活的盟约层数<@ba.vup>+2</>，最多40层",
+    "battleRuneKey": null
+  },
+  "garrison_c_huang_a": {
+    "garrisonId": "garrison_c_huang_a",
+    "desc": "<售出时>变为烛煌",
+    "eventType": "SERVER_CHESS_SOLD",
+    "effectType": "CUSTOM",
+    "effectKey": "custom_transform_on_sell",
+    "charLevel": 0,
+    "bb": {
+      "count": 1
+    },
+    "bbStr": {
+      "key": "custom_transform_on_sell",
+      "chess": "chess_char_5_03_a"
+    },
+    "owners": [
+      "chess_char_9_16_a"
+    ],
+    "eventTypeDesc": "特异化",
+    "eventTypeIcon": "icon_support",
+    "descRaw": "<售出时>变为烛煌",
+    "battleRuneKey": null
+  },
+  "garrison_c_huang_b": {
+    "garrisonId": "garrison_c_huang_b",
+    "desc": "<售出时>变为2个烛煌",
+    "eventType": "SERVER_CHESS_SOLD",
+    "effectType": "CUSTOM",
+    "effectKey": "custom_transform_on_sell",
+    "charLevel": 0,
+    "bb": {
+      "count": 2
+    },
+    "bbStr": {
+      "key": "custom_transform_on_sell",
+      "chess": "chess_char_5_03_a"
+    },
+    "owners": [
+      "chess_char_9_16_b"
+    ],
+    "eventTypeDesc": "特异化",
+    "eventTypeIcon": "icon_support",
+    "descRaw": "<售出时>变为2个烛煌",
+    "battleRuneKey": null
+  },
+  "garrison_c_kalts_a": {
+    "garrisonId": "garrison_c_kalts_a",
+    "desc": "<售出时>变为Mon3tr",
+    "eventType": "SERVER_CHESS_SOLD",
+    "effectType": "CUSTOM",
+    "effectKey": "custom_transform_on_sell",
+    "charLevel": 0,
+    "bb": {
+      "count": 1
+    },
+    "bbStr": {
+      "key": "custom_transform_on_sell",
+      "chess": "chess_char_9_21_a"
+    },
+    "owners": [
+      "chess_char_9_18_a"
+    ],
+    "eventTypeDesc": "特异化",
+    "eventTypeIcon": "icon_support",
+    "descRaw": "<售出时>变为Mon3tr",
+    "battleRuneKey": null
+  },
+  "garrison_c_kalts_b": {
+    "garrisonId": "garrison_c_kalts_b",
+    "desc": "<售出时>变为2个Mon3tr",
+    "eventType": "SERVER_CHESS_SOLD",
+    "effectType": "CUSTOM",
+    "effectKey": "custom_transform_on_sell",
+    "charLevel": 0,
+    "bb": {
+      "count": 2
+    },
+    "bbStr": {
+      "key": "custom_transform_on_sell",
+      "chess": "chess_char_9_21_a"
+    },
+    "owners": [
+      "chess_char_9_18_b"
+    ],
+    "eventTypeDesc": "特异化",
+    "eventTypeIcon": "icon_support",
+    "descRaw": "<售出时>变为2个Mon3tr",
+    "battleRuneKey": null
+  },
+  "garrison_c_meteo_a": {
+    "garrisonId": "garrison_c_meteo_a",
+    "desc": "<战斗中>首次开启技能时，使已激活的【卡兹戴尔】【精准】层数+5",
+    "eventType": "IN_BATTLE",
+    "effectType": "CUSTOM",
+    "effectKey": "custom_gain_first_skill",
+    "charLevel": 0,
+    "bb": {
+      "gain": 5
+    },
+    "bbStr": {
+      "key": "custom_gain_first_skill"
+    },
+    "owners": [
+      "chess_char_9_02_a"
+    ],
+    "eventTypeDesc": "单次叠加",
+    "eventTypeIcon": "icon_bond",
+    "descRaw": "<战斗中>首次开启技能时，使已激活的【卡兹戴尔】【精准】层数<@ba.vup>+5</>",
+    "battleRuneKey": null
+  },
+  "garrison_c_meteo_b": {
+    "garrisonId": "garrison_c_meteo_b",
+    "desc": "<战斗中>首次开启技能时，使已激活的【卡兹戴尔】【精准】层数+10",
+    "eventType": "IN_BATTLE",
+    "effectType": "CUSTOM",
+    "effectKey": "custom_gain_first_skill",
+    "charLevel": 0,
+    "bb": {
+      "gain": 10
+    },
+    "bbStr": {
+      "key": "custom_gain_first_skill"
+    },
+    "owners": [
+      "chess_char_9_02_b"
+    ],
+    "eventTypeDesc": "单次叠加",
+    "eventTypeIcon": "icon_bond",
+    "descRaw": "<战斗中>首次开启技能时，使已激活的【卡兹戴尔】【精准】层数<@ba.vup>+10</>",
+    "battleRuneKey": null
+  },
+  "garrison_c_shining_a": {
+    "garrisonId": "garrison_c_shining_a",
+    "desc": "<战斗中>每次治疗我方单位使自己已激活的盟约层数+1，最多10层",
+    "eventType": "IN_BATTLE",
+    "effectType": "CUSTOM",
+    "effectKey": "custom_gain_on_heal",
+    "charLevel": 0,
+    "bb": {
+      "gain": 1,
+      "max": 10
+    },
+    "bbStr": {
+      "key": "custom_gain_on_heal"
+    },
+    "owners": [
+      "chess_char_9_04_a"
+    ],
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "descRaw": "<战斗中>每次治疗我方单位使自己已激活的盟约层数<@ba.vup>+1</>，最多10层",
+    "battleRuneKey": null
+  },
+  "garrison_c_shining_b": {
+    "garrisonId": "garrison_c_shining_b",
+    "desc": "<战斗中>每次治疗我方单位使自己已激活的盟约层数+2，最多20层",
+    "eventType": "IN_BATTLE",
+    "effectType": "CUSTOM",
+    "effectKey": "custom_gain_on_heal",
+    "charLevel": 0,
+    "bb": {
+      "gain": 2,
+      "max": 20
+    },
+    "bbStr": {
+      "key": "custom_gain_on_heal"
+    },
+    "owners": [
+      "chess_char_9_04_b"
+    ],
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "descRaw": "<战斗中>每次治疗我方单位使自己已激活的盟约层数<@ba.vup>+2</>，最多20层",
+    "battleRuneKey": null
+  },
+  "garrison_c_wisdel_a": {
+    "garrisonId": "garrison_c_wisdel_a",
+    "desc": "<战斗中>攻击范围内每有一个敌人处于眩晕、束缚时使已激活的【卡兹戴尔】盟约层数+1",
+    "eventType": "IN_BATTLE",
+    "effectType": "CUSTOM",
+    "effectKey": "custom_gain_on_controlled",
+    "charLevel": 0,
+    "bb": {
+      "gain": 1,
+      "interval": 1
+    },
+    "bbStr": {
+      "key": "custom_gain_on_controlled"
+    },
+    "owners": [
+      "chess_char_9_10_a"
+    ],
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "descRaw": "<战斗中>攻击范围内每有一个敌人处于眩晕、束缚时使已激活的【卡兹戴尔】盟约层数<@ba.vup>+1</>",
+    "battleRuneKey": null
+  },
+  "garrison_c_wisdel_b": {
+    "garrisonId": "garrison_c_wisdel_b",
+    "desc": "<战斗中>攻击范围内每有一个敌人处于眩晕、束缚时使已激活的【卡兹戴尔】盟约层数+2",
+    "eventType": "IN_BATTLE",
+    "effectType": "CUSTOM",
+    "effectKey": "custom_gain_on_controlled",
+    "charLevel": 0,
+    "bb": {
+      "gain": 2,
+      "interval": 1
+    },
+    "bbStr": {
+      "key": "custom_gain_on_controlled"
+    },
+    "owners": [
+      "chess_char_9_10_b"
+    ],
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "descRaw": "<战斗中>攻击范围内每有一个敌人处于眩晕、束缚时使已激活的【卡兹戴尔】盟约层数<@ba.vup>+2</>",
+    "battleRuneKey": null
+  },
+  "garrison_mujica_oblvns": {
+    "garrisonId": "garrison_mujica_oblvns",
+    "desc": "<战斗开始时>获得等于【颂乐人偶】层数一半的Fever（不超过Fever上限）；【颂乐人偶】每叠加3层，本干员攻击力+2%",
+    "descRaw": "<战斗开始时>获得等于【颂乐人偶】层数一半的Fever（不超过Fever上限）；【颂乐人偶】每叠加3层，本干员攻击力+2%",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "作战能力",
+    "eventTypeIcon": "icon_battle",
+    "effectType": "GAIN_BUFF",
+    "effectKey": "MUJICA_OBLVNS",
+    "charLevel": 0,
+    "bb": {},
+    "bbStr": {},
+    "owners": [
+      "chess_zj_oblvns_a",
+      "chess_zj_oblvns_b"
+    ],
+    "battleRuneKey": null
+  },
+  "garrison_mujica_oblvns_b": {
+    "garrisonId": "garrison_mujica_oblvns_b",
+    "desc": "<战斗开始时>获得等于【颂乐人偶】层数一半的Fever（不超过Fever上限）；【颂乐人偶】每叠加3层，本干员攻击力+3%",
+    "descRaw": "<战斗开始时>获得等于【颂乐人偶】层数一半的Fever（不超过Fever上限）；【颂乐人偶】每叠加3层，本干员攻击力+3%",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "作战能力",
+    "eventTypeIcon": "icon_battle",
+    "effectType": "GAIN_BUFF",
+    "effectKey": "MUJICA_OBLVNS",
+    "charLevel": 0,
+    "bb": {},
+    "bbStr": {},
+    "owners": [
+      "chess_zj_oblvns_a",
+      "chess_zj_oblvns_b"
+    ],
+    "battleRuneKey": null
+  },
+  "garrison_zj_03_a": {
+    "garrisonId": "garrison_zj_03_a",
+    "desc": "<获得时>获得等于当前调度中心等级的【炎】层数（无需激活盟约）",
+    "descRaw": "<获得时>获得等于当前调度中心等级的【炎】层数（无需激活盟约）",
+    "eventType": "SERVER_GAIN",
+    "eventTypeDesc": "单次叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "SERVER_ADD_BOND_METHOD",
+    "effectKey": "SERVER_ADD_BOND_METHOD",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "multi": 1
+    },
+    "bbStr": {
+      "add_method": "shoplv",
+      "bond": "yanShip"
+    },
+    "owners": []
+  },
+  "garrison_zj_03_b": {
+    "garrisonId": "garrison_zj_03_b",
+    "desc": "<获得时>获得等于当前调度中心等级的【炎】层数（无需激活盟约）",
+    "descRaw": "<获得时>获得等于当前调度中心等级的【炎】层数（无需激活盟约）",
+    "eventType": "SERVER_GAIN",
+    "eventTypeDesc": "单次叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "SERVER_ADD_BOND_METHOD",
+    "effectKey": "SERVER_ADD_BOND_METHOD",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "multi": 2
+    },
+    "bbStr": {
+      "add_method": "shoplv",
+      "bond": "yanShip"
+    },
+    "owners": []
+  },
+  "garrison_zj_06_a": {
+    "garrisonId": "garrison_zj_06_a",
+    "desc": "<获得时>获得2次免费刷新",
+    "descRaw": "<获得时>获得2次免费刷新",
+    "eventType": "SERVER_GAIN",
+    "eventTypeDesc": "整备能力",
+    "eventTypeIcon": "icon_gold",
+    "effectType": "SERVER_GAIN_FREE_REFRESH_COUNT",
+    "effectKey": "SERVER_GAIN_FREE_REFRESH_COUNT",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "count": 2
+    },
+    "bbStr": {},
+    "owners": []
+  },
+  "garrison_zj_06_b": {
+    "garrisonId": "garrison_zj_06_b",
+    "desc": "<获得时>获得4次免费刷新",
+    "descRaw": "<获得时>获得4次免费刷新",
+    "eventType": "SERVER_GAIN",
+    "eventTypeDesc": "整备能力",
+    "eventTypeIcon": "icon_gold",
+    "effectType": "SERVER_GAIN_FREE_REFRESH_COUNT",
+    "effectKey": "SERVER_GAIN_FREE_REFRESH_COUNT",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "count": 4
+    },
+    "bbStr": {},
+    "owners": []
+  },
+  "garrison_zj_08_a": {
+    "garrisonId": "garrison_zj_08_a",
+    "descRaw": "攻击敌人时敌人防御力降低30%，持续5秒",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "",
+    "eventTypeIcon": "",
+    "effectType": "act1autochess_gar_eff_attack_enemy_def_down",
+    "effectKey": "act1autochess_gar_eff_attack_enemy_def_down",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "def_scale": 0.3,
+      "duration": 5
+    },
+    "bbStr": {
+      "bond_id": "preciShip",
+      "bond_type": "bond_by_id"
+    },
+    "owners": [],
+    "desc": "攻击敌人时敌人防御力降低30%，持续5秒"
+  },
+  "garrison_zj_08_b": {
+    "garrisonId": "garrison_zj_08_b",
+    "descRaw": "攻击敌人时敌人防御力降低60%，持续5秒",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "",
+    "eventTypeIcon": "",
+    "effectType": "act1autochess_gar_eff_attack_enemy_def_down",
+    "effectKey": "act1autochess_gar_eff_attack_enemy_def_down",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "def_scale": 0.6,
+      "duration": 5
+    },
+    "bbStr": {
+      "bond_id": "preciShip",
+      "bond_type": "bond_by_id"
+    },
+    "owners": [],
+    "desc": "攻击敌人时敌人防御力降低60%，持续5秒"
+  },
+  "garrison_zj_09_a": {
+    "garrisonId": "garrison_zj_09_a",
+    "desc": "<获得时>获得1个“炎国短刀”",
+    "descRaw": "<获得时>获得1个“炎国短刀”",
+    "eventType": "SERVER_GAIN",
+    "eventTypeDesc": "整备能力",
+    "eventTypeIcon": "icon_gold",
+    "effectType": "SERVER_GAIN_EQUIP",
+    "effectKey": "SERVER_GAIN_EQUIP",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "count": 1
+    },
+    "bbStr": {
+      "chess": "chess_item_3_04_e_a"
+    },
+    "owners": []
+  },
+  "garrison_zj_09_b": {
+    "garrisonId": "garrison_zj_09_b",
+    "desc": "<获得时>获得2个“炎国短刀”",
+    "descRaw": "<获得时>获得2个“炎国短刀”",
+    "eventType": "SERVER_GAIN",
+    "eventTypeDesc": "整备能力",
+    "eventTypeIcon": "icon_gold",
+    "effectType": "SERVER_GAIN_EQUIP",
+    "effectKey": "SERVER_GAIN_EQUIP",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "count": 2
+    },
+    "bbStr": {
+      "chess": "chess_item_3_04_e_a"
+    },
+    "owners": []
+  },
+  "garrison_zj_12_a": {
+    "garrisonId": "garrison_zj_12_a",
+    "desc": "<休整期结束时>当前激活且层数最多的盟约层数+2，此干员在整备区时也有效",
+    "descRaw": "<休整期结束时>当前激活且层数最多的盟约层数+2，此干员在整备区时也有效",
+    "eventType": "SERVER_PREP_FIN",
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "SERVER_ADD_BOND_ACTIVATED_MOST_LAYER",
+    "effectKey": "SERVER_ADD_BOND_ACTIVATED_MOST_LAYER",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "count": 2
+    },
+    "bbStr": {},
+    "owners": []
+  },
+  "garrison_zj_12_b": {
+    "garrisonId": "garrison_zj_12_b",
+    "desc": "<休整期结束时>当前激活且层数最多的盟约层数+4，此干员在整备区时也有效",
+    "descRaw": "<休整期结束时>当前激活且层数最多的盟约层数+4，此干员在整备区时也有效",
+    "eventType": "SERVER_PREP_FIN",
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "SERVER_ADD_BOND_ACTIVATED_MOST_LAYER",
+    "effectKey": "SERVER_ADD_BOND_ACTIVATED_MOST_LAYER",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "count": 4
+    },
+    "bbStr": {},
+    "owners": []
+  },
+  "garrison_zj_14_a": {
+    "garrisonId": "garrison_zj_14_a",
+    "desc": "<获得时>自身所属盟约层数+4（无需激活盟约）",
+    "descRaw": "<获得时>自身所属盟约层数+4（无需激活盟约）",
+    "eventType": "SERVER_GAIN",
+    "eventTypeDesc": "单次叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "SERVER_ADD_BOND_CHESS_ALL",
+    "effectKey": "SERVER_ADD_BOND_CHESS_ALL",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "count": 4
+    },
+    "bbStr": {},
+    "owners": []
+  },
+  "garrison_zj_14_b": {
+    "garrisonId": "garrison_zj_14_b",
+    "desc": "<获得时>自身所属盟约层数+8（无需激活盟约）",
+    "descRaw": "<获得时>自身所属盟约层数+8（无需激活盟约）",
+    "eventType": "SERVER_GAIN",
+    "eventTypeDesc": "单次叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "SERVER_ADD_BOND_CHESS_ALL",
+    "effectKey": "SERVER_ADD_BOND_CHESS_ALL",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "count": 8
+    },
+    "bbStr": {},
+    "owners": []
+  },
+  "garrison_zj_18_a": {
+    "garrisonId": "garrison_zj_18_a",
+    "desc": "<休整期结束时>本回合每获得过1名干员，使自身已激活的盟约层数+1",
+    "descRaw": "<休整期结束时>本回合每获得过1名干员，使自身已激活的盟约层数+1",
+    "eventType": "SERVER_PREP_FIN",
+    "eventTypeDesc": "单次叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "SERVER_ADD_BOND_METHOD",
+    "effectKey": "SERVER_ADD_BOND_METHOD",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "multi": 1
+    },
+    "bbStr": {
+      "add_method": "round_gain_char",
+      "bond": "yanShip,swiftShip,indomShip"
+    },
+    "owners": []
+  },
+  "garrison_zj_18_b": {
+    "garrisonId": "garrison_zj_18_b",
+    "desc": "<休整期结束时>本回合每获得过1名干员，使自身已激活的盟约层数+2",
+    "descRaw": "<休整期结束时>本回合每获得过1名干员，使自身已激活的盟约层数+2",
+    "eventType": "SERVER_PREP_FIN",
+    "eventTypeDesc": "单次叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "SERVER_ADD_BOND_METHOD",
+    "effectKey": "SERVER_ADD_BOND_METHOD",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "multi": 2
+    },
+    "bbStr": {
+      "add_method": "round_gain_char",
+      "bond": "yanShip,swiftShip,indomShip"
+    },
+    "owners": []
+  },
+  "garrison_zj_22_a": {
+    "garrisonId": "garrison_zj_22_a",
+    "desc": "<战斗中>每击倒1名敌人时，使已激活的【突袭】层数+3",
+    "descRaw": "<战斗中>每击倒1名敌人时，使已激活的【突袭】层数+3",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "ADD_BOND",
+    "effectKey": "act1autochess_gar_event_selfkillenemy",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "check_cnt": 1,
+      "bond_add_count": 3
+    },
+    "bbStr": {
+      "key": "act1autochess_gar_event_selfkillenemy",
+      "bond_add_type": "by_count",
+      "bond_id": "raidShip",
+      "bond_type": "bond_by_id"
+    },
+    "owners": []
+  },
+  "garrison_zj_22_b": {
+    "garrisonId": "garrison_zj_22_b",
+    "desc": "<战斗中>每击倒1名敌人时，使已激活的【突袭】层数+6",
+    "descRaw": "<战斗中>每击倒1名敌人时，使已激活的【突袭】层数+6",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "ADD_BOND",
+    "effectKey": "act1autochess_gar_event_selfkillenemy",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "check_cnt": 1,
+      "bond_add_count": 6
+    },
+    "bbStr": {
+      "key": "act1autochess_gar_event_selfkillenemy",
+      "bond_add_type": "by_count",
+      "bond_id": "raidShip",
+      "bond_type": "bond_by_id"
+    },
+    "owners": []
+  },
+  "garrison_zj_28_a": {
+    "garrisonId": "garrison_zj_28_a",
+    "desc": "<战斗中>每消耗1发子弹，使已激活的【坚守】盟约层数+4",
+    "descRaw": "<战斗中>每消耗1发子弹，使已激活的【坚守】盟约层数<@ba.kw>+4</>",
+    "eventType": "SERVER_PREP_FIN",
+    "eventTypeDesc": "单次叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "SERVER_ADD_BOND",
+    "effectKey": "SERVER_ADD_BOND",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "count": 0
+    },
+    "bbStr": {
+      "bond": "steadShip"
+    },
+    "owners": []
+  },
+  "garrison_zj_28_b": {
+    "garrisonId": "garrison_zj_28_b",
+    "desc": "<休整期结束时>使已激活的【坚守】层数+8",
+    "descRaw": "<休整期结束时>使已激活的【坚守】层数+8",
+    "eventType": "SERVER_PREP_FIN",
+    "eventTypeDesc": "单次叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "SERVER_ADD_BOND",
+    "effectKey": "SERVER_ADD_BOND",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "count": 0
+    },
+    "bbStr": {
+      "bond": "steadShip"
+    },
+    "owners": []
+  },
+  "garrison_zj_30_a": {
+    "garrisonId": "garrison_zj_30_a",
+    "desc": "<获得时>使下个休整期额外获得2资金",
+    "descRaw": "<获得时>使下个休整期额外获得2资金",
+    "eventType": "SERVER_GAIN",
+    "eventTypeDesc": "整备能力",
+    "eventTypeIcon": "icon_gold",
+    "effectType": "SERVER_ONCE_GOLD",
+    "effectKey": "SERVER_ONCE_GOLD",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "count": 2
+    },
+    "bbStr": {},
+    "owners": []
+  },
+  "garrison_zj_30_b": {
+    "garrisonId": "garrison_zj_30_b",
+    "desc": "<获得时>使下个休整期额外获得4资金资金",
+    "descRaw": "<获得时>使下个休整期额外获得4资金资金",
+    "eventType": "SERVER_GAIN",
+    "eventTypeDesc": "整备能力",
+    "eventTypeIcon": "icon_gold",
+    "effectType": "SERVER_ONCE_GOLD",
+    "effectKey": "SERVER_ONCE_GOLD",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "count": 4
+    },
+    "bbStr": {},
+    "owners": []
+  },
+  "garrison_zj_31_a": {
+    "garrisonId": "garrison_zj_31_a",
+    "desc": "<休整期结束时>使自身及身后一格干员的已激活盟约分别各层数+12",
+    "descRaw": "<休整期结束时>使自身及身后一格干员的已激活盟约分别各层数+12",
+    "eventType": "SERVER_PREP_FIN",
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "SERVER_ADD_BOND_POSITION",
+    "effectKey": "SERVER_ADD_BOND_POSITION",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "count": 12
+    },
+    "bbStr": {
+      "dir": "behind",
+      "conditionkey": "character_target_inboard"
+    },
+    "owners": []
+  },
+  "garrison_zj_31_b": {
+    "garrisonId": "garrison_zj_31_b",
+    "desc": "<休整期结束时>使自身及身后一格干员的已激活盟约分别各层数+24",
+    "descRaw": "<休整期结束时>使自身及身后一格干员的已激活盟约分别各层数+24",
+    "eventType": "SERVER_PREP_FIN",
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "SERVER_ADD_BOND_POSITION",
+    "effectKey": "SERVER_ADD_BOND_POSITION",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "count": 24
+    },
+    "bbStr": {
+      "dir": "behind",
+      "conditionkey": "character_target_inboard"
+    },
+    "owners": []
+  },
+  "garrison_zj_35_2_a": {
+    "garrisonId": "garrison_zj_35_2_a",
+    "desc": "<战斗中>开启技能时，使已激活的【奥术】层数+1",
+    "descRaw": "<战斗中>开启技能时，使已激活的【奥术】层数+1",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "ADD_BOND",
+    "effectKey": "act1autochess_gar_event_useskill",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "bond_add_count": 1
+    },
+    "bbStr": {
+      "key": "act1autochess_gar_event_useskill",
+      "bond_add_type": "by_count",
+      "garrison_key": "garrison_42_a",
+      "bond_type": "bond_by_id",
+      "bond_id": "arcaneShip"
+    },
+    "owners": []
+  },
+  "garrison_zj_35_2_b": {
+    "garrisonId": "garrison_zj_35_2_b",
+    "desc": "<战斗中>开启技能时，使已激活的【奥术】层数+2",
+    "descRaw": "<战斗中>开启技能时，使已激活的【奥术】层数+2",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "ADD_BOND",
+    "effectKey": "act1autochess_gar_event_useskill",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "bond_add_count": 2
+    },
+    "bbStr": {
+      "key": "act1autochess_gar_event_useskill",
+      "bond_add_type": "by_count",
+      "garrison_key": "garrison_42_a",
+      "bond_type": "bond_by_id",
+      "bond_id": "arcaneShip"
+    },
+    "owners": []
+  },
+  "garrison_zj_35_a": {
+    "garrisonId": "garrison_zj_35_a",
+    "desc": "<战斗中>开启技能时，使已激活的【萨尔贡】层数+2",
+    "descRaw": "<战斗中>开启技能时，使已激活的【萨尔贡】层数+2",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "ADD_BOND",
+    "effectKey": "act1autochess_gar_event_useskill",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "bond_add_count": 2
+    },
+    "bbStr": {
+      "key": "act1autochess_gar_event_useskill",
+      "bond_add_type": "by_count",
+      "garrison_key": "garrison_42_a",
+      "bond_type": "bond_by_id",
+      "bond_id": "sargonShip"
+    },
+    "owners": []
+  },
+  "garrison_zj_35_b": {
+    "garrisonId": "garrison_zj_35_b",
+    "desc": "<战斗中>开启技能时，使已激活的【萨尔贡】层数+4",
+    "descRaw": "<战斗中>开启技能时，使已激活的【萨尔贡】层数+4",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "ADD_BOND",
+    "effectKey": "act1autochess_gar_event_useskill",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "bond_add_count": 4
+    },
+    "bbStr": {
+      "key": "act1autochess_gar_event_useskill",
+      "bond_add_type": "by_count",
+      "garrison_key": "garrison_42_a",
+      "bond_type": "bond_by_id",
+      "bond_id": "sargonShip"
+    },
+    "owners": []
+  },
+  "garrison_zj_37_a": {
+    "garrisonId": "garrison_zj_37_a",
+    "desc": "<售出时>进行一次I阶干员的免费特殊招募\n本干员合成为精锐状态后，上述特殊招募变为V阶干员",
+    "descRaw": "<售出时>进行一次I阶干员的免费特殊招募\n本干员合成为精锐状态后，上述特殊招募变为V阶干员",
+    "eventType": "SERVER_CHESS_SOLD",
+    "eventTypeDesc": "整备能力",
+    "eventTypeIcon": "icon_gold",
+    "effectType": "SERVER_SELL_CHESS_GAIN_SPECIAL_GOODS",
+    "effectKey": "SERVER_SELL_CHESS_GAIN_SPECIAL_GOODS",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {},
+    "bbStr": {
+      "pool1": "pool_chess_shop_1_reward",
+      "pool2": "pool_chess_shop_1_reward",
+      "pool3": "pool_chess_shop_1_reward",
+      "pool4": "pool_chess_shop_1_reward",
+      "pool5": "pool_chess_shop_1_reward",
+      "pool6": "pool_chess_shop_1_reward",
+      "max_pool": "pool_chess_shop_1_reward"
+    },
+    "owners": []
+  },
+  "garrison_zj_37_b": {
+    "garrisonId": "garrison_zj_37_b",
+    "desc": "<售出时>进行一次I阶干员的免费特殊招募\n本干员合成为精锐状态后，上述特殊招募变为V阶干员",
+    "descRaw": "<售出时>进行一次I阶干员的免费特殊招募\n本干员合成为精锐状态后，上述特殊招募变为V阶干员",
+    "eventType": "SERVER_CHESS_SOLD",
+    "eventTypeDesc": "整备能力",
+    "eventTypeIcon": "icon_gold",
+    "effectType": "SERVER_SELL_CHESS_GAIN_SPECIAL_GOODS",
+    "effectKey": "SERVER_SELL_CHESS_GAIN_SPECIAL_GOODS",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {},
+    "bbStr": {
+      "pool1": "pool_chess_shop_5_reward",
+      "pool2": "pool_chess_shop_5_reward",
+      "pool3": "pool_chess_shop_5_reward",
+      "pool4": "pool_chess_shop_5_reward",
+      "pool5": "pool_chess_shop_5_reward",
+      "pool6": "pool_chess_shop_5_reward",
+      "max_pool": "pool_chess_shop_5_reward"
+    },
+    "owners": []
+  },
+  "garrison_zj_51_a": {
+    "garrisonId": "garrison_zj_51_a",
+    "desc": "【阿戈尔】每叠加3层，本干员攻击力+2%",
+    "descRaw": "【阿戈尔】每叠加3层，本干员攻击力+2%",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "作战能力",
+    "eventTypeIcon": "icon_battle",
+    "effectType": "GAIN_BUFF",
+    "effectKey": "act1autochess_gar_eff_attrByBond",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "divide_num": 3,
+      "atk": 0.02
+    },
+    "bbStr": {
+      "key": "act1autochess_gar_eff_attrByBond",
+      "bond_id": "egirShip",
+      "bond_type": "bond_by_id"
+    },
+    "owners": []
+  },
+  "garrison_zj_51_b": {
+    "garrisonId": "garrison_zj_51_b",
+    "desc": "【阿戈尔】每叠加3层，本干员攻击力+4%",
+    "descRaw": "【阿戈尔】每叠加3层，本干员攻击力+4%",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "作战能力",
+    "eventTypeIcon": "icon_battle",
+    "effectType": "GAIN_BUFF",
+    "effectKey": "act1autochess_gar_eff_attrByBond",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "divide_num": 3,
+      "atk": 0.04
+    },
+    "bbStr": {
+      "key": "act1autochess_gar_eff_attrByBond",
+      "bond_id": "egirShip",
+      "bond_type": "bond_by_id"
+    },
+    "owners": []
+  },
+  "garrison_zj_56_a": {
+    "garrisonId": "garrison_zj_56_a",
+    "desc": "<休整期结束时>使自身已激活的盟约层数+10",
+    "descRaw": "<休整期结束时>使自身已激活的盟约层数+10",
+    "eventType": "SERVER_PREP_FIN",
+    "eventTypeDesc": "单次叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "SERVER_ADD_BOND_CHESS_ALL",
+    "effectKey": "SERVER_ADD_BOND_CHESS_ALL",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "count": 10
+    },
+    "bbStr": {},
+    "owners": []
+  },
+  "garrison_zj_56_b": {
+    "garrisonId": "garrison_zj_56_b",
+    "desc": "<休整期结束时>使自身已激活的盟约层数+20",
+    "descRaw": "<休整期结束时>使自身已激活的盟约层数+20",
+    "eventType": "SERVER_PREP_FIN",
+    "eventTypeDesc": "单次叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "SERVER_ADD_BOND_CHESS_ALL",
+    "effectKey": "SERVER_ADD_BOND_CHESS_ALL",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "count": 20
+    },
+    "bbStr": {},
+    "owners": []
+  },
+  "garrison_zj_59_a": {
+    "garrisonId": "garrison_zj_59_a",
+    "desc": "<售出时>进入下个休整期额外获得4资金",
+    "descRaw": "<售出时>进入下个休整期额外获得4资金",
+    "eventType": "SERVER_CHESS_SOLD",
+    "eventTypeDesc": "整备能力",
+    "eventTypeIcon": "icon_gold",
+    "effectType": "SERVER_ONCE_GOLD",
+    "effectKey": "SERVER_ONCE_GOLD",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "count": 4
+    },
+    "bbStr": {},
+    "owners": []
+  },
+  "garrison_zj_59_b": {
+    "garrisonId": "garrison_zj_59_b",
+    "desc": "<售出时>进入下个休整期额外获得8资金资金",
+    "descRaw": "<售出时>进入下个休整期额外获得8资金资金",
+    "eventType": "SERVER_CHESS_SOLD",
+    "eventTypeDesc": "整备能力",
+    "eventTypeIcon": "icon_gold",
+    "effectType": "SERVER_ONCE_GOLD",
+    "effectKey": "SERVER_ONCE_GOLD",
+    "battleRuneKey": null,
+    "charLevel": 0,
+    "bb": {
+      "count": 8
+    },
+    "bbStr": {},
+    "owners": []
+  },
+  "garrison_zj_60_2_c": {
+    "garrisonId": "garrison_zj_60_2_c",
+    "desc": "<战斗中>部署后不占用可部署位置；<部署时>使自身已激活盟约+3",
+    "descRaw": "<战斗中>部署后不占用可部署位置；<部署时>使自身已激活盟约<@ba.vup>+3</>",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "作战能力",
+    "eventTypeIcon": "icon_battle",
+    "effectType": "GAIN_BUFF",
+    "effectKey": "act2autochess_gar_event_onstart",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "no_deploy_slot": 1,
+      "bond_add_count": 3
+    },
+    "bbStr": {
+      "key": "act2autochess_gar_event_onstart",
+      "bond_type": "bond_self",
+      "bond_add_type": "by_count",
+      "garrison_key": "garrison_zj_60_2_c"
+    },
+    "owners": []
+  },
+  "garrison_zj_60_2_d": {
+    "garrisonId": "garrison_zj_60_2_d",
+    "desc": "<战斗中>部署后不占用可部署位置；<部署时>使自身已激活盟约+6",
+    "descRaw": "<战斗中>部署后不占用可部署位置；<部署时>使自身已激活盟约<@ba.vup>+6</>",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "作战能力",
+    "eventTypeIcon": "icon_battle",
+    "effectType": "GAIN_BUFF",
+    "effectKey": "act2autochess_gar_event_onstart",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "no_deploy_slot": 1,
+      "bond_add_count": 6
+    },
+    "bbStr": {
+      "key": "act2autochess_gar_event_onstart",
+      "bond_type": "bond_self",
+      "bond_add_type": "by_count",
+      "garrison_key": "garrison_zj_60_2_d"
+    },
+    "owners": []
+  },
+  "garrison_zj_60_3_c": {
+    "garrisonId": "garrison_zj_60_3_c",
+    "desc": "<战斗中>陷入异常状态时，使自身已激活盟约+10",
+    "descRaw": "<战斗中>陷入异常状态时，使自身已激活盟约<@ba.vup>+10</>",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "作战能力",
+    "eventTypeIcon": "icon_battle",
+    "effectType": "GAIN_BUFF",
+    "effectKey": "act2autochess_gar_event_self_status",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "bond_add_count": 10
+    },
+    "bbStr": {
+      "bond_type": "bond_self",
+      "bond_add_type": "by_count",
+      "key": "act2autochess_gar_event_self_status",
+      "garrison_key": "garrison_zj_60_3_c"
+    },
+    "owners": []
+  },
+  "garrison_zj_60_3_d": {
+    "garrisonId": "garrison_zj_60_3_d",
+    "desc": "<战斗中>陷入异常状态时，使自身已激活盟约+20",
+    "descRaw": "<战斗中>陷入异常状态时，使自身已激活盟约<@ba.vup>+20</>",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "作战能力",
+    "eventTypeIcon": "icon_battle",
+    "effectType": "GAIN_BUFF",
+    "effectKey": "act2autochess_gar_event_self_status",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "bond_add_count": 20
+    },
+    "bbStr": {
+      "bond_type": "bond_self",
+      "bond_add_type": "by_count",
+      "key": "act2autochess_gar_event_self_status",
+      "garrison_key": "garrison_zj_60_3_d"
+    },
+    "owners": []
+  },
+  "garrison_zj_60_4_c": {
+    "garrisonId": "garrison_zj_60_4_c",
+    "desc": "<战斗中>每对敌方施加一次浮空，使自身已激活盟约+1（每名敌人仅触发一次）；每对敌方施加一次浮空，使自身已激活的【S.E.E.S】盟约层数+2",
+    "descRaw": "<战斗中>每对敌方施加一次<$ba.levitate>浮空</>，使自身已激活盟约<@ba.vup>+1</>（每名敌人仅触发一次）；每对敌方施加一次<$ba.levitate>浮空</>，使自身已激活的<@ba.vup>【S.E.E.S】</>盟约层数<@ba.vup>+2</>",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "作战能力",
+    "eventTypeIcon": "icon_battle",
+    "effectType": "GAIN_BUFF",
+    "effectKey": "act1autochess_gar_levitate_once",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "bond_add_count": 1,
+      "also_bond_add_count": 2
+    },
+    "bbStr": {
+      "status": "levitate",
+      "bond_type": "bond_self",
+      "bond_add_type": "by_count",
+      "key": "act1autochess_gar_levitate_once",
+      "garrison_key": "garrison_zj_60_4_c",
+      "also_bond_id": "seesShip"
+    },
+    "owners": []
+  },
+  "garrison_zj_60_4_d": {
+    "garrisonId": "garrison_zj_60_4_d",
+    "desc": "<战斗中>每对敌方施加一次浮空，使自身已激活盟约+2（每名敌人仅触发一次）；每对敌方施加一次浮空，使自身已激活的【S.E.E.S】盟约层数+4",
+    "descRaw": "<战斗中>每对敌方施加一次<$ba.levitate>浮空</>，使自身已激活盟约<@ba.vup>+2</>（每名敌人仅触发一次）；每对敌方施加一次<$ba.levitate>浮空</>，使自身已激活的<@ba.vup>【S.E.E.S】</>盟约层数<@ba.vup>+4</>",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "作战能力",
+    "eventTypeIcon": "icon_battle",
+    "effectType": "GAIN_BUFF",
+    "effectKey": "act1autochess_gar_levitate_once",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "bond_add_count": 2,
+      "also_bond_add_count": 4
+    },
+    "bbStr": {
+      "status": "levitate",
+      "bond_type": "bond_self",
+      "bond_add_type": "by_count",
+      "key": "act1autochess_gar_levitate_once",
+      "garrison_key": "garrison_zj_60_4_d",
+      "also_bond_id": "seesShip"
+    },
+    "owners": []
+  },
+  "garrison_zj_74_2_a": {
+    "garrisonId": "garrison_zj_74_2_a",
+    "desc": "【炎】每叠加100层，自然技力回复速度+1\n秒",
+    "descRaw": "【炎】每叠加100层，自然技力回复速度+1\n秒",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "作战能力",
+    "eventTypeIcon": "icon_battle",
+    "effectType": "GAIN_BUFF",
+    "effectKey": "act1autochess_gar_eff_attrByBond",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "divide_num": 100,
+      "sp_recovery_per_sec": 1
+    },
+    "bbStr": {
+      "key": "act1autochess_gar_eff_attrByBond",
+      "bond_id": "yanShip",
+      "bond_type": "bond_by_id"
+    },
+    "owners": []
+  },
+  "garrison_zj_74_2_b": {
+    "garrisonId": "garrison_zj_74_2_b",
+    "desc": "【炎】每叠加100层，自然技力回复速度+2\n秒",
+    "descRaw": "【炎】每叠加100层，自然技力回复速度+2\n秒",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "作战能力",
+    "eventTypeIcon": "icon_battle",
+    "effectType": "GAIN_BUFF",
+    "effectKey": "act1autochess_gar_eff_attrByBond",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "divide_num": 100,
+      "sp_recovery_per_sec": 2
+    },
+    "bbStr": {
+      "key": "act1autochess_gar_eff_attrByBond",
+      "bond_id": "yanShip",
+      "bond_type": "bond_by_id"
+    },
+    "owners": []
+  },
+  "garrison_zj_74_a": {
+    "garrisonId": "garrison_zj_74_a",
+    "desc": "【炎】每叠加3层，本干员攻击力+1.5%；【炎】每叠加100层，自然技力回复速度+1\n秒",
+    "descRaw": "【炎】每叠加3层，本干员攻击力+1.5%；【炎】每叠加100层，自然技力回复速度+1\n秒",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "作战能力",
+    "eventTypeIcon": "icon_battle",
+    "effectType": "GAIN_BUFF",
+    "effectKey": "act1autochess_gar_eff_attrByBond",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "divide_num": 3,
+      "atk": 0.015
+    },
+    "bbStr": {
+      "key": "act1autochess_gar_eff_attrByBond",
+      "bond_id": "yanShip",
+      "bond_type": "bond_by_id"
+    },
+    "owners": []
+  },
+  "garrison_zj_74_b": {
+    "garrisonId": "garrison_zj_74_b",
+    "desc": "【炎】每叠加3层，本干员攻击力+3%；【炎】每叠加100层，自然技力回复速度+2\n秒",
+    "descRaw": "【炎】每叠加3层，本干员攻击力+3%；【炎】每叠加100层，自然技力回复速度+2\n秒",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "作战能力",
+    "eventTypeIcon": "icon_battle",
+    "effectType": "GAIN_BUFF",
+    "effectKey": "act1autochess_gar_eff_attrByBond",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "divide_num": 3,
+      "atk": 0.03
+    },
+    "bbStr": {
+      "key": "act1autochess_gar_eff_attrByBond",
+      "bond_id": "yanShip",
+      "bond_type": "bond_by_id"
+    },
+    "owners": []
+  },
+  "garrison_zj_80_a": {
+    "garrisonId": "garrison_zj_80_a",
+    "desc": "【炎】【坚守】每叠加3层，本干员攻击力+1%",
+    "descRaw": "【炎】【坚守】每叠加3层，本干员攻击力+1%",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "作战能力",
+    "eventTypeIcon": "icon_battle",
+    "effectType": "GAIN_BUFF",
+    "effectKey": "act1autochess_gar_eff_attrByBond",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "divide_num": 3,
+      "atk": 0.01
+    },
+    "bbStr": {
+      "key": "act1autochess_gar_eff_attrByBond",
+      "bond_id": "yanShip,steadShip",
+      "bond_type": "bond_by_id"
+    },
+    "owners": []
+  },
+  "garrison_zj_80_b": {
+    "garrisonId": "garrison_zj_80_b",
+    "desc": "【炎】【坚守】每叠加3层，本干员攻击力+2%",
+    "descRaw": "【炎】【坚守】每叠加3层，本干员攻击力+2%",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "作战能力",
+    "eventTypeIcon": "icon_battle",
+    "effectType": "GAIN_BUFF",
+    "effectKey": "act1autochess_gar_eff_attrByBond",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "divide_num": 3,
+      "atk": 0.02
+    },
+    "bbStr": {
+      "key": "act1autochess_gar_eff_attrByBond",
+      "bond_id": "yanShip,steadShip",
+      "bond_type": "bond_by_id"
+    },
+    "owners": []
+  },
+  "garrison_zj_chyue_swift": {
+    "garrisonId": "garrison_zj_chyue_swift",
+    "desc": "",
+    "descRaw": "",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "ADD_BOND",
+    "effectKey": "act1autochess_gar_event_useskill",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "bond_add_count": 1
+    },
+    "bbStr": {
+      "key": "act1autochess_gar_event_useskill",
+      "bond_type": "bond_by_id",
+      "bond_id": "swiftShip",
+      "bond_add_type": "by_count"
+    },
+    "owners": [
+      "chess_zj_chyue_a",
+      "chess_zj_chyue_b"
+    ]
+  },
+  "garrison_zj_chyue_yan": {
+    "garrisonId": "garrison_zj_chyue_yan",
+    "desc": "<战斗中>开启技能时会使已激活的【炎】、【迅捷】层数+1。",
+    "descRaw": "<战斗中>开启技能时会使已激活的【炎】、【迅捷】层数<@ba.vup>+1</>。",
+    "eventType": "IN_BATTLE",
+    "eventTypeDesc": "持续叠加",
+    "eventTypeIcon": "icon_bond",
+    "effectType": "ADD_BOND",
+    "effectKey": "act1autochess_gar_event_useskill",
+    "battleRuneKey": "env_gbuff_new_with_verify",
+    "charLevel": 0,
+    "bb": {
+      "bond_add_count": 1
+    },
+    "bbStr": {
+      "key": "act1autochess_gar_event_useskill",
+      "bond_type": "bond_by_id",
+      "bond_id": "yanShip",
+      "bond_add_type": "by_count"
+    },
+    "owners": [
+      "chess_zj_chyue_a",
+      "chess_zj_chyue_b"
+    ]
   }
 }
