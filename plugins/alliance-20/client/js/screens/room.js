@@ -57,6 +57,9 @@ import { store, useStore, shallowEqual, emptyMatch, isSpectating, serverNow, loa
 import { data, useData } from '../data.js';
 import { chessAvatarUrl } from '../ui/assetUrls.js';
 import { CARD_PREF, cardOperators, seatPortrait } from '../ui/seatArt.js';
+// 名片立绘微调（本机 pref room.cardArt，ui/cardArt.js）：座位卡按 精一/精二/皮肤 三选一 + 缩放/框内平移画立绘，
+// 「立绘调整」按钮开一层预览。数据源是清单里的 portrait/portraitE2（见 ui/cardArt.js illustSources）。
+import { CardArt, CardArtImage, illustSources } from '../ui/cardArt.js';
 import { C2S } from '../../../shared/protocol.js';
 import { difficultyInfo, ProtoCard, LAYER_TEXT, serverSeatMaxOf } from './lobby.js';
 import { ProtocolScene } from '../ui/protocolScene.js';
@@ -298,7 +301,7 @@ function SeatCapSetter({ room, isHost, onPick }) {
   </div>`;
 }
 
-function SeatCard({ seat, index, room, facts, myId, busy, onKick, onInvite, searching, portraits, onPickCard = null, onAddBot = null, onRemoveBot = null }) {
+function SeatCard({ seat, index, room, facts, myId, busy, onKick, onInvite, searching, portraits, onPickCard = null, onTuneCard = null, onAddBot = null, onRemoveBot = null }) {
   const seatAccount = useAccount(seat && !seat.isBot ? seat.playerId : null);
   const [bad, setBad] = useState(null);
   const flash = useRise(!!seat && (seat.ready || seat.isBot || seat.playerId === room.hostId));
@@ -328,14 +331,26 @@ function SeatCard({ seat, index, room, facts, myId, busy, onKick, onInvite, sear
   const src = seat.isBot ? null : seatPortrait(seat, portraits);
   const owner = isOwnerName(seat.name);
   const canPick = isMe && !seat.isBot && !!onPickCard;
+  // 名片立绘（立绘调整）：画哪个干员与 seatPortrait 同一条 pick 规则，能画哪几套由清单的 portrait 链解出
+  // （ui/cardArt.js illustSources：portraitE2 → portrait → 外观 illustration）。机器人没有立绘。
+  const charId = seat.isBot ? null : ((isMe && portraits.myCard) || seat.card || null);
+  const sources = charId ? illustSources(portraits.m, charId) : null;
+  const illustOk = !!sources && !!(sources.e2 || sources.e1 || sources.skin);
+  const canTune = isMe && !seat.isBot && illustOk && !!onTuneCard;
   return html`<article class=${`rseat${ready ? ' is-ready' : ''}${flash ? ' is-flash' : ''}${isMe ? ' is-me' : ''}${isHostSeat ? ' is-host' : ''}${offline ? ' is-offline' : ''}${seat.isBot ? ' is-bot' : ''}`}
       style=${`--i:${index}`}>
     <span class="rseat__clip" aria-hidden="true"></span>
     <header class="rseat__strip"><i></i><span class="num">P${index + 1}</span></header>
     <div class=${`rseat__art${canPick ? ' is-pickable' : ''}`} onClick=${canPick ? onPickCard : undefined} title=${canPick ? t('点击更换名片干员') : undefined}>
-      ${src && bad !== src ? html`<img src=${src} alt="" draggable=${false} loading="lazy" onError=${() => setBad(src)} />`
-        : html`<span class="rseat__glyph">${seat.isBot ? html`<${Icon} name="robot" />` : [...(seat.name || '?')][0]}</span>`}
-      ${canPick ? html`<button type="button" class="rseat__pick" onClick=${(e) => { e.stopPropagation(); onPickCard(); }} aria-label=${t('更换名片干员')}><${Icon} name="edit" /><span>${t('更换立绘')}</span></button>` : null}
+      ${illustOk && bad !== charId
+        ? html`<${CardArtImage} key=${`${sources.e2}|${sources.skin}|${charId}`} charId=${charId} sources=${sources}
+            class="seat__portrait" onError=${() => setBad(charId)} />`
+        : src && bad !== src ? html`<img src=${src} alt="" draggable=${false} loading="lazy" onError=${() => setBad(src)} />`
+          : html`<span class="rseat__glyph">${seat.isBot ? html`<${Icon} name="robot" />` : [...(seat.name || '?')][0]}</span>`}
+      ${canPick || canTune ? html`<span class="rseat__picks">
+        ${canPick ? html`<button type="button" class="rseat__pick" data-testid="seat-card-pick" onClick=${(e) => { e.stopPropagation(); onPickCard(); }} aria-label=${t('更换名片干员')}><${Icon} name="edit" /><span>${t('更换立绘')}</span></button>` : null}
+        ${canTune ? html`<button type="button" class="rseat__pick rseat__pick--art" data-testid="seat-card-art" onClick=${(e) => { e.stopPropagation(); onTuneCard(); }} title=${t('立绘调整')} aria-label=${t('立绘调整')}><${Icon} name="expand" /><span>${t('立绘调整')}</span></button>` : null}
+      </span>` : null}
       ${isHostSeat ? html`<span class="rseat__host">${t('创建者')}</span>` : null}
       ${offline ? html`<span class="rseat__lost"><${Icon} name="wifiOff" />${t('失去信号')}</span>` : null}
       ${facts.needsContent && !seat.isBot ? html`<span class=${`rseat__content is-${seat.content || 'loading'}`} data-testid="seat-content">${
@@ -580,6 +595,33 @@ function RoomModsPanel({ room, onAlignment = null }) {
   </div>`;
 }
 
+/**
+ * 立绘调整面板要画的**真卡比例**：整卡宽高比 + 顶条 / 名字条 / 缝隙各占卡宽多少（ui/cardArt.js cardParts 用它把立绘框
+ * 摆到正确的位置）。面板若按一整块画，卡上的立绘（只占顶条与名字条之间那块）就对不上，位置/缩放会「调整的和实际显示的
+ * 完全不对等」。每次开面板、以及开着时窗口改尺寸，都从自己那张卡（`.rseat.is-me`）现量。
+ * @param {Document} [doc]
+ * @returns {{ aspect:number, strip:number, plate:number, gap:number }|null} 量不到（卡还没画出来）= null
+ */
+export function measureCardArtMetrics(doc = globalThis.document) {
+  const card = doc?.querySelector?.('.rseat.is-me');
+  if (!card || typeof card.getBoundingClientRect !== 'function') return null;
+  const r = card.getBoundingClientRect();
+  const rectOf = (sel) => {
+    const el = card.querySelector(sel);
+    return el && typeof el.getBoundingClientRect === 'function' ? el.getBoundingClientRect() : null;
+  };
+  const art = rectOf('.rseat__art');
+  const strip = rectOf('.rseat__strip');
+  const plate = rectOf('.rseat__plate');
+  if (!(r.width > 0) || !(r.height > 0) || !art || !strip || !plate) return null;
+  return {
+    aspect: r.width / r.height,
+    strip: strip.height / r.width,
+    plate: plate.height / r.width,
+    gap: Math.max(0, plate.top - art.bottom) / r.width,
+  };
+}
+
 /** Room screen component. */
 export function RoomScreen() {
   const room = useStore((s) => s.room);
@@ -614,6 +656,17 @@ export function RoomScreen() {
   const cardList = useMemo(() => cardOperators(data.list('chess')), [data.get('chess')]);
   const [myCard, setMyCard] = useState(() => { const v = loadPref(CARD_PREF, ''); return typeof v === 'string' ? v : ''; });
   const [picking, setPicking] = useState(false);
+  // 名片立绘微调（pref room.cardArt）：自己那张座位卡的「立绘调整」开一层预览 + 缩放/框内平移。
+  // 预览按**真卡**画（整卡比例 + 顶条/立绘/名字条），比例在开面板时从自己那张卡现量，开着时窗口改尺寸也重量。
+  const [artOpen, setArtOpen] = useState(false);
+  const [artMetrics, setArtMetrics] = useState(null);
+  useEffect(() => {
+    if (!artOpen || typeof window === 'undefined') return undefined;
+    const remeasure = () => setArtMetrics(measureCardArtMetrics());
+    remeasure();
+    window.addEventListener('resize', remeasure);
+    return () => window.removeEventListener('resize', remeasure);
+  }, [artOpen]);
   const portraits = useMemo(() => ({
     pool: cardList.filter((c) => (c.rarity ?? 0) >= 5).sort((a, b) => (a.charId < b.charId ? -1 : 1)),
     byChar: new Map(cardList.map((c) => [c.charId, c])), m, myId: me.playerId, myCard,
@@ -644,6 +697,14 @@ export function RoomScreen() {
   const searchable = CAN_QUEUE && !!room && coop && facts.isHost && room.private !== true && facts.seats.length <= DEFAULT_SEATS && !room.inMatch;
   const firepower = room?.random === true;
   const variant = room?.variant === 'endurance' || room?.variant === 'marathon' ? room.variant : 'blitz';
+  // 立绘调整（room.cardArt）画的那个干员：与座位卡同一条 pick 规则（自己的 pick 优先，其次服务端回显的 seat.card）；
+  // 能画哪几套由清单的 portrait 链解出。没有 pick（座位卡退到按 playerId 散列的默认干员）时不给这个入口。
+  const myCharId = myCard || facts?.mine?.card || '';
+  const mySources = myCharId ? illustSources(m, myCharId) : null;
+  const myHasArt = !!mySources && !!(mySources.e2 || mySources.e1 || mySources.skin);
+  const myOpName = myCharId ? (portraits.byChar.get(myCharId)?.name || null) : null;
+  const mySeatNo = Math.max(0, facts ? facts.seats.findIndex((s) => s && s.playerId === me.playerId) : -1) + 1;
+  const openArt = () => { setArtMetrics(measureCardArtMetrics()); setArtOpen(true); };
 
   // the server ends a room's search turn after 10 s without bots: queue again while the host still wants it
   const prevMatching = useRef(null);
@@ -875,7 +936,8 @@ export function RoomScreen() {
     <main class="rs-seats" ref=${seatsRef}>
       ${facts.seats.map((s, i) => html`<${SeatCard} key=${s ? `p${s.playerId}` : `e${i}`} seat=${s} index=${i} room=${room} facts=${facts}
         myId=${me.playerId} busy=${busy} onKick=${kick} onInvite=${() => copy('code')} searching=${searching} portraits=${portraits}
-        onPickCard=${cardList.length ? () => setPicking(true) : null} onAddBot=${addBot} onRemoveBot=${removeBot} />`)}
+        onPickCard=${cardList.length ? () => setPicking(true) : null} onTuneCard=${myHasArt ? openArt : null}
+        onAddBot=${addBot} onRemoveBot=${removeBot} />`)}
       ${coop ? null : html`<aside class="solo-brief rs-brief brackets">
         <${MicroLabel} tone="mint">BRIEFING<//>
         <h2>${DIFFICULTY_NAMES[room.difficulty] ? t(DIFFICULTY_NAMES[room.difficulty]) : ''}<span class="num t-dim"> ${info.code}</span></h2>
@@ -937,6 +999,13 @@ export function RoomScreen() {
         { key: 'diff', label: t(DIFFICULTY_NAMES[room.difficulty]), color: DIFFICULTY_COLORS[room.difficulty], icon: html`<${DifficultyIcon} difficulty=${room.difficulty} />` }]} />` : null}
     ${foundShown ? html`<${FoundPanel} class=${foundLeaving ? 'is-leaving' : ''} seats=${facts.seats.length} text=${t('同盟集结完毕')} />` : null}
     ${picking ? html`<${CardPicker} current=${myCard} list=${cardList} m=${m} onPick=${pickCard} onClose=${() => setPicking(false)} />` : null}
+    ${artOpen && myCharId && myHasArt ? html`<${Modal} open=${true} title=${t('立绘调整')} micro="CARD ART"
+      width="min(max(5.2rem, 320px), 96vw)" onClose=${() => setArtOpen(false)}
+      actions=${html`<${Button} variant="ghost" onClick=${() => setArtOpen(false)}>${t('关闭')}<//>`}>
+      <${CardArt} charId=${myCharId} sources=${mySources} operator=${myOpName} metrics=${artMetrics}
+        playerName=${me.name || null} seatNo=${mySeatNo}
+        onPickOperator=${cardList.length ? () => { setArtOpen(false); setPicking(true); } : null} />
+    <//>` : null}
     ${versionOpen && versionCtl ? html`<${VersionPicker} mode="room" versions=${versions || [{ id: curVersion, roomModes: [room.mode] }]} current=${curVersion}
       serverDefault=${serverDefault} roomMode=${room.mode} editable=${versionEditable && !versionWhy} busy=${busy === 'version'}
       note=${versionEditable ? versionWhy || (facts.humans.length > 1 ? t('其他博士同意后才会切换；切换后需要重新准备。') : null) : t('由创建者发起')}

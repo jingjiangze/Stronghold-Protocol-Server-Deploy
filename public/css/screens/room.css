@@ -336,6 +336,15 @@
 .rseat__kick .icon { width: max(.2rem, 12px); height: max(.2rem, 12px); }
 .rseat__kick .icon + .icon { width: max(.14rem, 9px); margin-left: -2px; }
 .rseat__kick:hover:not(:disabled), .rseat__kick:focus-visible { filter: brightness(1.3); }
+/* 座位卡上的两个入口（更换立绘 / 立绘调整）：座位卡的画面区是 grid 的一格，两个按钮各占一行会把卡面撑开 ——
+   包一层竖排（居中，与之前单个 .rseat__pick 的位置一致） */
+.rseat__picks {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .04rem;
+  max-width: 100%;
+}
 .rseat__pick {
   align-self: flex-end;
   display: inline-flex;

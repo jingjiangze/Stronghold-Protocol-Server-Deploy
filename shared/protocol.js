@@ -731,6 +731,10 @@ export const C2S = {
   'room.leave': {},
   'room.music': { command: validRoomMusicCommand },
   'room.ready': { ready: isBool },
+  // 名片干员 (room.card, server/lobby.js card()): the operator whose portrait fills the player's seat card — a visible
+  // charId of the room's chess.json, '' for none. Cosmetic: accepted in any phase, never touches a match.
+  // (插件顶替拷贝 plugins/mota/shared/protocol.js 有同一行；缺了它客户端一发包就在本地 BAD_MSG。)
+  'room.card': { charId: (v) => v === '' || isCharId(v) },
   'room.setDifficulty': { difficulty: (v) => DIFFICULTIES.includes(v) || v === TRAINING_DIFFICULTY },
   // the co-op room option 「AI 队友最后选择」 (GitHub #338; host, before the match): the strategy and 机变 drafts order every
   // human seat before every AI seat (server/match/match/phases.js humansFirst); room.state.aiPicksLast
