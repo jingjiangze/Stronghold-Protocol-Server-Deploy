@@ -21,8 +21,8 @@
       "bytes": 39457
     },
     "client/css/screens/game.css": {
-      "sha256": "746dd21f6726b55d4cc7267745e95fcd12beda20b325efa2a1869c14b9a54fe0",
-      "bytes": 129847
+      "sha256": "ddaff9781c9f8aa8b0efbdf9f08870f775a7665b0c68d99f4f58d2142e9af3f1",
+      "bytes": 132633
     },
     "client/css/screens/guide.css": {
       "sha256": "aef6cc3b6aaf027b61ddf509f6c75798e5dfbc15afb1497b6d65f034468ecf51",
@@ -153,8 +153,8 @@
       "bytes": 22978
     },
     "client/js/screens/game.js": {
-      "sha256": "f165eddea641a9bdd937c2e27144aef373b8dc2ad3733bb41904397cc73ef251",
-      "bytes": 137793
+      "sha256": "1546e1d9d45b79e0d28011b4fbc920d22ac1333dae7492936d384e3e390a7468",
+      "bytes": 142767
     },
     "client/js/screens/loadout.js": {
       "sha256": "475a2a94b2f2b82bc769875dc6455816997302fb20e841083e4626e6754d7873",
@@ -281,8 +281,8 @@
       "bytes": 1557
     },
     "client/js/ui/gameActions.js": {
-      "sha256": "f128e31765907f08d796843694057cbb7fd5ca10e44ecdab9bb50310df4382d1",
-      "bytes": 15139
+      "sha256": "e22bdd51bcfe751aeb3218705edb178e21df5f8c9a90e9a79037723770eb552e",
+      "bytes": 15881
     },
     "client/js/ui/gameComponents.js": {
       "sha256": "76e555b4f2b9cc7997389aafed3cee90035f93c8003dde0e3f84378d79eb9aae",
@@ -637,8 +637,8 @@
       "bytes": 4401
     },
     "server/match/Match.js": {
-      "sha256": "0090d4d4352c537b9825082b47eccb0e45e7d07282188fe6e5e82e028941b75f",
-      "bytes": 60793
+      "sha256": "2cfd26cfaf65f3cbbda8bee4930e75450e726965c4e54b0feab361ca4a7813bd",
+      "bytes": 62132
     },
     "server/match/PlayerState.js": {
       "sha256": "07b91abb93a84998988d75623cbea98c5610239aff56bdb89cc592e9374b2860",
@@ -733,8 +733,8 @@
       "bytes": 13335
     },
     "server/match/match/combat.js": {
-      "sha256": "f95b00d0336d42090749d59fe348dfb4aa4ad317336784a070e91dcf89918100",
-      "bytes": 17475
+      "sha256": "9d2e4854b245ca6614344478bd7db26ad1e770f8f8e81179edc69d0306b1932c",
+      "bytes": 23753
     },
     "server/match/match/common.js": {
       "sha256": "dee3c31d53386e1ec49eb0286e1614f28407956535003d4ba492701ece437f28",
@@ -769,8 +769,8 @@
       "bytes": 12105
     },
     "server/match/match/intents.js": {
-      "sha256": "ba26cb562aa39ec79e2bd2eb3662ea1ca2e4c0f6a8c602c924ff142c71c35f5c",
-      "bytes": 12715
+      "sha256": "9b2001b89e8989cf9c67cc9dcfea1b2c7d7c44083d789ae44fe813f5e8fc74f2",
+      "bytes": 12993
     },
     "server/match/match/meltdown.js": {
       "sha256": "aa54101c1d0ddd96e540d6e7858359d9fef614d9023534a61caa171c8b5dbc68",
