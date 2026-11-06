@@ -15,6 +15,8 @@ import { isPluginId } from './plugins/manifest.js';
 import { CONTRACTS } from './contracts.js';
 import { isTestCommand } from './testMode.js';
 import { PLUGIN_OFFER_SLOTS } from './plugins/limits.js';
+// 肉鸽「地图主题池」 (room.create { mapPool }, 2026-11-06): 'all' | 'ro1'…'ro6' —— 与插件顶替拷贝同口径。
+import { isPool } from './rogueThemes.js';
 
 // ---- tiny validators -------------------------------------------------------
 const isInt = (v, lo = -Infinity, hi = Infinity) => Number.isInteger(v) && v >= lo && v <= hi;
@@ -721,7 +723,10 @@ export const C2S = {
   // 肉鸽是独立模式（2026-11-01，客户端发 `mode:'rogue'`）：它的难度表是 N1–N20（difficultiesFor('rogue')），
   // 与 solo/coop 的旧 4 档并列接受；同一个 N 档发在 coop/solo 上仍然是坏字段（行为不变，不做全局放宽）。
   // `variant` 是房间玩法变体（'rogue' / 'xie' / 对抗规则档），只校验形状，怎么解释由 lobby 与插件决定。
-  'room.create': { mode: (v) => v === 'solo' || v === 'coop' || v === 'rogue', difficulty: (v, m) => DIFFICULTIES.includes(v) || v === TRAINING_DIFFICULTY || (m?.mode === 'rogue' && DIFFICULTY_TIERS.includes(v)), variant: (v) => v == null || (typeof v === 'string' && v.length > 0 && v.length <= 64 && /^[A-Za-z0-9_.:-]+$/.test(v)), test: (v) => v === true, capacity: (v) => ROOM_CAPACITIES.includes(v), $optional: ['test','capacity','variant'] },
+  'room.create': { mode: (v) => v === 'solo' || v === 'coop' || v === 'rogue', difficulty: (v, m) => DIFFICULTIES.includes(v) || v === TRAINING_DIFFICULTY || (m?.mode === 'rogue' && DIFFICULTY_TIERS.includes(v)), variant: (v) => v == null || (typeof v === 'string' && v.length > 0 && v.length <= 64 && /^[A-Za-z0-9_.:-]+$/.test(v)), test: (v) => v === true, capacity: (v) => ROOM_CAPACITIES.includes(v),
+    // 肉鸽「地图主题池」 (shared/rogueThemes.js): 'all' | 'ro1'…'ro6'。缺席 / null = 'all'（默认房一个键都不多）。
+    mapPool: (v) => v == null || isPool(v),
+    $optional: ['test','capacity','variant','mapPool'] },
   'room.join': { $optional: ['testAck'], testAck: (v) => v === true, code: (v) => isStr(v, ROOM_CODE_LEN + 2) && /^[A-Za-z0-9]+$/.test(v) },
   'room.leave': {},
   'room.music': { command: validRoomMusicCommand },

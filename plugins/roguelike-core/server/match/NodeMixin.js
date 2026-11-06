@@ -27,6 +27,7 @@
 // 数值（层数、候选、行动力、奖励）全部是**自设计（D 类）**，不是官方数据；数据文件头同样标注 selfDesigned。
 
 import { createRng, deriveSeed } from '../../../../server/sim/rng.js';
+import { isPool } from '../../../../shared/rogueThemes.js';
 
 const TABLE = 'rogue-nodes';
 /**
@@ -36,6 +37,13 @@ const TABLE = 'rogue-nodes';
 const STAGE_ID_RE = /^rogue_ro\d+_/;
 /** 把 tier（来自数据表，可能含 `-`/`.` 等）转成正则字面量。 */
 const escapeRe = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/** 从图 id 里取 tier：`rogue_ro4_1-3` → `1`，`rogue_ro5_t-2_dlc1` → `t`；不是肉鸽图时返回空串。 */
+const stageTierOf = (sid) => {
+  const m = /^rogue_ro\d+_([^-_]+)-/.exec(String(sid));
+  return m ? m[1] : '';
+};
+/** 「可战斗 tier」（主题内兜底第 ② 档）：普通 1–7、精英 t、首领 b。补给 d / 事件 ev / 剧情 fs·sv 等不在内。 */
+const COMBAT_TIERS = new Set(['1', '2', '3', '4', '5', '6', '7', 'b', 't']);
 
 const num = (v, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d);
 const str = (v, d = '') => (typeof v === 'string' && v ? v : d);
@@ -248,7 +256,16 @@ export class Mixin {
   /**
    * 第 r 回合该打哪张肉鸽图：当前节点 tier → `rogue_ro<主题号>_<tier>-*`（主题 ro1–ro6 都算；
    * 同 tier 多张时按 seed 稳定选一张）。
-   * 找不到（无插件数据 / 该 tier 没有可用图）返回 null，调用方落回原来的权重抽取。
+   *
+   * 肉鸽「地图主题池」 (this.rogueMapPool, room.create { mapPool }; shared/rogueThemes.js, 2026-11-06):
+   * 选池后先按 `^rogue_<池>_` 收窄，再在主题内按 tier / scene / active 过滤。tier 在该主题里没有图时
+   * **不回全局**，按下面的顺序在主题内兜底：
+   *   ① 同主题同 tier（正常路径）；
+   *   ② 同主题的**可战斗 tier**（1..7 / t / b，见 COMBAT_TIERS）；
+   *   ③ 同主题任意可用图。
+   * 只有该主题一张可用图都没有时才返回 null，调用方落回原来的权重抽取（MatchPhases._stagePool 同样只在该主题内兜底）。
+   * 已知缺口：ro1 / ro2 / ro3 没有 `d` 与 `7`，所以补给（d）节点会落到 ②；`'all'`（缺省 / 非法）不收窄、
+   * 也不走主题内兜底 —— 行为与加这个开关之前逐字节一致。
    * @param {number} r
    * @returns {string|null}
    */
@@ -271,27 +288,41 @@ export class Mixin {
     const tier = str(node.tier);
     if (!tier) return null;
 
-    const pool = Array.isArray(this.gd && this.gd.mode && this.gd.mode.stages) ? this.gd.mode.stages : [];
-    const re = new RegExp(`${STAGE_ID_RE.source}${escapeRe(tier)}-`);
-    const all = [];
-    for (const x of pool) {
-      const sid = String(x);
-      if (!re.test(sid)) continue;
+    const theme = isPool(this.rogueMapPool) ? this.rogueMapPool : 'all';
+    const base = Array.isArray(this.gd && this.gd.mode && this.gd.mode.stages) ? this.gd.mode.stages : [];
+    // 主题收窄：'all' 收窄成空操作（同一批 id，顺序不变），其余只留该主题前缀。
+    const pool = theme === 'all' ? base : base.filter((x) => String(x).startsWith(`rogue_${theme}_`));
+    const usable = (sid) => {
       const stage = typeof this.gd.stage === 'function' ? this.gd.stage(sid) : null;
-      if (!stage || stage.active === false) continue;
-      all.push(sid);
-    }
+      return !!stage && stage.active !== false;
+    };
+    const ids = pool.map(String).filter(usable);
+    const re = new RegExp(`${STAGE_ID_RE.source}${escapeRe(tier)}-`);
+
     // 「包含无场景地图」 (Match opts.incompleteMaps, room.setIncompleteMaps; off by default): a tier map without an official
     // scene package would put the round on the procedural board, so only scene-backed ids are drawn — unless the tier has
     // none at all (then the old behaviour: whatever the tier offers), and an empty tier still returns null so
     // MatchPhases.stageIdForRound falls back to its weighted pool.
     const scene = this.sceneStages instanceof Set ? this.sceneStages
       : (this.gd && this.gd.sceneStages instanceof Set ? this.gd.sceneStages : null);
-    const kept = this.incompleteMaps === true || !scene ? all : all.filter((sid) => scene.has(sid));
-    const cands = kept.length ? kept : all;
-    if (!cands.length) return null;
-    const rng = createRng(deriveSeed(this.seed, `rogue-stage:${round}:${node.id}`));
-    return cands[rng.int(cands.length)] || null;
+    const draw = (candidates) => {
+      const kept = this.incompleteMaps === true || !scene ? candidates : candidates.filter((sid) => scene.has(sid));
+      const cands = kept.length ? kept : candidates;
+      if (!cands.length) return null;
+      const rng = createRng(deriveSeed(this.seed, `rogue-stage:${round}:${node.id}`));
+      return cands[rng.int(cands.length)] || null;
+    };
+
+    // ① 同 tier
+    const tierHit = draw(ids.filter((sid) => re.test(sid)));
+    if (tierHit) return tierHit;
+    // 'all'：老行为 —— 该 tier 没有可用图就是 null（不回别的 tier，调用方落回权重抽取）。
+    if (theme === 'all') return null;
+    // ② 主题内的可战斗 tier
+    const combatHit = draw(ids.filter((sid) => COMBAT_TIERS.has(stageTierOf(sid))));
+    if (combatHit) return combatHit;
+    // ③ 主题内任意可用图；该主题一张可用图都没有时才是 null
+    return draw(ids);
   }
 
   /** 下发给客户端的节点状态（views.js 的 pub.rogue.nodes）。 */

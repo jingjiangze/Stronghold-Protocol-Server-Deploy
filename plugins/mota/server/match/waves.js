@@ -37,6 +37,7 @@
 
 import { createRng, deriveSeed } from '../sim/rng.js';
 import { PLUGIN_ACTION_UNITS } from '../../shared/plugins/limits.js';
+import { isPool } from '../../../../shared/rogueThemes.js';
 
 const ACLOON = 'enemy_9012_acloon';
 const DEFAULT_PLACEHOLDERS = Object.freeze({
@@ -189,14 +190,21 @@ export function setupMatchWaves(gd, rng) {
   // an official scene package are drawn (server/match/sceneStages.js; Match puts the Set on the gd as `sceneStages`).
   // Narrowing to nothing (no manifest, a mode whose stages all lack a scene, a plain tool gd) falls back to the full
   // pool, so a match never starts without a stage.
-  const stageIds = Array.isArray(gd.mode.stages) ? gd.mode.stages : [];
+  // 肉鸽「地图主题池」 (Match opts.mapPool → gd.rogueMapPool; shared/rogueThemes.js, 2026-11-06): 先按 `^rogue_<池>_`
+  // 收窄。兜底同样只在**该主题内**找（下面的 any 分支也按前缀过滤）—— 选了「水月」就不会开局落到傀影的图上；
+  // 只有该主题一张图都没有时 stageId 才是 null。'all'（缺省 / 非法）不收窄，行为与加这个开关之前逐字节一致。
+  const theme = isPool(gd.rogueMapPool) ? gd.rogueMapPool : 'all';
+  const stageIdsAll = Array.isArray(gd.mode.stages) ? gd.mode.stages : [];
+  const stageIds = theme === 'all' ? stageIdsAll : stageIdsAll.filter((id) => String(id).startsWith(`rogue_${theme}_`));
   const sceneStages = gd.sceneStages instanceof Set ? gd.sceneStages : null;
   const eligible = gd.allowIncompleteMaps === true || !sceneStages ? stageIds : stageIds.filter((id) => sceneStages.has(id));
   const pool = eligible.length ? eligible : stageIds;
   const stagePairs = pool.map((id) => [id, gd.stage(id)]).filter(([, s]) => s && s.active !== false && Number(s.weight) > 0).map(([id, s]) => [id, s.weight]);
   let stageId = stagePairs.length ? weightedPick(rng, stagePairs) : null;
   if (!stageId) {
-    const any = Object.keys(gd.raw.stages || {}).filter((id) => gd.stage(id) && gd.stage(id).active);
+    const anyIds = Object.keys(gd.raw.stages || {});
+    const themed = theme === 'all' ? anyIds : anyIds.filter((id) => id.startsWith(`rogue_${theme}_`));
+    const any = themed.filter((id) => gd.stage(id) && gd.stage(id).active);
     stageId = any.length ? any.sort()[0] : null;
   }
   // factions

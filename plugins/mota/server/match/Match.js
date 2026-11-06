@@ -19,6 +19,11 @@
 //                                              default): off, stage pools keep only the stages with an official scene
 //                                              package (server/match/sceneStages.js); on, every stage of the mode is drawn
 //                                              (a scene-less stage plays on the procedural board). Only `true` turns it on.
+//   opts.mapPool     string (optional)          肉鸽「地图主题池」 (room.create { mapPool }, shared/rogueThemes.js):
+//                                              'all' | 'ro1'…'ro6'. Only a rogue match uses it — the stage draws and the
+//                                              node-tier draw then keep only `rogue_ro<N>_*` ids of that theme, with a
+//                                              within-theme fallback (never the global pool). 'all' (default, and any
+//                                              illegal value) leaves every pool exactly as before.
 //   opts.seats       Array<{ seat: 0..3, playerId: string, name: string, isBot: boolean, connected: boolean,
 //                            loadout?: { [baseChessId]: { skill: index, module: uniEquipId|'none'|null } } | null,
 //                            ops?: { [charId]: { potential: 1–6, cultivate: 0–3 } } | null,
@@ -262,6 +267,8 @@ import { strategyBoostEnabled } from '../../shared/strategyBoost.js';
 // 「包含无场景地图」 (opts.incompleteMaps, server/match/sceneStages.js): the shared cache of stages with an official scene
 // package. The plugin reads the root module — one manifest parse for the vanilla engine and every plugin alike.
 import { stagesWithScene } from '../../../../server/match/sceneStages.js';
+// 肉鸽「地图主题池」 (opts.mapPool, shared/rogueThemes.js): 'all' | 'ro1'…'ro6' 的常量表与校验。
+import { isPool } from '../../../../shared/rogueThemes.js';
 
 export { FLOW_TICKER_PRIORITY, DELAYS, BAND_TURN_SECONDS } from './match/common.js';
 
@@ -388,6 +395,17 @@ export class Match {
       this.gd.allowIncompleteMaps = this.incompleteMaps;
       this.gd.sceneStages = this.sceneStages;
     } catch { /* frozen gd: no narrowing */ }
+    /**
+     * 肉鸽「地图主题池」 (opts.mapPool, room.create { mapPool }; shared/rogueThemes.js): 'all' | 'ro1'…'ro6'.
+     * 只有肉鸽局才落地 —— 过滤用的是 `rogue_ro<池>_` 前缀，非肉鸽局的图上没有这个前缀，收窄只会把池清空。
+     * 非法值回落 'all'（行为与加这个开关之前一致）。三处选图都读它：
+     *   · NodeMixin.rogueStageFor（节点 tier 主路径，读 `this.rogueMapPool`）
+     *   · MatchPhases._stagePool（回合权重池 / boss 兜底，读 `this.rogueMapPool`）
+     *   · waves.setupMatchWaves（开局图，读挂在 gd 上的同一个值）
+     * 挂到 gd 照 incompleteMaps 的写法：冻结的 gd 保留全池，即这个开关之前的行为。
+     */
+    this.rogueMapPool = this.isRogue === true && isPool(opts.mapPool) ? opts.mapPool : 'all';
+    try { this.gd.rogueMapPool = this.rogueMapPool; } catch { /* frozen gd: every theme stays in the pools */ }
     if (!this.difficulty) this.difficulty = this.gd.difficulty;
     this.isSolo = this.mode === 'solo' || this.gd.isSolo;
     /**

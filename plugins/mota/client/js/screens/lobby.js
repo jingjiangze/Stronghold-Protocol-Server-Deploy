@@ -120,6 +120,29 @@ const ROGUE_CARD = {
   desc: N_('开局与之后每 2 回合各抽一次藏品三选一（每人本局最多 3 件），每回合随机词缀、事件期出随机事件、每回合换战场；同时开启协同团队储备。'),
 };
 
+/**
+ * 肉鸽「地图主题池」 (2026-11-06)：大厅「选择模拟协议」左列的选择器。
+ * 池 id 与官方全名以 shared/rogueThemes.js 为权威（服务端按它过滤选图）；浏览器拿到的是插件挂载树
+ * （/js/…，与 /shared/… 是两套路径），不能 import 根 shared 的新文件，所以这里留一份同值的短表 ——
+ * 改池 id / 主题名时两处一起改。`acc` 只是该选项的强调色（`.vsopt` 的 `--acc`，与对抗规则 dock 同一套样式）。
+ */
+const ROGUE_MAP_POOLS = [
+  { id: 'all', code: 'ALL', short: N_('全部'), name: N_('全部主题'), acc: 'var(--gold-2)',
+    title: N_('全部主题：不按主题过滤，官方全部肉鸽图都可能成为战场') },
+  { id: 'ro1', code: 'R1', short: N_('傀影'), name: N_('傀影与猩红孤钻'), acc: 'var(--red)',
+    title: N_('傀影与猩红孤钻（ro1）：只从这一主题的官方地图里抽战场') },
+  { id: 'ro2', code: 'R2', short: N_('水月'), name: N_('水月与深蓝之树'), acc: 'var(--ice)',
+    title: N_('水月与深蓝之树（ro2）：只从这一主题的官方地图里抽战场') },
+  { id: 'ro3', code: 'R3', short: N_('银凇'), name: N_('探索者的银凇止境'), acc: '#cfe6ff',
+    title: N_('探索者的银凇止境（ro3）：只从这一主题的官方地图里抽战场') },
+  { id: 'ro4', code: 'R4', short: N_('萨卡兹'), name: N_('萨卡兹的无终奇语'), acc: 'var(--orange)',
+    title: N_('萨卡兹的无终奇语（ro4）：只从这一主题的官方地图里抽战场') },
+  { id: 'ro5', code: 'R5', short: N_('岁'), name: N_('岁的界园志异'), acc: '#8fd6a8',
+    title: N_('岁的界园志异（ro5，含 DLC 图）：只从这一主题的官方地图里抽战场') },
+  { id: 'ro6', code: 'R6', short: N_('黑流树海'), name: N_('沉沦者的黑流树海'), acc: 'var(--violet)',
+    title: N_('沉沦者的黑流树海（ro6）：只从这一主题的官方地图里抽战场') },
+];
+
 const MODE_CARDS = [
   {
     id: 'solo', name: N_('独立模拟'), en: 'SOLO SIMULATION', icon: 'user',
@@ -590,7 +613,7 @@ function ProtocolSelect({ card, roomMode, random, variant, difficulty, onDifficu
   online, maint, busy, isSearching, onCreate, onQueue, purpose = 'create', onSearch, onCancel, mm, onBrowse, chained = false, modeVariant = null,
   testMode = false, asTest = false, onTest = null, versusTeam = 2, onVersusTeam = null,
   versusRule = 'bounty', onVersusRule = null, versusAlt = true, onVersusAlt = null,
-  versusSpeed = 1, onVersusSpeed = null }) {
+  versusSpeed = 1, onVersusSpeed = null, mapPool = 'all', onMapPool = null }) {
   const [leaving, leave] = useLeave(onClose);
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape' && !document.querySelector('.modal, .guide')) leave(); };
@@ -680,6 +703,21 @@ function ProtocolSelect({ card, roomMode, random, variant, difficulty, onDifficu
                   onChange=${(e) => onVersusSpeed && onVersusSpeed(Number(e.currentTarget.value))}>
                   ${[1, 1.5, 2].map((m) => html`<option key=${m} value=${String(m)}>${t('{m}× 出怪', { m })}</option>`)}
                 </select></label>` : null}
+            </div>
+          </div>` : null}
+        ${effectiveMode === 'rogue' ? html`<div class="proto-dock">
+            <div class="proto-dock__row" role="radiogroup" aria-label=${t('地图主题')}>
+              ${ROGUE_MAP_POOLS.map((p) => html`<button key=${p.id} type="button" role="radio"
+                aria-checked=${mapPool === p.id ? 'true' : 'false'}
+                class=${`vsopt${mapPool === p.id ? ' is-on' : ''}`} style=${`--acc:${p.acc}`}
+                disabled=${!!busy} title=${t(p.title)}
+                onClick=${() => onMapPool && onMapPool(p.id)}>
+                <span class="vsopt__code">${p.code}</span>
+                <span class="vsopt__text"><b>${t(p.short)}</b><small>${t(p.name)}</small></span>
+              </button>`)}
+            </div>
+            <div class="proto-dock__foot">
+              <span class="proto-dock__note">${t('只从所选主题的官方地图里抽战场：该主题缺少这一层级的图时，改抽同主题的可战斗地图，不会跨主题。')}</span>
             </div>
           </div>` : null}
         ${modeVariant === 'xie' ? html`<div class="proto-versus proto-versus--info">
@@ -945,6 +983,9 @@ export function LobbyScreen() {
   const [versusAlt, setVersusAlt] = useState(true);
   // 赏金档倍速（业主 2026-10-31）：1 / 1.5 / 2，控怪档不吃这一项
   const [versusSpeed, setVersusSpeed] = useState(1);
+  // 肉鸽「地图主题池」 (2026-11-06)：'all' | 'ro1'…'ro6'，照 versusRule 的模式 —— 只在本页选择，建房时随
+  // room.create 发给服务端；'all' 也发（服务端按 all 处理），缺省行为与加这个选择器之前一致。
+  const [mapPool, setMapPool] = useState('all');
   const [difficulty, setDifficulty] = useState(() => preferredDifficulty(lobbySimulationPreference()));
   const [fpVariant, setFpVariant] = useState(firepowerVariantPreference);
   const roomMode = simulation === 'solo' ? 'solo' : simulation === 'versus' ? 'versus' : 'coop';
@@ -1062,6 +1103,8 @@ export function LobbyScreen() {
       mode: simulation === 'coop' && rogueRules ? 'rogue' : roomMode, difficulty,
       ...(randomMode ? { variant } : {}), ...(simulation === 'xie' ? { variant: 'xie' } : {}),
       ...(simulation === 'coop' && rogueRules ? { variant: 'rogue' } : {}),
+      // 肉鸽「地图主题池」 (2026-11-06)：左列选择器的结果。'all' 照样发，服务端按 all 处理。
+      ...(simulation === 'coop' && rogueRules ? { mapPool } : {}),
       ...(simulation === 'versus' ? { teamSize: 2, variant: versusRule,
         versusAlt: versusRule === 'ai' ? false : (versusRule === 'confront' ? versusAlt !== false : true),
         versusSpeed: versusRule === 'bounty' ? versusSpeed : 1 } : {}),
@@ -1236,6 +1279,7 @@ export function LobbyScreen() {
       testMode=${testMode} asTest=${asTest} onTest=${setAsTest}
       versusRule=${versusRule} onVersusRule=${setVersusRule} versusAlt=${versusAlt} onVersusAlt=${setVersusAlt}
       versusSpeed=${versusSpeed} onVersusSpeed=${setVersusSpeed}
+      mapPool=${mapPool} onMapPool=${setMapPool}
       onCreate=${create} onQueue=${async () => { await queueMatch(); setSheetOpen(false); }}
       purpose=${sheetPurpose} onSearch=${queueMatch} onCancel=${cancelMatch} mm=${mm} onBrowse=${() => setModalOpen(true)} chained=${sheetChained} />` : null}
 

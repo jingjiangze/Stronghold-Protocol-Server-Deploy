@@ -10,6 +10,7 @@ import { buildNormalWave, buildBossWave } from '../waves.js';
 import { layoutOf } from '../../../shared/layout.js';
 import { pairPlayers } from '../finalAssault.js';
 import { createRng, deriveSeed } from '../../sim/rng.js';
+import { isPool } from '../../../../../shared/rogueThemes.js';
 import { botPickBand } from '../bot.js';
 import { OK, fail, DELAYS, BAND_TURN_SECONDS } from './common.js';
 
@@ -294,15 +295,23 @@ export class MatchPhases {
    * starts from. Off, only the stages with an official scene package stay (server/match/sceneStages.js, the Set Match puts
    * on `this.sceneStages` / the gd); on, the mode's full list. Narrowing to nothing (no manifest, a tier whose maps all
    * lack a scene) falls back to the full pool, so a draw never runs dry.
+   * 肉鸽「地图主题池」 (`this.rogueMapPool`) narrows first, by the `rogue_ro<N>_` prefix; narrowing to nothing falls back to
+   * that theme's full list (never the global pool — see the method).
    * @returns {string[]}
    */
   _stagePool() {
     const pool = Array.isArray(this.gd?.mode?.stages) ? this.gd.mode.stages : [];
+    // 肉鸽「地图主题池」 (this.rogueMapPool, room.create { mapPool }; shared/rogueThemes.js, 2026-11-06):
+    // 先按 `^rogue_<池>_` 收窄，再照旧按场景包收窄。'all'（缺省 / 非法）不收窄 —— 池子与加这个开关之前完全一样。
+    // 兜底口径：主题内收窄到空时**回该主题全量**，绝不回全局（否则选「水月」会抽到傀影的图）；
+    // 只有该主题一张图都没有时才返回空数组，调用方（权重 < 2 张）沿用当前图。
+    const theme = isPool(this.rogueMapPool) ? this.rogueMapPool : 'all';
+    const narrowed = theme === 'all' ? pool : pool.filter((id) => String(id).startsWith(`rogue_${theme}_`));
     const scene = this.sceneStages instanceof Set ? this.sceneStages
       : (this.gd && this.gd.sceneStages instanceof Set ? this.gd.sceneStages : null);
-    if (this.incompleteMaps === true || !scene) return pool;
-    const kept = pool.filter((id) => scene.has(id));
-    return kept.length ? kept : pool;
+    if (this.incompleteMaps === true || !scene) return narrowed;
+    const kept = narrowed.filter((id) => scene.has(id));
+    return kept.length ? kept : narrowed;
   }
 
   /**
