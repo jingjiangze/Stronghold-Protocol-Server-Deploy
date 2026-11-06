@@ -37,6 +37,13 @@ const GEAR_PENALTY = 10;
 const FUNDS_PRICE = { prismatic: 8, gold: 5, silver: 3, gear: 6 };
 
 /**
+ * 藏品稀有度档位（失与得用，2026-11-06）：`relics-87` 现在只发 red(73) / blue(14)，`mid` 是客户端已经认的
+ * 中间档（将来数据侧出现时不必改这里）。官方口径「产出跟投入挂钩」⇒ 只允许**同档或降档**，不同档位按 rank 比。
+ * rank 0 = 未知档（数据缺 tier）⇒ 不设门（宁可换得到，也不要因为数据缺字段把选项锁死）。
+ */
+const RELIC_TIER_RANK = { blue: 1, mid: 2, red: 3 };
+
+/**
  * 一张熔毁卡的个人资金价（0 = 不能拿钱买）。
  * 装备栏固定 gear 档；其余按 card.grade（prismatic / gold / silver）。
  * @param {any} card
@@ -433,7 +440,11 @@ export class MatchMeltdown {
       .filter((r) => r && typeof r.id === 'string' && r.id)
       .map((r) => {
         const tier = Math.max(1, Math.min(6, Number(r.tierNum) || (r.tier === 'red' ? 4 : 2)));
-        const price = Math.max(2, Math.min(12, Math.round(Number(r.price) || (tier >= 4 ? 8 : 4))));
+        // 价格：官方三档 低 8 / 中 12 / 高 16（源石锭语义）。数据只映射了 blue=8（低档）/ red=16（高档），
+        // 没有中档稀有度，见 relics.json 的 priceNotice。
+        // 2026-11-06：去掉此前的 `Math.min(12, …)` 上限 —— red 的官方高档 16 会被夹成 12，
+        // 与 `relicOffer`（商店节点直购）用的 relics.json 原价不一致。
+        const price = Math.max(2, Math.round(Number(r.price) || (tier >= 4 ? 16 : 8)));
         return {
           kind: String(r.kind || ''),
           icon: String(r.icon || `/assets/relics/${r.id}.png`),
@@ -1163,10 +1174,24 @@ export class MatchMeltdown {
   relicGrantInstant(ps, def) {
     const e = (def && def.effect) || {};
     const im = e.immediate && typeof e.immediate === 'object' ? e.immediate : null;
+    // 失与得的账本（2026-11-06）：下发前先取基准值，事后按**实际变化**写一条可回放的账（`relicRevoke` 用）。
+    // 只记真的改过的字段 —— 玩家资金被 `addFunds` 夹到 0 之类的情况也如实记为 0 变化、不写键。
+    // 账本是纯数据（数字 / 字符串 / 数组），可直接 JSON 序列化；不进公开视图（见 player/views.js 的 privateView）。
+    const led = {};
+    const fundsBefore = Number(ps && ps.funds) || 0;
+    const lpBefore = Number(ps && ps.lp) || 0;
+    const capBefore = Number(ps && ps.deployCapBonus) || 0;
+    const grantedItems = [];
     if (im) {
       if (Number.isFinite(im.funds) && im.funds) ps.addFunds(Math.trunc(im.funds), { reason: 'relic' });
       if (Number.isFinite(im.lp) && im.lp) ps.lp = Math.max(1, (Number(ps.lp) || 0) + Math.trunc(im.lp));
-      if (Array.isArray(im.items)) for (const itemId of im.items) { try { ps.acquireItem(itemId, { source: 'relic' }); } catch { /* 池子/数据守卫 */ } }
+      if (Array.isArray(im.items)) for (const itemId of im.items) {
+        try {
+          const piece = ps.acquireItem(itemId, { source: 'relic' });
+          // 合成（两件同名 → 金）时返回的是合成后的那件，按它记 uid，revoke 时按 uid 找回并移除。
+          if (piece) grantedItems.push({ id: String(piece.id || itemId), uid: piece.uid });
+        } catch { /* 池子/数据守卫 */ }
+      }
     }
     if (Number.isFinite(e.deployCap) && e.deployCap) ps.deployCapBonus = (Number(ps.deployCapBonus) || 0) + Math.trunc(e.deployCap);
     // rule：loseAllFunds（追忆仪）「获得时，本次休整期失去所有的资金」（悬赏减半那半边待赏金倍率钩子，见覆盖清单）
@@ -1174,15 +1199,238 @@ export class MatchMeltdown {
     // rule：removeTemp（维度流质）「移除临时部署区」——置旗（stow 不再往 temp 塞）并把已经在里面的清掉
     if (e.rule && e.rule.id === 'removeTemp') {
       try {
+        const wasNoTemp = !!ps.relicNoTemp;
+        const cleared = [];
         ps.relicNoTemp = true;
         if (Array.isArray(ps.temp)) {
-          for (const piece of ps.temp) { try { if (piece) ps.releaseItemStock && ps.releaseItemStock(piece); } catch { /* noop */ } }
+          ps.temp.forEach((piece, idx) => {
+            if (!piece) return;
+            let repaid = 0;
+            try { repaid = ps.releaseItemStock ? (Number(ps.releaseItemStock(piece)) || 0) : 0; } catch { /* noop */ }
+            // 记原槽位 + 这件道具 + 清掉时归还的库存份数（revoke 放回时按同一份数重新记账）
+            cleared.push({ idx, piece, repaid });
+          });
           ps.temp.fill ? ps.temp.fill(null) : (ps.temp.length = 0);
         }
+        if (cleared.length) led.removedTemp = cleared;
+        if (!wasNoTemp) led.noTemp = true;
         ps.dirty && ps.dirty();
       } catch { /* noop */ }
     }
     if (Number.isFinite(e.lpCap) && e.lpCap) ps.lp = Math.max(1, (Number(ps.lp) || 0) + Math.trunc(e.lpCap));
+    // 净变化一次性落账：`immediate.lp` 与 `lpCap` 都写 `ps.lp`，合成一条 `lp` 才不会把同一笔加成记两遍。
+    const fundsDelta = (Number(ps && ps.funds) || 0) - fundsBefore;
+    const lpDelta = (Number(ps && ps.lp) || 0) - lpBefore;
+    const capDelta = (Number(ps && ps.deployCapBonus) || 0) - capBefore;
+    if (fundsDelta) led.funds = fundsDelta;
+    if (lpDelta) led.lp = lpDelta;
+    if (capDelta) led.deployCap = capDelta;
+    if (grantedItems.length) led.items = grantedItems;
+    // 落账：`ps.relicLedger[relicId]` 是**栈**（同一件藏品可能被重复下发 —— 得偿所愿池子抽空时允许发重复），
+    // 每次下发 push 一条，`relicRevoke` 弹最后一条。全是纯数据，可跨存档序列化；不进公开视图。
+    if (def && def.id && Object.keys(led).length) {
+      const map = ps.relicLedger && typeof ps.relicLedger === 'object' ? ps.relicLedger : (ps.relicLedger = {});
+      const stack = Array.isArray(map[def.id]) ? map[def.id] : (map[def.id] = []);
+      stack.push(led);
+    }
+  }
+
+  /** 藏品的稀有度档（'red' / 'blue' / 'mid'；数据缺 tier 时返回 ''）。 */
+  relicTierOf(relicId) {
+    const def = this.relicPool().find((r) => r && r.id === relicId) || null;
+    return String((def && def.tier) || '');
+  }
+
+  /** 档 → rank（0 = 未知档，不设门）。 */
+  relicTierRank(tier) {
+    return RELIC_TIER_RANK[String(tier || '')] || 0;
+  }
+
+  /**
+   * **撤销**一件藏品（失与得的「失」，2026-11-06）。
+   *
+   * 按 `ps.relicLedger[relicId]` 的最后一条逐项逆运算（资金 / 生命 / 部署上限 / 一次性道具 / 被 removeTemp 清掉的
+   * 临时部署区道具），然后从 `ps.relics` 移除 —— rule 类聚合（relicAllyMul / relicEnemyMul / relicEffectList）
+   * 都是「读 ps.relics 现算」的，所以移除即自然失效，不用另外回滚。
+   *
+   * **没有账本的老藏品（本次改动前发出的历史存档）只移除、不逆运算、不抛错** —— 一次性加成当时就没记账，
+   * 现在也无从回滚，宁可少给不可崩。
+   * @param {object} ps @param {string} relicId
+   */
+  relicRevoke(ps, relicId) {
+    const id = String(relicId || '');
+    if (!ps || !id) return fail(ERR.BAD_TARGET, 'bad relic'); // i18n-ignore
+    const own = Array.isArray(ps.relics) ? ps.relics : null;
+    const idx = own ? own.indexOf(id) : -1;
+    if (idx < 0) return fail(ERR.BAD_TARGET, 'relic not owned'); // i18n-ignore
+    own.splice(idx, 1);
+    const map = ps.relicLedger && typeof ps.relicLedger === 'object' ? ps.relicLedger : null;
+    const stack = map && Array.isArray(map[id]) ? map[id] : null;
+    const entry = stack && stack.length ? stack.pop() : null;
+    if (stack && !stack.length) { try { delete map[id]; } catch { /* noop */ } }
+    if (entry) {
+      try { this.relicRevokeEntry(ps, entry); } catch (e) { this.reportError('relic revoke', e); }
+    } else {
+      // 老存档 / 直接 push 进 relics 的藏品：没有账本，只移除（不伪造回滚）
+      try { this.reportError('relic revoke', new Error(`no ledger for ${id}`)); } catch { /* noop */ }
+    }
+    try { ps.dirty && ps.dirty(); } catch { /* noop */ }
+    return OK;
+  }
+
+  /** 按一条账逐项反向（只处理账里真有的键）。 */
+  relicRevokeEntry(ps, entry) {
+    if (!ps || !entry) return;
+    if (Number.isFinite(entry.funds) && entry.funds) {
+      const n = Math.trunc(entry.funds);
+      try {
+        if (typeof ps.addFunds === 'function') ps.addFunds(-n, { reason: 'relic-revoke' });
+        else ps.funds = Math.max(0, (Number(ps.funds) || 0) - n);
+      } catch { /* noop */ }
+    }
+    // 生命下限 1（与下发同口径）：`entry.lp` 为负（如 n22 −12）时这里是加回来
+    if (Number.isFinite(entry.lp) && entry.lp) ps.lp = Math.max(1, (Number(ps.lp) || 0) - Math.trunc(entry.lp));
+    if (Number.isFinite(entry.deployCap) && entry.deployCap) {
+      ps.deployCapBonus = (Number(ps.deployCapBonus) || 0) - Math.trunc(entry.deployCap);
+    }
+    if (Array.isArray(entry.items)) for (const it of entry.items) this.relicRevokeItem(ps, it);
+    if (Array.isArray(entry.removedTemp)) this.relicRestoreTemp(ps, entry.removedTemp);
+    if (entry.noTemp) ps.relicNoTemp = false;
+  }
+
+  /** 把下发时给的一次性道具收回来：按 uid 在手上 / 待部署区找回，找不到（已装备 / 已合成 / 已用掉）就记日志跳过。 */
+  relicRevokeItem(ps, it) {
+    const uid = it && it.uid;
+    const id = String((it && it.id) || '');
+    const hit = (arr, test) => (Array.isArray(arr) ? arr.findIndex((p) => p && test(p)) : -1);
+    const test = (p) => (uid != null ? p.uid === uid : (!!id && p.id === id));
+    for (const area of ['hand', 'temp']) {
+      const arr = ps[area];
+      const i = hit(arr, test);
+      if (i < 0) continue;
+      const piece = arr[i];
+      arr[i] = null;
+      try { if (ps.releaseItemStock) ps.releaseItemStock(piece); } catch { /* noop */ }
+      return;
+    }
+    try { this.reportError('relic revoke', new Error(`item ${id || '?'} not found`)); } catch { /* noop */ }
+  }
+
+  /** 把 removeTemp 清掉的道具放回原槽位；原槽位被占就找空槽，找不到就记日志跳过。 */
+  relicRestoreTemp(ps, list) {
+    if (!Array.isArray(ps.temp)) return;
+    for (const rec of list) {
+      const piece = rec && rec.piece;
+      if (!piece) continue;
+      const want = Number.isInteger(rec.idx) && rec.idx >= 0 ? rec.idx : -1;
+      let slot = want >= 0 && !ps.temp[want] ? want : ps.temp.findIndex((p) => !p);
+      if (slot < 0 && typeof ps.temp.push === 'function') slot = ps.temp.length;
+      if (slot < 0) {
+        try { this.reportError('relic revoke', new Error('no temp slot')); } catch { /* noop */ }
+        continue;
+      }
+      ps.temp[slot] = piece;
+      // 清掉时归还过库存（releaseItemStock → repay），放回来要把同一份数重新记成欠账，否则等于白赚库存
+      try {
+        const pool = ps.m && ps.m.itemPool;
+        if (pool && typeof pool.owe === 'function' && Number(rec.repaid) > 0) pool.owe(piece.id, Number(rec.repaid));
+      } catch { /* noop */ }
+    }
+  }
+
+  /**
+   * 发一份**失与得**的换入候选（3 件，`ps.relicOfferMode = 'swap'`）。
+   *
+   * 稀有度门（官方「产出跟投入挂钩」）：给了 `giveId` 就按它的档位过滤 —— 同档优先，池里没有对等档才降到低档，
+   * 并在卡面标 `downgraded: true`（客户端据此显示「已降档」）。不传 `giveId`（事件刚选中、还没选换出）时发全档候选。
+   * @param {object} ps @param {string|null} giveId
+   * @returns {boolean} 是否真的发出了 offer
+   */
+  relicSwapOffer(ps, giveId = null) {
+    if (!ps || ps.alive === false) return false;
+    const pool = this.relicDraftPool();
+    if (!pool.length) return false;
+    const owned = new Set(Array.isArray(ps.relics) ? ps.relics : []);
+    const free = pool.filter((r) => r && !owned.has(r.id));
+    if (!free.length) return false;
+    const give = giveId ? String(giveId) : '';
+    const giveRank = this.relicTierRank(give ? this.relicTierOf(give) : '');
+    let cands = free;
+    let downgraded = false;
+    if (giveRank > 0) {
+      const lower = free.filter((r) => {
+        const rk = this.relicTierRank(r && r.tier);
+        return rk > 0 && rk <= giveRank;
+      });
+      const equal = lower.filter((r) => this.relicTierRank(r && r.tier) === giveRank);
+      cands = equal.length ? equal : lower;
+      downgraded = !equal.length && cands.length > 0;
+    }
+    if (!cands.length) return false;
+    const round = Number(this.round) || 1;
+    const rng = createRng(deriveSeed(this.seed, `relic-swap:${round}:${ps.playerId}:${give}`));
+    const take = shuffled(cands, rng).slice(0, 3);
+    if (!take.length) return false;
+    const extra = give ? { swapGive: give } : {};
+    const down = downgraded ? { downgraded: true } : {};
+    ps.relicOffer = take.map((r) => r.id);
+    ps.relicOfferCards = take.map((r) => ({
+      id: r.id,
+      name: String(r.name || r.id),
+      desc: String(r.desc || ''),
+      icon: String(r.icon || `/assets/relics/${r.id}.png`),
+      tier: String(r.tier || ''),
+      set: String(r.set || ''),
+      kind: String(r.kind || ''),
+      mode: 'swap',
+      ...extra,
+      ...down,
+    }));
+    ps.relicOfferMode = 'swap';
+    ps.relicOfferRound = round;
+    ps.relicSwapGive = give || null;
+    try { this.markPrivate(ps); } catch (e) { this.reportError('relic swap offer', e); }
+    try { this.markPublic(); } catch { /* best effort */ }
+    return true;
+  }
+
+  /**
+   * **失与得**：1 件藏品换 1 件（2026-11-06，官方「选择自己持有但不需要的 1 件，换 1 件新的」）。
+   *
+   * 顺序：校验 → `relicRevoke(giveId)`（逆运算 + 从 relics 移除）→ `relicGrant(takeId)`（正常下发，含新账本）→
+   * 清掉这份 swap offer。数量因此不变；rule 类聚合随 `ps.relics` 自然重算。
+   * 稀有度门：`take` 的档位不得高于 `give`（数据缺 tier 的一侧不设门）。
+   * @param {object} ps @param {string} giveId @param {string} takeId
+   */
+  relicSwap(ps, giveId, takeId) {
+    if (!ps || !ps.alive) return fail(ERR.ELIMINATED);
+    const give = String(giveId || '');
+    const take = String(takeId || '');
+    if (!give || !take) return fail(ERR.BAD_TARGET, 'bad relic'); // i18n-ignore
+    const own = Array.isArray(ps.relics) ? ps.relics : [];
+    if (!own.includes(give)) return fail(ERR.BAD_TARGET, 'give: not owned'); // i18n-ignore
+    const offer = Array.isArray(ps.relicOffer) ? ps.relicOffer : null;
+    if (!offer || !offer.length) return fail(ERR.BAD_TARGET, 'no relic offer'); // i18n-ignore
+    if (!offer.includes(take)) return fail(ERR.BAD_TARGET, 'take: not offered'); // i18n-ignore
+    if (give === take) return fail(ERR.BAD_TARGET, 'swap: same relic'); // i18n-ignore
+    const giveRank = this.relicTierRank(this.relicTierOf(give));
+    const takeRank = this.relicTierRank(this.relicTierOf(take));
+    if (giveRank > 0 && takeRank > giveRank) return fail(ERR.BAD_TARGET, 'swap: rarity too high'); // i18n-ignore
+    const revoked = this.relicRevoke(ps, give);
+    if (revoked && revoked.error) return revoked;
+    const granted = this.relicGrant(ps, take);
+    if (granted && granted.error) {
+      // 下发失败：把换出的那件放回（尽力而为），玩家不会白丢一件
+      try { if (!ps.relics.includes(give)) ps.relics.push(give); } catch { /* noop */ }
+      return granted;
+    }
+    ps.relicOffer = null;
+    ps.relicOfferCards = null;
+    ps.relicOfferMode = null;
+    ps.relicSwapGive = null;
+    try { this.markPrivate(ps); } catch (e) { this.reportError('relic swap', e); }
+    try { this.markPublic(); } catch { /* best effort */ }
+    return OK;
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -1204,9 +1452,22 @@ export class MatchMeltdown {
     return list.filter((r) => r && typeof r.id === 'string' && r.id);
   }
 
-  /** 藏品节奏：协同 R4/R8/R12 各一次；肉鸽（独立模式）每 2 回合一次（业主 2026-10-27：肉鸽就是靠藏品滚起来）。 */
+  /**
+   * 藏品节奏（2026-11-06 业主裁决：改成官方形态「按节点给」）。
+   * 肉鸽**只在给藏品的节点发**：不期而遇(事件)、险路恶敌(首领)、得偿所愿(wish) 各一次三选一；
+   * 战斗 / 精英 / 商店(标价直购) / 休整不发（商店由 `relicOffer` 走 shop 分支，不在这里判）。
+   * 协同共竞仍是 R4 / R8 / R12。
+   *
+   * 时序注意：`phases.js` 的 `_startRoundAfterOffers` 在 `rogueNodeBegin(r)` **之前**调用本函数，那时
+   * `st.index` 还是上一层 ⇒ 必须用 `rogueNodeTypeFor(r)` 按回合号反算，不能读当前节点状态。
+   */
   relicDraftRound(r) {
-    if (this.isRogue === true) return r === 1 || (r >= 2 && r % 2 === 0); // 肉鸽：开局一份 + 之后每 2 回合
+    if (this.isRogue === true) {
+      const type = typeof this.rogueNodeTypeFor === 'function' ? this.rogueNodeTypeFor(r) : null;
+      // wish（得偿所愿）也是免费三选一（官方：不能空手离开），只是卡面文案与「不可跳过」由 `relicOffer` 标明。
+      // **事件节点不再自动发牌**：官方事件是「选项带代价换藏品」，自动再发一份会与事件选项双发（单节点最多 2 件）。
+      return type === 'wish' || type === 'boss' || type === 'shop';
+    }
     return r === 4 || r === 8 || r === 12;
   }
 
@@ -1229,6 +1490,13 @@ export class MatchMeltdown {
     const pool = this.relicDraftPool();
     if (!pool.length) return;
     const round = Number(this.round) || 1;
+    // 官方形态（四种来源，见各自的官方口径）：
+    //   · 首领取 / 事件取 —— 白给三选一（draft）；
+    //   · 商店 —— 按 relics.json 的 price 直购（blue 8 / red 16，见 priceNotice）；
+    //   · 得偿所愿（wish）—— 白给三选一，**免费、不能空手离开**（不给跳过/关闭，超时也自动取第一张）。
+    const nodeType = this.isRogue === true && typeof this.rogueNodeTypeFor === 'function' ? this.rogueNodeTypeFor(round) : null;
+    const shop = nodeType === 'shop';
+    const wish = nodeType === 'wish';
     const rng = createRng(deriveSeed(this.seed, `relic:${round}`));
     const shuffle = (arr) => {
       const a = arr.slice();
@@ -1236,13 +1504,22 @@ export class MatchMeltdown {
       return a;
     };
     for (const ps of this.alivePlayers()) {
-      if (!ps || (Array.isArray(ps.relics) && ps.relics.length >= 3)) continue; // 每人本局最多 3 件
+      if (!ps) continue;
+      // 肉鸽不设「每人 3 件」上限（官方没有这条）；协同共竞保持每人本局 3 件
+      if (this.isRogue !== true && Array.isArray(ps.relics) && ps.relics.length >= 3) continue;
       if (Array.isArray(ps.relicOffer) && ps.relicOffer.length) continue;         // 已经有一份没选完
       const owned = new Set(Array.isArray(ps.relics) ? ps.relics : []);
-      const take = shuffle(pool.filter((r) => !owned.has(r.id))).slice(0, 3);
+      const free = pool.filter((r) => !owned.has(r.id));
+      // 得偿所愿「不能空手离开」：池子被自己抽空（全拥有）时**也要给一张** —— 兜底允许重复发已拥有的藏品。
+      // 已知代价：`immediate` 类一次性效果会再结算一次（`relicGrantInstant` 是单向下发，没有「已持有」判定）；
+      // 但官方口径是「不能空手离开」，空手更偏离，所以选兜底。（事件/首领的 draft 不兜底：那种情况下静默不发即可。）
+      const take = free.length ? shuffle(free).slice(0, 3) : (wish ? shuffle(pool).slice(0, 3) : []);
       if (!take.length) continue;
       ps.relicOffer = take.map((r) => r.id);
-      // 卡面数据一并带上（客户端不用自己查表）
+      // 卡面数据一并带上（客户端不用自己查表）；商店节点额外带官方标价（relics.json 的 price）。
+      // `mode` 逐卡带上：客户端 relicOverlay 优先读 `priv.relicOfferMode`，但 server 的 player/views.js 目前
+      // 不下发那个字段，逐卡 mode 让它仍能区分 wish（必须选）/ draft（超时自动取）/ shop（标价）。
+      const offerMode = shop ? 'shop' : (wish ? 'wish' : 'draft');
       ps.relicOfferCards = take.map((r) => ({
         id: r.id,
         name: String(r.name || r.id),
@@ -1251,7 +1528,10 @@ export class MatchMeltdown {
         tier: String(r.tier || ''),
         set: String(r.set || ''),
         kind: String(r.kind || ''),
+        mode: offerMode,
+        ...(shop ? { price: Math.max(0, Number(r.price) || 0) } : {}),
       }));
+      ps.relicOfferMode = offerMode;
       ps.relicOfferRound = round;
       try { this.markPrivate(ps); } catch (e) { this.reportError('relic offer', e); }
     }
@@ -1264,11 +1544,122 @@ export class MatchMeltdown {
     } catch { /* 无调度器时忽略 */ }
   }
 
+  /**
+   * 给**一名**玩家发一份藏品三选一（肉鸽「不期而遇」的 `relic` / `relicBuy` 选项用）。
+   *
+   * 与 `relicOffer` 共用同一套 offer 字段（`relicOffer` / `relicOfferCards` / `relicOfferMode` / `relicOfferRound`）
+   * 与同一个结算入口（`relicPick` → `relicGrant`）—— **不另写一套发牌**。代价（资金 / 生命）的足额校验与扣款
+   * 在事件侧（rogue 插件的 `roguePick`）做完再来这里发牌。
+   *
+   * 单槽位限制：offer 只有一个槽位。已经有没选完的 offer 时**不再覆盖**它（覆盖会吞掉玩家已付费/已到手的
+   * 选项），改为直接入手一件（同一池子、同一 `relicGrant` 结算）。这也是官方「单事件 0–3 件」里
+   * 第二、三件的通道。
+   *
+   * 不排新定时器：肉鸽的事件弹窗与藏品 offer 都在回合开始发出，`relicOffer` 已经排过 20s 兜底，
+   * 这里再排一次会出现两个互相覆盖的定时器。
+   *
+   * @param {object} ps 玩家
+   * @param {'event'|'wish'} [mode] 'wish' 时卡面标「得偿所愿·必须选」，其余按免费三选一（draft）渲染
+   * @returns {boolean} 是否真的发出了东西（false = 玩家不合法 / 池子为空）
+   */
+  relicOfferOne(ps, mode = 'event') {
+    if (!ps || ps.alive === false) return false;
+    const pool = this.relicDraftPool();
+    if (!pool.length) return false;
+    const round = Number(this.round) || 1;
+    const owned = new Set(Array.isArray(ps.relics) ? ps.relics : []);
+    const free = pool.filter((r) => !owned.has(r.id));
+    // 全拥有时允许重复（与 relicOffer 里 wish 的兜底同口径：花了代价就不能空手）。
+    const src = free.length ? free : pool;
+    if (!src.length) return false;
+    const rng = createRng(deriveSeed(this.seed, `relic-one:${round}:${ps.playerId}:${(ps.relics || []).length}`));
+    if (Array.isArray(ps.relicOffer) && ps.relicOffer.length) {
+      const pick = src[rng.int(src.length)];
+      if (!pick) return false;
+      this.relicGrant(ps, pick.id);
+      try { this.markPrivate(ps); } catch { /* best effort */ }
+      try { this.markPublic(); } catch { /* best effort */ }
+      return true;
+    }
+    const take = shuffled(src, rng).slice(0, 3);
+    if (!take.length) return false;
+    const offerMode = mode === 'wish' ? 'wish' : 'draft';
+    ps.relicOffer = take.map((r) => r.id);
+    ps.relicOfferCards = take.map((r) => ({
+      id: r.id,
+      name: String(r.name || r.id),
+      desc: String(r.desc || ''),
+      icon: String(r.icon || `/assets/relics/${r.id}.png`),
+      tier: String(r.tier || ''),
+      set: String(r.set || ''),
+      kind: String(r.kind || ''),
+      mode: offerMode,
+    }));
+    ps.relicOfferMode = offerMode;
+    ps.relicOfferRound = round;
+    try { this.markPrivate(ps); } catch (e) { this.reportError('relic offer one', e); }
+    try { this.markPublic(); } catch { /* best effort */ }
+    return true;
+  }
+
   relicTimeout() {
     for (const ps of this.alivePlayers()) {
       const offer = ps && Array.isArray(ps.relicOffer) ? ps.relicOffer : null;
-      if (offer && offer.length) { try { this.relicPick(ps, offer[0], { auto: true }); } catch { /* best effort */ } }
+      if (!offer || !offer.length) continue;
+      let pick = offer[0];
+      if (ps.relicOfferMode === 'shop') {
+        // 商店的报价可能买不起：超时只在**买得起**的里取第一张，一张都买不起就清空（不能白拿）
+        const cards = Array.isArray(ps.relicOfferCards) ? ps.relicOfferCards : [];
+        const affordable = cards.find((c) => es_spendable(ps) >= Math.max(0, Number(c.price) || 0));
+        if (!affordable) {
+          ps.relicOffer = null; ps.relicOfferCards = null; ps.relicOfferMode = null;
+          try { this.markPrivate(ps); } catch { /* best effort */ }
+          continue;
+        }
+        pick = affordable.id;
+      } else if (ps.relicOfferMode === 'wish') {
+        // 得偿所愿：官方「不能空手离开」⇒ 超时也**不清空**，自动取第一张（与 draft 同形，但语义上是强制）。
+        // 这条分支显式写出来，避免以后有人把「买不起就清空」的商店逻辑顺手套到 wish 上。
+        pick = offer[0];
+      } else if (ps.relicOfferMode === 'swap') {
+        // 失与得：还没选换出就超时 ⇒ 整份 swap offer 作废（不能替玩家决定失去哪一件）；
+        // 已选换出 ⇒ 自动换入第一张，换不动（稀有度门 / offer 不合法）就清空，不留下卡死的弹窗。
+        if (!ps.relicSwapGive) {
+          ps.relicOffer = null; ps.relicOfferCards = null; ps.relicOfferMode = null; ps.relicSwapGive = null;
+          try { this.markPrivate(ps); } catch { /* best effort */ }
+          continue;
+        }
+        let res = null;
+        try { res = this.relicPick(ps, offer[0], { auto: true }); } catch { /* best effort */ }
+        if (res && res.error) {
+          ps.relicOffer = null; ps.relicOfferCards = null; ps.relicOfferMode = null; ps.relicSwapGive = null;
+          try { this.markPrivate(ps); } catch { /* best effort */ }
+        }
+        continue;
+      }
+      if (pick) { try { this.relicPick(ps, pick, { auto: true }); } catch { /* best effort */ } }
     }
+  }
+
+  /**
+   * 把一件藏品真正发到玩家身上（`relicPick` 与 `relicOfferOne` 的唯一结算入口）。
+   *
+   * 2026-11-06 补齐失与得需要的**可撤销**：下发时同步在 `ps.relicLedger[relicId]` 记一条「实际改了什么」的账
+   * （见 `relicGrantInstant`），`relicRevoke` 按账逆运算。不做失与得时行为与改动前逐字节等价 —— 账本只是多记一笔。
+   * @param {object} ps @param {string} relicId
+   */
+  relicGrant(ps, relicId) {
+    const id = String(relicId || '');
+    if (!id) return fail(ERR.BAD_TARGET, 'bad relic'); // i18n-ignore
+    const def = this.relicPool().find((r) => r.id === id) || null;
+    if (!Array.isArray(ps.relics)) ps.relics = [];
+    ps.relics.push(id);
+    try { this.relicGrantInstant(ps, def); } catch (e) { this.reportError('relic instant', e); }
+    try {
+      this.toast(ps, 'info', (def && def.kind === 'negative' ? '获得负面藏品：' : '获得增益藏品：') + ((def && def.name) || id));
+    } catch { /* toast 尽力而为 */ }
+    try { ps.dirty && ps.dirty(); } catch { /* noop */ }
+    return OK;
   }
 
   /** 选一件：只接受自己 offer 里的 id；入手后立即结算一次性效果。 */
@@ -1276,21 +1667,44 @@ export class MatchMeltdown {
     if (!ps || !ps.alive) return fail(ERR.ELIMINATED);
     const offer = Array.isArray(ps.relicOffer) ? ps.relicOffer : null;
     if (!offer || !offer.length) return fail(ERR.BAD_TARGET, 'no relic offer'); // i18n-ignore
+    // 失与得（swap）分两阶段，都复用这一个意图（不新增 g.*）：
+    //   ① `ps.relicSwapGive` 还没定 —— 传进来的是「自己要换出的藏品」id（从藏品页点选），定下后按档位重发 offer；
+    //   ② 已定 —— 传进来的是 offer 里的 takeId，走 `relicSwap` 结算。
+    if (ps.relicOfferMode === 'swap') return this.relicSwapPick(ps, relicId);
     if (!offer.includes(relicId)) return fail(ERR.BAD_TARGET, 'not offered'); // i18n-ignore
-    const def = this.relicPool().find((r) => r.id === relicId) || null;
+    // 商店节点：按 relics.json 的官方标价扣款（blue 8 / red 16，见 priceNotice），买不起直接拒绝、offer 保留
+    // 得偿所愿（wish）与 draft/event 都免费 —— 不走这里，也就没有「余额不足拒绝」的路径。
+    if (ps.relicOfferMode === 'shop') {
+      const card = Array.isArray(ps.relicOfferCards) ? ps.relicOfferCards.find((c) => c.id === relicId) : null;
+      const price = Math.max(0, Number(card && card.price) || 0);
+      if (!(es_spendable(ps) >= price)) return fail(ERR.NO_FUNDS);
+      if (price > 0 && !es_safe_spend(ps, price)) return fail(ERR.NO_FUNDS);
+    }
     ps.relicOffer = null;
     ps.relicOfferCards = null;
-    if (!Array.isArray(ps.relics)) ps.relics = [];
-    ps.relics.push(relicId);
-    try { this.relicGrantInstant(ps, def); } catch (e) { this.reportError('relic instant', e); }
-    try {
-      this.toast(ps, 'info', (def && def.kind === 'negative' ? '获得负面藏品：' : '获得增益藏品：') + ((def && def.name) || relicId));
-    } catch { /* toast 尽力而为 */ }
-    try { ps.dirty && ps.dirty(); } catch { /* noop */ }
+    ps.relicOfferMode = null;
+    try { this.relicGrant(ps, relicId); } catch (e) { this.reportError('relic grant', e); }
     try { this.markPrivate(ps); } catch (e) { this.reportError('relic pick markPrivate', e); }
     try { this.markPublic(); } catch (e) { this.reportError('relic pick markPublic', e); }
     void auto;
     return OK;
+  }
+
+  /**
+   * 失与得的两阶段点击（`relicPick` 在 `relicOfferMode === 'swap'` 时转进来）。
+   * 阶段①：`ps.relicSwapGive` 还是空的 ⇒ 传进来的是自己要换出的藏品 id，校验持有后按档位重发 offer；
+   * 阶段②：已定 ⇒ 传进来的是 takeId，直接 `relicSwap`（稀有度 / offer 归属都在那里校验）。
+   */
+  relicSwapPick(ps, relicId) {
+    const id = String(relicId || '');
+    if (!id) return fail(ERR.BAD_TARGET, 'bad relic'); // i18n-ignore
+    if (!ps.relicSwapGive) {
+      const own = Array.isArray(ps.relics) ? ps.relics : [];
+      if (!own.includes(id)) return fail(ERR.BAD_TARGET, 'swap: give not owned'); // i18n-ignore
+      if (!this.relicSwapOffer(ps, id)) return fail(ERR.BAD_TARGET, 'swap: no candidate'); // i18n-ignore
+      return OK;
+    }
+    return this.relicSwap(ps, ps.relicSwapGive, id);
   }
 
   /** 按 relicId 购买藏品：校验商店等级 → 个人储备，再扣款并记入 `ps.relics`。 */

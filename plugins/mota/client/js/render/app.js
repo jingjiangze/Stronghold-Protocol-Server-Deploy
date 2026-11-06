@@ -599,6 +599,10 @@ export async function createFieldView(host, options = {}) {
   // 0.75 × 0.14231 × 视口高），取景只拟合棋盘四角，再用这个专用 padding 取景（上下各 10%、左右各 6%，
   // 底部再按 HUD 实测的商店栏带 + 0.6rem 兜底），默认地图的缩放因此更小。
   const ROGUE_TILE_PX = 0.75 * 0.14231;
+  // 2026-11-06 业主「地图再放大 3–5%」：整备期真正生效的是下面这条下边距（缩放上限在 prep 下 0/545 触顶，
+  // 改 ROGUE_TILE_PX 对整备期无效）。商店栏实测带 ×0.921 ⇒ 1280×720 219→201.8、1920×1080 327→301.2，
+  // 实测棋盘 +4.0%，整备区近沿仍在商店栏之上（720 余 22.8px / 1080 余 34.2px）。
+  const ROGUE_ZOOM_PAD = 0.921;
   // 视口 rem 基准（与 ui/fieldHost.js hudBands 同源），给 HUD 兜底留出 0.6rem 余量
   function rootRem() { try { return parseFloat(getComputedStyle(document.documentElement).fontSize) || 100; } catch { return 100; } }
   function roguePadding(sz, hud) {
@@ -606,7 +610,10 @@ export async function createFieldView(host, options = {}) {
     // 底部让开商店栏实测带：候选区（整备区）在第 7 行且贴着视口底部，底部 padding 不得窄于商店栏实测带，
     // 否则棋盘会压在候选区上
     const p = { top: sz.height * 0.10, bottom: sz.height * 0.10, left: sz.width * 0.06, right: sz.width * 0.06 };
-    if (hud && typeof hud === 'object') p.bottom = Math.max(p.bottom, (Number(hud.bottom) || 0) + 0.6 * rootRem());
+    if (hud && typeof hud === 'object') {
+      const band = (Number(hud.bottom) || 0) + 0.6 * rootRem();
+      p.bottom = Math.max(p.bottom, band * ROGUE_ZOOM_PAD);
+    }
     return p;
   }
 
@@ -819,7 +826,13 @@ export async function createFieldView(host, options = {}) {
     // 肉鸽官方小图有画框，3D 层只建画框那一块，留着
     if (board3d && !stdField() && !(st && st.rogueFrame)) disable3d();
     tiles.setStage(st);
+    // the drop-target board region follows the stage's deploy frame (a rogue stage's rogueFrame), not the default
+    // window: otherwise legal blue tiles outside rows 9–12 / cols 2–10 cancel the drag before pieceDrop
+    drag.setGeo(stageDeployRect(st));
     tiles.setBattleRect(mode === 'battle' && battleMeta ? battleMeta.rect : null);
+    // prep / scouting: the stage's static ground paths, so the spawn side and the lanes read before the battle (a
+    // battle's own timed routes replace them in enterBattle, right after this)
+    if (mode !== 'battle') tiles.setRoutes(stageGroundRoutes(st));
     if (board3d) { board3d.setStage(st); board3d.setBattleRect(mode === 'battle' && battleMeta ? battleMeta.rect : null); useOfficialScene(st); }
     tiles.project(cam, true);
     // a pen laid out before the stage arrived (setPrep / a scouting board first) used the default zones and the old
@@ -1032,6 +1045,8 @@ export async function createFieldView(host, options = {}) {
       if (v.setCount) v.setCount(e.piece.kind === 'token' ? e.piece.count : 0);
       if (v.setItems) v.setItems(Array.isArray(e.piece.items) ? e.piece.items.map((it) => { const r = data.item(it?.id); return assets.itemIcon ? assets.itemIcon(r ? { trapId: r.trapId, iconId: r.iconId } : it?.id) : null; }) : []);
       v._showFacing = e.area === 'board';
+      // 整备区（手牌行 7 / 临时区行 8）在肉鸽图上就是棋盘行：标出来，让深度排序把棋盘上的干员排在它之上
+      v.bench = e.area !== 'board';
       // the stored facing (a piece held by the direction step shows the wheel's preview instead)
       if (e.area === 'board' && info.dir && !held.has(e.uid) && typeof v.setDir === 'function') v.setDir(info.dir);
     }
@@ -1630,6 +1645,9 @@ export async function createFieldView(host, options = {}) {
       if (st) setStage(st);
     }
     tiles.setBattleRect(rect);
+    // this round's enemy lanes: server/sim/battle/events.js fieldMeta incomingRoutes ({ id, time, segments }); absent
+    // for a scouting board or a field with no movable spawns
+    tiles.setRoutes(Array.isArray(meta.incomingRoutes) ? meta.incomingRoutes : null);
     board3d?.setBattleRect(rect);
     for (const u of Array.isArray(meta.units) ? meta.units : []) applyInfo(u);
     // the official effects of this battle's units load now (the prep → battle switch), the board's heights for their
@@ -2301,6 +2319,12 @@ export async function createFieldView(host, options = {}) {
       syncLeaderHits();
       return true;
     },
+    /** Enemy routes / spawn points ({ segments: [[{x: col, y: row}, …]] }[]); null clears (tiles.js setRoutes). */
+    setRoutes(list) {
+      if (destroyed) return false;
+      tiles.setRoutes(list);
+      return true;
+    },
     on(name, fn) {
       if (typeof fn !== 'function') return () => {};
       if (!listeners.has(name)) listeners.set(name, new Set());
@@ -2471,4 +2495,48 @@ export async function createFieldView(host, options = {}) {
     }
     throw err;
   }
+}
+
+/**
+ * A stage's static ground paths as `tiles.setRoutes` input. `data/stages.json` stores them as
+ * `groundPaths: { "r,c->r,c": [[r, c], …] }` (server/sim/groundPaths.js generates them); a route point is
+ * `{ x: col, y: row }`. Prep has no `m.field`, so these are the only lanes known before a battle starts.
+ * @param {any} st stage record
+ * @returns {Array<{ segments: Array<Array<{ x: number, y: number }>> }>|null}
+ */
+function stageGroundRoutes(st) {
+  const map = st && st.groundPaths;
+  if (!map || typeof map !== 'object') return null;
+  const list = [];
+  for (const key of Object.keys(map)) {
+    const pts = map[key];
+    if (!Array.isArray(pts) || pts.length < 2) continue;
+    const seg = [];
+    for (const p of pts) {
+      if (!Array.isArray(p) || p.length < 2) continue;
+      seg.push({ x: Number(p[1]), y: Number(p[0]) });
+    }
+    if (seg.length > 1) list.push({ segments: [seg] });
+    if (list.length >= 16) break;
+  }
+  return list.length ? list : null;
+}
+
+/**
+ * The deploy frame of a stage in board coordinates — `stage.rogueFrame` when present, else null (= GEO.FIELD). The same
+ * conversion as ui/gameLogic/placement.js fieldRectOf and server/match/board.js, so the highlight, the drop target and
+ * the server all agree on which tiles are board.
+ * @param {any} st stage record
+ * @returns {{ r0: number, r1: number, c0: number, c1: number }|null}
+ */
+function stageDeployRect(st) {
+  const f = st && st.rogueFrame;
+  if (!f || typeof f !== 'object') return null;
+  const int = (v) => (Number.isFinite(Number(v)) ? Math.trunc(Number(v)) : null);
+  const row = int(f.row), col = int(f.col);
+  if (row == null || col == null) return null;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const r0 = clamp(row, 0, GEO.ROWS - 1), c0 = clamp(col, 0, GEO.COLS - 1);
+  const h = Math.max(1, int(f.h) ?? 1), w = Math.max(1, int(f.w) ?? 1);
+  return { r0, r1: clamp(r0 + h - 1, r0, GEO.ROWS - 1), c0, c1: clamp(c0 + w - 1, c0, GEO.COLS - 1) };
 }

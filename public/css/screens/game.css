@@ -859,6 +859,43 @@
 .chud__layers { border-color: var(--mint-700); }
 /* a 联防 / 最终攻势 field watched with 前往查看: the ‹ › pill carries 返回战场 (DESIGN §20.15) */
 .chud__layers.is-observing { gap: .1rem; padding-right: .08rem; border-color: rgba(246, 163, 41, .55); }
+/* 战斗中实时部署 (方案 A, ui/realtimeDeploy.js): the deploy strip of the own battle.
+   Placement — the bottom-RIGHT corner of the field, clear of every other in-match floating layer:
+     · .dpbox (the DP counter) sits at the right edge, vertically CENTRED — above this strip, never on it;
+     · .chud__bottom (bottom centre .3rem) holds only the waiting / observing / ‹ › pills, none of which the own running
+       normal field shows;
+     · .gm__corner (bottom left .24rem) holds the gear, the 交流轮盘 (emote wheel, which opens upward) and the AI panel;
+     · .shopbar is a PREP-only bar (screens/game.js showShop) — absent during COMBAT;
+     · the spectate UI never reaches here: plugins/spectate/client/css/spectate.css .team__watch rides an avatar inside
+       .team (left, top 2.36rem), the top bar's SpectatorPill is in .gtop, and the combat HUD's 观战 pill is bottom centre.
+   The strip wraps upward from the right edge (max-width keeps it inside the right third), so a big board grows into the
+   empty band under the DP counter instead of towards the centre. */
+.gm__rtdeploy { position: absolute; right: .3rem; bottom: .3rem; display: flex; justify-content: flex-end; max-width: 4.6rem; }
+.rtdeploy { display: flex; flex-wrap: wrap-reverse; justify-content: flex-end; align-items: center; gap: .06rem; }
+.rtdeploy__hint {
+  font-size: max(calc(.11 * var(--t)), 9px); font-weight: 700; letter-spacing: .12em; color: var(--text-lo);
+  padding: 0 .04rem;
+}
+.rtdeploy__slot { position: relative; display: inline-flex; }
+.rtdeploy__chip {
+  display: flex; flex-direction: column; align-items: center; gap: 0; padding: .03rem .1rem;
+  background: rgba(8, 11, 10, .9); border: 1px solid var(--line-2); color: var(--text-hi); cursor: pointer;
+  transition: color var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.rtdeploy__chip:hover:not(:disabled) { border-color: var(--mint-400); color: #fff; }
+.rtdeploy__chip.is-standing, .rtdeploy__chip:disabled { opacity: .45; cursor: default; }
+.rtdeploy__chip.is-armed { border-color: var(--mint-400); box-shadow: 0 0 .1rem rgba(45, 212, 191, .55); color: #fff; }
+.rtdeploy__name {
+  font-size: max(calc(.11 * var(--t)), 10px); font-weight: 700; max-width: .9rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rtdeploy__cost { font-size: max(calc(.10 * var(--t)), 9px); color: var(--gold); }
+.rtdeploy__out {
+  position: absolute; top: -.05rem; right: -.05rem; width: .18rem; height: .18rem; padding: 0; line-height: 1;
+  display: grid; place-items: center; font-size: .13rem;
+  background: rgba(8, 11, 10, .95); border: 1px solid var(--line-2); color: var(--text-lo); cursor: pointer;
+}
+.rtdeploy__out:hover { color: #fff; border-color: var(--mint-400); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---- settings modal ------------------------------------------------------------------------------------------------ */

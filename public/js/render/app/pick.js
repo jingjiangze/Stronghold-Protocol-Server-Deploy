@@ -23,7 +23,7 @@ function pickUnitOf(v, walks = false, hitArea = null) {
   // a huge boss (data `hitArea`): its hit area on the ground and a body box as wide as it are pickable (render/pick.js)
   const area = walks && !v.flying ? hitRectAt(v.x, v.y, hitArea) : null;
   if (area && body) body.hw = hitArea.w / 2;
-  return { tile, x: v.x, y: v.y, fly: walks && !!v.flying, body, area, depth: v.root && !v.root.destroyed ? v.root.zIndex : 0, ref: v };
+  return { tile, x: v.x, y: v.y, fly: walks && !!v.flying, body, area, depth: v.root && !v.root.destroyed ? v.root.zIndex : 0, bench: v.bench === true, ref: v };
 }
 
 export { pieceDirOf, pickUnitOf };

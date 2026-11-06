@@ -103,6 +103,7 @@ import { Ticker } from '../ui/ticker.js';
 import { EmoteWheel } from '../ui/emotes.js';
 import { EffectsList } from '../ui/effectsList.js';
 import { CombatHud } from '../ui/combatHud.js';
+import { RealtimeDeployStrip, deployErrorText } from '../ui/realtimeDeploy.js';
 import { CombatMetricsPanel } from '../ui/combatMetrics.js';
 import { SettingsModal, settingsStore, useSettings } from '../ui/settings.js';
 import { ExitModal, AwayOverlay, awayStore } from '../ui/matchChrome.js';
@@ -311,6 +312,57 @@ function MatchScreen() {
   const [armedCard, setArmedCard] = useState(null);     // the shop bar's armed card { kind, id } (merge tile cue)
   const cc = isClientCombat(pub);
   const battleState = useStore((s) => s.match.battle, shallowEqual); // local battle runner (client-side combat)
+
+  // ---- 战斗中实时部署 (方案 A, ui/realtimeDeploy.js) ----------------------------------------------------------------
+  // The own battle holds the player's operators off the field until they place them (spec.flags.liveDeploy): a chip
+  // arms a piece, the next ground tap names its tile. The browser is the authority of a client-side field, so the order
+  // applies to the local Battle first (battle/runner.js liveDeploy → Battle.deployLive/retreatLive) and the server only
+  // records it (g.deploy / g.retreat → spec.cmds, for a takeover re-simulation); its m.deploy answer carries the
+  // authoritative verdict. A refusal is the engine's own reason, toasted through deployErrorText. A retreat refunds no
+  // DP and a redeploy costs base.cost — 方案 A's rule set (no penalty multiplier).
+  const [rtArm, setRtArm] = useState(null);              // the armed piece uid (a second tap on its chip disarms)
+  const [rtStanding, setRtStanding] = useState(() => new Set()); // uids standing on the field (m.deploy ok / retreat)
+  const rtArmRef = useRef(null);
+  rtArmRef.current = rtArm;
+  const rtMarkStanding = useCallback((uid, on) => setRtStanding((cur) => {
+    if (cur.has(uid) === on) return cur;
+    const next = new Set(cur);
+    if (on) next.add(uid); else next.delete(uid);
+    return next;
+  }), []);
+  // apply the order locally, then record it on the server — a refusal never reaches the server
+  const rtDeploy = useCallback((uid, row, col) => {
+    const out = battleRunner ? battleRunner.liveDeploy(myId, uid, Number.isInteger(row) && Number.isInteger(col) ? [row, col] : null) : { ok: false, error: 'mode' };
+    if (!out || !out.ok) {
+      toast(deployErrorText(out && out.error), 'error');
+      audio.sfx('error', { volume: 0.5 });
+      return false;
+    }
+    rtMarkStanding(uid, true);
+    actions.deploy(uid, row, col);
+    return true;
+  }, [myId, rtMarkStanding]);
+  const rtRetreat = useCallback((uid) => {
+    const out = battleRunner ? battleRunner.liveRetreat(myId, uid) : { ok: false, error: 'mode' };
+    if (!out || !out.ok) {
+      toast(deployErrorText(out && out.error), 'error');
+      audio.sfx('error', { volume: 0.5 });
+      return;
+    }
+    rtMarkStanding(uid, false);
+    setRtArm((cur) => (cur === uid ? null : cur));
+    actions.retreat(uid);
+  }, [myId, rtMarkStanding]);
+  const rtDeployRef = useRef(rtDeploy);                  // the field handlers close over the first render only
+  rtDeployRef.current = rtDeploy;
+  const rtRetreatRef = useRef(rtRetreat);
+  rtRetreatRef.current = rtRetreat;
+  // the server's answers — the standing set follows them (a piece deployed by a takeover-replayed order, a refusal)
+  useEffect(() => net.on('m.deploy', (msg) => {
+    if (!msg || typeof msg !== 'object' || !Number.isInteger(msg.uid)) return;
+    if (msg.ok) rtMarkStanding(msg.uid, !msg.retreat);
+    else { toast(deployErrorText(msg.error), 'error'); audio.sfx('error', { volume: 0.5 }); }
+  }), [rtMarkStanding]);
 
   const phase = pub?.phase;
   const mode = phaseMode(phase);
@@ -1320,6 +1372,17 @@ function MatchScreen() {
       view.on('tileClick', (t) => {
         if (!t || !Number.isInteger(t.row) || !Number.isInteger(t.col)) return;
         const L = live.current;
+        // 战斗中实时部署 (方案 A): an armed piece turns this ground tap into a live deployment at (row, col) — the local
+        // battle is the authority (battle/runner.js liveDeploy) and the order is recorded on the server (m.deploy
+        // answers). The tap is consumed: an ordinary tile keeps its other meanings (deselect, device / terrain card).
+        if (rtArmRef.current != null) {
+          const uid = rtArmRef.current;
+          audio.sfx('click', { volume: 0.4 });
+          rtArmRef.current = null;
+          setRtArm(null);
+          rtDeployRef.current?.(uid, t.row, t.col);
+          return;
+        }
         const [row, col] = L.terrainTile(t.row, t.col);
         const device = L.deviceBattle
           ? deviceTipAt(L.terrainStage, row, col, { units: [...deviceUnitsRef.current.values()], snap: snapUnitsRef.current })
@@ -1715,6 +1778,19 @@ function MatchScreen() {
   // client-side combat: observing a teammate's battle (research 09 §3.1) and the 联防 / 最终攻势 camera halves
   // (an eliminated player auto-observes a teammate's normal field — research 09 "keep-watching" — without asking)
   const watchedFid = watchingOther ? watching : (cc && combat && !alive && battleState && battleState.watch && battleState.kind === 'normal' ? battleState.fieldId : null);
+  // 战斗中实时部署 (方案 A): the deploy strip — shown only for the OWN client-side battle that holds its board
+  // (battleState.liveDeploy, spec.flags.liveDeploy: a human field of a normal round). It lists the board's operators with
+  // their cost; `rtStanding` (from the m.deploy answers) greys the ones on the field and adds their ×. The DP figure is
+  // not repeated here: the combat HUD's DpCounter shows it (ui/hud.js).
+  const rtFacts = (() => {
+    if (!battleState?.liveDeploy || phase !== PHASE.COMBAT || spectator || !alive || !priv) return null;
+    if (watchingOther || battleState.watch) return null;
+    const pieces = (Array.isArray(priv.board) ? priv.board : []).filter((p) => p && p.kind === 'chess').map((p) => {
+      const rec = gd.chess(p.id);
+      return { uid: p.uid, name: rec?.name || p.id, cost: rec?.stats?.cost ?? null, standing: rtStanding.has(p.uid) };
+    });
+    return pieces.length ? { pieces } : null;
+  })();
   // the ‹ › pill: on the 联防 / 最终攻势 field on screen — also one watched with 前往查看 (a leaker, an eliminated spectator)
   const layers = cc && combat && field && field.local && (!watchingOther || field.fieldId === watching) ? cameraLayers(field, pub, myId) : [];
   const progress = cc && phase === PHASE.COMBAT ? teammateProgress(pub, myId) : null;
@@ -1887,6 +1963,10 @@ function MatchScreen() {
       ${combat || mode === 'settle' ? html`<${CombatHud} pub=${pub} myId=${myId} watching=${watchingNow} hud=${hud} myDone=${!!myDone && alive}
         spectating=${!alive} spectator=${spectator} onWatch=${watchField}
         client=${cc ? { progress, observing: observingName ? { name: observingName } : null, onBack: alive ? backHome : null, layers, layer, onLayer: setLayer } : null} />` : null}
+
+      ${rtFacts ? html`<div class="gm__rtdeploy"><${RealtimeDeployStrip} pieces=${rtFacts.pieces} armed=${rtArm}
+        onDeploy=${(uid) => { audio.sfx('click', { volume: 0.4 }); setRtArm((cur) => (cur === uid ? null : uid)); }}
+        onRetreat=${(uid) => rtRetreatRef.current?.(uid)} /></div>` : null}
 
       ${showDeadPill(alive, phase) ? (spectator
         ? html`<div class="gm__dead gm__dead--spectator" role="status"><${GIcon} name="eye" />${t('观战中 · 点击左侧成员头像切换查看')}</div>`

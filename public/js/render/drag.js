@@ -54,9 +54,12 @@ export function tileSlot(tile, geo = GEO) {
   if (!tile || !Number.isInteger(tile.row) || !Number.isInteger(tile.col)) return null;
   const { row, col } = tile;
   if (row === geo.HAND_ROW && col >= 0 && col < geo.HAND_SIZE) return { area: 'hand', idx: col };
-  if (row === geo.TEMP_ROW && col >= geo.TEMP_C0 && col < geo.TEMP_C0 + geo.TEMP_SIZE) return { area: 'temp', idx: col - geo.TEMP_C0 };
+  // The board wins over the temp row: a rogue stage's deploy frame (`fieldRectOf`) covers rows the default window does
+  // not, and its deploy tiles are written over the whole frame — row 8 col 4..8 would otherwise be read as a temp slot,
+  // which is never a valid drop target anyway (resolveDrop cancels it) and only mislabelled the rejection.
   const F = geo.FIELD;
   if (row >= F.r0 && row <= F.r1 && col >= F.c0 && col <= F.c1) return { area: 'board', row, col };
+  if (row === geo.TEMP_ROW && col >= geo.TEMP_C0 && col < geo.TEMP_C0 + geo.TEMP_SIZE) return { area: 'temp', idx: col - geo.TEMP_C0 };
   return null;
 }
 
@@ -129,6 +132,9 @@ export function createDragController(hooks) {
   let st = null;
   let hoverUid = null;
   let hoverTileKey = '';
+  // Board region that can take a drop: GEO.FIELD (rows 9–12 / cols 2–10) unless the stage's deploy frame is wider
+  // (a rogue stage's rogueFrame, see ui/gameLogic/placement.js fieldRectOf) — app.js setGeo() with it on setStage.
+  let geoOverride = null;
 
   const emit = (name, payload) => { try { h.emit(name, payload); } catch (err) { console.error('[drag] listener failed', err); } };
   const draggable = (piece) => !!piece && piece.draggable !== false && piece.uid != null;
@@ -137,7 +143,7 @@ export function createDragController(hooks) {
   const overCanvas = (cx, cy) => { try { return h.isOverCanvas ? h.isOverCanvas(cx, cy) !== false : true; } catch { return true; } };
 
   function setHoverTile(tile) {
-    const slot = tile ? tileSlot(tile) : null;
+    const slot = tile ? tileSlot(tile, geoOverride || GEO) : null;
     const key = tile ? `${tile.row},${tile.col}` : '';
     if (key === hoverTileKey) return;
     hoverTileKey = key;
@@ -165,7 +171,7 @@ export function createDragController(hooks) {
     st.last = e;
     const tile = tileAt(e.x, e.y);
     const over = overCanvas(e.clientX, e.clientY);
-    const slot = over && tile ? tileSlot(tile) : null;
+    const slot = over && tile ? tileSlot(tile, geoOverride || GEO) : null;
     const legal = !!slot && slot.area !== 'temp' && (slot.area === 'board' || !sameSlot(slot, st.from)) && isLegal(canPlace, st.piece, slot);
     setHoverTile(over ? tile : null);
     emit('pieceDragMove', { uid: st.piece.uid, piece: st.piece, x: e.x, y: e.y, clientX: e.clientX, clientY: e.clientY, target: slot, legal });
@@ -178,7 +184,7 @@ export function createDragController(hooks) {
     let dropped = false;
     if (!cancelled) {
       const tile = tileAt(e.x, e.y);
-      const d = resolveDrop({ piece: s.piece, from: s.from, tile, overCanvas: overCanvas(e.clientX, e.clientY), clientX: e.clientX, clientY: e.clientY, canPlace });
+      const d = resolveDrop({ piece: s.piece, from: s.from, tile, overCanvas: overCanvas(e.clientX, e.clientY), clientX: e.clientX, clientY: e.clientY, canPlace, geo: geoOverride || GEO });
       if (d.kind === 'drop') {
         dropped = true;
         emit('pieceDrop', { uid: s.piece.uid, piece: s.piece, from: s.from, target: d.target });
@@ -198,6 +204,8 @@ export function createDragController(hooks) {
       if (!editable && st && st.mode === 'dragging') endDrag(null, true);
     },
     setCanPlace(fn) { canPlace = typeof fn === 'function' ? fn : null; },
+    /** Drop-target board region `{ r0, r1, c0, c1 }`; null restores GEO.FIELD (a stage without a rogueFrame). */
+    setGeo(rect) { geoOverride = rect ? { ...GEO, FIELD: { ...rect } } : null; },
 
     /** e: { pointerId, pointerType, button, x, y (canvas CSS px), clientX, clientY } */
     pointerDown(e) {

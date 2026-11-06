@@ -1629,7 +1629,7 @@ export class UnitView {
     if (lungeK) { const q = cam.project(this.x + lx, this.y + ly, this.z + this.hover + this.lift, LG_P); bx = q.x; by = q.y; }
     this.root.position.set(bx, by);
     this.root.alpha = alpha;
-    this.root.zIndex = unitDepthKey(cam, this.x, this.y, this.lift);
+    this.root.zIndex = unitDepthKey(cam, this.x, this.y, this.lift, this.bench ? -0.5 : 0);
     // off-screen: nothing to animate or draw (bounds / hit-testing still follow `screen`)
     if (this._cull(bx, by, s, dt)) return;
     const flip = this.modelFlip();
@@ -2401,10 +2401,12 @@ const ICON_TMP = [];
  * Unit-layer zIndex of a unit / piece whose feet are at (x, y): farther rows first (so raised block rows, keyed by
  * tiles.rowDepthKey, hide units behind them); lifted (dragged) pieces on top; ties broken by column.
  */
-export function unitDepthKey(cam, x, y, lift = 0) {
+export function unitDepthKey(cam, x, y, lift = 0, extra = 0) {
   // +40 (< one row of depth at the official 30° pitch, 100·sin 30° = 50): a lifted piece never ties with the unit one
   // row in front of it (a tie flickers with the column tie-break)
-  return -cam.depthOf(x, y, 0) * 100 + (lift > 0 ? 40 : 0) + x * 0.001;
+  // `extra`: a tie-breaker for pieces that share the tile exactly (the prep bench rows 7/8 are board rows on a rogue
+  // stage whose rogueFrame covers them): a bench piece passes -0.5 so the deployed operator on that tile wins
+  return -cam.depthOf(x, y, 0) * 100 + (lift > 0 ? 40 : 0) + x * 0.001 + extra;
 }
 
 function mixTint(a, b, k) {
@@ -2469,7 +2471,7 @@ export class ItemView {
     const p = cam.project(this.x, this.y, lifted ? this.z : this.z + this.lift + 0.12 + Math.sin(t * 2 + this.bob) * 0.03, this.screen);
     this.placed = true;
     this.root.position.set(p.x, p.y);
-    this.root.zIndex = unitDepthKey(cam, this.x, this.y, this.lift);
+    this.root.zIndex = unitDepthKey(cam, this.x, this.y, this.lift, this.bench ? -0.5 : 0);
     const size = p.s * 0.62;
     this.plate.scale.set(size / 128);
     this.plate.anchor.set(0.5, lifted ? 0.5 : 1);

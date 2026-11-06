@@ -35,7 +35,11 @@ export class BattleLifecycle {
     // its owner's deploy — takes its 联防 carry on that first deployment too)
     this._startDeploying = true;
     for (const kind of ['op', 'token']) {
-      const per = lists.map((l) => l.filter((u) => u.kind === kind && !u.deferDeploy));
+      // 战斗中实时部署 (flags.liveDeploy，方案 A): operators are deployed by PLAYER order (g.deploy → deployLive), never
+      // by the opening deployment; summon pieces keep their normal docking rules. A bot field never gets the flag
+      // (server/match/match/combat.js), so an AI seat still opens with its board deployed.
+      const live = this.flags.liveDeploy === true;
+      const per = lists.map((l) => l.filter((u) => u.kind === kind && !u.deferDeploy && !(live && kind === 'op')));
       const n = Math.max(0, ...per.map((l) => l.length));
       for (let i = 0; i < n; i++) for (const l of per) if (l[i]) this._safe(() => this._deploy(l[i], { initial: true }), 'initialDeploy', l[i]);
     }
@@ -84,6 +88,10 @@ export class BattleLifecycle {
     this._stepping = true;
     try {
       if (!this.started) this._phase('start', () => this.start());
+      // 战斗中实时部署 (flags.liveDeploy，方案 A): replay the player orders the spec carried (spec.cmds) at their tick.
+      // Only a battle built from a spec WITH cmds has `_cmds` (server/sim/spec.js createBattleFromSpec), so every other
+      // battle takes exactly the phases it always took.
+      if (this._cmds) this._phase('cmds', () => this._applyCmds());
       const dt = this.dt;
       this._phase('scheduled', () => this._runScheduled());
       this._phase('spawns', () => this._processSpawns());

@@ -875,6 +875,11 @@ export function convertLevel(lv, file, ctx) {
   // Boss 节点（b-*）已在上方注入（totalCount 已含这条 boss spawn）：kind 仍是 'normal'，bossId 仍为 null。
   if (timing) wave.timing = timing;
 
+  // 2026-11-06：上游波次 0 出怪 = 事件/特殊图，不是战斗图（实测 8 张：ro3_ev-1/ev-8、ro5_sv-13/t-5、
+  // ro6_c-1-b/c-2/c-5/t-7）。它们此前被当成普通图进了 n1–n20 全部 20 档池 ⇒ 抽到即零出怪。
+  // 标 active:false 后，服务端 `_stagePool`（phases.js）与 `rogueStageFor`（NodeMixin.js）都会跳过（两处都判 `active !== false`）。
+  if (!Array.isArray(wave.spawns) || wave.spawns.length === 0) stage.active = false;
+
   const report = {
     id: idn.id,
     file: path.basename(file),

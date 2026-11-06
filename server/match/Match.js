@@ -259,6 +259,16 @@ const BOT_SLICE_MS = 8;
 const env = (k) => (typeof process !== 'undefined' && process.env ? process.env[k] : undefined);
 /** Default combat mode: client-side unless SP_COMBAT=server. */
 const envClientCombat = () => String(env('SP_COMBAT') || '').toLowerCase() !== 'server';
+/**
+ * 战斗中实时部署 (方案 A, match/combat.js liveDeploy / spec.flags.liveDeploy)：**默认开启**（2026-11-06 业主裁决）。
+ * 要回到旧行为（开局自动部署）设 `SP_LIVE_DEPLOY=0`；调用方也可用 `opts.liveDeploy` 覆盖。
+ * 它是一条新玩法规则（棋盘在 COMBAT 期自己摆），会改变「同一 spec 的客户端/服务端结果一致」那组断言的前提 ——
+ * 所以 `test/match/harness.js` 的夹具显式传 `liveDeploy:false`，那组一致性用例继续钉旧策略。
+ */
+const envLiveDeploy = () => {
+  const v = String(env('SP_LIVE_DEPLOY') ?? '').trim().toLowerCase();
+  return !['0', 'false', 'off'].includes(v);
+};
 /** SP_VERIFY → 'off' | 'sample' | 'all'. */
 export function parseVerify(v) {
   const s = String(v ?? '').trim().toLowerCase();
@@ -407,6 +417,14 @@ export class Match {
     this.ds = dataSourceFor(this.data);
     /** client-side combat (DESIGN §14) — see the header */
     this.clientCombat = opts.clientCombat != null ? !!opts.clientCombat : envClientCombat();
+    /**
+     * 战斗中实时部署 (方案 A): the players place their boards during COMBAT (match/combat.js liveDeploy; the engine side
+     * is Battle.deployLive under spec.flags.liveDeploy). Opt-in (SP_LIVE_DEPLOY=1 / opts.liveDeploy) so an existing
+     * match's outcome — and the client-equals-server checks that pin it — stays byte-identical; it needs client-side
+     * combat (a browser authority applies the order) and never reaches a bot field. (`liveDeployOn`: the intents
+     * liveDeploy / liveRetreat are methods of the same name.)
+     */
+    this.liveDeployOn = (opts.liveDeploy != null ? !!opts.liveDeploy : envLiveDeploy()) && this.clientCombat;
     this.verifyMode = parseVerify(opts.verify ?? env('SP_VERIFY'));
     /** wall-clock ms per slice of a server-run normal / 联防 field (virtual time: at once) */
     this.headlessSliceMs = Number.isFinite(opts.headlessSliceMs) && opts.headlessSliceMs > 0 ? opts.headlessSliceMs : this.sched.virtual ? Infinity : HEADLESS_SLICE_MS;

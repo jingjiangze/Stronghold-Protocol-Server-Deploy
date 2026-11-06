@@ -960,3 +960,6 @@
 .rgv__key { flex: none; display: grid; place-items: center; width: max(.34rem, 22px); height: max(.34rem, 22px);
   font-size: max(.14rem, 9px); font-weight: 800; color: #0b1622; background: #7fb6ff; }
 .rgv__label { font-size: max(.17rem, 11px); line-height: 1.4; }
+/* 选项角标：这一选会给 / 卖一件藏品（红 8 / 青蓝 4 这类官方标价由服务端下发；发牌与扣款都在服务端，这里只提示） */
+.rgv__mark { flex: none; margin-left: auto; padding: 0 .08rem; font-size: max(.14rem, 9px); letter-spacing: .04em;
+  color: #ffd77a; background: rgba(240, 192, 74, .12); border: 1px solid rgba(240, 192, 74, .45); }

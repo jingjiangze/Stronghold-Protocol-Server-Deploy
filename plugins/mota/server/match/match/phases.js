@@ -449,10 +449,13 @@ export class MatchPhases {
         this.relicOffer();
       }
     } catch (e) { this.reportError?.('relic offer', e); }
-    // 肉鸽随机事件（不期而遇）：R3 / R6 / R9，非阻塞，20s 超时取第一个选项。
+    // 肉鸽随机事件（不期而遇）：2026-11-06 改成**按节点触发** —— 走到 `event` 节点才遇事件（官方形态），
+    // 不再是固定回合 R3 / R6 / R9。时序与藏品一致：`rogueNodeBegin(r)` 在本函数之后才调，所以用
+    // `rogueNodeTypeFor(r)` 按回合号反算（不能读 st.index）。`rogueEventRound` 保留在 rogue 插件里给
+    // 老调用方/单测用，**不再作为门**；没装 roguelike-core 时 `rogueNodeTypeFor` 缺席 ⇒ 不触发（typeof 守卫）。
     try {
       if (this.isRogue === true && typeof this.rogueEventOffer === 'function'
-        && typeof this.rogueEventRound === 'function' && this.rogueEventRound(r)) {
+        && typeof this.rogueNodeTypeFor === 'function' && this.rogueNodeTypeFor(r) === 'event') {
         this.rogueEventOffer();
       }
     } catch (e) { this.reportError?.('rogue event', e); }

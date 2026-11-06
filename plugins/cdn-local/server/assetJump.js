@@ -264,6 +264,11 @@ export function createAssetJump({ sourcesPath = process.env.SP_EDGE_SOURCES || D
   // 后续请求会自动避开；同步补齐（如刚上传的场景素材）在一个 TTL 之后自动恢复。
   const EXIST_TTL_MS = 10 * 60_000;
   const EXIST_MAX = 5000;
+  // 2026-11-06：数据集上部分对象不是素材，而是 639 字节的纯文本占位符
+  // （`o2p-platform (handshake-only: game bytes never transit this host). POST /api/room …`），HEAD 照样 200。
+  // 实测 24 个角色素材里 2 个是它（安哲拉 avatar/spine 都在内）；同一路径在 jsdelivr/ghfast 上是真文件。
+  // 把它记成 miss，302 就会顺延到下一个源（第一次请求仍可能拿到占位符，TTL 内后续请求自动避开）。
+  const PLACEHOLDER_BYTES = 639;
   // 边缘层快照：nginx 把 /assets|fonts/** 交给侧车（deploy/stardust/ms-edge/edge-sidecar.mjs），
   // 侧车不自己探测，只读这里写出的结论 —— 探测逻辑只有一份，不会两边漂移。
   const SNAPSHOT_PATH = process.env.SP_EDGE_SNAPSHOT
@@ -283,9 +288,24 @@ export function createAssetJump({ sourcesPath = process.env.SP_EDGE_SOURCES || D
   const snapshotTimer = setInterval(publishSnapshot, 5000);
   snapshotTimer?.unref?.();
   const exists = new Map();            // key = 源 id + '\n' + 路径 → { v: 'ok' | 'miss' | null, at }
+  // 2026-11-06：数据集里 534 个对象是 639 字节的纯文本占位符（全量枚举，见 config/stubs.json）。
+  // 静态黑名单让**第一次请求**就不落到 modelscope（只跳过这一个源，其它源照常按 order 顺延）。
+  const STATIC_STUBS = (() => {
+    try {
+      const p = path.join(path.dirname(sourcesPath), 'stubs.json');
+      const doc = JSON.parse(fs.readFileSync(p, 'utf8'));
+      const list = Array.isArray(doc?.paths) ? doc.paths : (Array.isArray(doc) ? doc : []);
+      return new Set(list.map((s) => String(s).replace(/^\/+/, '')));
+    } catch { return new Set(); }
+  })();
   const existProbing = new Set();
   const existKey = (id, pathname) => id + '\n' + pathname;
   const knownMiss = (id, pathname) => {
+    // 数据集上的占位对象：只对 modelscope 生效（其它源里同一路径可能是真文件）
+    if (id === 'modelscope' && STATIC_STUBS.size) {
+      const rel = String(pathname || '').replace(/^\/+/, '');
+      if (STATIC_STUBS.has(rel)) return true;
+    }
     const e = exists.get(existKey(id, pathname));
     return !!e && e.v === 'miss' && Date.now() - e.at < EXIST_TTL_MS;
   };
@@ -308,7 +328,12 @@ export function createAssetJump({ sourcesPath = process.env.SP_EDGE_SOURCES || D
     Promise.resolve()
       .then(async () => (isModelscopeUrl(target) ? await modelscopeCookie() : null))
       .then((ck) => fetchImpl(target, { method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(5000), headers: ck ? { Cookie: ck } : {} }))
-      .then((r) => noteExist(id, pathname, r.status < 400 ? 'ok' : (r.status === 404 ? 'miss' : null)))
+      .then((r) => {
+        const len = Number(r.headers.get('content-length'));
+        // 占位符按「缺件」处理：让 302 顺延到下一个源，而不是把文本当图片发给玩家
+        const stub = r.status < 400 && Number.isFinite(len) && len === PLACEHOLDER_BYTES;
+        noteExist(id, pathname, stub ? 'miss' : (r.status < 400 ? 'ok' : (r.status === 404 ? 'miss' : null)));
+      })
       .catch(() => noteExist(id, pathname, null))
       .finally(() => existProbing.delete(key));
   };

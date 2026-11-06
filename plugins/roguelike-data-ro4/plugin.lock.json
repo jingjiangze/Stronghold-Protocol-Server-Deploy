@@ -5,8 +5,8 @@
   "generator": "tools/plugin.mjs pack",
   "files": {
     "data/rogue-nodes.json": {
-      "sha256": "e29b21a37ca7203a5e4787749fdfa40ef8ade97b8ca530b97260711aec27bfd7",
-      "bytes": 10801
+      "sha256": "8d8e34a5d6323fd4aa5df213e399d47312b75b33ad0c2dc0bee51358e48f36e5",
+      "bytes": 11130
     },
     "plugin.json": {
       "sha256": "0e3a9fa8a66273f4b5532f18b4085aaab89b373b6aaea0a7c8fb343721c3a861",

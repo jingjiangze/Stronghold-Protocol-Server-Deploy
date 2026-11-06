@@ -3,12 +3,13 @@
 // (server-run streaming, client-side combat), the per-field results and the sim-error log, then 联防 or SETTLE.
 // Installed on Match.prototype by server/match/Match.js (a method container: never instantiated; `this` is the match).
 
-import { PHASE, GEO } from '../../../shared/constants.js';
+import { PHASE, ERR, GEO } from '../../../shared/constants.js';
 import { deriveSeed } from '../../sim/rng.js';
+import { TICK } from '../../sim/constants.js';
 import { withBounties } from '../waves.js';
 import { planUnite } from '../unite.js';
 import { FieldRunner, DeadBattle } from '../fields.js';
-import { DELAYS } from './common.js';
+import { OK, fail, DELAYS } from './common.js';
 import { previewPlayer } from '../preview.js';
 import { morphBattleOpt } from '../../../shared/plugins/rules.js';
 
@@ -87,7 +88,13 @@ export class MatchCombat {
       spawns: this._sanitizeSpawns(Array.isArray(ev.spawns) ? ev.spawns : spawns, ps.playerId),
       routes: wave.routes,
       sharedBoss: null,
-      flags: { layerGainsEnabled: true, ...this.gd.dp },
+      // 战斗中实时部署 (方案 A, flags.liveDeploy): the opening deployment is skipped and the player places their board
+      // during COMBAT (g.deploy → liveDeploy). The match enables it explicitly (Match.liveDeployOn: SP_LIVE_DEPLOY=1 or
+      // opts.liveDeploy — off by default, so an existing match keeps today's outcome), it needs client-side combat, and
+      // only a HUMAN seat gets the flag: an AI seat's field is simulated by the server and would open with no operator on
+      // the field at all, while a preview (bot rehearsal / g.unitStats) must still measure the board as deployed. A
+      // 联防 / boss / versus field never comes through here, so those keep the opening deployment untouched.
+      flags: { layerGainsEnabled: true, ...this.gd.dp, ...(this.liveDeployOn && !preview && ps && !ps.isBot ? { liveDeploy: true } : null) },
       fieldId: `n:${ps.playerId}`,
       enemyOverrides: wave.overrides,
       waveId: wave.templateId,
@@ -193,5 +200,92 @@ export class MatchCombat {
     const plan = planUnite(this, this.lastResults);
     if (plan) this.startUnite(plan);
     else this.settle(null, null);
+  }
+
+  // ---- 战斗中实时部署 (方案 A) ------------------------------------------------------------------------------------
+  // g.deploy / g.retreat (intents.js): the player places / withdraws one of their OWN board operators while COMBAT
+  // runs. The rules are the engine's (server/sim/battle/deploy.js deployLive / retreatLive): a retreat refunds no DP,
+  // a redeploy costs `base.cost` with no penalty multiplier. A client-authoritative field (the default) has NO Battle
+  // on the server — the browser is the authority and applies the order itself — so the server only validates the seat
+  // and the uid, records the order in `spec.cmds` (a takeover re-simulation replays it) and answers m.deploy; a field
+  // the server took over runs its own Battle, which answers with the real DP / geometry verdict.
+  // Watch replicas and teammate bots are not chased (方案 A): a bot's board is never held (no liveDeploy flag), and a
+  // watcher's replica simply replays the recorded cmds from t = 0.
+
+  /** 战斗中实时部署: g.deploy — one of the player's own operators onto the tapped tile (or its board tile). */
+  liveDeploy(ps, { uid, row, col } = {}) {
+    return this._liveDeployOrder(ps, { uid, row, col }, 'deploy');
+  }
+
+  /** 战斗中实时部署: g.retreat — withdraw a standing operator (its redeploy timer arms; no DP refund). */
+  liveRetreat(ps, { uid } = {}) {
+    return this._liveDeployOrder(ps, { uid }, 'retreat');
+  }
+
+  /** The shared gate of liveDeploy / liveRetreat; see the block comment above for the two paths. */
+  _liveDeployOrder(ps, { uid, row, col } = {}, action) {
+    if (this.phase !== PHASE.COMBAT) return fail(ERR.WRONG_PHASE, 'live deploy runs in combat');
+    if (!ps || ps.spectator || !ps.alive) return fail(ERR.ELIMINATED);
+    if (!Number.isSafeInteger(uid) || uid <= 0) return fail(ERR.BAD_TARGET, 'which unit');
+    const f = this._liveDeployField(ps);
+    if (!f) return fail(ERR.WRONG_PHASE, 'live deploy is a client-side normal field');
+    // 归属: the piece must be one of THIS player's own board operators — a foreign uid never reaches an engine
+    if (!this._liveOwnsUid(f, ps.playerId, uid)) return fail(ERR.BAD_TARGET, 'not your operator');
+    const tile = Number.isInteger(row) && Number.isInteger(col) ? [row, col] : null;
+    const b = f.mode === 'server' && f.battle ? f.battle : null;
+    if (b && typeof b.deployLive === 'function') {
+      const out = action === 'retreat' ? b.retreatLive(ps.playerId, uid) : b.deployLive(ps.playerId, uid, tile);
+      this._sendDeployReply(ps.playerId, action, out);
+      if (out.ok) this.markPublic();
+      return OK;
+    }
+    // the browser is the authority and has already applied this order to its own Battle: record it for a takeover
+    this._liveCmdRecord(f, ps.playerId, action, uid, tile);
+    this._sendDeployReply(ps.playerId, action, { ok: true, uid });
+    return OK;
+  }
+
+  _sendDeployReply(playerId, action, out) {
+    const ok = !!(out && out.ok);
+    const base = { t: 'm.deploy', ok, ...(ok ? { uid: out.uid } : { error: (out && out.error) || 'unknown' }) };
+    if (ok && action === 'retreat') base.retreat = true;
+    else if (ok && Number.isFinite(out.dp)) base.dp = out.dp;
+    this.sendTo(playerId, base);
+  }
+
+  /**
+   * The field a live deployment may touch: the player's own normal field, and only when its spec runs in live-deploy
+   * mode (the flag server/match/match/combat.js _normalOpts injects for a human client-authoritative field). Null under
+   * a non-COMBAT state, a spectator / eliminated seat, an observer of someone else's field, or any other field kind.
+   */
+  _liveDeployField(ps) {
+    if (!ps || ps.spectator || !ps.alive) return null;
+    const list = Array.isArray(this.fields) ? this.fields : [];
+    return list.find((f) => f && !f.done && f.spec && f.spec.flags && f.spec.flags.liveDeploy === true
+      && Array.isArray(f.players) && f.players.includes(ps.playerId)) || null;
+  }
+
+  /** Whether `uid` is one of `playerId`'s own operators in the field's spec (a board chess, not a summon). */
+  _liveOwnsUid(f, playerId, uid) {
+    const list = f && f.spec && Array.isArray(f.spec.players) ? f.spec.players : [];
+    const p = list.find((x) => x && x.playerId === playerId);
+    if (!p || !Array.isArray(p.units)) return false;
+    return p.units.some((u) => u && u.uid === uid && (u.kind === 'chess' || u.kind === 'op'));
+  }
+
+  /**
+   * Record one player order in the field's `spec.cmds` — `[tick, playerId, 'deploy' | 'retreat', uid, row?, col?]`,
+   * ascending by tick — which a takeover re-simulation replays at that tick (server/sim/battle/deploy.js _applyCmds).
+   * `tick` is the field clock's tick: the browser's local battle is paced by the same clock (b.start `elapsed`), so a
+   * takeover reproduces the player's timing within one tick. Bounded (max 512 entries): a spec is sent to every watcher,
+   * and a battle does not hold more orders than that.
+   */
+  _liveCmdRecord(f, playerId, action, uid, tile) {
+    if (!f || !f.spec) return 0;
+    if (!Array.isArray(f.spec.cmds)) f.spec.cmds = [];
+    const tick = Math.max(0, Math.round((Number(this._fieldElapsed(f)) || 0) / TICK));
+    if (f.spec.cmds.length >= 512) return tick;
+    f.spec.cmds.push(action === 'retreat' ? [tick, playerId, 'retreat', uid] : [tick, playerId, 'deploy', uid, ...(tile || [])]);
+    return tick;
   }
 }

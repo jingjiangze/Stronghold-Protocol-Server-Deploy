@@ -910,6 +910,21 @@ function MatchScreen() {
     if (phase !== PHASE.PREP) setRewardMin(false);
     setSpBusy(null);
   }, [phaseKey]);
+  // 官方肉鸽的节点图是「层内常驻底图」：每到需要选节点的准备期就自动铺开，不再藏在齿轮按钮后面；
+  // 同一层玩家手动关掉后不再骚扰（key 变了才重开），作战 / 结算期间保持关闭（官方也是全屏接管）。
+  const rogueAutoKey = useRef('');
+  useEffect(() => {
+    const nodes = pub?.rogue?.nodes;
+    if (!nodes || rogueBlocked || spectator || !alive) return;
+    const next = Array.isArray(nodes.nextChoices) ? nodes.nextChoices : [];
+    const cur = Array.isArray(nodes.choices) ? nodes.choices : [];
+    const needPick = (next.length > 0 && !nodes.nextPicked) || (cur.length > 0 && !nodes.picked);
+    if (!needPick) return;
+    const key = `${nodes.layer}:${nodes.nextRound || nodes.round}`;
+    if (rogueAutoKey.current === key) return;
+    rogueAutoKey.current = key;
+    setRoguePanel(true);
+  }, [pub?.rogue?.nodes, rogueBlocked, spectator, alive]);
   // 协议启动！ fades once BATTLE_CHECK is over (ProtocolBoot `leaving`), then goes
   const bootDone = !!boot && phase !== PHASE.BATTLE_CHECK;
   useEffect(() => {

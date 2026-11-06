@@ -4,9 +4,11 @@
 //   · 一层面板 + 半透明遮罩，**不是**局内常驻浮窗；只在非战斗阶段由左上角的「肉鸽」按钮打开，
 //     战斗 / 结算由 screens/game.js 关闭并禁用入口（这里再按 `blocked` 兜一层，防相位切换的那一帧）。
 //   · 三页 tab，官方配色（深蓝黑底 + 金色标题 + 青色描边）：
-//       节点 —— 三列：左「14 层时间轴 + 图例（已通过 / 当前 / 未到）」、中「下一层 三选一」大卡
-//               （深蓝黑底 + 金色描边 + 顶部类型色条，官方 img_*_active.png 图标）、右「节点详情」
-//               （当前层 / 类型 / 地图、下一层预览的 tier + 地图前缀、本局 AP·藏品·词缀、本层奖励 / 难度）；
+//       节点 —— 上「列式节点图」（官方 IS 形态：横轴 14 层各一列，列内纵排该层 3 个节点，层间画连线；
+//               当前层高亮描边、已走节点打勾并置为金色、下一层候选青色脉冲；点候选节点即选中，点其它节点
+//               只切右下详情。连线规则见 nodeGraph() 的注释），下「下一层三选一」大卡（深蓝黑底 + 金色描边
+//               + 顶部类型色条，官方 img_*_active.png 图标）+「节点详情」（当前层 / 类型 / 地图、下一层
+//               预览的 tier + 地图前缀、本局 AP·藏品·词缀、本层奖励 / 难度）；
 //       地图 —— buildMinimapModel(stage) 的当前战场缩略图（按 rogueFrame 裁剪），主题官方底图垫底，
 //               图例横排在地图正下方（3 列 × 2 行），右侧是「关卡信息」信息卡：关卡 / 回合 / 尺寸 / 主题
 //               + 地图统计（地面 / 高台 / 禁入 / 其他格数，近战 / 远程部署点数）+ 2–3 行规则说明（填满右栏）；
@@ -34,13 +36,20 @@ import { html, Icon } from './components.js';
 import { data, useData } from '../data.js';
 import { t } from '../../../shared/i18n.js';
 import { buildMinimapModel, TERRAIN } from './rogueMapModel.js';
+// 失与得（2026-11-06）：swap offer 进行中时，藏品页给每件藏品一个「换出」入口。
+// 判断信号来自 relicOverlay 的渲染期标记（对局页同一帧先归一化藏品 offer 再渲染本面板），本面板不自己猜。
+import { relicSwapPending } from './relicOverlay.js';
 
 /** 官方素材根目录（public/assets/local/roguelike，由 assets 导出脚本落盘）。 */
 export const ROGUE_ASSET = '/assets/local/roguelike';
 /** 节点卡底（官方 165×94）。选中态只用 CSS（描边 + 光晕），官方 img_focus.png 留作以后换皮。 */
 export const NODE_CARD_BG = `${ROGUE_ASSET}/node/img_node_bkg.png`;
 
-/** 官方类型色（用户给的对照表：battle / elite / boss / shop / rest / event，unknown 白）。 */
+/**
+ * 官方类型色（用户给的对照表：battle / elite / boss / shop / rest / event，unknown 白）。
+ * `wish`（得偿所愿）是官方 IS 的「许愿」节点：取金色系，但比 battle 的 #FFB80D 亮一档（#FFD76A），
+ * 两者在同一张节点图里不会看混。
+ */
 export const TYPE_COLOR = Object.freeze({
   battle: '#FFB80D',
   elite: '#F37E00',
@@ -49,10 +58,15 @@ export const TYPE_COLOR = Object.freeze({
   rest: '#00B4FF',
   event: '#00E2E4',
   incident: '#00E2E4',
+  wish: '#FFD76A',
   unknown: '#FFFFFF',
 });
 
-/** 类型 → 官方图标（`img_*_active.png`；事件在官方素材里叫 incident）。 */
+/**
+ * 类型 → 官方图标（`img_*_active.png`；事件在官方素材里叫 incident）。
+ * ⚠ `wish` 没有官方图标：`public/assets/local/roguelike/node/` 里 `img_wish*` 一个都没有（导出脚本按官方包名取的，
+ * 官方这一版素材就没带）。这里借用 `img_treasure_active.png`（藏宝宝箱，语义最近），换成官方图时只改这一行。
+ */
 const TYPE_ICON = {
   battle: 'img_battle_active.png',
   elite: 'img_elite_active.png',
@@ -61,6 +75,7 @@ const TYPE_ICON = {
   rest: 'img_rest_active.png',
   event: 'img_incident_active.png',
   incident: 'img_incident_active.png',
+  wish: 'img_treasure_active.png',
 };
 
 /** 类型 → 中文名（渲染时取，不在模块加载时锁死语言）。 */
@@ -73,6 +88,7 @@ function typeName(type) {
     case 'rest': return t('休整');
     case 'event':
     case 'incident': return t('事件');
+    case 'wish': return t('得偿所愿');
     default: return t('未知');
   }
 }
@@ -108,8 +124,8 @@ const BACKDROP_RANGE = Object.freeze({
   ro6: [0, 6],
 });
 
-/** 藏品上限（与 ui/rogueHud.js 的 3 一致：开局 + 每 2 回合的三选一）。 */
-export const RELIC_CAP = 3;
+// 藏品**没有**数量上限：官方肉鸽不设「每人 3 件」，服务端已取消这条（2026-11 对齐官方形态），
+// 所以面板只显示已持有件数，不出现 `n/3` / `undefined/3` 这类残句。别再把上限常量加回来。
 
 /** `g.rogueNode` 的意图消息（纯函数：面板与 node 单测共用，不在组件里拼协议字符串）。 */
 export function nodeIntent(nodeId) {
@@ -191,6 +207,136 @@ export function layerTrail(nodes) {
     });
   }
   return out;
+}
+
+/**
+ * 节点图：一层一列、列内纵排该层节点（本数据每层 3 个），列间画连线（官方 IS #4/#5 的节点图形态）。
+ *
+ * 分组：`sequence` 已按层拍平，这里只走一遍按 `layer`（缺省退回 `layerName`，再缺省都并进一列）分列，
+ *       列序 = 首次出现顺序 = 第 1 层 … 第 14 层。某层只有 1 个节点也只是「只有 1 行的列」，不补空位。
+ * 状态：列 —— `nodes.index`（0 起算的当前层）之前的列 done、等于 index 的列 current、`nextRound - 1` 的列
+ *       next（有 `nextChoices` 时）、其余 future；节点 —— id 出现在 `visited` / `current` / `picked` 任一处的是
+ *       taken，当前层里没走到的那两个是 sibling，下一层里属于 `nextChoices` 的是 candidate（可点 = 真会改下一
+ *       回合地图），其余是 skipped（已过但没走）/ future。
+ * 连线（只有层数据、没有显式边，简化规则固定为三条，便于复核）：
+ *       ① 下一列是候选层 → 本列「已走节点」（本列还没走则用列中点）分别连到下一列**每个候选节点**（分支）；
+ *       ② 下一列已经有走过的节点 → 本列**全部节点**都连到它（收敛），其中来自本列已走节点的那条标记 active；
+ *       ③ 其余（两个都还没到的未来层之间）→ 本列已走节点（没有则中点）到下一列中点的一条干线。
+ *       行号都是列内下标，渲染时用 {@link graphRowPct} 折算成百分比 y，所以某层只有 1 个节点时落在 50%。
+ * @param {object|null} nodes `pub.rogue.nodes`（没有 / 不是对象时返回空图）
+ * @returns {{
+ *   layers: Array<{ key: string, index: number, name: string, state: 'done'|'current'|'next'|'future',
+ *     nodes: Array<{ id: string, type: string, name: string, tier: string, cost: number,
+ *       state: 'taken'|'sibling'|'candidate'|'skipped'|'future', picked: boolean }> }>,
+ *   links: Array<{ key: string, gap: number, kind: 'taken'|'candidate'|'trunk',
+ *     segs: Array<{ fromRow: number, toRow: number, active: boolean }> }>,
+ * }}
+ */
+export function nodeGraph(nodes) {
+  const seq = nodes && Array.isArray(nodes.sequence) ? nodes.sequence : [];
+  const visited = nodes && Array.isArray(nodes.visited) ? nodes.visited.map((v) => String(v)) : [];
+  const taken = new Set(visited);
+  const rawIndex = nodes ? Number(nodes.index) : -1;
+  const index = Number.isInteger(rawIndex) && rawIndex >= 0 ? rawIndex : -1;
+  // 「已走」的三个来源：`visited`（历次落地的 id）、`current`（当前落地的 id）、`picked`（本层真正落地的
+  // id，服务端 `picks[li]`）。任一命中都算走过，任一处缺失时另外两处还能兜住。
+  const currentId = nodes && nodes.current ? String(nodes.current) : '';
+  const pickedId = nodes && nodes.picked ? String(nodes.picked) : '';
+  if (currentId) taken.add(currentId);
+  if (pickedId) taken.add(pickedId);
+  const nextChoices = nodes && Array.isArray(nodes.nextChoices) ? nodes.nextChoices : [];
+  const candIds = new Set(nextChoices.filter(Boolean).map((n) => String(n.id)));
+  const nextRound = Number(nodes && nodes.nextRound) || 0;
+  const nextIndex = candIds.size && nextRound > 0 ? nextRound - 1 : -1;
+  const nextPicked = nodes && nodes.nextPicked ? String(nodes.nextPicked) : '';
+
+  // —— 分组：按 layer 首现顺序分列（一遍遍历，单层 1 个节点也不丢）——
+  const layers = [];
+  const byKey = new Map();
+  for (const n of seq) {
+    if (!n || n.id === undefined || n.id === null || n.id === '') continue;
+    const key = String(n.layer || n.layerName || 'layer-1');
+    let col = byKey.get(key);
+    if (!col) {
+      col = { key, index: layers.length, name: String(n.layerName || n.layer || ''), state: 'future', nodes: [] };
+      byKey.set(key, col);
+      layers.push(col);
+    }
+    col.nodes.push({
+      id: String(n.id),
+      type: String(n.type || 'unknown'),
+      name: String(n.name || ''),
+      tier: n.tier == null ? '' : String(n.tier),
+      cost: Number(n.cost) || 0,
+      state: 'future',
+      picked: false,
+    });
+  }
+
+  // —— 列 / 节点状态 ——
+  for (const col of layers) {
+    col.state = col.index < index ? 'done'
+      : col.index === index ? 'current'
+        : col.index === nextIndex ? 'next'
+          : 'future';
+    for (const n of col.nodes) {
+      if (taken.has(n.id)) n.state = 'taken';
+      else if (col.state === 'current') n.state = 'sibling';
+      else if (col.state === 'next') n.state = candIds.has(n.id) ? 'candidate' : 'skipped';
+      else n.state = col.state === 'done' ? 'skipped' : 'future';
+      n.picked = n.state === 'candidate' && n.id === nextPicked;
+    }
+  }
+
+  // —— 连线（规则 ①②③，见函数头）——
+  const mid = (col) => Math.floor((col.nodes.length - 1) / 2);
+  const rowOfTaken = (col) => col.nodes.findIndex((n) => n.state === 'taken');
+  const links = [];
+  for (let i = 0; i < layers.length - 1; i++) {
+    const a = layers[i];
+    const b = layers[i + 1];
+    const fromRow = rowOfTaken(a);
+    const bTaken = rowOfTaken(b);
+    const candRows = b.nodes.map((n, r) => (n.state === 'candidate' ? r : -1)).filter((r) => r >= 0);
+    const segs = [];
+    if (candRows.length) {
+      const src = fromRow >= 0 ? [fromRow] : [mid(a)];
+      for (const fr of src) for (const tr of candRows) segs.push({ fromRow: fr, toRow: tr, active: true });
+      links.push({ key: `g${i}`, gap: i, kind: 'candidate', segs });
+    } else if (bTaken >= 0) {
+      for (const fr of a.nodes.map((_, r) => r)) segs.push({ fromRow: fr, toRow: bTaken, active: fr === fromRow });
+      links.push({ key: `g${i}`, gap: i, kind: 'taken', segs });
+    } else {
+      segs.push({ fromRow: fromRow >= 0 ? fromRow : mid(a), toRow: mid(b), active: false });
+      links.push({ key: `g${i}`, gap: i, kind: 'trunk', segs });
+    }
+  }
+  return { layers, links };
+}
+
+/**
+ * 列内第 `row` 个节点的纵向中心（百分比）：列内节点等高分布，所以 1 个节点时是 50%、3 个时是 16.7/50/83.3。
+ * 渲染（`.rpn-graph__stack` 的 `repeat(n, 1fr)` + 居中）与连线 SVG 共用同一条公式，线才落在节点中心。
+ */
+function graphRowPct(col, row) {
+  const rows = Math.max(1, col && Array.isArray(col.nodes) ? col.nodes.length : 1);
+  return ((row + 0.5) / rows) * 100;
+}
+
+/**
+ * 节点图里按 id 找节点（点图上的节点 → 右栏详情用）。
+ * @param {ReturnType<typeof nodeGraph>} graph
+ * @param {string} id
+ * @returns {{ node: object, layer: object }|null}
+ */
+export function graphNode(graph, id) {
+  const want = String(id || '');
+  if (!want || !graph || !Array.isArray(graph.layers)) return null;
+  for (const layer of graph.layers) {
+    const node = layer.nodes.find((n) => n.id === want);
+    if (node) return { node, layer };
+  }
+  return null;
 }
 
 /**
@@ -371,6 +517,24 @@ const tabList = () => [
 ];
 
 /**
+ * 一列到下一列的连线（内联 SVG，一条线一个 `<line>`）：
+ * viewBox 固定 0–100，`preserveAspectRatio="none"` 把 x 拉伸到「本列中心 → 下一列中心」这段宽度
+ * （CSS 里 SVG 的 `left:50%` + `width: calc(100% + 列间距)` 就是这个区间），y 用同一条百分比公式，
+ * `vector-effect="non-scaling-stroke"` 保证线宽不被 x/y 的非等比缩放拉扁。
+ * @param {{ key: string, kind: string, segs: Array<{ fromRow: number, toRow: number, active: boolean }> }} link
+ * @param {object} col 本列 @param {object} next 下一列（行数可能不同）
+ */
+function graphLink(link, col, next) {
+  return html`<svg class="rpn-graph__links" viewBox="0 0 100 100" preserveAspectRatio="none"
+      aria-hidden="true" focusable="false">
+    ${link.segs.map((s, i) => html`<line key=${`${link.key}-${i}`}
+      x1="0" y1=${graphRowPct(col, s.fromRow)} x2="100" y2=${graphRowPct(next, s.toRow)}
+      class=${cls('rpn-graph__wire', `is-${link.kind}`, s.active && 'is-active')}
+      vector-effect="non-scaling-stroke" />`)}
+  </svg>`;
+}
+
+/**
  * 集成战略叠加面板。
  * @param {{
  *   pub: object|null,
@@ -385,14 +549,16 @@ export function RoguePanel({ pub, relicCards = null, open = false, blocked = fal
   const stagesReady = useData('stages');
   const [tab, setTab] = useState('nodes');
   const [busy, setBusy] = useState(null);
-  // 关掉面板时清忙态：下一次打开不该继承上一张卡片的 spinner
-  useEffect(() => { if (!open) setBusy(null); }, [open]);
+  // 节点图上「被点开看详情」的节点 id（只影响右下详情栏，不发送任何意图）
+  const [focusId, setFocusId] = useState(null);
+  // 关掉面板时清忙态与详情焦点：下一次打开不该继承上一张卡片的 spinner / 上一局的选中项
+  useEffect(() => { if (!open) { setBusy(null); setFocusId(null); } }, [open]);
 
   const rogue = pub && pub.rogue ? pub.rogue : null;
   if (!open || !rogue) return null;
 
   const nodes = rogueNodes(pub);
-  const trail = layerTrail(nodes);
+  const graph = nodeGraph(nodes);
   const picks = choiceList(nodes);
   const relics = relicList(pub, relicCards);
   const currentIndex = nodes && Number.isFinite(Number(nodes.index)) ? Number(nodes.index) : -1;
@@ -403,9 +569,11 @@ export function RoguePanel({ pub, relicCards = null, open = false, blocked = fal
   const lastRound = Number(pub && pub.lastRound) || 0;
   const affix = rogue.affix && rogue.affix.label ? String(rogue.affix.label) : '';
   const canSend = typeof onPickNode === 'function' && !blocked;
-  // 详情列 / 时间轴要用的派生值（全部只读 `pub.rogue.nodes`，不新造字段）
+  // 详情列要用的派生值（全部只读 `pub.rogue.nodes` / 节点图，不新造字段）
   const cur = currentChoice(nodes);
-  const curType = cur && cur.type ? String(cur.type) : (trail[currentIndex] ? String(trail[currentIndex].type) : '');
+  const curCol = currentIndex >= 0 ? graph.layers[currentIndex] || null : null;
+  const curTaken = curCol ? curCol.nodes.find((n) => n.state === 'taken') || null : null;
+  const curType = (cur && cur.type ? String(cur.type) : '') || (curTaken ? curTaken.type : '');
   const curTier = cur && cur.tier != null ? cur.tier : (nodes && nodes.tier != null ? nodes.tier : '');
   const curCost = cur && Number.isFinite(Number(cur.cost)) ? Number(cur.cost) : 0;
   const curMapId = nodes && nodes.mapId ? String(nodes.mapId) : '';
@@ -413,8 +581,6 @@ export function RoguePanel({ pub, relicCards = null, open = false, blocked = fal
   const stageIdNow = (pub && pub.stageId ? String(pub.stageId) : '') || curMapId;
   const mapName = mapLabel(stageIdNow);
   const themeNo = rogueThemeOf(stageIdNow);
-  const curPickedName = pickText(nodes && nodes.picked, nodes && nodes.choices);
-  const nextPickedName = pickText(nodes && nodes.nextPicked, nodes && nodes.nextChoices);
   const preview = previewChoices(nodes);
   const diffPct = Math.round(difficultyFrac(curTier) * 100);
 
@@ -431,10 +597,32 @@ export function RoguePanel({ pub, relicCards = null, open = false, blocked = fal
     }
   };
 
+  // 失与得：点「换出」把这一件（relicId）发给服务端 —— 复用 `g.relicPick` 的第一阶段（服务端把没定换出时的
+  // relicId 当换出 id），不新增意图。之后服务端按档位重发换入候选，藏品弹窗里选。
+  const swapOut = async (relicId) => {
+    if (!canSend || busy || !relicId) return;
+    setBusy('swap:' + relicId);
+    try {
+      await onPickNode('g.relicPick', { relicId });
+    } catch (e) {
+      // 同上：错误提示归对局页，这里只解除忙态
+    } finally {
+      setBusy(null);
+    }
+  };
+  const swapPending = relicSwapPending();
+
   const stage = stagesReady && pub && pub.stageId ? data.lookup('stages', pub.stageId) : null;
   const model = tab === 'map' ? buildMinimapModel(stage) : null;
   const backdrop = tab === 'map' ? backdropPath(pub && pub.stageId) : null;
   const mapStats = tab === 'map' ? minimapStats(model) : null;
+
+  // 节点图的一次点击：先切详情焦点；只有「下一层候选」才走既有的 pick()（pick 内部已守 canSend / busy）。
+  const selectNode = (n) => {
+    setFocusId(String(n.id));
+    if (n.state === 'candidate') pick(n.id);
+  };
+  const focus = focusId ? graphNode(graph, focusId) : null;
 
   const head = html`<header class="rpn__head">
     <div class="rpn__headline">
@@ -447,7 +635,7 @@ export function RoguePanel({ pub, relicCards = null, open = false, blocked = fal
       <span class="rpn__chip">${lastRound ? t('回合 {r}/{last}', { r: round, last: lastRound }) : t('回合 {r}', { r: round })}</span>
       ${mapName ? html`<span class="rpn__chip rpn__chip--map">${t('地图')} <b>${mapName}</b></span>` : null}
       <span class="rpn__chip rpn__chip--ap"><b>AP</b> ${ap}/${maxAp}</span>
-      <span class="rpn__chip rpn__chip--relic">${t('藏品 {n}/{max}', { n: relics.length, max: RELIC_CAP })}</span>
+      <span class="rpn__chip rpn__chip--relic">${t('藏品 ×{n}', { n: relics.length })}</span>
     </div>
     <button type="button" class="rpn__close" aria-label=${t('关闭集成战略')} title=${t('关闭')}
       data-testid="rogue-panel-close" onClick=${() => onClose && onClose()}><${Icon} name="close" /></button>
@@ -462,32 +650,54 @@ export function RoguePanel({ pub, relicCards = null, open = false, blocked = fal
   const pageProps = { role: 'tabpanel', id: `rpn-page-${tab}`, 'aria-labelledby': `rpn-tab-${tab}` };
 
   const nodesPage = html`<div class="rpn-nodes" ...${pageProps}>
-    <aside class="rpn-rail" aria-label=${t('节点层')}>
-      ${trail.length ? html`<ol class="rpn-trail">
-        ${trail.map((row) => {
-          const done = row.index < currentIndex;
-          const now = row.index === currentIndex;
-          const chosen = now ? curPickedName : (row.index === currentIndex + 1 ? nextPickedName : '');
-          return html`<li key=${row.key}
-            class=${cls('rpn-trail__row', done && 'is-done', now && 'is-current', !done && !now && 'is-next', chosen && 'is-picked')}
-            aria-current=${now ? 'step' : null}>
-            <span class="rpn-trail__dot" aria-hidden="true"></span>
-            <span class="rpn-trail__idx">${row.index + 1}</span>
-            <span class="rpn-trail__name">
-              <span class="rpn-trail__label">${row.name}</span>
-              ${chosen ? html`<i class="rpn-trail__chosen">${t('已选')} · ${chosen}</i>` : null}
-            </span>
-            <span class="rpn-trail__type" style=${`--c:${typeColor(row.type)}`}>${typeName(row.type)}</span>
-          </li>`;
+    <section class="rpn-graph" aria-label=${t('节点图')} data-testid="rogue-nodes"
+      data-layers=${String(graph.layers.length)} data-graph-root="1">
+      <div class="rpn-graph__bar">
+        <b class="rpn-graph__title">${t('节点图')}</b>
+        <span class="rpn-graph__meta">${graph.layers.length
+          ? t('{done}/{total} 层', { done: Math.max(0, Math.min(currentIndex + 1, graph.layers.length)), total: graph.layers.length })
+          : '—'}</span>
+        <span class="rpn-graph__hint">${t('点节点看详情；青色的是下一层候选，点一下就选中')}</span>
+        <ul class="rpn-graph__legend" aria-label=${t('节点图例')}>
+          <li><i class="is-past" aria-hidden="true"></i>${t('已通过')}</li>
+          <li><i class="is-now" aria-hidden="true"></i>${t('当前')}</li>
+          <li><i class="is-cand" aria-hidden="true"></i>${t('候选')}</li>
+          <li><i class="is-todo" aria-hidden="true"></i>${t('未到')}</li>
+        </ul>
+      </div>
+      ${graph.layers.length ? html`<div class="rpn-graph__cols" style=${`--cols:${graph.layers.length}`}>
+        ${graph.layers.map((col) => {
+          const link = graph.links.find((l) => l.gap === col.index) || null;
+          const next = link ? graph.layers[col.index + 1] : null;
+          return html`<div key=${col.key} class=${cls('rpn-graph__col', `is-${col.state}`)}
+              data-layer=${col.key} data-layer-state=${col.state}>
+            <div class="rpn-graph__head">
+              <span class="rpn-graph__num">${col.index + 1}</span>
+              ${col.name ? html`<span class="rpn-graph__lv">${layerTitle(col.name) || col.name}</span>` : null}
+            </div>
+            <div class="rpn-graph__stack" style=${`--rows:${Math.max(col.nodes.length, 1)}`}>
+              ${link && next ? graphLink(link, col, next) : null}
+              ${col.nodes.map((n) => html`<button key=${n.id} type="button"
+                class=${cls('rpn-graph__node', `is-${n.state}`, n.picked && 'is-picked',
+                  n.state === 'candidate' && !canSend && 'is-readonly')}
+                style=${`--c:${typeColor(n.type)}`}
+                data-node-id=${n.id} data-graph-node="1" data-type=${n.type} data-state=${n.state}
+                data-layer=${col.key}
+                aria-current=${n.state === 'taken' ? 'true' : null}
+                aria-label=${`${t('第 {n} 层', { n: col.index + 1 })} · ${n.name || typeName(n.type)} · ${typeName(n.type)}${n.tier ? ` · ${tierLabel(n.tier)}` : ''}${n.cost ? ` · -${n.cost} AP` : ''}`}
+                title=${`${n.name || typeName(n.type)} · ${typeName(n.type)}${n.tier ? ` · ${tierLabel(n.tier)}` : ''}`}
+                onClick=${() => selectNode(n)}>
+                <img class="rpn-graph__icon" src=${typeIcon(n.type)} alt="" aria-hidden="true" />
+                <span class="rpn-graph__name">${n.name || typeName(n.type)}</span>
+                ${n.state === 'taken' ? html`<span class="rpn-graph__ok" aria-hidden="true">✓</span>` : null}
+              </button>`)}
+            </div>
+          </div>`;
         })}
-      </ol>` : html`<p class="rpn-empty">${t('本局没有节点数据：服务端未安装 roguelike-core。')}</p>`}
-      <ul class="rpn-rail__legend" aria-label=${t('节点图例')}>
-        <li><i class="is-past" aria-hidden="true"></i>${t('已通过')}</li>
-        <li><i class="is-now" aria-hidden="true"></i>${t('当前')}</li>
-        <li><i class="is-todo" aria-hidden="true"></i>${t('未到')}</li>
-      </ul>
-    </aside>
+      </div>` : html`<p class="rpn-empty">${t('本局没有节点数据：服务端未安装 roguelike-core。')}</p>`}
+    </section>
 
+    <div class="rpn-nodes__foot">
     <section class="rpn-pick">
       <div class="rpn-pick__head">
         <b>${picks.label}${picks.round ? ` · ${t('第 {n} 层', { n: picks.round })}` : ''}</b>
@@ -532,13 +742,21 @@ export function RoguePanel({ pub, relicCards = null, open = false, blocked = fal
     <section class="rpn-detail" aria-label=${t('节点详情')}>
       <div class="rpn-detail__sec">
         <h3 class="rpn-detail__h">${t('节点详情')}</h3>
+        ${focus ? html`<div class="rpn-detail__focus" style=${`--c:${typeColor(focus.node.type)}`} data-focus-id=${focus.node.id}>
+          <img class="rpn-detail__ficon" src=${typeIcon(focus.node.type)} alt="" aria-hidden="true" />
+          <span class="rpn-detail__fbody">
+            <b>${focus.node.name || typeName(focus.node.type)}</b>
+            <i class="rpn-detail__fmeta">${t('第 {n} 层', { n: focus.layer.index + 1 })}${focus.layer.name ? ` · ${layerTitle(focus.layer.name) || focus.layer.name}` : ''} · ${typeName(focus.node.type)}${focus.node.tier ? ` · ${tierLabel(focus.node.tier)}` : ''}</i>
+          </span>
+          <span class="rpn-detail__fcost">${focus.node.cost ? `-${focus.node.cost} AP` : t('免费')}</span>
+        </div>` : null}
         <dl class="rpn-detail__rows">
           <div><dt>${t('当前层')}</dt><dd>${currentIndex >= 0
             ? (layerTitle(layerName) || t('第 {n} 层', { n: currentIndex + 1 }))
             : t('尚未开局')}</dd></div>
           <div><dt>${t('类型')}</dt><dd class="is-type" style=${`--c:${typeColor(curType)}`}>${curType ? typeName(curType) : '—'}</dd></div>
           <div><dt>${t('地图')}</dt><dd>${mapName || '—'}</dd></div>
-          <div><dt>${t('进度')}</dt><dd>${trail.length ? `${Math.max(1, currentIndex + 1)} / ${trail.length}` : '—'}</dd></div>
+          <div><dt>${t('进度')}</dt><dd>${graph.layers.length ? `${Math.max(1, currentIndex + 1)} / ${graph.layers.length}` : '—'}</dd></div>
         </dl>
       </div>
       <div class="rpn-detail__sec">
@@ -557,7 +775,7 @@ export function RoguePanel({ pub, relicCards = null, open = false, blocked = fal
         <h3 class="rpn-detail__h">${t('本局摘要')}</h3>
         <div class="rpn-detail__stats">
           <span><b>AP</b>${ap}/${maxAp}</span>
-          <span><b>${t('藏品')}</b>${relics.length}/${RELIC_CAP}</span>
+          <span><b>${t('藏品')}</b>${relics.length}</span>
           <span><b>${t('词缀')}</b>${affix || t('无')}</span>
         </div>
       </div>
@@ -571,6 +789,7 @@ export function RoguePanel({ pub, relicCards = null, open = false, blocked = fal
         <div class="rpn-detail__meter" aria-hidden="true"><i style=${`width:${diffPct}%`}></i></div>
       </div>
     </section>
+    </div>
   </div>`;
 
   const mapPage = html`<div class="rpn-map" ...${pageProps}>
@@ -616,10 +835,12 @@ export function RoguePanel({ pub, relicCards = null, open = false, blocked = fal
   if (rogue.emergency === true) badges.push({ icon: 'warn', text: t('紧急作战') });
   if (Number.isInteger(rogue.nextEventRound)) badges.push({ icon: 'dice', text: t('下次不期而遇 R{r}', { r: rogue.nextEventRound }) });
   if (Number.isInteger(rogue.nextEmergencyRound)) badges.push({ icon: 'hourglass', text: t('下次紧急作战 R{r}', { r: rogue.nextEmergencyRound }) });
+  // 失与得进行中：提示「点一件换出」，并给每件藏品开一个换出入口（见下方 data-swap-id）
+  if (swapPending) badges.push({ icon: 'refresh', text: t('失与得：点一件换出') });
 
   const relicsPage = html`<div class="rpn-relics" ...${pageProps}>
     <div class="rpn-relics__head">
-      <b>${t('本局藏品 {n}/{max}', { n: relics.length, max: RELIC_CAP })}</b>
+      <b>${t('本局藏品 ×{n}', { n: relics.length })}</b>
       ${affix ? html`<span class="rpn-relics__affix">${t('词缀：')}${affix}</span>` : null}
       ${badges.map((b) => html`<span key=${b.text} class="rpn-relics__badge"><${Icon} name=${b.icon} />${b.text}</span>`)}
     </div>
@@ -634,6 +855,9 @@ export function RoguePanel({ pub, relicCards = null, open = false, blocked = fal
         </span>
         ${c.tier ? html`<span class="rpn-relic__tier">${c.tier}</span>` : null}
         ${c.applied === false ? html`<span class="rpn-relic__na" title=${t('这条藏品的效果还没接进引擎：本局只记录、不生效')}>${t('未实装')}</span>` : null}
+        ${swapPending ? html`<button type="button" class="rpn-relic__swap" data-swap-id=${c.id}
+          disabled=${!canSend || !!busy} title=${t('失与得：换出这一件')}
+          onClick=${() => swapOut(c.id)}>${t('换出')}</button>` : null}
       </li>`)}
     </ul>` : html`<p class="rpn-empty">${t('还没有藏品：开局与每 2 回合各有一次三选一。')}</p>`}
   </div>`;

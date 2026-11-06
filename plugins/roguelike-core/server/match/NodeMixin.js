@@ -156,6 +156,28 @@ export class Mixin {
   }
 
   /**
+   * 第 r 回合将要落地的节点类型（`battle`/`elite`/`event`/`shop`/`rest`/`boss`），没有节点表时 null。
+   *
+   * 与 `rogueNodeBegin` 解耦：`phases.js` 的 `_startRoundAfterOffers` 在 `rogueNodeBegin(r)` **之前**就发藏品
+   * 与随机事件，那一刻 `st.index` 还停在上一个层，所以节奏判断只能按回合号反算，不能读 `st.index`。
+   * @param {number} r 回合号（1 起算）
+   * @returns {string|null}
+   */
+  rogueNodeTypeFor(r) {
+    if (this.isRogue !== true) return null;
+    const table = this.rogueNodeTable();
+    if (!table) return null;
+    const st = this.rogueNodeInit(table);
+    const { layers } = st;
+    if (!layers.length) return null;
+    const li = layerIndex(layers, Math.max(1, num(r, 1)));
+    const layer = layers[li];
+    if (!layer) return null;
+    const node = nodeInLayer(layer, st.picks[li]) || layer.nodes[0];
+    return node ? String(node.type || '') || null : null;
+  }
+
+  /**
    * 某一层（默认当前层）的 3 个候选，供 UI 渲染。
    * @param {number} [round] 回合号（1 起算）；缺省 = 当前已落地的层
    * @returns {Array<{id:string,type:string,name:string,tier:string,cost:number,reward:object,available:boolean}>}

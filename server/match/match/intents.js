@@ -51,6 +51,10 @@ export class MatchIntents {
       case 'g.pause': return this.setPause(ps, !!msg.on);
       // the stats the board's units start their next battle with (the detail card in prep, user playtest #4 item 7)
       case 'g.unitStats': return this.unitStats(ps, msg.seq ?? null);
+      // 战斗中实时部署 (方案 A): deploy / withdraw one of the player's own board pieces during COMBAT
+      // (match/combat.js liveDeploy / liveRetreat)
+      case 'g.deploy': return this.liveDeploy(ps, msg);
+      case 'g.retreat': return this.liveRetreat(ps, msg);
       case 'g.leave': this.onLeave(ps.playerId); return OK;
       case 'g.test': return this.applyTestCommand(ps, msg);
       case 'b.progress': return this._onProgress(ps, msg);

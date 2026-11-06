@@ -262,7 +262,10 @@ export class TileField {
     this.boxes = [];               // gate / objective wire boxes { r, c, gate, g } (in the unit layer)
     this.flowGfx = new P.Graphics();
     this.flowGfx.blendMode = P.BLEND_MODES.ADD;
-    layers.overlay.addChild(this.hlGfx, this.flowGfx);
+    this.routeGfx = new P.Graphics();   // enemy routes + spawn rings (setRoutes), under the airflow streaks
+    this.routeGfx.blendMode = P.BLEND_MODES.ADD;
+    layers.overlay.addChild(this.hlGfx, this.routeGfx, this.flowGfx);
+    this.routes = [];              // { segs: [[r, c], …][] } — board space (see setRoutes)
     this.animLayer = new P.Container();
     layers.anim.addChild(this.animLayer);
     this.highlights = new Map();   // group → { tiles: [[r,c]], style }
@@ -727,6 +730,7 @@ export class TileField {
     for (let i = this.flashes.length - 1; i >= 0; i--) { this.flashes[i].t += dt; if (this.flashes[i].t > 1.2) this.flashes.splice(i, 1); }
     this._drawBoxes();
     this._drawFlow();
+    this._drawRoutes();
   }
 
   /** Gate / objective wire boxes: tall, so each is its own Graphics depth-sorted with the block rows and units. */
@@ -792,6 +796,66 @@ export class TileField {
     }
   }
 
+  /**
+   * Enemy routes and spawn points. `list` is `m.field`'s `incomingRoutes` (`{ id, time, segments }`, the legs
+   * server/sim/ai.js `incomingRoutePoints` predicted for this round) or any `{ segments }` list in the same shape;
+   * a point is `{ x: col, y: row }` in board space. `null` / `[]` clears them.
+   *
+   * The overlay layer is Pixi in both board modes (render/board3d draws only the board itself), so the routes show on
+   * the 2D board and the official 3D one alike — same layer as the highlight groups and the airflow streaks.
+   */
+  setRoutes(list) {
+    const next = [];
+    for (const rec of Array.isArray(list) ? list : []) {
+      const segs = [];
+      for (const seg of Array.isArray(rec?.segments) ? rec.segments : []) {
+        const pts = [];
+        for (const pt of Array.isArray(seg) ? seg : []) {
+          const r = Number(pt?.y), c = Number(pt?.x);
+          if (Number.isFinite(r) && Number.isFinite(c)) pts.push([r, c]);
+        }
+        if (pts.length > 1) segs.push(pts);
+      }
+      if (segs.length) next.push({ segs });
+      if (next.length >= 16) break;   // the server caps incomingRoutes at 16 too
+    }
+    this.routes = next;
+    this._drawRoutes();
+    return true;
+  }
+
+  /** Route polylines with a direction arrow at each leg's end and a spawn ring on the first tile. */
+  _drawRoutes() {
+    const g = this.routeGfx;
+    if (!g) return;
+    g.clear();
+    const cam = this.cam;
+    if (!cam || !this.routes.length) return;
+    const p = this._p;
+    const pulse = 0.5 + 0.5 * Math.sin(this.time * 2.4);
+    for (let i = 0; i < this.routes.length; i++) {
+      const color = ROUTE_COLORS[i % ROUTE_COLORS.length];
+      for (const seg of this.routes[i].segs) {
+        let lx = 0, ly = 0, lx2 = 0, ly2 = 0;
+        for (let k = 0; k < seg.length; k++) {
+          const [r, c] = seg[k];
+          cam.project(c, r, this.heightAt(r, c) + 0.06, p);
+          if (k === 0) g.moveTo(p.x, p.y);
+          else { g.lineStyle(Math.max(1, p.s * 0.028), color, 0.5 + 0.25 * pulse); g.lineTo(p.x, p.y); }
+          lx2 = lx; ly2 = ly; lx = p.x; ly = p.y;
+        }
+        if (seg.length > 1) routeArrow(g, lx2, ly2, lx, ly, Math.max(4, p.s * 0.17), color);
+      }
+      const [sr, sc] = this.routes[i].segs[0][0];
+      cam.project(sc, sr, this.heightAt(sr, sc) + 0.05, p);
+      const rad = Math.max(4, p.s * 0.4);
+      g.lineStyle(Math.max(1.5, p.s * 0.035), color, 0.55 + 0.4 * pulse);
+      g.drawCircle(p.x, p.y, rad);
+      g.lineStyle(Math.max(1, p.s * 0.02), color, 0.32);
+      g.drawCircle(p.x, p.y, rad * 1.6);
+    }
+  }
+
   destroy() {
     for (const d of this.devices) d.gfx.destroy();
     for (const a of this.animSprites) a.sprite.destroy();
@@ -803,7 +867,7 @@ export class TileField {
     this.meshes = []; this.rowMeshes.clear(); this.rowSurfaces.clear(); this.mesh = null; this.plane = null;
     for (const b of this.boxes) b.g.destroy();
     this.boxes = [];
-    this.hlGfx.destroy(); this.flowGfx.destroy(); this.animLayer.destroy();
+    this.hlGfx.destroy(); this.routeGfx.destroy(); this.flowGfx.destroy(); this.animLayer.destroy();
   }
 }
 
@@ -1150,6 +1214,25 @@ function drawBush(g, cam, cx, cy, z0, seed) {
 }
 
 const lerp2 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+
+// Enemy route colours (ADD blend): one per concurrent route, cycling — the spawn ring and its polyline share one.
+const ROUTE_COLORS = [0xffb04a, 0xff6b6b, 0x6bd5ff, 0xc08bff, 0x7dffb0, 0xff8fd0];
+
+/** Filled arrow head at (x1, y1), pointing along (x0, y0) → (x1, y1). */
+function routeArrow(g, x0, y0, x1, y1, size, color) {
+  const dx = x1 - x0, dy = y1 - y0;
+  const len = Math.hypot(dx, dy);
+  if (!(len > 0.001)) return;
+  const ux = dx / len, uy = dy / len;
+  const nx = -uy, ny = ux, w = size * 0.55;
+  g.beginFill(color, 0.85);
+  g.drawPolygon([
+    x1, y1,
+    x1 - ux * size + nx * w, y1 - uy * size + ny * w,
+    x1 - ux * size - nx * w, y1 - uy * size - ny * w,
+  ]);
+  g.endFill();
+}
 
 /** Glowing wireframe box (gates / objective) with a warning glyph on the front face. */
 function drawWireBox(g, cam, cx, cy, z0, size, height, color, pulse, gate) {

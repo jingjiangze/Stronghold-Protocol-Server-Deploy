@@ -9,6 +9,18 @@ import { COLS } from '../constants.js';
 import { unitInfo } from '../snapshot.js';
 import { fin } from './util.js';
 
+/** Placement class of a deployed ally ('melee' | 'high' | 'ranged' | 'all'), from its chess record's `position`.
+ * Mirrors server/match/board.js positionClass without the 可以放置于远程位 trait exception (a melee chess with that
+ * trait is melee-only here for now — the battle grid has no trait-text parser). Used by deployLive's canStand gate. */
+function deployPosClass(u) {
+  const rec = (u && u.def && (u.def.raw ?? u.def)) || null;
+  const pos = rec && typeof rec.position === 'string' ? rec.position.toUpperCase() : 'ALL';
+  if (rec && rec.rangedTilesOnly === true) return 'high';
+  if (pos === 'MELEE') return 'melee';
+  if (pos === 'HIGH') return 'high';
+  return 'ranged';
+}
+
 export class BattleDeploy {
   /**
    * Deploy `u` on its home tile, or on `tile` ([r, c]: a one-off landing tile — the home stays the board tile; an
@@ -68,6 +80,8 @@ export class BattleDeploy {
       sk.sp = Math.max(0, Math.min(sk.spCost, fin(keepSp.sp, 0)));
       if (sk.charges >= sk.maxCharges) sk.sp = sk.spCost;
     }
+    // 藏品通道 (relicMods)：开战限时 debuff / 部署晕眩 / DoT / 负面庇护 —— 无 relicMods 时整段空转
+    this._relicOnDeploy(u, { initial });
     if (first) this._ev(['spawn', unitInfo(u)]);
     this._ev(['deploy', u.id]);
     if (this._hooks.deploy) this.emit('deploy', { unit: u, initial });
@@ -75,6 +89,46 @@ export class BattleDeploy {
     // of Battle.start, so deployment/battle-start gifts do not come on top of it; later redeploys keep their gifts.
     if (!restoreLater && cs && Number.isFinite(cs.sp) && u.alive && u.skill) u.skill.setSpTotal(cs.sp);
     return true;
+  }
+
+  /**
+   * 藏品通道的部署时效果（`relicMods`，spec.js sanitizeUnitLoadout；生产侧 server/match/match/meltdown.js
+   * relicAllyMul）。字段缺省时每一步都是空转，所以召唤物 / 装置 / 无藏品的干员行为完全不变。
+   */
+  _relicOnDeploy(u, { initial = false } = {}) {
+    if (!u) return;
+    // 开战限时 debuff（startDebuff「战斗开始时我方攻击 −20%、攻速 −20、技力回复 −20%，持续 N 秒」）：只作用于战斗
+    // 开始的那次部署，用 buff 的到期实现「到期自动恢复」
+    const start = u.relicStart;
+    if (initial && start && start.dur > 0) {
+      const mods = {};
+      if (start.atkPct) mods.atkPct = start.atkPct;
+      if (start.aspd) mods.aspd = start.aspd;
+      if (start.spMul !== 1) mods.spRecoveryMul = start.spMul;
+      if (Object.keys(mods).length) this.addBuff(u, { key: 'relic:startDebuff', duration: start.dur, mods });
+    }
+    // 部署即晕眩（stunOnDeploy / openingDebuff，本引擎用晕眩代表那一组负面状态）
+    if (u.relicStunOnDeploy > 0) {
+      this.applyStatus(u, 'stun', { duration: u.relicStunOnDeploy, ignoreSelect: true });
+    }
+    // 每秒固定伤害（neuralDps）：整场一次，persist 跨倒地保留，重新部署不会叠第二层
+    if (u.relicFlatDps > 0 && !u.findBuff('relic:dps')) {
+      const dps = u.relicFlatDps;
+      this.addBuff(u, {
+        key: 'relic:dps', interval: 1, persist: true,
+        onTick: ({ battle, unit }) => battle.loseHp(unit, dps, { sourceless: true, tags: ['relic:dps'] }),
+      });
+    }
+    // 部署后限时按最大生命百分比掉血（fogOnDeploy）：每次部署重新计时，到期即停
+    if (u.relicDot) {
+      const { pct, dur } = u.relicDot;
+      this.addBuff(u, {
+        key: 'relic:dot', duration: dur > 0 ? dur : Infinity, interval: 1,
+        onTick: ({ battle, unit }) => battle.loseHp(unit, pct * unit.s.maxHp, { sourceless: true, tags: ['relic:dot'] }),
+      });
+    }
+    // 负面庇护（shelterOnDebuff）：该玩家已触发过就常驻（status.js `_relicOnStatusApplied`），之后部署的单位也吃到
+    if (this._relicDebuffActive && this._relicDebuffActive.has(u.ownerId ?? '')) this._relicApplyTeamDebuff(u);
   }
 
   /** Mark `unit` dead (hp reached 0). Fires `kill` then `death`. */
@@ -238,6 +292,9 @@ export class BattleDeploy {
    * is free and its player has the DP.
    */
   _checkRedeploys() {
+    // 战斗中实时部署 (flags.liveDeploy，方案 A): redeployment is the PLAYER's order (g.deploy → deployLive — tile and
+    // timing are theirs), so the automatic home-tile redeploy never runs; a downed operator waits for its player.
+    if (this.flags.liveDeploy === true) return;
     for (const u of this.allyUnits) {
       if (u.alive || u.removed || u.kind !== 'op') continue;
       if (this.time + 1e-9 < u.respawnAt) continue;
@@ -291,6 +348,83 @@ export class BattleDeploy {
     if (e.inTotal) {
       this.leakedInTotal++;
       if (pp) pp.leakedInTotal++;
+    }
+  }
+
+  /**
+   * 战斗中实时部署 (flags.liveDeploy，方案 A): deploy one of the player's OWN board pieces — created at battle start but
+   * held off the field (`flags.liveDeploy` skips the opening deployment in lifecycle.start) — on the tapped tile, paying
+   * `base.cost` DP. A retreat refunds nothing and no penalty multiplier applies (方案 A: 撤退不退 DP、再部署按 base.cost 平价).
+   *
+   * Returns `{ ok: true, uid, dp }` or `{ ok: false, error }` — `error` is a stable reason the client shows:
+   * 'finished' | 'mode' | 'player' | 'unknown' | 'deployed' | 'removed' | 'respawn' | 'tile' | 'occupied' | 'down' | 'dp'.
+   * @param {string} playerId @param {number} uid @param {number[]|null} [tile] @returns {object}
+   */
+  deployLive(playerId, uid, tile = null) {
+    if (this.finished) return { ok: false, error: 'finished' };
+    if (this.flags.liveDeploy !== true) return { ok: false, error: 'mode' };
+    const ps = this.getPlayer(playerId);
+    if (!ps) return { ok: false, error: 'player' };
+    const u = ps.units.find((x) => x.uid === uid && x.kind === 'op');
+    if (!u) return { ok: false, error: 'unknown' };
+    if (u.alive && u.deployed) return { ok: false, error: 'deployed' };
+    if (u.removed) return { ok: false, error: 'removed' };
+    // a never-deployed piece has respawnAt = Infinity (no window armed): only a FINITE window gates
+    const armed = Number.isFinite(u.respawnAt) ? u.respawnAt : -Infinity;
+    if (this.time + 1e-9 < armed) return { ok: false, error: 'respawn' };
+    // `tile` = the field tile the player tapped (stage coordinates); absent = the piece's own board tile (its home,
+    // the tile the spec deployment would have used). A landing tile does not move the home: a later redeploy still
+    // returns to the board tile.
+    const at = Array.isArray(tile) && Number.isInteger(tile[0]) && Number.isInteger(tile[1]) ? [tile[0], tile[1]] : [u.homeR, u.homeC];
+    if (!this.grid.inRect(at[0], at[1])) return { ok: false, error: 'tile' };
+    if (this._sealedDeployTiles?.has(at[0] * COLS + at[1])) return { ok: false, error: 'tile' }; // _deploy would refuse it
+    if (!this.grid.canStand(at[0], at[1], { ranged: deployPosClass(u) !== 'melee' })) return { ok: false, error: 'tile' };
+    const occ = this._occ[at[0] * COLS + at[1]];
+    if (occ && occ.alive && occ !== u) return { ok: false, error: 'occupied' };
+    if (this.downOn(at[0], at[1], u)) return { ok: false, error: 'down' };
+    // redeploy carries the whole DP path (check, pay before the deploy hook, refund when the deploy refuses)
+    if (!this.redeploy(u, { free: false, tile: at })) return { ok: false, error: 'dp' };
+    return { ok: true, uid: u.uid, dp: ps.dp };
+  }
+
+  /**
+   * 战斗中实时部署 (flags.liveDeploy，方案 A): withdraw a standing operator. `retreat` removes it and arms the redeploy
+   * timer (`base.respawnTime` — _remove); no DP is refunded (a retreat costs the deployment, the operator comes back
+   * after the cooldown), and `_checkRedeploys` stays out of the way: the player chooses when and where to bring it back.
+   * @param {string} playerId @param {number} uid @returns {{ ok: boolean, uid?: number, error?: string }}
+   */
+  retreatLive(playerId, uid) {
+    if (this.finished) return { ok: false, error: 'finished' };
+    if (this.flags.liveDeploy !== true) return { ok: false, error: 'mode' };
+    const ps = this.getPlayer(playerId);
+    if (!ps) return { ok: false, error: 'player' };
+    const u = ps.units.find((x) => x.uid === uid && x.kind === 'op');
+    if (!u) return { ok: false, error: 'unknown' };
+    if (!u.alive || !u.deployed) return { ok: false, error: 'notdeployed' };
+    this.retreat(u);
+    return { ok: true, uid: u.uid };
+  }
+
+  /**
+   * 方案 A 的一致性：重放玩家指令。`cmds` (spec.cmds) is an ascending list of `[tick, playerId, type, uid, row?, col?]`
+   * — one entry per accepted g.deploy / g.retreat — replayed at its tick so a takeover re-simulation (or a display
+   * replica built later) reproduces the deployments the player made in their browser. Only a battle created from a spec
+   * that carried `cmds` has `_cmds`; every other battle skips this phase entirely (lifecycle.step).
+   * @private
+   */
+  _applyCmds() {
+    const list = this._cmds;
+    const now = this.tickCount;
+    for (let guard = 0; this._cmdI < list.length && guard < 256; guard++) {
+      const c = list[this._cmdI];
+      if (!Array.isArray(c) || !(Number(c[0]) <= now)) break;
+      this._cmdI++;
+      try {
+        if (c[2] === 'retreat') this.retreatLive(c[1], c[3]);
+        else this.deployLive(c[1], c[3], Number.isInteger(c[4]) && Number.isInteger(c[5]) ? [c[4], c[5]] : null);
+      } catch (e) {
+        this._internalError?.('cmds', e);
+      }
     }
   }
 }

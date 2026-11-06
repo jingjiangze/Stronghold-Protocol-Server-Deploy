@@ -99,7 +99,12 @@ export function pickOnTile(units, ground) {
   for (const u of units) {
     if (!u || !onTile(u, ground)) continue;
     const d = groundDist(u, ground);
-    if (d < bd - EPS || (Math.abs(d - bd) <= EPS && depthOf(u) > depthOf(best))) { best = u; bd = d; }
+    if (d < bd - EPS) { best = u; bd = d; continue; }
+    if (Math.abs(d - bd) > EPS) continue;
+    const du = depthOf(u), db = depthOf(best);
+    if (du > db + EPS) { best = u; bd = d; continue; }
+    // 同格同深度：整备区棋子（行 7/8）与棋盘干员逐格重合时棋盘干员优先 —— 否则按下干员所在的格子会选中整备卡
+    if (Math.abs(du - db) <= EPS && best && best.bench === true && u.bench !== true) best = u;
   }
   return best;
 }

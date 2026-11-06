@@ -1,6 +1,8 @@
 /* plugins/mota/client/css/screens/rogue-panel.css — 肉鸽「集成战略」全屏叠加面板（2026-11-04 重做）。
    screens/game.js 首次进对局时按需注入（同 hex.css 的注入法），核心 index.html 不引用它。
    官方配色：深蓝黑底 + 金色标题 + 青色描边；卡片沿用官方 img_node_bkg.png（165×94）作底。
+   节点页 = 上「列式节点图」（14 层各一列、列内纵排 3 个节点、列间 SVG 连线）+ 下「三选一卡 / 节点详情」；
+   连线几何由 js/ui/roguePanel.js 的 nodeGraph() 给（行号 → 百分比），这里只管线宽、配色与状态。
    尺寸一律 rem（1rem = 100 设计 px，1280×720 下 1rem≈66.7px），字号 calc(N * var(--t)) 与 --t 同口径。 */
 
 .rpn {
@@ -109,86 +111,149 @@
 .rpn__body { flex: 1; min-height: 0; display: flex; padding: .13rem .18rem .15rem; overflow: auto; }
 .rpn-empty { margin: 0; padding: .1rem 0; color: var(--rp-dim); font-size: max(calc(.125 * var(--t)), 11px); }
 
-/* ===== 节点页：左「时间轴 + 图例」· 中「三选一大卡」· 右「节点详情」 ===== */
-/* 左栏 2.2rem → 2.45rem：14 层名（`第四层 · 无灯的房间` / `第十二层 · 封锁线`）在 2.2rem 里会被省略号截断
-   （第五轮视觉验收）；中列（三选一卡宽）保持 2.9rem 不动，右列是 minmax(0, 1fr)，自动吸收这 0.25rem。 */
+/* ===== 节点页：上「列式节点图」· 下「三选一卡 + 节点详情」 ===== */
+/* 节点图占满正文宽度（官方 IS 的节点图形态），下面一行才是选点卡与详情。
+   图高由内容决定（标题行 + 3 行节点），剩下的高度全给下面一行，卡片不挤。 */
 .rpn-nodes {
   flex: 1; min-height: 0; display: grid;
-  grid-template-columns: 2.45rem 2.9rem minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: .1rem;
+}
+.rpn-nodes__foot {
+  min-height: 0; display: grid;
+  grid-template-columns: 2.9rem minmax(0, 1fr);
   gap: .16rem;
 }
 
-/* —— 左：14 层时间轴 + 状态图例 —— */
-.rpn-rail {
-  display: flex; flex-direction: column; gap: .06rem; min-height: 0;
-  padding-right: .07rem; border-right: 1px solid rgba(0, 226, 228, .14);
+/* —— 节点图：一层一列，列内纵排该层节点，列间连线 —— */
+.rpn-graph {
+  --rpn-colgap: .1rem; /* 列间距：连线 SVG 的宽度 = 本列宽 + 这个间距，正好画到下一列中心 */
+  min-width: 0; overflow-x: auto; overflow-y: hidden;
 }
-.rpn-trail {
-  flex: 1 1 auto; min-height: 0; margin: 0; padding: 0; list-style: none;
-  overflow-y: auto; overflow-x: hidden;
-  display: flex; flex-direction: column; gap: .01rem;
+.rpn-graph__bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .02rem .1rem;
+  padding-bottom: .05rem; border-bottom: 1px solid rgba(0, 226, 228, .14);
 }
-.rpn-trail__row {
-  position: relative; display: grid; align-items: center;
-  grid-template-columns: .16rem .24rem minmax(0, 1fr) auto;
-  gap: .06rem; padding: .045rem .05rem .045rem .04rem;
-  color: var(--rp-dim);
+.rpn-graph__title { font-size: max(calc(.12 * var(--t)), 10px); letter-spacing: .12em; color: var(--rp-gold-hi); }
+.rpn-graph__meta { font-family: var(--font-mono); font-size: max(calc(.09 * var(--t)), 8px); color: var(--rp-dim); }
+.rpn-graph__hint { font-size: max(calc(.085 * var(--t)), 8px); color: var(--rp-dim); opacity: .8; }
+/* 图例：已通过（金实心）/ 当前（金环）/ 候选（青脉冲）/ 未到（灰空心） */
+.rpn-graph__legend {
+  margin: 0 0 0 auto; padding: 0; list-style: none;
+  display: flex; flex-wrap: wrap; gap: .02rem .09rem;
+  font-size: max(calc(.085 * var(--t)), 8px); color: #b6cada;
 }
-.rpn-trail__row::before {
-  content: ""; position: absolute; left: .115rem; top: 0; bottom: 0; width: 1px;
-  background: rgba(0, 226, 228, .16);
-}
-.rpn-trail__dot {
-  position: relative; z-index: 1; width: .13rem; height: .13rem; border-radius: 50%;
-  border: 1px solid var(--rp-cyan); background: rgba(4, 10, 18, .92);
-}
-/* 已通过：金色实心 */
-.rpn-trail__row.is-done { color: rgba(138, 163, 186, .8); }
-.rpn-trail__row.is-done .rpn-trail__dot { background: var(--rp-gold); border-color: var(--rp-gold); }
-/* 当前：金色环 + 光晕 + 左侧金条 + 白字（时间轴上最亮的一行） */
-.rpn-trail__row.is-current {
-  color: #fff;
-  background: linear-gradient(90deg, rgba(255, 184, 13, .2), rgba(255, 184, 13, 0) 90%);
-  box-shadow: inset 2px 0 0 var(--rp-gold);
-}
-.rpn-trail__row.is-current .rpn-trail__dot {
-  background: rgba(255, 184, 13, .28); border: 2px solid var(--rp-gold);
-  box-shadow: 0 0 0 2px rgba(255, 184, 13, .18), 0 0 calc(.09 * var(--t)) rgba(255, 184, 13, .8);
-}
-.rpn-trail__row.is-current .rpn-trail__label { color: var(--rp-gold-hi); font-weight: 700; }
-/* 已选层：层名下面一行「已选 · 候选名」 */
-.rpn-trail__row.is-picked .rpn-trail__chosen { color: var(--rp-cyan); }
-/* 未到：青色空心环 */
-.rpn-trail__row.is-next .rpn-trail__dot { border-color: rgba(0, 226, 228, .8); }
-.rpn-trail__idx { font-family: var(--font-mono); font-size: max(calc(.1 * var(--t)), 9px); opacity: .7; text-align: right; }
-.rpn-trail__name { display: flex; flex-direction: column; gap: .01rem; min-width: 0; }
-/* 层名不再用省略号截断（第五轮视觉验收）：放不下就折成两行（`第四层 · 无灯的房间`），
-   行高收到 1.14，折行时仍与右侧单行类型列居中对齐。 */
-.rpn-trail__label {
-  font-size: max(calc(.125 * var(--t)), 11px); line-height: 1.14;
-  white-space: normal; overflow-wrap: anywhere;
-}
-.rpn-trail__chosen {
-  font-style: normal; font-size: max(calc(.085 * var(--t)), 8px);
-  color: var(--rp-gold-hi); opacity: .9;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-/* 类型列：auto 宽、贴右、单行不裁切（层名折行时也不跟着换行） */
-.rpn-trail__type { font-size: max(calc(.1 * var(--t)), 9px); color: var(--c, var(--rp-dim)); opacity: .85; white-space: nowrap; text-align: right; }
+.rpn-graph__legend li { display: flex; align-items: center; gap: .035rem; }
+.rpn-graph__legend i { flex: 0 0 auto; width: .08rem; height: .08rem; border-radius: 50%; }
+.rpn-graph__legend i.is-past { background: var(--rp-gold); }
+.rpn-graph__legend i.is-now { border: 2px solid var(--rp-gold); box-shadow: 0 0 0 1px rgba(255, 184, 13, .3); }
+.rpn-graph__legend i.is-cand { border: 1px solid var(--rp-cyan); box-shadow: 0 0 0 2px rgba(0, 226, 228, .22); }
+.rpn-graph__legend i.is-todo { border: 1px solid rgba(166, 188, 207, .55); }
 
-/* 图例：已通过（金实心）/ 当前（金环）/ 未到（青空心）；键名字号与颜色都提到可读 */
-.rpn-rail__legend {
-  flex: 0 0 auto; margin: 0; padding: .06rem 0 0; list-style: none;
-  display: flex; flex-wrap: wrap; gap: .03rem .09rem;
-  border-top: 1px dashed rgba(0, 226, 228, .18);
-  font-size: max(calc(.095 * var(--t)), 9px); color: #b6cada;
+/* 列宽下限 .42rem：14 列在 11.2rem 正文里排得下；更窄的屏（<720px）横向滚动，不挤成一条线 */
+.rpn-graph__cols {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 14), minmax(.42rem, 1fr));
+  column-gap: var(--rpn-colgap); align-items: stretch;
+  padding-top: .06rem;
 }
-.rpn-rail__legend li { display: flex; align-items: center; gap: .04rem; }
-.rpn-rail__legend i { flex: 0 0 auto; width: .1rem; height: .1rem; border-radius: 50%; }
-.rpn-rail__legend i.is-past { background: var(--rp-gold); }
-.rpn-rail__legend i.is-now { border: 2px solid var(--rp-gold); box-shadow: 0 0 0 1px rgba(255, 184, 13, .3); }
-.rpn-rail__legend i.is-todo { border: 1px solid var(--rp-cyan); }
+.rpn-graph__col { display: flex; flex-direction: column; gap: .03rem; min-width: 0; }
+.rpn-graph__head { display: flex; align-items: baseline; justify-content: center; gap: .025rem; min-width: 0; }
+.rpn-graph__num { font-family: var(--font-mono); font-size: max(calc(.085 * var(--t)), 8px); color: var(--rp-dim); }
+.rpn-graph__lv {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: max(calc(.08 * var(--t)), 7px); color: rgba(166, 188, 207, .72);
+}
+.rpn-graph__col.is-done .rpn-graph__num { color: rgba(255, 184, 13, .78); }
+.rpn-graph__col.is-current .rpn-graph__num { color: var(--rp-gold-hi); font-weight: 700; }
+.rpn-graph__col.is-next .rpn-graph__num { color: var(--rp-cyan); }
+
+/* 节点堆：等高行（`--rows` 由组件给实际节点数）+ 居中；不留行间距，
+   这样第 k 个节点的中心恒等于 (k + .5) / 行数，连线 SVG 用同一条公式才对得上。 */
+.rpn-graph__stack {
+  position: relative; flex: 1 1 auto;
+  display: grid; grid-template-rows: repeat(var(--rows, 3), minmax(.42rem, 1fr));
+  align-items: center; justify-items: center;
+}
+
+/* 连线：绝对定位在本列中心 → 下一列中心这一段（左 50%，宽 = 本列宽 + 列间距）。
+   viewBox 0–100 非等比拉伸 + non-scaling-stroke：线宽不随列宽变化。 */
+.rpn-graph__links {
+  position: absolute; left: 50%; top: 0; height: 100%;
+  width: calc(100% + var(--rpn-colgap));
+  overflow: visible; pointer-events: none; z-index: 0;
+}
+.rpn-graph__wire { fill: none; stroke: rgba(0, 226, 228, .3); stroke-width: 1; }
+.rpn-graph__wire.is-taken { stroke: rgba(0, 226, 228, .26); }
+.rpn-graph__wire.is-taken.is-active {
+  stroke: var(--rp-gold); stroke-width: 1.6;
+  filter: drop-shadow(0 0 .02rem rgba(255, 184, 13, .7));
+}
+.rpn-graph__wire.is-candidate { stroke: rgba(0, 226, 228, .52); stroke-dasharray: 3 3; animation: rpnWire 1.6s linear infinite; }
+.rpn-graph__wire.is-candidate.is-active { stroke: var(--rp-cyan); stroke-width: 1.4; }
+.rpn-graph__wire.is-trunk { stroke: rgba(166, 188, 207, .2); }
+@keyframes rpnWire { to { stroke-dashoffset: -6; } }
+
+/* 节点片：小方片 + 类型图标 + 名称，类型色只上在描边/悬停 */
+.rpn-graph__node {
+  --c: #ffffff;
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .01rem;
+  width: 100%; max-width: .56rem; height: .42rem; box-sizing: border-box;
+  padding: .01rem .02rem;
+  border: 1px solid rgba(0, 226, 228, .28); border-radius: 3px;
+  background: linear-gradient(180deg, #0b1a2a, #060e18 88%);
+  color: var(--rp-dim); font-size: max(calc(.085 * var(--t)), 8px); line-height: 1.1;
+  overflow: hidden; cursor: pointer; text-align: center;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast), opacity var(--t-fast);
+}
+.rpn-graph__node:hover, .rpn-graph__node:focus-visible {
+  border-color: var(--c); box-shadow: 0 0 0 1px rgba(255, 255, 255, .18); transform: translateY(-1px);
+}
+.rpn-graph__icon {
+  flex: 0 0 auto; height: .16rem; width: auto; max-width: 92%;
+  object-fit: contain; filter: drop-shadow(0 0 .02rem rgba(0, 0, 0, .9));
+}
+.rpn-graph__name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; }
+/* 已走过（visited / 当前层之前）：置灰 + 金色描边 + 右上角 ✓ —— 走过的路读得出来，但不抢当前层的亮度 */
+.rpn-graph__node.is-taken {
+  border-color: rgba(255, 184, 13, .45); color: #b9c8d4; opacity: .72;
+  background: linear-gradient(180deg, #0a1622, #060c14 88%);
+}
+.rpn-graph__ok {
+  position: absolute; right: .015rem; top: 0;
+  font-size: max(calc(.1 * var(--t)), 8px); line-height: 1.1;
+  color: var(--rp-gold); text-shadow: 0 0 .02rem rgba(0, 0, 0, .95);
+}
+/* 当前层：金色亮描边 + 光晕（官方「你现在在这里」）—— 只给当前层列里真正在的那个节点 */
+.rpn-graph__col.is-current .rpn-graph__node.is-taken {
+  opacity: 1; color: #fff3d2;
+  border-color: var(--rp-gold-hi);
+  box-shadow: 0 0 0 1px rgba(255, 184, 13, .55), 0 0 .09rem rgba(255, 184, 13, .5);
+}
+/* 当前层里没走到的那两个：压暗但不打勾 */
+.rpn-graph__node.is-sibling { opacity: .42; }
+/* 已过但没走的 / 还没到的：更暗 */
+.rpn-graph__node.is-skipped { opacity: .3; border-color: rgba(166, 188, 207, .2); }
+.rpn-graph__node.is-future { opacity: .5; border-color: rgba(166, 188, 207, .22); }
+/* 下一层候选：青色亮边 + 脉冲（可点 = 真的会改下一回合地图） */
+.rpn-graph__node.is-candidate {
+  border-color: var(--rp-cyan); color: #dffaff;
+  box-shadow: 0 0 0 1px rgba(0, 226, 228, .55), 0 0 .07rem rgba(0, 226, 228, .4);
+  animation: rpnCand 1.8s ease-in-out infinite;
+}
+.rpn-graph__node.is-candidate.is-picked {
+  border-color: var(--rp-gold); color: #ffe6a8;
+  box-shadow: 0 0 0 1px rgba(255, 184, 13, .6), 0 0 .1rem rgba(255, 184, 13, .45);
+  animation: none;
+}
+/* 发不出意图时（战斗中 / 拿不到对局网络）：候选不再装成可点 —— 脉冲停掉、压暗；
+   点它仍然只切详情栏，和「只读」提示同一口径 */
+.rpn-graph__node.is-readonly { animation: none; opacity: .55; cursor: default; border-color: rgba(166, 188, 207, .45); }
+@keyframes rpnCand {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(0, 226, 228, .5), 0 0 .07rem rgba(0, 226, 228, .3); }
+  50% { box-shadow: 0 0 0 2px rgba(0, 226, 228, .26), 0 0 .13rem rgba(0, 226, 228, .62); }
+}
 
 /* —— 中：下一层三选一（竖排大卡，宽约 2.9rem / 高约 1.4rem） —— */
 .rpn-pick {
@@ -294,9 +359,12 @@
 @keyframes rpnBusy { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
 
 /* —— 右：节点详情（当前层 / 下一层预览 / 本局摘要 / 本层奖励·难度） —— */
+/* 详情栏：节点图下方这一行比原来的三列布局宽得多（≈8rem），所以四段改成 2×2 网格，
+   每段 ~4rem（原来一列铺满 8rem 时 dt/dd 会拉得很空）。窄屏在媒体查询里退回单列。 */
 .rpn-detail {
-  min-width: 0; min-height: 0; display: flex; flex-direction: column;
-  justify-content: space-between; gap: .08rem;
+  min-width: 0; min-height: 0; display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start; gap: .08rem .2rem;
   padding-left: .14rem; border-left: 1px solid rgba(0, 226, 228, .12);
   overflow-y: auto;
 }
@@ -320,6 +388,24 @@
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .rpn-detail__rows dd.is-type { color: var(--c, var(--rp-gold-hi)); font-weight: 600; }
+/* 节点图上点开的那一个（只切详情、不发意图）：类型色左条 + 图标 + 层号/类型/tier + 消耗 */
+.rpn-detail__focus {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .06rem;
+  padding: .045rem .07rem; box-sizing: border-box;
+  border: 1px solid rgba(0, 226, 228, .22); border-left: 2px solid var(--c, var(--rp-cyan));
+  background: rgba(0, 226, 228, .07);
+}
+.rpn-detail__ficon { height: .17rem; width: auto; max-width: .5rem; object-fit: contain; filter: drop-shadow(0 0 .02rem rgba(0, 0, 0, .8)); }
+.rpn-detail__fbody { display: flex; flex-direction: column; gap: .01rem; min-width: 0; }
+.rpn-detail__fbody b {
+  font-size: max(calc(.12 * var(--t)), 10px); color: #eef9fd;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rpn-detail__fmeta {
+  font-style: normal; font-size: max(calc(.09 * var(--t)), 8px); color: var(--rp-dim);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rpn-detail__fcost { font-family: var(--font-mono); font-size: max(calc(.09 * var(--t)), 8px); color: #bdeff4; white-space: nowrap; }
 
 .rpn-preview { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: .03rem; }
 .rpn-preview__row {
@@ -513,14 +599,12 @@
   color: var(--rp-dim); border: 1px solid rgba(255, 255, 255, .22);
 }
 
-/* 窄屏：单列铺满，时间轴 / 三选一 / 详情上下叠；地图的信息卡落到图例下方（不再整块隐藏，统计与规则说明要留着） */
+/* 窄屏：节点图横向滚动（14 列不挤压），下面「三选一 / 详情」改成上下叠；地图的信息卡落到图例下方（不再整块隐藏） */
 @media (max-width: 720px) {
-  .rpn-nodes { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); }
-  .rpn-rail {
-    max-height: 1.4rem; border-right: 0; border-bottom: 1px solid rgba(0, 226, 228, .14);
-    padding-right: 0; padding-bottom: .05rem;
-  }
-  .rpn-detail { border-left: 0; padding-left: 0; }
+  .rpn-nodes { grid-template-rows: auto minmax(0, 1fr); }
+  .rpn-nodes__foot { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .rpn-graph__cols { grid-template-columns: repeat(var(--cols, 14), .5rem); }
+  .rpn-detail { grid-template-columns: minmax(0, 1fr); border-left: 0; padding-left: 0; }
   .rpn-map {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) auto auto;
@@ -533,4 +617,7 @@
 @media (prefers-reduced-motion: reduce) {
   .rpn-card { transition: none; }
   .rpn-card__busy { animation: none; }
+  .rpn-graph__node { transition: none; }
+  .rpn-graph__node.is-candidate { animation: none; }
+  .rpn-graph__wire.is-candidate { animation: none; }
 }

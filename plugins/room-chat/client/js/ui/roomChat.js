@@ -187,7 +187,8 @@ export function mountRoomChat() {
         initial.x = fabPosition.x - w - 8;
     }
     const target = desired || initial;
-    position = clamp(guard && desired && hits(guard, desired.x, desired.y, w, h) ? initial : target, v, w, h);
+    // 拖动进行中不再被左下角「交流」轮盘禁区弹回（否则拖进去就跳回原位，看着像拖不动）；禁区只约束默认落点。
+    position = clamp(dragging ? target : (guard && desired && hits(guard, desired.x, desired.y, w, h) ? initial : target), v, w, h);
     Object.assign(panel.style, {
       left: position.x + 'px', top: position.y + 'px',
       width: w + 'px', height: h + 'px',
@@ -534,17 +535,25 @@ export function mountRoomChat() {
   listen(danmakuButton, 'click', () => { danmaku.toggle();updateDanmakuButton(); });
   listen(fold, 'click', () => open(false));
 
-  listen(header, 'pointerdown', event => {
-    if ((event.target === fold || event.target === danmakuButton) || !event.isPrimary || event.button !== 0 || !position) return;
+  // 拖动把手：整块面板都能拖（原先只有 30px 高的标题栏，业主反馈「悬浮窗聊天无法拖动」——在消息区按住拖完全没反应）。
+  // 排除交互元素（输入框 / 表单 / 按钮 / 可编辑区），并加 4px 死区：点一下展开收起、选文字、滚动都不受影响。
+  const DRAG_DEAD_ZONE = 4;
+  const notADrag = target => !!target?.closest?.('input, textarea, select, button, form, a, [contenteditable="true"]');
+  listen(panel, 'pointerdown', event => {
+    if (notADrag(event.target) || !event.isPrimary || event.button !== 0 || !position) return;
     event.preventDefault();
     dragging = {
       id: event.pointerId, x: event.clientX, y: event.clientY,
-      start: { ...position },
+      start: { ...position }, moved: false,
     };
-    header.setPointerCapture(event.pointerId);
+    panel.setPointerCapture(event.pointerId);
   });
-  listen(header, 'pointermove', event => {
+  listen(panel, 'pointermove', event => {
     if (dragging?.id !== event.pointerId) return;
+    if (!dragging.moved) {
+      if (Math.hypot(event.clientX - dragging.x, event.clientY - dragging.y) < DRAG_DEAD_ZONE) return;
+      dragging.moved = true;
+    }
     desired = {
       x: dragging.start.x + event.clientX - dragging.x,
       y: dragging.start.y + event.clientY - dragging.y,
@@ -555,10 +564,10 @@ export function mountRoomChat() {
     if (dragging?.id !== event.pointerId) return;
     dragging = null;
     desired = { ...position };
-    if (header.hasPointerCapture(event.pointerId)) header.releasePointerCapture(event.pointerId);
+    if (panel.hasPointerCapture(event.pointerId)) panel.releasePointerCapture(event.pointerId);
   }
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'])
-    listen(header, type, finishDrag);
+    listen(panel, type, finishDrag);
 
   for (const type of [
     'keydown', 'keyup', 'keypress', 'pointerdown', 'pointermove',

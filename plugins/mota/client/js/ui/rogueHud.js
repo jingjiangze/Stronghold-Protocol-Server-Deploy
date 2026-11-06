@@ -24,7 +24,7 @@ export function RogueHud({ rogue, relicCards, disabled = false }) {
     <button type="button" data-testid="rogue-hud-toggle" onClick=${() => setOpen((v) => !v)}
       style="all:unset;cursor:pointer;display:flex;gap:.5rem;align-items:center;width:100%">
       <b>${t('肉鸽')}</b>
-      <span class="num">${t('藏品 {n}/{max}', { n: cards.length, max: 3 })}</span>
+      <span class="num">${t('藏品 ×{n}', { n: cards.length })}</span>
       ${affix ? html`<span style="opacity:.85">${t('词缀：')}${affix}</span>` : null}
       <span style="margin-left:auto;opacity:.6">${open ? '▾' : '▸'}</span>
     </button>

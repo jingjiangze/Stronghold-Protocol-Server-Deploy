@@ -44,6 +44,12 @@ import {hasScopedEnemySource} from '../../shared/enemyResultSources.js';
 // battle and a b.result naming another one is refused (P1c, DESIGN §32.6) —, the diagnostics and replays. `vs` (P1c), the
 // room's visual set of cosmetic plugins (shared/plugins/visual.js; 64 hex digits), likewise: kept when well-formed, never
 // read by the sim — a replay or a bug report names the art the battle was drawn with.
+// 藏品 (relics, 2026-11-01): a unit entry may carry `relicMods` (the operator-side effects of its owner's relics — stat
+// multipliers, 初始技力, 技力回复, 庇护, 开战限时 debuff, DoT, 负面庇护, 部署晕眩; consumed by battle/players.js,
+// deploy.js and status.js) and the spec may carry `enemyMods` (the enemy-side ones: 防御加成 / 受击衰减 / 异常时长 /
+// 精英限时减伤; consumed by battle/spawns.js, combat.js and status.js). Both are kept as the known keys of finite
+// numbers only — a key that is not a number drops the whole block — and both are absent from a spec built without them,
+// so an official spec (and the battle it describes) is exactly what it was.
 
 import { Battle } from './Battle.js';
 import { toDataSource, withUnitLoadouts } from './simdata.js';
@@ -94,6 +100,9 @@ function contractFields(o) {
 export function buildBattleSpec(o = {}) {
   const bossLike = o.kind === 'boss' || o.kind === 'hidden';
   const tl = Number(o.timeLimit);
+  // 藏品对敌人的 spawn 级修正 (meltdown.js relicEnemyMods → spec.enemyMods): only when present, so an official
+  // spec grows no key
+  const enemyMods = cleanEnemyMods(o.enemyMods);
   const spec = {
     v: SPEC_VERSION,
     battleId: o.battleId ?? null,
@@ -115,6 +124,7 @@ export function buildBattleSpec(o = {}) {
     // client-side combat field — applies exactly what the server's own simulation applies
     ...contractFields(o),
     enemyOverrides: o.enemyOverrides ?? {},
+    ...(enemyMods ? { enemyMods } : {}),
     waveId: o.waveId ?? null,
     bossId: o.bossId ?? null,
     content: o.content ?? 'full',
@@ -130,6 +140,10 @@ export function buildBattleSpec(o = {}) {
     // morphPairing plus only. An official spec grows no key (identity and extra-field tests).
     ...(o.incomingPreviewDone===true?{incomingPreviewDone:true}:{}),
     ...(o.morphPairing === 'plus' ? { morphPairing: 'plus' } : {}),
+    // 战斗中实时部署 (flags.liveDeploy，方案 A): the player orders a takeover re-simulation replays at their tick —
+    // `[tick, playerId, 'deploy' | 'retreat', uid, row?, col?]` (server/match/match/combat.js _liveCmdRecord). Carried
+    // only when the match recorded some, so a battle without live deployment grows no key.
+    ...(Array.isArray(o.cmds) && o.cmds.length ? { cmds: o.cmds } : {}),
   };
   const out = JSON.parse(JSON.stringify(spec, specReplacer));
   for (const p of out.players) for (const u of (p && Array.isArray(p.units) ? p.units : [])) if (u && typeof u === 'object') sanitizeUnitLoadout(u);
@@ -137,6 +151,56 @@ export function buildBattleSpec(o = {}) {
 }
 
 const LOADOUT_ID = /^[A-Za-z0-9_\-]{1,64}$/;
+
+/**
+ * 藏品通道 `players[].units[].relicMods` (server/match/player/round.js, server/match/match/meltdown.js relicAllyMul):
+ * the operator stat / SP / battle-timing effects one player's 藏品 grant this unit. The engine consumes them in
+ * server/sim/battle/players.js (_makeAlly / _setupUnit), deploy.js (_deploy) and status.js; the keys are the ones the
+ * match writes, and only finite numbers pass (a spec is JSON-safe: what the server simulates is what the client gets).
+ */
+const RELIC_MOD_KEYS = Object.freeze([
+  'atkMul', 'hpMul', 'defMul', 'aspdAdd', 'initSp', 'spRegenMul', 'shelter',
+  'startAtkPct', 'startAspd', 'startSpMul', 'startDur',
+  'flatDps', 'dotMaxHpPct', 'dotDur',
+  'skillSpPer', 'skillSpMax', 'skillAtkWindow', 'skillAtkMul',
+  'debuffShelter', 'debuffIgnore', 'stunOnDeploy',
+]);
+
+/**
+ * A well-formed `relicMods` reduced to the known keys (unknown keys dropped), or null when any known key is not a
+ * finite number — the whole block is then dropped (a broken channel must not half-apply).
+ */
+function cleanRelicMods(m) {
+  if (!m || typeof m !== 'object' || Array.isArray(m)) return null;
+  const out = {};
+  for (const k of RELIC_MOD_KEYS) {
+    if (!(k in m)) continue;
+    const v = m[k];
+    if (typeof v !== 'number' || !Number.isFinite(v)) return null;
+    out[k] = v;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+/**
+ * 藏品对敌人的 spawn 级修正 `spec.enemyMods` (server/match/match/meltdown.js relicEnemyMods): `defAdd` /
+ * `defShredPerHit` / `defShredMax` (戈渎不语), `statusDurationMul` (精神治疗录像带), `eliteDmgTakenMul` /
+ * `eliteDmgDur` (生命蓝图). Consumed by server/sim/battle/spawns.js / combat.js / status.js; same numeric rule as
+ * relicMods.
+ */
+const ENEMY_MOD_KEYS = Object.freeze(['defAdd', 'defShredPerHit', 'defShredMax', 'statusDurationMul', 'eliteDmgTakenMul', 'eliteDmgDur']);
+
+function cleanEnemyMods(m) {
+  if (!m || typeof m !== 'object' || Array.isArray(m)) return null;
+  const out = {};
+  for (const k of ENEMY_MOD_KEYS) {
+    if (!(k in m)) continue;
+    const v = m[k];
+    if (typeof v !== 'number' || !Number.isFinite(v)) return null;
+    out[k] = v;
+  }
+  return Object.keys(out).length ? out : null;
+}
 
 /**
  * A well-formed 自选 pick `{ charId, skillIndex?, uniEquipId? }` reduced to those fields (skill 0–9 or null, module a
@@ -159,7 +223,8 @@ function cleanDiyPick(d) {
 /**
  * Keep a unit's `skillIndex` / `moduleId` only when well-formed (the data layer checks legality), `standIn` only when
  * exactly `true` (补位), `diy` only as a well-formed pick (自选), `potential` (1–6) / `cultivate` (0–3) only when
- * well-formed and not on a stand-in. Mutates `u`.
+ * well-formed and not on a stand-in, `relicMods` only as the known keys of finite numbers (藏品通道, else the whole
+ * block is dropped). Mutates `u`.
  */
 export function sanitizeUnitLoadout(u) {
   if ('skillIndex' in u && !(Number.isInteger(u.skillIndex) && u.skillIndex >= 0 && u.skillIndex <= 9)) delete u.skillIndex;
@@ -168,6 +233,7 @@ export function sanitizeUnitLoadout(u) {
   if ('diy' in u) { const d = cleanDiyPick(u.diy); if (d) u.diy = d; else delete u.diy; }
   if ('potential' in u && !isPotential(u.potential)) delete u.potential;
   if ('cultivate' in u && !isCultivate(u.cultivate)) delete u.cultivate;
+  if ('relicMods' in u) { const r = cleanRelicMods(u.relicMods); if (r) u.relicMods = r; else delete u.relicMods; }
   if (u.standIn === true) { delete u.potential; delete u.cultivate; }
   if (u.kind === 'token') { delete u.skillIndex; delete u.moduleId; delete u.standIn; delete u.diy; delete u.potential; delete u.cultivate; }
   return u;
@@ -192,6 +258,7 @@ export function createBattleFromSpec(spec, dataSource, opts = {}) {
   let sharedBoss = opts.sharedBoss ?? null;
   if (!sharedBoss && bossLike && s.boss) sharedBoss = new LocalBossPool(s.boss.poolMax, s.boss.poolHp, s.boss.burstGuard);
   const BattleClass = typeof opts.BattleClass === 'function' ? opts.BattleClass : Battle;
+  const enemyMods = cleanEnemyMods(s.enemyMods);
   const battleOpts = {
     ...(s.incomingPreviewDone===true?{incomingPreviewDone:true}:{}),
     seed: s.seed,
@@ -211,6 +278,9 @@ export function createBattleFromSpec(spec, dataSource, opts = {}) {
     ...contractFields(s),
     fieldId: s.fieldId,
     enemyOverrides: s.enemyOverrides ?? {},
+    // 藏品对敌人的 spawn 级修正: back onto the Battle (spawns.js / combat.js / status.js read it), so a client-side
+    // field and the server's re-simulation apply the same enemy modifiers
+    ...(enemyMods ? { enemyMods } : {}),
     waveId: s.waveId ?? null,
     data: BattleClass === Battle ? withUnitLoadouts(toDataSource(dataSource), s.players) : dataSource,
     content: opts.content ?? s.content ?? 'full',
@@ -222,6 +292,9 @@ export function createBattleFromSpec(spec, dataSource, opts = {}) {
   if (opts.quiet) battleOpts.quiet = true;
   const b = new BattleClass(battleOpts);
   b.battleId = s.battleId ?? null;
+  // 战斗中实时部署 (flags.liveDeploy，方案 A): the recorded player orders, replayed at their tick by the step
+  // (server/sim/battle/deploy.js _applyCmds). `s` is the clone above, so every battle from one spec replays its own copy.
+  if (Array.isArray(s.cmds) && s.cmds.length) { b._cmds = s.cmds; b._cmdI = 0; }
   return b;
 }
 

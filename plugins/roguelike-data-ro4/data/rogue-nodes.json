@@ -1,6 +1,6 @@
 {
   "selfDesigned": true,
-  "notice": "自设计，非官方（D 类数值）。官方 roguelike_topic_table.json 不在机器上；层数、每层候选数、行动力、奖励、层名均为社区设计，不得对外宣称按官方。每层 3 个候选节点（choices:3），`tier` 指向 stages 里 rogue_ro4_<tier>-* 的一张图；t/b/d/ev 是肉鸽的精英/首领/补给/事件层级。",
+  "notice": "自设计，非官方（D 类数值）。官方 roguelike_topic_table.json 不在机器上；层数、每层候选数、行动力、奖励、层名均为社区设计，不得对外宣称按官方。每层 3 个候选节点（choices:3），`tier` 指向 stages 里 rogue_ro4_<tier>-* 的一张图；t/b/d/ev 是肉鸽的精英/首领/补给/事件层级。`wish`（得偿所愿）只是**节点类型名**取自官方（免费拿 1 件藏品、不能空手离开），落在第 2/4/7/10/13 层各 1 个；节点落在第几层、cost、reward 仍是自设计数值，不得对外宣称按官方。",
   "schema": 2,
   "canvas": [
     19,
@@ -23,6 +23,11 @@
       "name": "事件",
       "cost": 1,
       "color": "#f6c329"
+    },
+    "wish": {
+      "name": "得偿所愿",
+      "cost": 1,
+      "color": "#ffd76a"
     },
     "shop": {
       "name": "商店",
@@ -90,7 +95,7 @@
         },
         {
           "id": "R2-N2",
-          "type": "battle",
+          "type": "wish",
           "name": "无灯长廊",
           "tier": "2",
           "cost": 1,
@@ -150,7 +155,7 @@
         },
         {
           "id": "R4-N2",
-          "type": "event",
+          "type": "wish",
           "name": "废弃补给箱",
           "tier": "ev",
           "cost": 1,
@@ -240,7 +245,7 @@
         },
         {
           "id": "R7-N2",
-          "type": "battle",
+          "type": "wish",
           "name": "隧道哨兵",
           "tier": "4",
           "cost": 1,
@@ -330,7 +335,7 @@
         },
         {
           "id": "R10-N2",
-          "type": "rest",
+          "type": "wish",
           "name": "急救站",
           "tier": "d",
           "cost": 0,
@@ -420,7 +425,7 @@
         },
         {
           "id": "R13-N2",
-          "type": "shop",
+          "type": "wish",
           "name": "军械掮客",
           "tier": "d",
           "cost": 1,
