@@ -114,6 +114,9 @@ export function castSlot(b, e, s, duration = null) {
   if (!b || !e || !s || !Number.isInteger(s.slot)) return;
   const value=Number.isFinite(duration)&&duration>=0?duration:s.bb?.duration;
   const d = typeof value === 'number' && value > 0 ? Math.round(value * 100) / 100 : 0;
+  // Bookkeeping only (no gameplay state): the instant this slot was announced, so a display fallback of a skill no kit
+  // casts (unclaimed.js) stays quiet when another ability announced the same slot in the same tick.
+  if (e.mem) (e.mem.castAt ||= {})[s.slot] = b.time;
   b._ev(d > 0 ? ['cast', e.id, s.slot, d] : ['cast', e.id, s.slot]);
 }
 

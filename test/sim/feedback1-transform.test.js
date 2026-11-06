@@ -453,7 +453,9 @@ describe('#5 转译基底·α: damage is cancelled until its form change; only t
     assert.ok(Math.hypot(e.x - x, e.y - 9) > 0.5, 'walks on');
     assert.ok(h.b.dealDamage(h.unit('t_gun'), e, { amount: 100, type: 'phys' }) > 0, 'damage lands now');
     assert.equal(e.stats.attacks, 0, '幽灵 never attacks');
-    assert.equal(e.mem.ab.list.length, 1);
+    // one kit ability; the display fallback of the data skills no kit casts adds abilities of its own
+    // (server/sim/content/enemies/unclaimed.js — `display: true`, no gameplay)
+    assert.equal(e.mem.ab.list.filter((a) => !a.display).length, 1);
   });
 });
 
