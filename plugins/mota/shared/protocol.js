@@ -526,7 +526,10 @@ export const C2S = {
   // 2026-11-02：mode 放行独立肉鸽模式；难度接受 N1–N20 或旧 4 档名（**浏览器拿到的是这份顶替拷贝**，
   // 核心 shared/protocol.js 改了这里也要同步，否则 net.request 在本地就把请求拒了）
   'room.create': { mode: (v) => v === 'solo' || v === 'coop' || v === 'versus' || v === 'rogue',
-    difficulty: (v) => DIFFICULTIES.includes(v) || LEGACY_DIFFICULTIES.includes(v) || v === TRAINING_DIFFICULTY, private: (v) => v === true || v === false, variant: (v) => v == null || (typeof v === 'string' && v.length > 0 && v.length <= 64 && /^[A-Za-z0-9_.:-]+$/.test(v)), test: (v) => v === true, randomStage: (v) => v == null || isBool(v), teamSize: (v) => v == null || (Number.isInteger(v) && v >= 1 && v <= 10), versusAlt: (v) => v == null || typeof v === 'boolean', version: isVersionId, soloUnlimited: isBool, versusSpeed: (v) => v == null || v === 1 || v === 1.5 || v === 2, $optional: ['versusSpeed', 'test', 'variant', 'private', 'randomStage', 'teamSize', 'version', 'soloUnlimited', 'versusAlt'] },
+    difficulty: (v) => DIFFICULTIES.includes(v) || LEGACY_DIFFICULTIES.includes(v) || v === TRAINING_DIFFICULTY, private: (v) => v === true || v === false, variant: (v) => v == null || (typeof v === 'string' && v.length > 0 && v.length <= 64 && /^[A-Za-z0-9_.:-]+$/.test(v)), test: (v) => v === true, randomStage: (v) => v == null || isBool(v), teamSize: (v) => v == null || (Number.isInteger(v) && v >= 1 && v <= 10), versusAlt: (v) => v == null || typeof v === 'boolean', version: isVersionId, soloUnlimited: isBool, versusSpeed: (v) => v == null || v === 1 || v === 1.5 || v === 2,
+    // 肉鸽「地图主题池」 (shared/rogueThemes.js): 'all' | 'ro1'…'ro6'；房间大厅左列的选择器发这个键。
+    mapPool: (v) => v == null || v === 'all' || /^ro[1-6]$/.test(String(v)),
+    $optional: ['versusSpeed', 'test', 'variant', 'private', 'randomStage', 'teamSize', 'version', 'soloUnlimited', 'versusAlt', 'mapPool'] },
   'room.join': { $optional: ['testAck'], testAck: (v) => v === true, code: (v) => isStr(v, ROOM_CODE_LEN + 2) && /^[A-Za-z0-9]+$/.test(v) },
   'room.leave': {},
   'room.ready': { ready: isBool },

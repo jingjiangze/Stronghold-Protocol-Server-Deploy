@@ -1,6 +1,6 @@
 {
   "trusted": {
-    "mota": "d77c45223140ef1f31a7551aef3a563863eb7aff2524f3651a1a71ab5e171c29",
+    "mota": "910362c33b29120e765613e653b12d2766a9c57efcdcdd0e2f75efe9ffd3688c",
     "ai-scoring": "669b316f3b254101ecdc9743354f85f6a5f38c18b27efc1cbf7f2c83f208cc17",
     "operator-skins": "3967efa673a839faf99fecdeeec6409c73cc1647cb19bebc0d4eda8c537abde3",
     "alliance-20": "e6c9d24463e114cc96306b8130e1751f15bbbcb9b000a482a6ccd328d1701d5f",
@@ -8,13 +8,13 @@
     "room-chat": "e94a18e4760f400a80085052c34551bc39c272b03ace4f712c947885c3405f78",
     "spectate": "dc8db04cd17cbfe830e3992d39f3bc3053349039077f8161ac7df326276f7e18",
     "loan-pledge": "d09d4254afb55487c255b0c544c9aea408d7bf916ba880bed5efc5270b0fe393",
-    "cdn-local": "7f2a8a1b24be80f5f9fcb28add43d4e3fd6af0d4fd6e57ab676c29eacfea7edd",
+    "cdn-local": "de11bbef8ce5a43962ea3c845897dd0dd09130d02b61da737a57e77baa0e9631",
     "versus-room": "319816ee589b807578c5be76555cc1a410e5dc4ea86a55a4098f7cb16c6d7a50",
     "xie-room": "12a4d59fcef72546c82e6e85227afe2b899faa09c8282c0233709097db2eb17d",
     "relics-87": "553797907075232df25a5c3e4e3b68940cc4f926ddc8db2f726b40011d0df4dc",
     "random-stage": "67dcddc553d0d1edf8e2018ec48e0d17d4cd1930c8bbc9b6e9747db29bebbf5f",
     "rogue": "a714aee0280043c1aacf2047c2bb075337e5ae33e30653e097bdd015f2d6851b",
-    "roguelike-core": "18cd26794a1fdad52e11603b34d498e4178bef6f328add30ba494cbc070403b6",
+    "roguelike-core": "c3790c5fad5cee26fbd9568e365b24d8a726d5d1bad5a8f622e3c27deb8a40ee",
     "roguelike-data-ro4": "2b8f4c7f843d0e1e72d25e364d094a95189164ec9102a68b22031855af8315a0",
     "ave-mujica": "05ef9b5ad8bdeb9c843afe141df17f0babf7160b08567537f3878dbeb90c3a78",
     "kits-ave-mujica": "26a60db8b46d2a735c930cca3facdea954b0bf63eafe94c89b9581e77e65362f",

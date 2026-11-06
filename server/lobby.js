@@ -235,6 +235,8 @@ import { DIFFICULTIES, LEGACY_DIFFICULTIES, TRAINING_DIFFICULTY, difficultyRank,
 import { getData } from './data.js';
 import { checkLoadout, checkLoadoutOps, cultivationCharIds, checkNotOwned, checkDiyPicks, charPotentialChanges, checkSkinSelection, operatorCharIds } from '../shared/protocol.js';
 import { contractsValidFor, resolvePicked } from '../shared/contracts.js';
+// 肉鸽「地图主题池」 (room.create { mapPool }, 2026-11-06): 'all' | 'ro1'…'ro6' 的常量表在 shared/rogueThemes.js。
+import { isPool } from '../shared/rogueThemes.js';
 import { encode, isErrCode, sendRaw, sendSession } from './net.js';
 import { getData as defaultGetData, lookup } from './data.js';
 import { Match as DefaultMatch } from './match/Match.js';
@@ -421,6 +423,12 @@ export class Room {
      */
     this.incompleteMaps = false;
     /**
+     * 肉鸽「地图主题池」 (room.create { mapPool }, shared/rogueThemes.js; 2026-11-06): 'all' | 'ro1'…'ro6'.
+     * 只对肉鸽局有意义 —— Match 只在 isRogue 时把它挂到 gd 并收窄 `rogue_ro<池>_` 前缀的图；非肉鸽局恒为 'all'。
+     * `'all'` 不过滤（选图与加这个开关之前逐字节一致），room.state 也只在非 'all' 时带这个键。
+     */
+    this.mapPool = 'all';
+    /**
      * 危机合约 (shared/contracts.js): the contract ids the host picked with room.setContracts — already resolved by
      * `setContracts` (exclusivity, prerequisites, the room's size / difficulty), so the list is exactly what the match
      * plays and what room.state shows. A room without contracts keeps `[]`.
@@ -547,6 +555,8 @@ export class Room {
       ...(this.soloUnlimited === true ? { soloUnlimited: true } : {}),
       // 「包含无场景地图」 (header): likewise omitted unless on
       ...(this.incompleteMaps === true ? { incompleteMaps: true } : {}),
+      // 肉鸽「地图主题池」 (header): omitted for 'all' (a default room.state stays identical)
+      ...(this.mapPool !== 'all' ? { mapPool: this.mapPool } : {}),
       // 插件平铺进 room.state 的字段（后写的覆盖同名核心键；插件自己保证不冲撞）
       ...(this.ext?.state?.(this) || {}),
     };
@@ -1027,7 +1037,7 @@ export class Lobby {
   // room.* handlers
   // ---------------------------------------------------------------------------------------------------
 
-  create(session, { mode, difficulty: asked, test, version: askedVersion, soloUnlimited, teamSize, variant, versusAlt, versusSpeed } = {}) {
+  create(session, { mode, difficulty: asked, test, version: askedVersion, soloUnlimited, teamSize, variant, versusAlt, versusSpeed, mapPool } = {}) {
     // A test room exists only when the process switch allowed it. The check runs before the room is built.
     if (test === true && this.testEnabled !== true) return fail(ERR.TEST_DISABLED);
     // the official version (header "Official versions"): left out, the server's default
@@ -1088,7 +1098,7 @@ export class Lobby {
       const warming = this.warmContent?.(defaults, version) || null;
       if (warming) {
         return warming.then(() => this.create(session, {
-          mode, difficulty: asked, test, version: askedVersion, soloUnlimited, teamSize, variant, versusAlt, versusSpeed,
+          mode, difficulty: asked, test, version: askedVersion, soloUnlimited, teamSize, variant, versusAlt, versusSpeed, mapPool,
         }));
       }
       const r = this.resolveContent(null, defaults, {}, version, leaving ? cur.content : null);
@@ -1113,6 +1123,9 @@ export class Lobby {
     // 「不限时」 only on a solo room of a version whose solo is timed (header). Anywhere else the key is ignored, so a
     // stray true cannot change a default or co-op create.
     if (mode === 'solo' && soloUnlimited === true && this.versionSoloTimed(version)) room.soloUnlimited = true;
+    // 肉鸽「地图主题池」 (header): 只认合法的池 id，且只在肉鸽房里落地 —— 非肉鸽局没有 `rogue_ro*` 图，
+    // 收窄会把池清空。'all' / 缺省 / 非法值都不落键（默认值就是 'all'）。
+    if ((mode === 'rogue' || variant === 'rogue') && isPool(mapPool) && mapPool !== 'all') room.mapPool = mapPool;
     room.content = initial;
     if (initial !== this.baseContent(version)) this.holdContent(initial);
     room.ownerKey = key;
@@ -2417,6 +2430,8 @@ export class Lobby {
         ...(room.mode === 'solo' && room.soloUnlimited === true ? { soloUnlimited: true } : {}),
         // 「包含无场景地图」 (header): only while the room's flag is on; off, the match narrows its stage pools itself
         ...(room.incompleteMaps === true ? { incompleteMaps: true } : {}),
+        // 肉鸽「地图主题池」 (header): only while a theme is selected; 'all' keeps the opts' keys as before
+        ...(room.mapPool !== 'all' ? { mapPool: room.mapPool } : {}),
         // The list the lobby just checked the picks with (kittedFor). Vanilla rooms omit it: setDiy stays on
         // KITTED_CHARS, and the worker payload / test journal of a normal match do not grow a key.
         ...(modded ? { kitted: this.kittedFor(room) } : {}),
