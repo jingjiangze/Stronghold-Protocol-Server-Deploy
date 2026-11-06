@@ -70,6 +70,8 @@ export const ICONS = {
   warn: { d: 'M12 2 1 21h22zm-1 7v6h2V9zm0 7.5v2h2v-2z', eo: true },
   play: { d: 'M7 4v16l13-8z' },
   mic: { d: 'M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21H8v2h8v-2h-3v-3.1A7 7 0 0 0 19 11z' },
+  // 对话唤出 (the in-match chat toggle, screens/game.js data-testid="hud-chat"): a speech bubble with three dots
+  chat: { d: 'M4 3h16a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-6.4L7 22v-4H4a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zm3 6.2a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2zm5 0a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2zm5 0a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2z', eo: true },
   edit: { d: 'M3 17.2V21h3.8l11-11-3.8-3.8zM20.7 7.1a1 1 0 0 0 0-1.4l-2.4-2.4a1 1 0 0 0-1.4 0l-1.8 1.8 3.8 3.8z' },
   sword: { d: 'M20 3h1v4L10.4 17.6l1.4 1.4-1.4 1.4-2.1-2.1-3.5 3.5-1.4-1.4 3.5-3.5L4.8 14.8l1.4-1.4 1.4 1.4L18 4z' },
   shield: { d: 'M12 2 4 5v6c0 5 3.4 9.3 8 11 4.6-1.7 8-6 8-11V5z' },

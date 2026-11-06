@@ -313,8 +313,8 @@
       "bytes": 23167
     },
     "client/css/room-chat.css": {
-      "sha256": "907f3d0f8d7387f8e78830729ced4a295fb8690632044565da5ee3f977385f87",
-      "bytes": 6306
+      "sha256": "2ef2914ceaa73081dd9391795929c5079d95c65e5ed43d82e67632be1aa5b2e5",
+      "bytes": 17095
     },
     "client/js/ui/chatScroll.js": {
       "sha256": "c1c2f228d8f4046160241ea495eb359047db7c4ff1660becb8c92ffba96b73f9",
@@ -325,12 +325,12 @@
       "bytes": 7192
     },
     "client/js/ui/emotes.js": {
-      "sha256": "a8b488aac84626a58f8ef7d6ac665761f39afa9a8d4438f0aea10fe961b83480",
-      "bytes": 17480
+      "sha256": "5391d1171eec2eefcd247d1051d7849b18d0f9e009c45b0779cc2516cb3c6345",
+      "bytes": 17797
     },
     "client/js/ui/roomChat.js": {
-      "sha256": "b42f30fcb34022bbc8d836f7f2f07a4057f588c416a6af2efb29a5762983c6d6",
-      "bytes": 27302
+      "sha256": "12931cecaa6a92975a5648edd39c9248802d176191802cbcb6e2ea398cc34363",
+      "bytes": 27934
     },
     "client/js/ui/roomDanmaku.js": {
       "sha256": "6f6c2987b7fa67e8112cdb5a454d2f01118713fe8d4765e1067aa96a4d0565eb",

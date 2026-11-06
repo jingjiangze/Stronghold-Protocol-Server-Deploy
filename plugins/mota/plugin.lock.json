@@ -145,16 +145,16 @@
       "bytes": 9830
     },
     "client/js/screens/bandDraft.js": {
-      "sha256": "d658b5800dd73bfa1ea82b0bb51a9318e456714cab1869735408b0a23394023f",
-      "bytes": 22631
+      "sha256": "497fd39520b73f48965464acc4d8cedf9006edc58c5fc6618f67393780ca0f67",
+      "bytes": 35319
     },
     "client/js/screens/diy.js": {
       "sha256": "4d35755d9711a7a8d0427c4c86c68a49c3a83d75ccdd00595fe1eac568913b51",
       "bytes": 22978
     },
     "client/js/screens/game.js": {
-      "sha256": "1546e1d9d45b79e0d28011b4fbc920d22ac1333dae7492936d384e3e390a7468",
-      "bytes": 142767
+      "sha256": "caacc07bc72c5244b5d33b13b74fefe3526459238d6064d8265e06270f49a2eb",
+      "bytes": 146439
     },
     "client/js/screens/loadout.js": {
       "sha256": "475a2a94b2f2b82bc769875dc6455816997302fb20e841083e4626e6754d7873",
@@ -241,8 +241,8 @@
       "bytes": 2439
     },
     "client/js/ui/components.js": {
-      "sha256": "87c7f4e17c7ccee7bc19361ccaf658c3dbcf59d929179b2d37967d638eed3ea1",
-      "bytes": 50684
+      "sha256": "da91768723c78a606ed46941d7b9a472c6106db9071524a9fe487d7c93392578",
+      "bytes": 51051
     },
     "client/js/ui/confrontOverlay.js": {
       "sha256": "eb6a97d60ff4eea155b6b40bfe7e3ed84e938b378b92c2f8eebe44fcc83bfb0d",
@@ -305,8 +305,8 @@
       "bytes": 12561
     },
     "client/js/ui/gameLogic.js": {
-      "sha256": "c5d775682242edb0a10ff0814bfb5893cb90268627ff6429d57c3a951131d3a4",
-      "bytes": 5799
+      "sha256": "c6b5911cdea5c83c00d645301ff0091e5cfbe92d0c0c5a91d117ae91a608da49",
+      "bytes": 5813
     },
     "client/js/ui/guide.js": {
       "sha256": "fcfb288936a361724985baf247fb73d6fd1aaf49f7add966aad169f9c3494d51",
