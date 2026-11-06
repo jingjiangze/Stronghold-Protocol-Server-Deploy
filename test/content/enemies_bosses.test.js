@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import { makeBattle, checkInvariants } from '../helpers/battleHarness.js';
 import * as enemiesMod from '../../server/sim/content/enemies.js';
 import * as bossesMod from '../../server/sim/content/bosses.js';
+import { claimedSlots, displayPlan } from '../../server/sim/content/enemies/unclaimed.js';
 
 const E = JSON.parse(fs.readFileSync(new URL('../../data/enemies.json', import.meta.url), 'utf8'));
 const W = JSON.parse(fs.readFileSync(new URL('../../data/waves.json', import.meta.url), 'utf8'));
@@ -33,6 +34,31 @@ test('0.4.3 stats-only enemies attach no ability', () => {
     assert.ok(e, `spawn ${k}`);
     assert.ok(!e.mem.ab || !e.mem.ab.list.length, `${k} attaches an ability`);
   }
+});
+
+test('0.4.3+ display: every data prefabKey is announced — claimed by a kit ability, or by the unclaimed fallback', () => {
+  // A skill with no kit behind it used to be invisible (no ['cast', id, slot], so no clip / telegraph / official
+  // effects: server/sim/content/enemies/unclaimed.js). This gate pins the invariant that made it silent: every
+  // prefabKey of a non-STATS_ONLY enemy is either named by one of the kit's abilities (`a.sk`) or is in the display
+  // fallback's plan; the fallback itself stays within its per-enemy cap.
+  const h = makeBattle({ content: 'generic', extraContent: [enemiesMod, bossesMod], seed: 7, autoFinish: false });
+  h.step();
+  const bad = [];
+  for (const k of Object.keys(E)) {
+    const skills = E[k].skills;
+    if (!Array.isArray(skills) || !skills.length) continue;
+    if (STATS_ONLY[k]) continue;                 // documented: this key attaches no ability (the stats-only test above)
+    const e = h.spawn(k, { pos: [10, 7] });
+    const ab = e && e.mem && e.mem.ab;
+    if (!ab) { bad.push(`${k}: no ability record at spawn`); continue; }
+    const kit = claimedSlots(ab);
+    const plan = new Set(displayPlan(ab, Infinity).map((p) => p.key));
+    const shown = ab.list.filter((a) => a && a.display).length;
+    if (shown > 8) bad.push(`${k}: ${shown} display abilities (cap 8)`);
+    if (shown !== displayPlan(ab).length) bad.push(`${k}: ${shown} display abilities, plan ${displayPlan(ab).length}`);
+    for (const s of skills) if (s && s.prefabKey != null && !kit.has(s.prefabKey) && !plan.has(s.prefabKey)) bad.push(`${k}: ${s.prefabKey}`);
+  }
+  assert.deepEqual(bad, [], `prefabKeys neither claimed by a kit nor announced: ${bad.slice(0, 20).join(', ')}`);
 });
 
 test('boss_11: enemy_1515_bsnake spawns from act3autochess_h08_04 with its kit', () => {

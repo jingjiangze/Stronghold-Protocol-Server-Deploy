@@ -1836,7 +1836,21 @@ export async function createFieldView(host, options = {}) {
       // (and its official skill effects: render/vfx/skillfx.js cast — index v2 has the enemies' skills)
       // an attack-class skill cast in the attack's turn ['cast', id, slot, dur, clip] plays its clip in place of the attack
       // (UnitView.onCast; DESIGN §35.57)
-      case 'cast': { const v = views.get(e[1]); if (v) { v.setSkillSlot?.(e[2] | 0); v.onCast?.(e[2] | 0, now, e.length > 4 ? Number(e[4]) || 0 : null); wiring.enemyCast(v, e[2] | 0, Number(e[3]) || 0); } break; }
+      case 'cast': {
+        const v = views.get(e[1]);
+        if (v) {
+          v.setSkillSlot?.(e[2] | 0);
+          v.onCast?.(e[2] | 0, now, e.length > 4 ? Number(e[4]) || 0 : null);
+          // no official effect for this slot (no extracted asset index, or the skill has none): a procedural warning
+          // ring stands in, so a cast is never silent — the sim announces the skills no kit implements the same way
+          // (server/sim/content/enemies/unclaimed.js). Zero new assets: render/fx/simfx.js 'telegraph'.
+          if (!wiring.enemyCast(v, e[2] | 0, Number(e[3]) || 0)) {
+            const d = Number(e[3]) || 0;
+            fx.simFx('telegraph', v.x, v.y, { id: v.id, r: 1, ...(d > 0 ? { dur: d } : {}) });
+          }
+        }
+        break;
+      }
       case 'die': {
         const v = views.get(e[1]);
         const used = consumedIds.delete(e[1]);

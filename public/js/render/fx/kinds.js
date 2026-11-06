@@ -98,6 +98,11 @@ const FX_GUESS = [
   [/blast|bomb|explo|burst|boom|nova|strike/i, 'blast'], [/zone|field|area|wall|mist|fog|pool/i, 'zone'],
   [/buff|boost|power|rage|charge|up$/i, 'buff'], [/mark|lock|target|wanted|expose/i, 'reticle'], [/teleport|blink|warp|swap/i, 'blink'],
   [/stealth|hide|vanish|cloak/i, 'vanish'], [/pull|push|knock|dash|leap/i, 'move'], [/pulse|wave|ring|sonic/i, 'wave'],
+  // The data's own skill names of a wind-up / mode change / pose (M1AttackWarning, M1Effect, M2RealAttack, BeginAnim,
+  // EndAnim, Pose, StartEat, ChangeToB, SwitchToMode2 …): a telegraph ring reads better than the generic sparkle. The
+  // display fallback of an unimplemented enemy skill passes the same name families as its fx `kind`
+  // (server/sim/content/enemies/unclaimed.js KIND_GUESS).
+  [/warning|alert|effect|anim|pose|start|begin|switch|change|awake|recover/i, 'telegraph'],
 ];
 
 /**
@@ -114,7 +119,7 @@ export function fxSpec(kind, extra = {}) {
   let spec = FX_KINDS[k];
   if (!spec) {
     const g = FX_GUESS.find(([re]) => re.test(k));
-    spec = g ? { ...FX_KINDS[{ heal: 'heal', shield: 'shield', summon: 'summon', blast: 'aoe', zone: 'zone', buff: 'buff', reticle: 'lock', blink: 'blink', vanish: 'disappear', move: 'displace', wave: 'pulse' }[g[1]]] } : { a: 'generic', c: 0xfff2d0 };
+    spec = g ? { ...FX_KINDS[{ heal: 'heal', shield: 'shield', summon: 'summon', blast: 'aoe', zone: 'zone', buff: 'buff', reticle: 'lock', blink: 'blink', vanish: 'disappear', move: 'displace', wave: 'pulse', telegraph: 'telegraph' }[g[1]]] } : { a: 'generic', c: 0xfff2d0 };
   }
   const el = extra && extra.element;
   if (el && (spec.a === 'blast' || spec.a === 'zone' || spec.a === 'element')) {

@@ -2,6 +2,7 @@ import {BLACKFLOW_ELITE_KITS} from './enemies/blackflow-elites-20261102.js';
 import {ARK_UPDATE_URSUS_KITS} from './enemies/ark-update-ursus-20261101.js';
 import {URSUS_WAR_CASTER_KITS} from './enemies/ursus-war-caster.js';
 import {installEnemyPressure} from './enemies/pressure.js';
+import {installUnclaimed} from './enemies/unclaimed.js';
 import {BOLIVAR_KITS} from './enemies/bolivar.js';
 import {PRISONER_KITS} from './enemies/prisoners.js';
 import {ORCHESTRA_KITS} from './enemies/orchestra.js';
@@ -141,6 +142,8 @@ import {CONTRACT_ENEMY_KITS,CONTRACT_ENEMY_STATS} from './enemies/contract-expan
 //                   (factions.json): its kits, its kit-only constants and its part of KITS
 //   passengers.js   shared 载客 for the two carriers in special.js (伊利昂的木驮兽, “越长尘”)
 //   leaders.js      bounty (悬赏) leaders: kitLeaderMisc (single form) and the multi-form kits
+//   unclaimed.js    display-only fallback: for every data skill no kit casts, an ability that only emits the skill's
+//                   `cast` and a telegraph ring (so an unimplemented line is still visible; no gameplay)
 // Every name this file exported before the split is still exported from here.
 
 import { TICK } from '../constants.js';
@@ -175,6 +178,7 @@ export function ensureInstalled(b) {
   st.installed = true;
   installEnemyPressure(b);
   b.on('enemySpawn', ({ enemy }) => onSpawn(b, enemy), { priority: 100 });
+  b.on('enemySpawn', ({ enemy }) => onSpawnDisplay(b, enemy), { priority: -1000 });
   b.on('hit', (c) => onHitOut(b, c), { priority: 200 });
   b.on('hit', (c) => chaliceShare(b, c), { priority: -400 });
   b.on('hit', (c) => onHitIn(b, c), { priority: -500 });
@@ -215,6 +219,16 @@ function onSpawn(b, e) {
     attach(b, e, list);
   }
   installAmbush(b,e);
+}
+
+// The skills no kit casts announce themselves anyway (unclaimed.js: the skill's `cast` event + a telegraph ring, no
+// gameplay state). It runs after every kit installer — this file's onSpawn (priority 100), bosses.js (90), the
+// extensions — so an ability a kit attaches later is not announced twice. STATS_ONLY keys keep the "no ability"
+// promise of their entry; a missing module must not break a spawn.
+function onSpawnDisplay(b, e) {
+  const key = e.def.raw?.effectRef ?? e.defId;
+  if (typeof installUnclaimed !== 'function' || STATS_ONLY[e.defId] || STATS_ONLY[key]) return;
+  installUnclaimed(b, e, e.mem.ab || null);
 }
 
 function onHitOut(b, c) {
