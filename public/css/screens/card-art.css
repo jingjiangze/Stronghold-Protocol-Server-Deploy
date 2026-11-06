@@ -1,0 +1,295 @@
+/* card-art.css — 名片立绘微调（房间座位卡的「立绘调整」；DOM 见 public/js/ui/cardArt.js）。
+ *
+ * 由 ui/cardArt.js 懒加载（不进 index.html）。
+ *
+ * 三条硬约束：
+ *   1. 立绘**完整显示**：座位卡的立绘框是竖长的，精二立绘却是近方形大图，旧的 cover 只露出画面中间一条。现在由
+ *      ui/cardArt.js 的 artFit 把「内容框」等比缩进**立绘框**里（px 定位，object-fit 不参与裁剪），空出来的地方是
+ *      同一张图的 `.cardart__bg` 虚化铺满；缩放 0.8–2.0× 照旧。面板里的「卡片窗口」是**整张卡**：顶条 + 立绘框 +
+ *      名字条，全按真卡现量的比例画。
+ *   2. 触屏：滑杆与按键的地板 24px，矮屏不缩到点不着。
+ *   3. 字号全部 `max(<px 地板>, calc(k * var(--t)))` —— 与全站六档字号口径一致。 */
+
+.cardart {
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+  min-width: 0;
+}
+
+/* ---- 头：标题 / 重置 ------------------------------------------------------------------------------------------------ */
+.cardart__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .1rem;
+}
+.cardart__title {
+  font-size: max(12px, calc(.2 * var(--t)));
+  font-weight: 800;
+  color: var(--text-hi);
+  letter-spacing: .02em;
+}
+.cardart__ver,
+.cardart__fit {
+  display: inline-flex;
+  flex-wrap: wrap;
+  border: 1px solid var(--line-2);
+  background: rgba(0, 0, 0, .3);
+  min-width: 0;
+}
+/* 取景：完整（整幅缩进框里）/ 填满（铺满框、边缘裁掉）。两组按钮同一套视觉 */
+.cardart__fit { margin-left: .06rem; }
+.cardart__vbtn {
+  min-height: 24px;
+  min-width: 40px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 .12rem;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: none;
+  color: var(--text-lo);
+  font-size: max(11px, calc(.16 * var(--t)));
+  font-weight: 800;
+  cursor: pointer;
+  transition: color var(--t-fast), background var(--t-fast);
+}
+.cardart__vbtn:last-child { border-right: 0; }
+.cardart__vbtn:hover { color: var(--text-hi); }
+.cardart__vbtn.is-on { background: var(--mint-500); color: var(--text-on-mint); }
+.cardart__reset {
+  margin-left: auto;
+  min-height: 24px;
+  min-width: 48px;
+  padding: 0 .12rem;
+  border: 1px solid var(--line-2);
+  background: rgba(0, 0, 0, .3);
+  color: var(--text-lo);
+  font-size: max(11px, calc(.16 * var(--t)));
+  font-weight: 700;
+  cursor: pointer;
+}
+.cardart__reset:hover { border-color: var(--line-3); color: var(--text-hi); }
+
+/* ---- 版面：先干员（可换），再立绘（精一 / 精二 / 每一套皮肤各一颗），再取景 ------------------------------- */
+.cardart__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .06rem;
+  min-width: 0;
+}
+.cardart__k {
+  flex: none;
+  font-size: max(11px, calc(.14 * var(--t)));
+  color: var(--text-lo);
+}
+.cardart__opname {
+  min-width: 0;
+  font-size: max(12px, calc(.17 * var(--t)));
+  font-weight: 800;
+  color: var(--text-hi);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cardart__pick {
+  margin-left: auto;
+  min-height: 24px;
+  min-width: 48px;
+  padding: 0 .12rem;
+  border: 1px solid var(--line-2);
+  background: rgba(0, 0, 0, .3);
+  color: var(--text-lo);
+  font-size: max(11px, calc(.16 * var(--t)));
+  font-weight: 700;
+  cursor: pointer;
+}
+.cardart__pick:hover { border-color: var(--line-3); color: var(--text-hi); }
+
+/* ---- 取景框 -------------------------------------------------------------------------------------------------------
+ * 取景框是**正方形**：中间按座位卡的比例框出一条竖长「卡片窗口」（.cardart__win），窗口里就是卡片真正露出来的那一块，
+ * 窗口外面留着看「多出来的画面在哪」，拖动时一眼能看出位置怎么变。 */
+.cardart__frame {
+  position: relative;
+  width: min(100%, 4rem);
+  aspect-ratio: 1;
+  margin-inline: auto;
+  overflow: hidden;
+  border: 1px solid var(--line-2);
+  background: linear-gradient(180deg, #2a302d, #151917);
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.cardart__frame:active { cursor: grabbing; }
+.cardart__frame:focus-within { border-color: var(--mint-600); }
+/* 两层图都由 ui/cardArt.js 摆位：底下虚化铺满（不参与取景），上面是按内容框缩好的那张（px 尺寸/位置走内联 style）。
+   量框/量图之前内联 style 退回 `width/height:100%; object-fit: contain`，所以这里只钉公共部分。 */
+.cardart__bg,
+.cardart__img {
+  position: absolute;
+  display: block;
+  transform-origin: center center;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none;
+}
+/* **必须解除全局 `img { max-width: 100% }`**（theme.css:180）：立绘按 artFit 用 px 摆，宽度常常大于画布里那张卡的
+   宽度，全局上限会把图**横向压扁**到容器宽、而高度照旧 —— 画面位置/比例全变。别删这两行。 */
+.cardart__img {
+  max-width: none;
+  max-height: none;
+}
+/* 整卡：卡片真正露出来的那一块。卡外压暗（box-shadow 铺满整个正方形），边框标出边界；顶条与名字条画在里面 */
+.cardart__win {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+  border: 1px solid var(--mint-400, #5df0c6);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, .55);
+}
+/* 卡片顶条（P1 那条）：真实卡上是 P 编号横条，这里只画条子，卡宽太窄放不下字 */
+.cardart__stripbar {
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: -1px;
+  display: block;
+  background: #2b2e2e;
+  border-bottom: 1px solid rgba(255, 255, 255, .1);
+}
+/* 卡底的名字条：头像 + 名字（预览里要看得见它，拖拽时才知道卡的真实边界） */
+.cardart__plate {
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow: hidden;
+  padding: 0 3px;
+  background: linear-gradient(90deg, #26302d, #161a19);
+  border-top: 1px solid rgba(255, 255, 255, .1);
+}
+.cardart__plate::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(6, 9, 8, .25), rgba(6, 9, 8, .55));
+}
+.cardart__pav,
+.cardart__prow { position: relative; z-index: 1; }
+.cardart__pav {
+  display: grid;
+  place-items: center;
+  flex: none;
+  height: min(14px, 100%);
+  width: auto;
+  aspect-ratio: 1;
+  overflow: hidden;
+  font-size: max(8px, calc(.09 * var(--t)));
+  font-weight: 900;
+  color: #eef0ef;
+  background: #101413;
+  border: 1px solid rgba(255, 255, 255, .55);
+}
+.cardart__prow { display: flex; align-items: baseline; gap: 4px; min-width: 0; }
+.cardart__pname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: max(8px, calc(.09 * var(--t)));
+  font-weight: 800;
+  color: #f0f4f2;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .9);
+}
+.cardart__pno { flex: none; font-size: max(7px, calc(.075 * var(--t))); color: rgba(255, 255, 255, .6); }
+.cardart__bg {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 20%;
+  filter: blur(22px) brightness(.32) saturate(.85);
+  transform: scale(1.12);
+}
+/* 座位卡里的立绘容器：盖满整张卡的画面区，卡自己的角标/名字条压在它上面 */
+.cardart__stillwrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.cardart__glyph {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: max(18px, calc(.62 * var(--t)));
+  font-weight: 900;
+  color: rgba(255, 255, 255, .24);
+}
+.cardart__hint {
+  position: absolute;
+  left: .05rem;
+  bottom: .04rem;
+  font-size: max(10px, calc(.12 * var(--t)));
+  color: rgba(255, 255, 255, .52);
+  pointer-events: none;
+}
+
+/* ---- 缩放 / 位置 ------------------------------------------------------------------------------------------------- */
+.cardart__zoom {
+  display: flex;
+  align-items: center;
+  gap: .08rem;
+}
+.cardart__zlabel {
+  flex: none;
+  font-size: max(11px, calc(.15 * var(--t)));
+  color: var(--text-lo);
+}
+.cardart__range {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 24px;
+  accent-color: var(--mint-500);
+}
+.cardart__znum {
+  flex: none;
+  min-width: 2.2em;
+  text-align: right;
+  font-size: max(11px, calc(.15 * var(--t)));
+  color: var(--text-hi);
+}
+.cardart__pos {
+  margin: 0;
+  font-size: max(11px, calc(.14 * var(--t)));
+  color: var(--text-lo);
+}
+
+/* ---- 座位卡上的第二个入口键（立绘调整）：与「更换立绘」同一条视觉，只把触摸地板抬到 24px ------------------------ */
+.rseat__pick--art {
+  min-height: max(.36rem, 24px);
+}
+
+/* ---- 矮屏（667×375 / 844×390）：框窄一点（比例不变），滑杆仍留 24px ---------------------------------------------- */
+@media (max-height: 480px) {
+  .cardart__frame { width: min(100%, 2.4rem); }
+  .cardart { gap: .06rem; }
+  /* 卡只有几十像素宽时，这句提示会压住卡面；拖动本身就够直白，矮屏不画 */
+  .cardart__hint { display: none; }
+}
+@media (max-height: 380px) {
+  .cardart__frame { width: min(100%, 2rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cardart__vbtn, .cardart__reset { transition: none; }
+}
