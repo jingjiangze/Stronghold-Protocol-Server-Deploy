@@ -129,14 +129,19 @@ export function mountRoomChat() {
   const guardKey = g => `${Math.round(g.left)},${Math.round(g.top)},${Math.round(g.right)},${Math.round(g.bottom)}`;
   let measuredGuardKey = '';   // 上一次 layout() 用到的「真实量到」的轮盘盒子（观察器据此判断是否要重排）
 
-  // 轮盘还没挂进 DOM（HUD 晚于 room.state、或在挂载窗口期被隐藏）时的保底禁区，按 CSS 常量估：
-  //   高：底距 .24rem + 面板 2.31rem（粗指针下 scale:1.3，public/css/devices.css:95）+ .56rem 按钮 + .02rem 间隙 ≈ 3.3rem，
-  //       窄屏 wrap-reverse 折行（public/css/devices.css:128）最多再叠两行 .56rem + 间隙，仍在 3.4rem 之内。
-  //   宽：交流按钮最小 1.51rem + 最多 4 个 .gm__gear 各 .56rem + 4 个 .1rem 间隙 ≈ 4.15rem（public/css/emotes.css:19-25、
-  //       public/css/screens/game.css:624-628）；角区还可能再多一个「肉鸽」/配装按钮，所以这里只当「别停在这块」的下界，
-  //       真正的落点用高度判定（抬到禁区上方），与角区实际宽度无关。
-  // 只用于「量不到」的那段窗口：宁可把左侧下沿整块让出去，也不能像旧默认落点那样正好落在「交流」按钮上。
-  const WHEEL_ZONE_W_REM = 4.15, WHEEL_ZONE_H_REM = 3.4;
+  // 轮盘还没挂进 DOM（HUD 晚于 room.state、或在挂载窗口期被隐藏）时的保底禁区，按 CSS 常量估。
+  // **2026-11-07 表情键改方键后重算**（public/css/emotes.css `.ewheel__btn`：width/height .56rem，原来是 1.51×.56
+  // 的长条贴图），算式写在每一项后面，不再靠旧的长条宽度：
+  //   宽 = 角区最窄那一行 + 表情盘右缘，取两者较大的那个再加余量：
+  //        ① 一行键：表情方键 .56 + 最多 4 个 .gm__gear 各 .56 + 4 道 .1 间隙 = 3.2rem；
+  //        ② 表情盘右缘（从视口左算）：键左 .24 − 盘左偏 .15 + 盘宽 3.13 = 3.22rem，
+  //           禁区左缘是 .24 − .15 = .09rem，所以需要 W ≥ 3.22 − .09 = 3.13rem。
+  //        取 W = 3.4rem（3.2 与 3.13 的上界 + 余量）。
+  //   高 = 底距 .24 + 表情盘 2.31 × 1.3（矮屏触屏上 scale:1.3，public/css/devices.css `.ewheel__panel`）
+  //        + 键 .56（矮屏触屏放大到 34px ≈ .57，取 .6）+ 间隙 .1 ≈ 3.92rem，取 H = 4.0rem。
+  //        （窄屏 wrap-reverse 折行时角区更高，由 layout() 量到的真实盒子覆盖，这里只管「量不到」的窗口。）
+  // 只用于「量不到」的那段窗口：宁可把左侧下沿整块让出去，也不能像旧默认落点那样正好落在表情键上。
+  const WHEEL_ZONE_W_REM = 3.4, WHEEL_ZONE_H_REM = 4.0;
   function estimatedWheelGuard(v) {
     const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const bottom = v.y + v.h - 0.24 * rem;
@@ -316,6 +321,9 @@ export function mountRoomChat() {
       if (match !== inMatch) {
         inMatch = match;
         root.dataset.inMatch = match ? '1' : '0';
+        // **局内只留一份聊天**（2026-11-07）：对局阶段由 ui/chatBox.js 的角落面板（data-testid="hud-chat" 唤出）
+        // 负责，这个浮动窗整块收起，否则两套聊天会叠在左下角。离开对局（回到房间页）立刻还回来。
+        root.hidden = !identity || match;
         desired = null;
         dragging = null;
         observeHud(match);
@@ -330,10 +338,10 @@ export function mountRoomChat() {
     identity = next;
     inMatch = match;
     root.dataset.inMatch = match ? '1' : '0';
-    // 局内不再藏面板（原先 `|| room.inMatch === true` 把整个 root 连悬浮按钮一起藏了，玩家以为聊天没了）。
-    // 现在靠 layout() 按「交流」轮盘的实测盒子把面板 / 悬浮按钮挪到它右侧（放不下则挪到上方），
-    // 容器只做命中避让（.spchat pointer-events: none，见 room-chat.css），不再靠隐藏躲避点击冲突。
-    root.hidden = !next;
+    // 房间页用这个浮动窗（面板 + 可拖的圆点）；**局内整块隐藏**，对局阶段只显示 ui/chatBox.js 那一份
+    // （screens/game.js 的 ChatBox，角落「对话唤出」键唤出），两套聊天不在同一屏出现。
+    // 不在房间 / 没有座位时同样隐藏。
+    root.hidden = !next || inMatch;
     received.clear();
     danmaku.clear();
     historyRequest = null;

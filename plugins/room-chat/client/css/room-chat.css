@@ -107,3 +107,143 @@
 .community-chat .community-chat__picker .community-stickers { padding:4px 11px 6px; }
 .community-chat .community-chat__picker .community-stickers button { background:rgba(255,255,255,.03); border:1px solid rgba(62,75,69,.9); border-radius:0; }
 .community-chat .community-chat__picker .community-stickers button:hover { border-color:var(--mint-500, #4ed8af); background:rgba(78,216,175,.12); }
+
+/* ==========================================================================================
+   chatbox — 局内 / 房间的文字聊天（public/js/ui/chatBox.js，照搬目标站 /css/room-chat.css 的 chatbox 段）
+   ------------------------------------------------------------------------------------------
+   三态（类名切换，见 chatBox.js）：
+     .is-collapsed（默认）= 约三条日志的窄框，常显在角落键那一行之上、**不吃指针**（日志点穿到棋盘）；
+     .is-active           = 标题栏 + 最多五条日志 + 发言框，底边不动、**向上展开**；
+     .is-hid              = 打开表情盘挑表情时整块让开（表情盘关掉就回到原来的态）；
+     .is-empty            = 一条消息都还没有 —— 空的一条窄框没有意义，不画。
+   层级：局内聊天在 HUD 之下（css/screens/game.css `.gm__hud` 是 z-index 3 的独立层），所以 z-index 2 —— 高于战场、
+   低于整块 HUD；表情盘在 .gm__corner 里（z-index 5）且被 .is-hid 让开，两块永远不叠。
+   底边：--chat-bottom 是「贴着角落键那一行的高度」，--gm-corner-h 由 chatBox.js 量 .gm__corner 写入（窄屏折成两行时
+   聊天框跟着往上抬），--chat-kb 由 chatBox.js 按手机软键盘的 visualViewport 写入（键盘弹出时整块抬起）。
+   ========================================================================================== */
+.chat-panel {
+  position: fixed; z-index: 110; left: 16px; bottom: 16px;
+  width: 230px; max-width: calc(100vw - 32px); max-height: calc(100vh - 32px);
+  display: flex; flex-direction: column; box-sizing: border-box;
+  /* 背景更透明（能看见底下的棋盘），边框也弱化；整块**不吃指针** —— 只有标题栏的控件与输入行接收点击，
+     日志区域点击穿透到棋盘，所以它压在上方也不影响点选 / 拖动棋子。 */
+  background: rgba(14, 18, 17, .52); border: 1px solid rgba(255, 255, 255, .10); border-radius: 9px;
+  box-shadow: 0 4px 18px #0006; overflow: hidden; pointer-events: none;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  font: 12px/1.35 system-ui, sans-serif; color: #e4e4e7;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .9);
+}
+/* 需要点击的东西才恢复命中：收起键、唤出对话、输入行。日志本身保持穿透。 */
+.chat-panel .chat-header-bar, .chat-panel .chat-form, .chat-panel .chat-trigger-btn,
+.chat-panel .chat-collapse-btn, .chat-panel .chat-input, .chat-panel .chat-send-btn { pointer-events: auto; }
+.chat-panel .chat-log { pointer-events: none; }
+/* 聊天文字显示栏**常显**：收起时只是不显示输入行，日志与标题栏都留着。唤出对话 = 出输入框。 */
+.chat-panel:not(.is-active) .chat-form { display: none; }
+.chat-panel.is-collapsed { height: auto; }
+.chat-panel.is-collapsed .chat-log { max-height: 34px; }
+.chat-header-bar { display: flex; align-items: center; justify-content: space-between; flex: 0 0 26px; padding: 0 6px; border-bottom: 1px solid #27272a; }
+/* 收起控件：半透明圆形小箭头，hover 才亮。 */
+.chat-collapse-btn { width: 20px; height: 20px; display: grid; place-items: center; padding: 0; border: 1px solid transparent;
+  border-radius: 50%; background: transparent; color: rgba(228,228,231,.55); cursor: pointer; touch-action: manipulation; transition: color .15s, background .15s; }
+.chat-collapse-btn:hover, .chat-collapse-btn:focus-visible { color: #34d399; background: rgba(52,211,153,.12); border-color: rgba(52,211,153,.35); }
+.chat-collapse-icon { font-size: 12px; line-height: 1; }
+.chat-log { max-height: 118px; flex: 1 1 auto; min-height: 0; overflow: auto; padding: 6px 8px; overscroll-behavior: contain; touch-action: pan-y; }
+.chat-item { margin-bottom: 6px; overflow-wrap: anywhere; }
+.chat-seat { color: #a1a1aa; margin-right: 4px; }
+.chat-seat.seat-0 { color: #60a5fa; } .chat-seat.seat-1 { color: #34d399; }
+.chat-seat.seat-2 { color: #fbbf24; } .chat-seat.seat-3 { color: #f472b6; }
+.chat-seat.seat-spec { color: #a78bfa; }
+.chat-text { color: #fafafa; }
+.chat-form { display: flex; gap: 4px; padding: 3px 5px; border-top: 1px solid rgba(255,255,255,.08); flex-shrink: 0; align-items: center; }
+/* 发言框：细长一条。 */
+.chat-input { min-width: 0; flex: 1; height: 20px; box-sizing: border-box; padding: 0 7px;
+  background: #09090b; color: #fafafa; border: 1px solid #3f3f46; border-radius: 5px;
+  font: 12px system-ui, sans-serif; outline-color: #34d399;
+  -webkit-user-select: text !important; user-select: text !important;
+  touch-action: manipulation !important; pointer-events: auto !important; }
+.chat-send-btn { font: inherit; border-radius: 5px; cursor: pointer; padding: 0 8px; touch-action: manipulation;
+  border: 1px solid #34d39966; background: #065f46; color: #ecfdf5; }
+/* 房间界面的「唤出对话」按钮：就在标题栏里（点它出输入框）。局内不画它 —— 开关是左下角落那颗「对话唤出」键
+   （screens/game.js data-testid="hud-chat"，与 设置 同一个开关）。 */
+.chat-trigger-btn { width: 24px; height: 20px; padding: 0; font-size: 12px; line-height: 1;
+  background: #27272a !important; border: 1px solid #34d39966 !important; border-radius: 5px !important;
+  color: #e4e4e7; cursor: pointer; touch-action: manipulation; }
+/* 未读角标 / 标题栏（房间与局内共用）。局内标题文字已删，这一栏只剩未读角标与半收起键。 */
+.chat-title { display: inline-flex; align-items: center; gap: 4px; min-width: 0; color: #8ee7c9;
+  font-size: 10px; font-weight: 700; letter-spacing: .08em; white-space: nowrap; }
+.chat-actions { display: inline-flex; align-items: center; gap: 4px; }
+.chat-unread, .chat-trigger-badge {
+  display: inline-grid; place-items: center; min-width: 14px; height: 14px; padding: 0 3px;
+  border-radius: 7px; background: #f97316; color: #1a0d05; font: 700 9px/1 var(--font-num, system-ui);
+}
+.chat-trigger-badge { position: absolute; right: -4px; top: -4px; }
+.chat-name { color: #c6d4cd; font-size: 11px; white-space: nowrap; }
+.chat-time { color: #7f8f88; font-size: 9px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ---- 局内（.gm 之下）：贴左下角落键那一行之上，向上展开 ---------------------------------------------- */
+.gm .chat-panel {
+  z-index: 2;
+  display: flex;
+  /* 面板是 position:fixed（相对视口），角落键却在按安全区缩进的 .gm__hud 里 —— 左右 / 底边都把安全区补回来，
+     刘海屏上聊天框才和角落键同一条竖线、同一个底。 */
+  left: calc(.24rem + var(--sa-l, 0px));
+  /* 底边 = 角落块的真实高度 + 一道缝（--gm-corner-h 由 chatBox.js 量 .gm__corner 写入，没有时退回一行键的 .56rem）。 */
+  --chat-bottom: calc(.24rem + var(--gm-corner-h, .56rem) + max(.1rem, 4px) + var(--sa-b, 0px));
+  bottom: calc(var(--chat-bottom) + var(--chat-kb, 0px));
+  width: min(max(3.4rem, 32px, calc(220px * var(--sp-ui, 1))), 34vw);
+  max-width: calc(100vw - .48rem);
+  height: auto;
+  /* 展开态空聊天时也不只剩一条输入行：至少留出约三行日志的高度。 */
+  min-height: min(max(1.7rem, 32px, calc(110px * var(--sp-ui, 1))), 42vh);
+  /* 手机软键盘弹起时整块被 --chat-kb 抬起，这里再封顶一次：顶边永远不进顶栏。 */
+  max-height: calc(100vh - var(--chat-bottom) - var(--chat-kb, 0px) - max(.3rem, 8px));
+  background: rgba(14, 18, 17, .8);
+  border-color: rgba(255, 255, 255, .12);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+/* 收起态：三条日志（3 × 18px + 上下 4px 内边距 = 62px；下面那条 54px 是给短屏留的余量），没有标题栏与发言框，
+   日志点穿到棋盘。 */
+.gm .chat-panel.is-collapsed { min-height: 0; }
+.gm .chat-panel.is-collapsed .chat-header-bar { display: none; }
+.gm .chat-panel.is-collapsed .chat-log { max-height: 54px; pointer-events: none; }
+/* 挑表情时整块让开（game.js: hidden=${emoteOpen}）；一条消息都还没有时不画空的窄框。 */
+.gm .chat-panel.is-hid { display: none; }
+.gm .chat-panel.is-empty { display: none; }
+.gm .chat-panel .chat-header-bar { flex: 0 0 22px; padding: 0 5px; border-bottom: 1px solid rgba(255, 255, 255, .1); }
+.gm .chat-panel .chat-title { font-size: 0; letter-spacing: 0; }
+.gm .chat-panel .chat-log { padding: 4px 6px; max-height: 96px; }
+.gm .chat-panel .chat-item {
+  display: flex; align-items: baseline; gap: 4px; height: 18px; line-height: 18px; margin: 0;
+  white-space: nowrap; overflow: hidden;
+}
+.gm .chat-panel .chat-seat { margin-right: 0; font-weight: 700; }
+.gm .chat-panel .chat-name { max-width: 28%; overflow: hidden; text-overflow: ellipsis; }
+.gm .chat-panel .chat-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gm .chat-panel .chat-input { height: 26px; font-size: 12px; }
+.gm .chat-panel .chat-send-btn { min-height: 26px; }
+.gm .chat-panel .chat-trigger-btn { width: auto; min-width: 30px; height: 24px; }
+
+/* 手机端（触屏 / 窄屏）单独定宽、定底：角落键的跨度只有 ~107px，聊天文字放不下，改成 61vw / 240px 上限；
+   底边按手机上放大后的 34px 键重算。这里只给 --chat-bottom，bottom 仍由上面那条
+   `calc(var(--chat-bottom) + var(--chat-kb))` 算 —— 软键盘抬起时同样生效。 */
+@media (max-width: 767px), (max-height: 600px) and (pointer: coarse), (max-height: 600px) and (any-pointer: coarse) {
+  .gm .chat-panel {
+    width: min(61vw, 240px);
+    --chat-bottom: calc(.24rem + var(--gm-corner-h, max(.56rem, 32px, calc(34px * var(--sp-ui, 1)))) + max(.1rem, 4px) + var(--sa-b, 0px));
+  }
+  .chat-input { font-size: max(16px, 1rem); }
+  .chat-send-btn { min-height: 32px; min-width: 32px; }
+  .chat-collapse-btn { min-height: 20px; min-width: 20px; }
+}
+@media (max-width: 420px) { .chat-panel { width: min(200px, calc(100vw - 24px)); } }
+/* 短屏手机：日志压矮一档，但收起态仍是**三条**（3 × 17px = 51px）。 */
+@media (orientation: landscape) and (max-height: 600px) and (any-pointer: coarse) {
+  .gm .chat-panel .chat-log { max-height: 85px; padding: 3px 5px; }
+  .gm .chat-panel.is-collapsed .chat-log { max-height: 51px; }
+  .gm .chat-panel .chat-item { height: 17px; line-height: 17px; gap: 3px; }
+  .gm .chat-panel .chat-time { display: none; } /* 窄屏优先留名字和正文 */
+  .chat-collapse-btn { position: relative; }
+  .chat-collapse-btn::before { content: ''; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
+  .chat-trigger-btn { position: relative; }
+  .chat-trigger-btn::before { content: ''; position: absolute; inset: -10px; }
+}

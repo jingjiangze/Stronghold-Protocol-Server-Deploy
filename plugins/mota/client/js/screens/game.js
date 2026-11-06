@@ -99,6 +99,7 @@ import { ChoiceOverlay, spMarks } from '../ui/choiceOverlay.js';
 import { EnemyDrawer } from '../ui/enemyDrawer.js';
 import { Ticker } from '../ui/ticker.js';
 import { EmoteWheel } from '../ui/emotes.js';
+import { ChatBox } from '../ui/chatBox.js';
 import { ConfrontOverlay, ConfrontClash } from '../ui/confrontOverlay.js';
 import { HexOverlay, normalizeHexOffer } from '../ui/hexOverlay.js';
 import { RelicOverlay, normalizeRelicOffer } from '../ui/relicOverlay.js';
@@ -131,7 +132,7 @@ import {
   terrainInfo, deviceInfo, deviceTipAt, noteDeviceUnits, deviceUnitsForEntry,
   countdownState, shopBlockReason, stageOverrides, effectiveStage, watchTarget, dropFailureReason,
   previewEnemyKey, prepCamera, prepCameraFor, deployFoldsShop, deployZoomStep, deployZoomRemember, prepDeployCamera, deployFieldOf, fieldTile, panelSide, panelSlots, bondPopupPlace, unitLoadout, deployedRecord,
-  mergeTarget, modeOffBonds, readyFundsPrompt, readyShopFold, ownerBandId, ownDiyRecord, ownStandIn, roundStartReplay,
+  mergeTarget, modeOffBonds, readyFundsPrompt, readyShopFold, ownerBandId, ownDiyRecord, ownStandIn, roundStartReplay, heldDraftPub,
 } from '../ui/gameLogic.js';
 import { toast } from '../ui/toasts.js';
 import { LoadoutButton } from './loadout.js';
@@ -165,6 +166,16 @@ if (battleRunner) {
   settingsStore.subscribe(applyCombatMetrics);
 }
 
+/**
+ * The pre-game's end inside the official BATTLE_CHECK (activity_table autoChessData.enterStepList: BATTLE_CHECK, 协议启动,
+ * time 3 → data/config.json timers.battleCheck 3): once the draft is over the draft screen stays DRAFT_HOLD_MS on
+ * 已选定策略 / 策略选择完成 · 正在进入模拟…, then 协议启动！ shows (ui/protocolBoot.js). Both inside the 3 s the server
+ * spends in BATTLE_CHECK, so 协议启动！ starts to leave as 回合开始 begins and the round-1 plate plays inside 回合开始.
+ * See public/js/screens/game.js DRAFT_HOLD_MS for the full note (this file is the mota overlay of that screen; the two
+ * hold the same number so a screen swap does not change the pacing).
+ */
+export const DRAFT_HOLD_MS = 700;
+
 /** Router for the in-match screens. */
 export function GameScreen() {
   const pub = useStore((s) => s.match.public);
@@ -175,6 +186,25 @@ export function GameScreen() {
   const gd = useGameData();
   // 协议启动！'s official sprites (ui/protocolBoot.js), fetched while the briefing and the band draft run
   useEffect(() => { if (gd.ready) preloadBootArt(); }, [gd.ready]);
+  // 已选定策略 (PR #643, the event's draft end, video 7:36–7:44): once the draft is over the screen stays DRAFT_HOLD_MS on
+  // 策略选择完成 · 正在进入模拟… with the pick, from the last draft snapshot (m.public.draft is gone after BAND_DRAFT),
+  // then 协议启动！ — both inside BATTLE_CHECK's official 3 s (see DRAFT_HOLD_MS). Decided while rendering, so the match
+  // screen mounts once; none with reduced motion or into a result.
+  const liveMode = pub ? phaseMode(pub.phase) : null;
+  const lastDraft = useRef(null);
+  const hold = useRef(null);                             // { until, pub } while the draft screen is held
+  const [, endHold] = useState(0);
+  if (liveMode === 'draft' && pub?.draft) { lastDraft.current = pub; hold.current = null; }
+  else if (lastDraft.current && pub) {
+    if (liveMode !== 'result' && !reducedMotion()) hold.current = { until: Date.now() + DRAFT_HOLD_MS, pub: heldDraftPub(lastDraft.current, pub) };
+    lastDraft.current = null;
+  }
+  const held = hold.current && hold.current.until > Date.now() && liveMode !== 'result' ? hold.current.pub : null;
+  useEffect(() => {
+    if (!held) return undefined;
+    const id = setTimeout(() => { hold.current = null; endHold((n) => n + 1); }, Math.max(0, hold.current.until - Date.now()));
+    return () => clearTimeout(id);
+  }, [held]);
   if (!pub || !gd.ready) {
     return html`<div class="screen gload">
       <${Spinner} size="lg" label=${pub ? 'LOADING DATA' : 'ENTERING SIMULATION'} />
@@ -185,7 +215,7 @@ export function GameScreen() {
   let body;
   if (hasResult || mode === 'result') body = html`<${ResultScreen} />`;
   else if (mode === 'briefing') body = html`<${BriefingScreen} />`;
-  else if (mode === 'draft') body = html`<${BandDraftScreen} />`;
+  else if (mode === 'draft' || held) body = html`<${BandDraftScreen} held=${held} />`;
   else body = html`<${MatchScreen} />`;
   return html`${body}
     ${(away || autoplay) && !hasResult && mode !== 'result' && !ended ? html`<${AwayOverlay} />` : null}
@@ -274,6 +304,7 @@ function MatchScreen() {
   const showMetrics = metricsSetting && !modRoom && !spectator;
   useEffect(() => { if (!showMetrics) setMetricsOpen(false); }, [showMetrics]);
   const [emoteOpen, setEmoteOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);       // 局内聊天面板 (ui/chatBox.js)
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exitOpen, setExitOpen] = useState(false);
   // 集成战略叠加面板（2026-11-04：节点 / 地图 / 藏品改成一页一开的官方风格面板，不再是三个常驻浮窗）。
@@ -1945,6 +1976,13 @@ function MatchScreen() {
 
       <${Ticker} />
 
+      ${/* 局内文字聊天 (room.chat): the fixed lower-left log of ui/chatBox.js. It is opened by the corner's
+            对话唤出 key (data-testid="hud-chat", the same toggle as 设置) — not by a bare Enter press; inside the
+            input Enter still sends and Esc closes. 收起态 = 约三条日志的窄框；展开 = 向上长出发言框。打开表情盘
+            挑表情时整块让开（hidden=${emoteOpen}），表情盘一关就回到原来的态 —— 两层不会叠在一起。
+            局内只显示这一份；房间页的浮动窗（plugins/room-chat roomChat.js）在局内隐藏，见那份文件的 sync()。 */ null}
+      <${ChatBox} active=${chatOpen} onToggle=${setChatOpen} showTrigger=${false} hidden=${emoteOpen} />
+
       <div class="ui-slot gm__ui-slot" data-ui-slot="hud.right" aria-label=${t('界面插件')} dangerouslySetInnerHTML=${{ __html: '' }}></div>
 
       <div class="gm__corner">
@@ -1973,6 +2011,11 @@ function MatchScreen() {
             setBondOpen(null);
           }}><${Icon} name="rogue" /></button>` : null}
         <button type="button" class="gm__gear" aria-label=${t('设置')} title=${t('设置')} onClick=${() => setSettingsOpen(true)}><${GIcon} name="gear" /></button>
+        ${/* 对话唤出：与其它角落键同一颗（触发方式一致，不再靠全局 Enter 凭空打开）。排在 设置 之后：
+              `document.querySelector('.gm__gear')` 是各 e2e 里「点设置」的老写法，首匹配必须仍是设置键。 */ null}
+        ${spectator ? null : html`<button type="button" class="gm__gear gm__chat" data-testid="hud-chat"
+          aria-label=${t('打开对话')} title=${t('打开对话')} aria-pressed=${chatOpen ? 'true' : 'false'}
+          aria-controls="match-chat-panel" onClick=${() => setChatOpen(!chatOpen)}><${Icon} name="chat" /></button>`}
         <button type="button" class="gm__gear gm__guide" aria-label=${t('玩法说明')} title=${t('玩法说明')} onClick=${() => openGuide(0)}><${Icon} name="book" /></button>
         <${FullscreenButton} class="gm__gear gm__fs" />
       </div>
