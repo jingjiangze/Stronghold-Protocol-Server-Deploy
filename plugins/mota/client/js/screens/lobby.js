@@ -25,7 +25,7 @@ import { useHubBackdrop, HubBackdrop, HubRadar, BackdropSettings, BackdropGlyph,
 import { TestMark } from '../ui/testConsole.js';
 import { ResumeMatchButton } from '../ui/resumeMatch.js';
 import { useEffect, useRef, useState } from '../../vendor/hooks.module.js';
-import { DIFFICULTIES, LEGACY_DIFFICULTIES, difficultiesFor, DIFFICULTY_NAMES, DIFFICULTY_COLORS, ROOM_CODE_LEN, MAX_SEATS, MAX_SPECTATORS, modeIdFor, ERR, ERR_TEXT } from '../../../shared/constants.js';
+import { DIFFICULTIES, LEGACY_DIFFICULTIES, DIFFICULTY_NAMES, DIFFICULTY_COLORS, ROOM_CODE_LEN, MAX_SEATS, MAX_SPECTATORS, modeIdFor, difficultyOptionsFor, ERR, ERR_TEXT } from '../../../shared/constants.js';
 import { RANDOM_MODE } from '../../../shared/randomMode.js';
 import { html, confirmDialog, Button, Icon, MicroLabel, Panel, TextField, PingPill, Tooltip, Spinner, DifficultyIcon } from '../ui/components.js';
 
@@ -134,8 +134,8 @@ const MODE_CARDS = [
   },
   {
     id: 'versus', name: N_('赏金 / 控怪'), badge: 'NEW', en: 'VERSUS', icon: 'sword',
-    desc: N_('2V2 攻防：一队投放怪物、一队布防作战，攻守按回合交换。赏金＝官方出怪为主，你只能替换其中一部分，靠自家怪被击杀拿赏金；控怪＝这一波出什么怪、走哪条路线、什么时候进场，全部由你决定。'),
-    points: [N_('固定 2V2（4 席）· 攻守轮换'), N_('赏金 / 控怪 两档 · 控怪可关掉攻守交换 · 事件期挑强化')],
+    desc: N_('2V2 攻防：一队投放怪物、一队布防作战。赏金＝官方出怪为主，你只能替换其中一部分，靠自家怪被击杀拿赏金，攻守每回合轮换；控怪＝这一波出什么怪、走哪条路线、什么时候进场，全部由你决定，阵营固定。'),
+    points: [N_('固定 2V2（4 席）'), N_('赏金 / 控怪 两档 · 赏金每回合轮换攻守 · 事件期挑强化')],
   },
   {
     id: 'xie', name: N_('协同共竞'), badge: 'NEW', en: 'JOINT OP', icon: 'dice',
@@ -170,11 +170,17 @@ export function lobbySimulationPreference() {
   return loadPref('lobby.mode', 'coop') === 'solo' ? 'solo' : 'coop';
 }
 
+/**
+ * The remembered difficulty, brought into the list the coming screen will actually show (2026-11-05: 肉鸽 keeps the
+ * 20 tiers, every other mode the four legacy names) — otherwise a saved `N8` (picked in 肉鸽) would leave the four-card
+ * screen with nothing selected. `FUNNY` is the first legacy card, so the first visit still lands on a selected card.
+ */
 function preferredDifficulty(simulation) {
   const key = simulation === 'firepower' ? 'lobby.firepowerDifficulty' : 'lobby.difficulty';
   const d = loadPref(key, 'FUNNY');
-  // 2026-11-03：N1–N20 只属于肉鸽；切回标准/同盟/对抗/协同共竞时把 N 档收敛成 FUNNY。
-  return difficultiesFor(simulation).includes(d) ? d : 'FUNNY';
+  const options = difficultyOptionsFor(simulation === 'rogue' ? 'rogue' : 'coop');
+  if (options.includes(d)) return d;
+  return options.includes('FUNNY') ? 'FUNNY' : options[0];
 }
 
 /** Keep the explanation tied to the shared balance configuration. */
@@ -459,8 +465,9 @@ function HubTile({ icon, label, en, onClick, children }) {
 
 /** Shared frame of the hub's two dialogs (the start sheet, 密钥加入). */
 /**
- * 娱乐模式（业主 2026-10-31「其他模式聚合为大厅里的一个按钮」）：把协同共竞 / 赏金 / 对战(控怪) / 肉鸽
- * 收进一个入口；弹窗占视口 80%，2×2 网格，选哪格就走对应的建房弹窗。
+ * 娱乐模式（业主 2026-10-31「其他模式聚合为大厅里的一个按钮」）：把协同共竞 / 赏金·控怪 / 肉鸽
+ * 收进一个入口；弹窗占视口 80%，一行三格，选哪格就走对应的建房弹窗。
+ * 2026-11-05 业主裁决：赏金与控怪合成「赏金 · 控怪」一格（细分档位在进入后的「选择模拟协议」页上选），四格变三格。
  */
 function FunSelect({ onClose, onPick, busy, lobbyStats = null, onJoinRoom = null, onSpectateRoom = null }) {
   const [leaving, leave] = useLeave(onClose);
@@ -473,10 +480,8 @@ function FunSelect({ onClose, onPick, busy, lobbyStats = null, onJoinRoom = null
   const cells = [
     { id: 'xie', name: t('协同共竞'), en: 'JOINT OP', icon: 'joint', acc: 'var(--gold)',
       desc: t('两人共竞：团队储备、三项商店升级、借贷、救济与救援。') },
-    { id: 'bounty', name: t('赏金'), en: 'BOUNTY', icon: 'bounty', acc: 'var(--ice)',
-      desc: t('2V2 攻防：官方出怪为主，你替换其中一部分，靠自家怪被击杀拿赏金；建房时可选倍速。') },
-    { id: 'confront', name: t('对战 · 控怪'), en: 'CONFRONT', icon: 'confront', acc: 'var(--orange)',
-      desc: t('出怪、路线、时机全部由你决定；守方遇到的怪约为官方的 1.5 倍。') },
+    { id: 'versus', name: t('赏金 · 控怪'), en: 'BOUNTY / CONFRONT', icon: 'bounty', acc: 'var(--ice)',
+      desc: t('2V2 攻防两档：赏金＝替换部分官方出怪、攻守每回合轮换；控怪＝出怪 / 路线 / 时机全可控、阵营固定。进入后再选档。') },
     { id: 'rogue', name: t('肉鸽模式'), en: 'ROGUELIKE', icon: 'rogue', acc: 'var(--violet)',
       desc: t('开局与每 2 回合各抽一次藏品三选一，外加随机词缀、随机事件与每回合换图。') },
   ];
@@ -589,8 +594,10 @@ export function ProtoCard({ roomMode, difficulty, selected, onSelect, matchmakin
 function ProtocolSelect({ card, roomMode, random, variant, difficulty, onDifficulty, onClose, matchmaking, brief, privateRoom, onPrivate,
   online, maint, busy, isSearching, onCreate, onQueue, purpose = 'create', onSearch, onCancel, mm, onBrowse, chained = false, modeVariant = null,
   testMode = false, asTest = false, onTest = null, versusTeam = 2, onVersusTeam = null,
-  versusRule = 'bounty', onVersusRule = null, versusAlt = true, onVersusAlt = null,
-  versusSpeed = 1, onVersusSpeed = null }) {
+  versusRule = 'bounty', onVersusRule = null,
+  versusSpeed = 1, onVersusSpeed = null, monsterMode = 'shared', onMonsterMode = null,
+  // 2026-11-05：肉鸽走 coop 家族建房（roomMode 仍是 'coop'），所以档位列表另给一个模式键：肉鸽 → 20 档，其余 → 四档。
+  difficultyMode = null }) {
   const [leaving, leave] = useLeave(onClose);
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape' && !document.querySelector('.modal, .guide')) leave(); };
@@ -654,32 +661,38 @@ function ProtocolSelect({ card, roomMode, random, variant, difficulty, onDifficu
             <div class="proto-dock__row" role="radiogroup" aria-label=${t('对抗规则')}>
               ${[
                 { key: 'bounty', code: 'B', acc: 'var(--gold-2)', name: t('赏金'), sub: t('替换部分官方出怪'),
-                  title: t('赏金：官方出怪为主，你只能替换其中一部分，靠自家怪被击杀拿赏金') },
+                  title: t('赏金：官方出怪为主，你只能替换其中一部分，靠自家怪被击杀拿赏金；攻守每回合轮换') },
                 { key: 'confront', code: 'C', acc: 'var(--orange)', name: t('控怪'), sub: t('出怪 · 路线 · 时机全可控'),
-                  title: t('控怪：这一波出什么怪、走哪条路线、什么时候进场，全部由你决定') },
-                { key: 'ai', code: 'AI', acc: 'var(--ice)', name: t('AI 对抗'), sub: t('你控怪 · AI 布防'), locked: false,
-                  title: t('AI 对抗：你操作怪物、AI 布防（1–20 人；你与队友坐 team0、AI 坐对面）') },
+                  title: t('控怪：这一波出什么怪、走哪条路线、什么时候进场，全部由你决定；阵营固定，不换边') },
               ].map((r) => html`<button key=${r.key} type="button" role="radio" aria-checked=${versusRule === r.key ? 'true' : 'false'}
                 class=${`vsopt${versusRule === r.key ? ' is-on' : ''}`} style=${`--acc:${r.acc}`}
-                disabled=${!!busy || !!r.locked} title=${r.title}
-                onClick=${() => !r.locked && onVersusRule && onVersusRule(r.key)}>
+                disabled=${!!busy} title=${r.title}
+                onClick=${() => onVersusRule && onVersusRule(r.key)}>
                 <span class="vsopt__code">${r.code}</span>
                 <span class="vsopt__text"><b>${r.name}</b><small>${r.sub}</small></span>
-                ${r.locked ? html`<span class="vsopt__lock">${t('待开放')}</span>` : null}
               </button>`)}
             </div>
             <div class="proto-dock__foot">
-              ${versusRule === 'confront' ? html`<label class="proto-versus__alt">
-                <input type="checkbox" checked=${versusAlt !== false} disabled=${!!busy}
-                  onChange=${(e) => onVersusAlt && onVersusAlt(e.currentTarget.checked)} />
-                <span>${t('每回合交换攻守')}</span></label>` : null}
-              ${versusRule === 'ai' ? html`<span class="proto-dock__hint" style="opacity:.75">${t('固定攻守：你们恒为攻方、AI 恒为守方（不换边）')}</span>` : null}
+              <span class="proto-dock__hint" style="opacity:.75">${versusRule === 'bounty' ? t('赏金档：攻守每回合轮换') : t('控怪档：固定阵营（不换边）')}</span>
               ${versusRule === 'bounty' ? html`<label class="proto-team" title=${t('出怪倍速：这一回合守方遇到的敌人数量的倍数（以当前赏金档为 1×）')}>
                 <span>${t('倍速')}</span>
                 <select value=${String(versusSpeed)} disabled=${!!busy}
                   onChange=${(e) => onVersusSpeed && onVersusSpeed(Number(e.currentTarget.value))}>
                   ${[1, 1.5, 2].map((m) => html`<option key=${m} value=${String(m)}>${t('{m}× 出怪', { m })}</option>`)}
                 </select></label>` : null}
+              ${/* 怪物形态（业主 2026-11-04 / 2026-11-06）：三档 —— 共有 / 单人怪物 / 单人掌握；怪物卡池在赏金 / 控怪两档都开着（confront.monsterShopOn） */ null}
+              <label class="proto-team" title=${t('怪物形态：共有出怪 = 同队攻方共用一个出怪池、一起出怪；单人怪物 = 每人一个池，只有每队第一位存活攻方持有投放权（其余攻方的商店不开）；单人掌握 = 资源仍是全队共用，但只有每队第一位存活攻方操作怪物，其余攻方只读')}>
+                <span>${t('怪物形态')}</span>
+                <select value=${monsterMode} disabled=${!!busy}
+                  onChange=${(e) => {
+                    // 三值归一化（2026-11-06）：master 是新档，别让它被旧的二值判断吞成 shared
+                    const v = e.currentTarget.value;
+                    onMonsterMode && onMonsterMode(v === 'solo' || v === 'master' ? v : 'shared');
+                  }}>
+                  <option value="shared">${t('共有出怪')}</option>
+                  <option value="solo">${t('单人怪物')}</option>
+                  <option value="master">${t('单人掌握')}</option>
+                </select></label>
             </div>
           </div>` : null}
         ${modeVariant === 'xie' ? html`<div class="proto-versus proto-versus--info">
@@ -688,7 +701,7 @@ function ProtocolSelect({ card, roomMode, random, variant, difficulty, onDifficu
       </section>
       <section class="proto-side">
         <div class="proto-list" role="radiogroup" aria-label=${t('模拟难度')}>
-          ${difficultiesFor(effectiveMode).map((d) => html`<${ProtoCard} key=${d} roomMode=${roomMode} difficulty=${d} selected=${difficulty === d} onSelect=${onDifficulty}
+          ${difficultyOptionsFor(difficultyMode || roomMode).map((d) => html`<${ProtoCard} key=${d} roomMode=${roomMode} difficulty=${d} selected=${difficulty === d} onSelect=${onDifficulty}
             matchmaking=${matchmaking} random=${random} variant=${variant} modeVariant=${cardModeVariant} />`)}
         </div>
         <div class="proto-foot">
@@ -939,12 +952,14 @@ export function LobbyScreen() {
   }, []);
   const [simulation, setSimulation] = useState(lobbySimulationPreference);
   // 对抗模式固定 2V2（4 席）：人数选择已按业主裁决移出本页，改在别处调（当前无可调入口）
-  // 对抗规则档（业主 2026-10-26）：赏金 = 线上那套（官方波次 + 替换份额），对抗 = 纯玩家出怪
+  // 规则档两档（业主 2026-11-04 定两档）：赏金 = 线上那套（官方波次 + 替换份额，攻守每回合轮换），控怪 = 纯玩家出怪、阵营固定；
+  // 攻守是否轮换由服务端强制，本页不再给开关。原第三档已撤（服务端收到未知档会回落成赏金）。
   const [versusRule, setVersusRule] = useState('bounty');
-  // 纯对抗里可以关掉「每回合交换攻守」（业主 2026-10-26）；赏金档恒交替。
-  const [versusAlt, setVersusAlt] = useState(true);
   // 赏金档倍速（业主 2026-10-31）：1 / 1.5 / 2，控怪档不吃这一项
   const [versusSpeed, setVersusSpeed] = useState(1);
+  // 怪物形态（业主 2026-11-04 / 2026-11-06）：'shared' 共有出怪（默认）/ 'solo' 单人怪物 / 'master' 单人掌握；
+  // 只有对抗房的 room.create 带这个字段
+  const [monsterMode, setMonsterMode] = useState('shared');
   const [difficulty, setDifficulty] = useState(() => preferredDifficulty(lobbySimulationPreference()));
   const [fpVariant, setFpVariant] = useState(firepowerVariantPreference);
   const roomMode = simulation === 'solo' ? 'solo' : simulation === 'versus' ? 'versus' : 'coop';
@@ -1063,8 +1078,12 @@ export function LobbyScreen() {
       ...(randomMode ? { variant } : {}), ...(simulation === 'xie' ? { variant: 'xie' } : {}),
       ...(simulation === 'coop' && rogueRules ? { variant: 'rogue' } : {}),
       ...(simulation === 'versus' ? { teamSize: 2, variant: versusRule,
-        versusAlt: versusRule === 'ai' ? false : (versusRule === 'confront' ? versusAlt !== false : true),
-        versusSpeed: versusRule === 'bounty' ? versusSpeed : 1 } : {}),
+        // 攻守是否轮换由服务端按档强制（赏金轮换 / 控怪固定），这里只把 wire 发干净，值本身不会被采信。
+        versusAlt: versusRule === 'bounty',
+        versusSpeed: versusRule === 'bounty' ? versusSpeed : 1,
+        // 怪物形态（业主 2026-11-04 / 2026-11-06）：服务端只认 'solo' / 'master'，其余回落 'shared'
+        // （server/lobby.js create；versus-room 的 matchOptions 同一口径）
+        monsterMode } : {}),
       ...(testMode && asTest ? { test: true } : {}),
     });
     // 随机地图默认关（2026-10-30）：不再在建房时强开；要换图请在房间里用「随机地图」开关。
@@ -1146,16 +1165,19 @@ export function LobbyScreen() {
     else { setSheetPurpose('create'); setSheetChained(false); setSheetOpen(true); }
   };
   const openSearch = () => { pickMode('coop'); setSheetChained(allyOpen); setAllyOpen(false); setSheetPurpose('search'); setSheetOpen(true); };
-  // 娱乐模式的四格 → 各自打开对应的建房流程
+  // 娱乐模式的三格 → 各自打开对应的建房流程（2026-11-05：赏金 / 控怪合成 versus 一格）
   const pickFun = (id) => {
     setFunOpen(false);
     if (id !== 'rogue') setRogueRules(false);
     if (id === 'xie') { pickMode('xie'); setSheetPurpose('create'); setSheetChained(false); setSheetOpen(true); return; }
     // 肉鸽（2026-11-02 业主）：点了直接到难度选择，不再先过一遍「选择同盟方式」面板
     if (id === 'rogue') { pickMode('coop'); setRogueRules(true); pickDifficulty('N8'); setSheetPurpose('create'); setSheetChained(false); setSheetOpen(true); return; }
-    pickMode('versus');
-    setVersusRule(id === 'confront' ? 'confront' : 'bounty');
-    setSheetPurpose('create'); setSheetChained(false); setSheetOpen(true);
+    // 赏金 · 控怪（2026-11-05）：进对抗房建房页，档位重置成默认的赏金，细分档位在协议页的那对 radio 上选。
+    // 不发 variant —— wire 上的 variant 由 versusRule 决定（见 create()）。
+    if (id === 'versus') {
+      pickMode('versus'); setVersusRule('bounty');
+      setSheetPurpose('create'); setSheetChained(false); setSheetOpen(true); return;
+    }
   };
   const modeCard = MODE_CARDS.find((c) => c.id === simulation) || MODE_CARDS[0];
 
@@ -1234,8 +1256,10 @@ export function LobbyScreen() {
       brief=${randomMode ? html`<${FirepowerBrief} variant=${fpVariant} onVariant=${pickVariant} />` : null}
       privateRoom=${privateRoom} onPrivate=${setPrivateRoom} online=${online} maint=${maint} busy=${busy} isSearching=${isSearching}
       testMode=${testMode} asTest=${asTest} onTest=${setAsTest}
-      versusRule=${versusRule} onVersusRule=${setVersusRule} versusAlt=${versusAlt} onVersusAlt=${setVersusAlt}
+      versusRule=${versusRule} onVersusRule=${setVersusRule}
       versusSpeed=${versusSpeed} onVersusSpeed=${setVersusSpeed}
+      monsterMode=${monsterMode} onMonsterMode=${setMonsterMode}
+      difficultyMode=${rogueRules ? 'rogue' : roomMode}
       onCreate=${create} onQueue=${async () => { await queueMatch(); setSheetOpen(false); }}
       purpose=${sheetPurpose} onSearch=${queueMatch} onCancel=${cancelMatch} mm=${mm} onBrowse=${() => setModalOpen(true)} chained=${sheetChained} />` : null}
 

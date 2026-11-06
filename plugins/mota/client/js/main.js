@@ -297,6 +297,9 @@ function wireNet() {
   });
   net.on('m.public', (msg) => { matchAt = Date.now(); store.patch('match', { public: payload(msg) }); maybeFinishRestore(); });
   net.on('m.private', (msg) => { matchAt = Date.now(); store.patch('match', { private: payload(msg) }); });
+  // 怪物卡池（2026-11-03）：攻方怪物商店的私有帧 —— 服务端每次成功买卡 / 刷新 / 冻结推一帧新的（公共帧刻意不带商店，
+  // 见 server/match/monsterShop.js）。客户端只读这一帧，不本地维护 slots / 草稿。
+  net.on('m.monsterShop', (msg) => { store.patch('match', { monsterShop: payload(msg) }); });
   net.on('m.layer', (msg) => {
     const s = store.get();
     if (selectRoute(s) === 'game' && msg.playerId === s.me?.playerId) audio.layerGain(msg.bondId, msg.add);

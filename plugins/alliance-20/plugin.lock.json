@@ -9,12 +9,12 @@
       "bytes": 132294
     },
     "client/css/screens/lobby.css": {
-      "sha256": "07f3e8c814c2f25bb172b89aeced712275d2d0639b317c5930920d173389bab4",
-      "bytes": 372753
+      "sha256": "cb492033dffdd0b27f8cc61e28fd72cf7282739f7fea84bdcb2677e9fc433990",
+      "bytes": 373302
     },
     "client/js/screens/room.js": {
-      "sha256": "be438a8d92401ab66fd2d1e30860d39c360368506894548e8329ade84f7f1d0a",
-      "bytes": 70040
+      "sha256": "f3a0a59895049081780135a090a1558de577e4f7c7d748e14b4d663278abe05b",
+      "bytes": 70050
     },
     "client/js/ui/teamPanel.js": {
       "sha256": "cf1ed682c4c7084395bc5955640d449f8bc48983e2659f24b77ef144ac698ab7",

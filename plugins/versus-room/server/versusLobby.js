@@ -24,10 +24,10 @@ export function setup(api) {
     if (room && room.mode === 'versus' && !validTeam(room.teamSize)) room.teamSize = 2;
   });
 
-  // 规则档（业主 2026-10-26）：「赏金」= 当前线上那套（官方波次 + 替换份额）；「对抗」= 完全由玩家控制出怪。
-  // 「AI 对抗」（2026-11-01 立项，业主「AI 对抗也做」）：你控怪、AI 布防 —— 与赏金档同一套数值，固定攻守（不换边）。
+  // 规则档（业主 2026-10-26 / 2026-11-04 定两档）：「赏金」= 当前线上那套（官方波次 + 替换份额，每回合轮换攻守）；
+  // 「对抗」= 完全由玩家控制出怪，攻守固定（不换边）。第三档「AI 对抗」已撤（它就是「对抗」+ AI 补席，由 beforeStart 补满）。
   // 走 room.variant（客户端 room.create 带过来），不进 modeId —— 避免动 data/config.json 的模式表。
-  const RULES = new Set(['bounty', 'confront', 'ai']);
+  const RULES = new Set(['bounty', 'confront']);
   const ruleOf = (room) => (RULES.has(room && room.variant) ? room.variant : 'bounty');
   api.matchOptions((room) => {
     if (!room || room.mode !== 'versus') return null;
@@ -35,10 +35,14 @@ export function setup(api) {
     // 不走 modeId 前缀：实测 mode_confront_* 会让 GameData 找不到该模式，波次价值塌成 0。
     const rule = ruleOf(room);
     return { teamSize: teamSizeOf(room), versusRule: rule,
-      // AI 对抗强制固定攻守（服务端兜底，不信客户端）：真人队恒为攻方、AI 队恒为守方
-      versusAlt: rule === 'ai' ? false : room.versusAlt !== false,
-      // 赏金档倍速（业主 2026-10-31）：1 / 1.5 / 2，控怪档不吃这一项（那边是 1.5× 官方固定口径）。
-      versusSpeed: room.versusSpeed === 1.5 || room.versusSpeed === 2 ? room.versusSpeed : 1 };
+      // 赏金档强制每回合轮换攻守；对抗档强制固定（服务端兜底，不信客户端传来的 versusAlt）。
+      versusAlt: rule === 'bounty',
+      // 赏金档倍速（业主 2026-10-31）：1 / 1.5 / 2，只在赏金档透传；对抗档恒 1。
+      versusSpeed: rule === 'bounty' && (room.versusSpeed === 1.5 || room.versusSpeed === 2) ? room.versusSpeed : 1,
+      // 怪物形态（业主 2026-11-04 / 2026-11-06）：「共有出怪」= 'shared'（默认）/「单人怪物」= 'solo' /
+      // 「单人掌握」= 'master'（资源仍是队级，只有每队第一位存活攻方操作怪物）。房间没声明就按 shared，
+      // 与 confront.js 的 monsterMode 判定同口径；经 MatchProxy 的 wireOptions 白名单下发给子进程。
+      monsterMode: room.monsterMode === 'solo' || room.monsterMode === 'master' ? room.monsterMode : 'shared' };
   });
 
   api.beforeStart((room, session, lobby) => {
@@ -49,14 +53,7 @@ export function setup(api) {
     if (room.seats.slice(want).some(Boolean)) {
       return { error: 'BAD_MSG', detail: `seats beyond the team size are taken (2V2 keeps 4, 4V4 keeps 8)` };
     }
-    // AI 对抗：分边只按座位号，freeSeat 拦不住真人坐进 team1 —— 开局前把话说明白（真空了就补 AI）
-    if (ruleOf(room) === 'ai') {
-      const team = teamSizeOf(room);
-      for (let i = team; i < want; i++) {
-        const s = room.seats[i];
-        if (s && !s.isBot) return { error: 'BAD_MSG', detail: 'AI Versus: the opponent team (team1) must be AI — humans sit on team0' };
-      }
-    }
+    // AI 席按分边人数补满（对抗档的对手队本来就是 AI，由这里补齐）
     for (let i = 0; i < want; i++) {
       if (room.seats[i]) continue;
       const added = lobby.addBot(session);

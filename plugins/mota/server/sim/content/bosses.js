@@ -527,6 +527,9 @@ function kitBlade(ab, e, b, tpl) {
     const n = b2.spawnEnemy(e2.defId, {
       route: origin || { motion: 'FLY', start: home, end: home, steps: [{ t: 'wait', s: 99999 }] }, pos: origin ? undefined : home,
       tag: e2.tag, countInTotal: false, mods: e2.mods, ownerPlayerId: e2.ownerId,
+      // 对抗投放归属（2026-11-06）：变身 / 重召的 copy 继承原单位的投放席位，否则投放 boss 的第二形态
+      // 漏过 / 被击杀都记不到投放者头上（settle 只认 confrontSeat）
+      confrontSeat: Number.isInteger(e2.confrontSeat) ? e2.confrontSeat : null,
     });
     if (n) { n.hp = Math.min(n.s.maxHp, e2.hp); b2.fx('blink', { x: n.x, y: n.y, id: n.id, fx: e2.x, fy: e2.y }); }
     b2.kill(e2, null);

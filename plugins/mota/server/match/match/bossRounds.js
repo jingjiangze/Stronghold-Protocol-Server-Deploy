@@ -156,6 +156,15 @@ export class MatchBoss {
     const alive = this.alivePlayers();
     this.teamLp = alive.reduce((s, p) => s + Math.max(0, p.lp), 0);
     for (const ps of alive) ps.lpAtFinal = Math.max(0, ps.lp);
+    // 对抗模式：最终攻势共用 boss 池，但两队血池必须继续可读 —— 否则 teamLps 从 R13 起冻结，
+    // 顶栏两队血条再也不动。这里按 lpAtFinal 把合并池拆回两队，之后 _syncTeamLp 每次回写都同步刷新。
+    if (this.isVersus && this.teamLps) {
+      for (const t of this.matchTeamIds()) {
+        let hp = 0;
+        for (const ps of this.order) if (ps.lpAtFinal != null && this.teamIdOf(ps) === t) hp += Math.max(0, ps.lpAtFinal);
+        this.teamLps.set(t, hp);
+      }
+    }
   }
 
   _startFinalClient(hidden) {
@@ -499,6 +508,12 @@ export class MatchBoss {
       left--;
     }
     for (const x of rows) if (x.p.lp !== x.n) { x.p.lp = x.n; x.p.dirty(); }
+    // 对抗模式：合并池的每次回写同步刷新两队池（按 rows 的落点归属），让 m.public.teamLps 保持活着。
+    if (this.isVersus && this.teamLps) {
+      const next = new Map(this.matchTeamIds().map((t) => [t, 0]));
+      for (const x of rows) { const t = this.teamIdOf(x.p); next.set(t, (next.get(t) ?? 0) + x.n); }
+      for (const [t, v] of next) this.teamLps.set(t, v);
+    }
   }
 
   /**

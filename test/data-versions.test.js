@@ -469,7 +469,9 @@ test('HTTP (M1, DESIGN §35.23): an enabled version\'s data is served (immutable
     const vanilla = await vr.json();
     assert.equal(Object.hasOwn(vanilla, 'version'), false);
     assert.equal(Object.hasOwn(vanilla, 'bounds'), false);
-    assert.ok(Object.values(vanilla.data).every((d) => /^\/data\/[a-z]+\.json\?v=[0-9a-f]{8}$/.test(d.url)));
+    // 2026-11-05：文件名可为 data/monster-factions.json — contentIndexOf 用 encodeURIComponent(f.file) 拼 URL，
+    // 连字符是未被转义的 unreserved 字符，故字符类放宽到 [a-z0-9-]（旧的 [a-z]+ 漏掉带连字符的表）。
+    assert.ok(Object.values(vanilla.data).every((d) => /^\/data\/[a-z0-9-]+\.json\?v=[0-9a-f]{8}$/.test(d.url)));
     assert.deepEqual(vanilla, srv.content.index);
     assert.equal((await get(`/cs/${srv.versions.csOf('act1autochess').slice(0, 16)}/data/chess.json`)).status, 404);
     // /healthz names them and their match hosts

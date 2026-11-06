@@ -231,7 +231,7 @@
 
 import { aiTakeover, aiTakeoverDirect, resetAiTakeover, reconcileAiTakeover, maybeRandomAiTakeover } from './aiTakeover.js';
 import { randomBytes, randomInt } from 'node:crypto';
-import { DIFFICULTIES, LEGACY_DIFFICULTIES, TRAINING_DIFFICULTY, difficultyRank, difficultiesFor, ERR, MAX_SEATS, MAX_SPECTATORS, ROOM_CODE_LEN, modeIdFor } from '../shared/constants.js';
+import { DIFFICULTIES, LEGACY_DIFFICULTIES, TRAINING_DIFFICULTY, difficultyRank, difficultiesFor, difficultyOptionsFor, ERR, MAX_SEATS, MAX_SPECTATORS, ROOM_CODE_LEN, modeIdFor } from '../shared/constants.js';
 import { getData } from './data.js';
 import { checkLoadout, checkLoadoutOps, cultivationCharIds, checkNotOwned, checkDiyPicks, charPotentialChanges, checkSkinSelection, operatorCharIds } from '../shared/protocol.js';
 import { contractsValidFor, resolvePicked } from '../shared/contracts.js';
@@ -1027,7 +1027,7 @@ export class Lobby {
   // room.* handlers
   // ---------------------------------------------------------------------------------------------------
 
-  create(session, { mode, difficulty: asked, test, version: askedVersion, soloUnlimited, teamSize, variant, versusAlt, versusSpeed } = {}) {
+  create(session, { mode, difficulty: asked, test, version: askedVersion, soloUnlimited, teamSize, variant, versusAlt, versusSpeed, monsterMode } = {}) {
     // A test room exists only when the process switch allowed it. The check runs before the room is built.
     if (test === true && this.testEnabled !== true) return fail(ERR.TEST_DISABLED);
     // the official version (header "Official versions"): left out, the server's default
@@ -1110,6 +1110,10 @@ export class Lobby {
     if (mode === 'versus') room.versusAlt = versusAlt !== false;
     // 对抗「倍速」（业主 2026-10-31：赏金档的怪量让玩家自己调）：只认 1 / 1.5 / 2，其它一律回 1。
     if (mode === 'versus') room.versusSpeed = versusSpeed === 1.5 || versusSpeed === 2 ? versusSpeed : 1;
+    // 对抗「怪物形态」（业主 2026-11-04 / 2026-11-06）：'shared' 共有出怪（默认，同队攻方共用一个池）/
+    // 'solo' 单人怪物（池与资金按人，每队第一位存活攻方持有投放权）/ 'master' 单人掌握（资源仍是队级，只有每队
+    // 第一位存活攻方操作怪物，其余攻方只读）。与 versusLobby.js 的 matchOptions 同口径：别的值（含缺省）一律回 'shared'。
+    if (mode === 'versus') room.monsterMode = monsterMode === 'solo' || monsterMode === 'master' ? monsterMode : 'shared';
     // 「不限时」 only on a solo room of a version whose solo is timed (header). Anywhere else the key is ignored, so a
     // stray true cannot change a default or co-op create.
     if (mode === 'solo' && soloUnlimited === true && this.versionSoloTimed(version)) room.soloUnlimited = true;
@@ -1688,7 +1692,8 @@ export class Lobby {
   }
 
   /**
-   * The difficulties a version offers a room mode (DIFFICULTIES for 第二期下半 / a server without versions).
+   * The difficulties a version offers a room mode (difficultyOptionsFor(mode) for 第二期下半 / a server without
+   * versions: the four normal ones, or the 20 tiers in a 肉鸽 room).
    * @param {string} v @param {string} mode @returns {readonly string[]}
    */
   /** lobby 级插件面（server/plugins/lobbyModules.js）：null 表示本进程没有插件声明 code.lobby。 */
@@ -1698,11 +1703,13 @@ export class Lobby {
   }
 
   offered(v, mode) {
-    // 2026-11-03 业主：N1–N20 只给肉鸽；标准/同盟/对抗/协同共竞仍用旧 4 档。
-    if (!this.versions || v === DEFAULT_VERSION) return difficultiesFor(mode);
+    // 插件房模式（versus / rogue）沿用 coop 的难度表：玩法本体在插件里，房间选项仍是同一套难度。
+    const family = mode === 'versus' || mode === 'rogue' ? 'coop' : mode;
+    // 2026-11-05 业主裁决：默认版本除肉鸽外只向界面提供四个正常难度（客户端选择器同一份表：difficultyOptionsFor），
+    // 肉鸽仍给 20 档。DIFFICULTIES 本体不动 —— fallbackDifficulty / hasModeOfVersion 仍要能放行旧档与 N 档。
+    if (!this.versions || v === DEFAULT_VERSION) return difficultyOptionsFor(mode);
     // 肉鸽是默认版本专属玩法（官方版本的数据里没有 mode_rogue_*）⇒ 非默认版本没有肉鸽房。
     if (mode === 'rogue') return [];
-    const family = mode === 'versus' ? 'coop' : mode;
     return this.versions.offered(v, /** @type {'solo' | 'coop'} */ (family));
   }
 

@@ -99,6 +99,17 @@ export const DIFFICULTY_NAMES = {
 };
 export const DIFFICULTY_COLORS = { ...LEGACY_COLORS, ...TIER_DIFFICULTY_COLORS };
 
+/**
+ * 2026-11-05 业主裁决：除肉鸽外，难度一律走「四个正常难度」（标准 / 险境 / 绝境 / 终极模拟）。
+ * 肉鸽保留 20 档（它的关卡与名称是按 N 档铺的）。
+ * 注意：DIFFICULTIES 本身不动 —— 那是数据侧 20 档的完整清单，服务端校验与版本回退仍要用它。
+ * @param {string} roomMode 房间模式（'solo' | 'coop' | 'versus' | 'rogue' | 'xie' …）
+ * @returns {readonly string[]}
+ */
+export function difficultyOptionsFor(roomMode) {
+  return roomMode === 'rogue' ? DIFFICULTIES : LEGACY_DIFFICULTIES;
+}
+
 // 救援（促融共竞 / DESIGN §29）: LP 归零不再当场淘汰。结算期开一个窗口，**其余全体存活队友同意**后，从共享池
 // 按人头各扣 REVIVAL_COST_PER 点（第 2 次起每人 +REVIVAL_COST_STEP，依次叠加）把目标救回 1 点 LP。
 // 窗口只在结算期、且队伍还没输（teamLp 仍为 null）时开放。

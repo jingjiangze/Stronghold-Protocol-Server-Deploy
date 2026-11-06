@@ -11,6 +11,7 @@ import { syntheticResult } from '../fields.js';
 import { FLOW_TICKER_PRIORITY, OK, fail } from './common.js';
 import { msg } from '../../../shared/i18n.js';
 import { ruleOption } from '../../../shared/plugins/rules.js';
+import { monsterShopFrame } from '../monsterShop.js';
 
 const GAME_TYPES = new Set(Object.keys(C2S).filter((t) => Object.hasOwn(C2S, t) && (t.startsWith('g.') || t.startsWith('b.'))));
 
@@ -304,6 +305,14 @@ export class MatchPlatform {
       if (!ps.spectator) {
         ps._lastPriv = null;
         this._sendPrivate(ps, true);
+        // 重连补帧（2026-11-04 第二轮复审修复 4）：怪物商店是**私有**态（public / private 都不带），
+        // 不在这里补一发，PREP 中途掉线回来的人就收不到 `m.monsterShop`，客户端 `monsterShopOpen` 变 false、
+        // 投放 UI 直接消失。只在攻守回合、商店开着、且这个席位真的有商店（攻方且已开店）时补。
+        if (this.monsterShopOn && ps.monsterShop
+          && typeof this.isRoleRound === 'function' && this.isRoleRound()
+          && typeof this.isAttacker === 'function' && this.isAttacker(ps)) {
+          try { this.sendTo(playerId, monsterShopFrame(this, ps)); } catch (e) { this.reportError('resync monster shop', e); }
+        }
       }
       if (this.clientCombat) this._resendBattle(ps);
       else if (!this.fields.length && this._follows(ps)) this._followScout(ps, { keep: true });

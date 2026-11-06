@@ -152,7 +152,8 @@ test('official tables pass the systematic bound; a 1e9 blackboard or loop field 
   assert.equal(officialBbMax('times'), 12);
   assert.equal(officialBbMax('attack@times'), 5);
   assert.equal(officialBbMax('count'), 20);
-  assert.equal(officialFieldMax('enemy.sp.maxSp'), 55);
+  // 2026-11-05：怪物表并入肉鸽/剧情怪后，官方 enemy.sp.maxSp 上限由 55（enemy_1535_wlfmster）升到 300（enemy_2092_skzamy）。
+  assert.equal(officialFieldMax('enemy.sp.maxSp'), 300);
   assert.equal(dataBound(12), 120);
   assert.equal(dataBound(null), 64);
   const plain = validateData(base);

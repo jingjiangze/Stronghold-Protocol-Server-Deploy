@@ -4671,10 +4671,11 @@ button.ally-card:disabled { filter: grayscale(.7) brightness(.7); cursor: defaul
 /* ---- 娱乐模式弹窗（2026-11-01：与大厅入口/难度卡同一设计语言 —— 暗底细线 + 括号角 + 令牌色） ------- */
 .fun-modal { width: min(9.2rem, 94vw); height: auto; max-height: 86vh; }
 .fun-modal .modal__head { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: .14rem; padding-right: .56rem; }
-.fun-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .14rem; padding: .14rem .3rem .22rem; overflow: auto; }
+/* 2026-11-05 业主裁决：赏金 / 控怪合成一格，四格改一行三格（窄屏仍单列）。 */
+.fun-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .12rem; padding: .14rem .3rem .22rem; overflow: auto; }
 .fun-card {
   --acc: var(--mint-400);
-  position: relative; display: flex; flex-direction: column; gap: .07rem; min-height: 1.42rem;
+  position: relative; display: flex; flex-direction: column; gap: .07rem; min-height: 1.42rem; min-width: 0;
   padding: .15rem .18rem .13rem; overflow: hidden; text-align: left; cursor: pointer; color: var(--text-hi); font: inherit;
   background: linear-gradient(160deg, rgba(30, 46, 42, .94), rgba(9, 15, 14, .96));
   border: 1px solid var(--line-2);
@@ -4688,12 +4689,18 @@ button.ally-card:disabled { filter: grayscale(.7) brightness(.7); cursor: defaul
 }
 .fun-card:disabled { opacity: .5; cursor: default; }
 .fun-card__en { font: 700 .11rem/1 ui-monospace, Consolas, monospace; letter-spacing: .22em; color: var(--acc); }
-.fun-card__name { font-size: .28rem; font-weight: 900; letter-spacing: .06em; white-space: nowrap; }
-.fun-card__desc { color: var(--text-dim); font-size: .14rem; line-height: 1.65; }
+/* 三列后卡面变窄：「赏金 · 控怪」允许折行，描述限 3 行（单列的窄屏解除限制，免得把话截掉）。 */
+.fun-card__name { font-size: .26rem; font-weight: 900; letter-spacing: .06em; line-height: 1.15; white-space: normal; overflow-wrap: anywhere; }
+.fun-card__desc { color: var(--text-dim); font-size: .14rem; line-height: 1.65;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .fun-card__corner { position: absolute; right: 0; bottom: 0; width: .26rem; height: .26rem; background: linear-gradient(135deg, transparent 50%, var(--acc) 50%); opacity: .75; }
 .fun-rooms { padding: 0 .3rem .22rem; display: flex; flex-wrap: wrap; gap: .4rem .4rem; align-items: center; }
 .fun-rooms { gap: .4rem; }
-@media (max-width: 760px) { .fun-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 760px) {
+  .fun-grid { grid-template-columns: minmax(0, 1fr); }
+  .fun-card__name { font-size: .28rem; white-space: nowrap; }
+  .fun-card__desc { display: block; -webkit-line-clamp: unset; overflow: visible; }
+}
 
 /* ==========================================================================================
    选择模拟协议 · 版式（2026-11-01 第四稿：业主「左侧做成和右侧一样的卡片，盖住地图」）

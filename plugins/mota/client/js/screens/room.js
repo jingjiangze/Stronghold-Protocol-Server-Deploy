@@ -26,7 +26,7 @@ import { enabled as federationEnabled, currentNode } from '../federation.js';
 // Texts go through t() (docs/I18N.md).
 
 import { useEffect, useMemo, useRef, useState } from '../../vendor/hooks.module.js';
-import { DIFFICULTIES, DIFFICULTY_NAMES, DIFFICULTY_COLORS, MIN_SEATS, MAX_SPECTATORS } from '../../../shared/constants.js';
+import { difficultyOptionsFor, DIFFICULTY_NAMES, DIFFICULTY_COLORS, MIN_SEATS, MAX_SPECTATORS } from '../../../shared/constants.js';
 // seat counts through the namespace: the live constants (before the 10-seat package) have MAX_SEATS 4 and no DEFAULT_SEATS
 import * as SEAT_CONST from '../../../shared/constants.js';
 import { RANDOM_MODE, RANDOM_MODE_NAME } from '../../../shared/randomMode.js';
@@ -395,7 +395,7 @@ function RoomProtocol({ room, variant, onClose, onPick, busy, leaving = false })
     <section class="rs-proto__side">
       <h2 class="rs-proto__title">${t('选择模拟协议')}</h2>
       <div class="proto-list rs-proto__list" role="radiogroup" aria-label=${t('模拟难度')}>
-        ${DIFFICULTIES.map((d) => html`<${ProtoCard} key=${d} roomMode=${room.mode} difficulty=${d} selected=${pick === d} onSelect=${setPick}
+        ${difficultyOptionsFor(room.mode).map((d) => html`<${ProtoCard} key=${d} roomMode=${room.mode} difficulty=${d} selected=${pick === d} onSelect=${setPick}
           random=${room.random === true} variant=${variant} />`)}
       </div>
       <button type="button" class="proto-start rs-proto__ok" disabled=${!!busy} onClick=${() => (pick === room.difficulty ? onClose() : onPick(pick))}>

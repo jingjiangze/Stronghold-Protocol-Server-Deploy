@@ -414,13 +414,22 @@ const playerInput = (pid, seat, units, { side = 'L', colOffset = 0, bonds = {}, 
 const cardRef = (effectId, n = 1) => ({ id: `choice:${effectId}#${n}`, key: `choice:${effectId}`, source: 'choice', params: { prepOk: true }, data: { effectId }, counter: null });
 
 /** Extra spawns: enemy kinds outside the round template, every other one as a kill bounty (waves.js bountySpawns). */
-function extraSpawns(gd, routes, keys, round, pid, t0 = 8, step = 5) {
+function extraSpawns(gd, routes, keys, round, pid, t0 = 8, step = 5, limit = null) {
   const scale = gd.enemyScale(round);
+  // 2026-11-05：extra 的排程时间必须落在场景 timeLimit 之内。旧实现固定 t0=8/step=5，与 timeLimit 无关，
+  // 怪物表变大后第 17 只起排到 90s 时限之后，被 _timeout 记成 unspawned（= 这些怪在本场景从未出场，覆盖是假的）。
+  const n = keys.length;
+  let st = step;
+  if (Number.isFinite(limit) && n > 1) {
+    const room = Math.max(0, limit - t0 - 1);      // 留 1s 余量，保证最后一只 < limit
+    st = Math.min(step, Math.max(0.1, room / (n - 1)));
+  }
   return keys.map((key, i) => {
     const fly = isFlyKey(gd, key);
     let routeIndex = routeByMotion(routes, fly);
     if (!(routeIndex >= 0)) routeIndex = 0;
-    const s = { time: t0 + i * step, enemyKey: key, routeIndex, count: 1, interval: 0, mods: { ...roundMods(scale), slot: fly ? 'NF' : 'N' }, ownerPlayerId: pid };
+    const time = st === step ? t0 + i * step : Math.round((t0 + i * st) * 1000) / 1000;
+    const s = { time, enemyKey: key, routeIndex, count: 1, interval: 0, mods: { ...roundMods(scale), slot: fly ? 'NF' : 'N' }, ownerPlayerId: pid };
     if (i % 2 === 0) { s.tag = 'bounty'; s.bounty = { coins: 2, ownerPlayerId: pid }; s.mods.bountyCoins = 2; }
     return s;
   });
@@ -494,7 +503,7 @@ export function rosterScenarios() {
   });
   for (const sc of scenarios) {
     if (!sc._extra) continue;
-    sc.spawns = sc.spawns.concat(extraSpawns(gdFor(sc.modeId), sc.routes, sc._extra, sc.round, 'p1'));
+    sc.spawns = sc.spawns.concat(extraSpawns(gdFor(sc.modeId), sc.routes, sc._extra, sc.round, 'p1', 8, 5, sc.timeLimit));
     delete sc._extra;
   }
   return scenarios;

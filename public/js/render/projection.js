@@ -456,7 +456,8 @@ export function clearHud(cam, hud, keep, viewport) {
 const sameRect = (a, b) => !!a && !!b && a.r0 === b.r0 && a.r1 === b.r1 && a.c0 === b.c0 && a.c1 === b.c1;
 
 /**
- * Preset camera for a field kind: 'prep' | 'normal' | 'unite' | 'boss' ('hidden') | 'bossPrep' | 'pen'.
+ * Preset camera for a field kind: 'prep' | 'normal' | 'unite' | 'boss' ('hidden') | 'bossPrep' | 'pen'
+ * (see CAMERA_PRESETS).
  * Official framing (configBlackBoard params, `opts.config` = stage.config overrides the defaults) unless the
  * viewport is narrower than 4:3 (portrait), `opts.fit` is set, or `opts.rect` is a custom rect — then the rect is
  * fitted into the padded viewport (`fitCamera`). `opts.side` 'L'|'R' picks the side's param (right boss half);
