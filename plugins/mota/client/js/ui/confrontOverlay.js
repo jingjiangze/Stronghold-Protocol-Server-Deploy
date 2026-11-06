@@ -22,6 +22,7 @@ import { FOE_NAMES, foeEffect, eliteEffect, eventFoeCard } from './eventFoe.js';
 // 撤回一次投放（`g.monsterDrop`）：与投放同一条通道（act 统一处理错误提示）。
 import { act } from './gameActions.js';
 import { t } from '../../../shared/i18n.js';
+import { rosterHiddenFor } from '../../../shared/constants.js';
 
 const cx = (...p) => p.flat().filter(Boolean).join(' ');
 /** Bounty rows show every placed monster up to this many; the rest collapse into a +N chip. */
@@ -221,6 +222,10 @@ export function ConfrontOverlay({ pub, busy = false, onTarget }) {
   // announced list is shown, as a corner card (ui/rosterPanel.js) that does not intercept the battlefield's clicks.
   if (roster) {
     if (conf.roster && conf.roster.coop) return coopRosterPanel(gd, pub, conf, players);
+    // 2026-11-06 业主：「投放方不显示投放名单，仅对面显示」。攻方这一回合的名单他们自己在 MonsterDropFloat 里看得见
+    // （已投 N 只 + 逐条撤回），不需要这块公示；守方才看。身份读 `pub.attackingTeam`（views.js 平铺下发，非攻守回合
+    // 是 null ⇒ 照常渲染，行为与改造前一致）。
+    if (rosterHiddenFor(pub, myTeam)) return null;
     const until = Number(conf.roster && conf.roster.until) || Number(pub && pub.deadline) || 0;
     return html`<${RosterPanel} title=${t('投放名单')} micro=${'SORTIE LIST // ' + t('投放名单')} tone="gold"
       className="rospov--conf" testid="confront-roster" rows=${clashRows(gd, pub, conf, myTeam)} until=${until}
@@ -428,6 +433,11 @@ export function clashFirstOfMatch(seen, cur) {
 }
 
 /**
+ * 投放名单「不给投放方看」的判据在 shared/constants.js（`rosterHiddenFor`）—— 服务端与客户端共用一份，
+ * 也是唯一能被 node 单测直接 import 的地方（本文件依赖 preact 的 vendor 模块，测试里 import 不了）。
+ */
+
+/**
  * The 悬赏名单 AFTER the phase: once the battles start, the applied submissions stay on the public view for a moment —
  * both teams' boards are revealed (who sent what at whom, and what killing it pays). Display only: it fades out by
  * itself. The roster hold itself is rendered by this file's ConfrontOverlay (stage 'roster').
@@ -453,6 +463,9 @@ export function ConfrontClash({ pub }) {
   const players = pub.players || [];
   const me = players.find((p) => p.playerId === myId) || null;
   const myTeam = me ? me.team : null;
+  // 投放方不看投放名单（2026-11-06 业主）—— 与 ConfrontOverlay 的 roster 分支同一个判据（rosterHiddenFor）。
+  // 注意放在「本局已弹」记位**之前**：攻方本来就不该看，不该吃掉守方那一局的一次。
+  if (rosterHiddenFor(pub, myTeam)) return null;
   const rows = clashRows(gd, pub, conf, myTeam);
   if (!rows.length) return null;
   // 「本局已弹」只在**真的画出来**时占用：上面任何一条短路（不在 COMBAT / 名单为空 / 已经淡出）都没显示过名单，

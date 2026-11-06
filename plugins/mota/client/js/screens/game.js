@@ -2040,10 +2040,11 @@ function MatchScreen() {
       ${pub?.confront && ((myRole === 'attack' && confBounty && pub.confront.active === true && confStage === 'target') || confStage === 'roster')
         ? html`<${ConfrontOverlay} pub=${pub} busy=${confBusy}
         onTarget=${async (targetPlayerId) => { setConfBusy(true); try { await actions.confrontTarget(targetPlayerId); } finally { setConfBusy(false); } }} />` : null}
-      ${/* 投放名单整屏卡（2026-11-05 业主第 4 条）：悬赏档（versusRule === 'bounty'）**不画** —— 只留右下角那块
-           （ui/confrontOverlay.js 的 RosterPanel className="rospov--conf"，投放公示那 5 秒）。控怪档保持现状：
-           仍弹整屏，但本局只弹一次（ui/confrontOverlay.js 的 clashFirstOfMatch）。 */ null}
-      ${pub?.confront && pub.confront.applied && !confBounty ? html`<${ConfrontClash} pub=${pub} />` : null}
+      ${/* 投放名单整屏卡：悬赏档（versusRule === 'bounty'）**不画**（2026-11-05 业主第 4 条，只留右下角那块 5 秒公示）。
+           控怪档本局只弹一次（ui/confrontOverlay.js 的 clashFirstOfMatch），并且**只给守方**（2026-11-06 业主：
+           「投放方不显示投放名单，仅对面显示」）—— 攻方自己有 MonsterDropFloat，不再吃这块整屏。 */ null}
+      ${pub?.confront && pub.confront.applied && !confBounty && myRole !== 'attack'
+        ? html`<${ConfrontClash} pub=${pub} />` : null}
       ${/* 原中央「本回合你是进攻方」绿块（.gm__attackwait，role="status"）2026-11-06 删：业主嫌它挡棋盘。
            它的「已投 N 只」与「撤回上一只」搬进了上面的 MonsterDropFloat（那个小窗在 .gm__hud 顶部渲染）。 */ null}
       ${myRole === 'defend' && phase === PHASE.PREP && Array.isArray(priv?.incoming) && priv.incoming.length ? html`<div class="gm__incoming" data-testid="incoming">

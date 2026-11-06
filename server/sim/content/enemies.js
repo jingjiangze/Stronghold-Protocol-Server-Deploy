@@ -409,7 +409,7 @@ export const STATS_ONLY = Object.freeze({
   enemy_1080_sotidp: 'merged roster (rogue/story data); no authored kit — fights on data stats', enemy_1080_sotidp_2: 'merged roster (rogue/story data); no authored kit — fights on data stats',
   enemy_1082_soticn: 'merged roster (rogue/story data); no authored kit — fights on data stats', enemy_1082_soticn_2: 'merged roster (rogue/story data); no authored kit — fights on data stats',
   enemy_1084_sotidm: 'merged roster (rogue/story data); no authored kit — fights on data stats', enemy_1084_sotidm_2: 'merged roster (rogue/story data); no authored kit — fights on data stats',
-  enemy_1085_sotiwz: 'merged roster (rogue/story data); no authored kit — fights on data stats', enemy_1088_ltsmer: 'merged roster (rogue/story data); no authored kit — fights on data stats',
+  enemy_1085_sotiwz: 'merged roster (rogue/story data); no authored kit — fights on data stats',
   enemy_1090_mdsnpr_2: 'merged roster (rogue/story data); no authored kit — fights on data stats', enemy_1095_ccripr: 'merged roster (rogue/story data); no authored kit — fights on data stats',
   enemy_1098_cchmpn: 'merged roster (rogue/story data); no authored kit — fights on data stats', enemy_1098_cchmpn_2: 'merged roster (rogue/story data); no authored kit — fights on data stats',
   enemy_1103_wdkght_3: 'merged roster (rogue/story data); no authored kit — fights on data stats', enemy_1104_lfkght: 'merged roster (rogue/story data); no authored kit — fights on data stats',

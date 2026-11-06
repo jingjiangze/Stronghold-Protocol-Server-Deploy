@@ -471,6 +471,22 @@ const HUNT_RHYTHM = Object.freeze({
   merchantRoundCap: 4, merchantUncappedRound: 15,
 });
 export const VERSUS_CONFRONT = Object.freeze({ targetSeconds: 10, ...HUNT_RHYTHM, maxBosses: 32 });
+
+/**
+ * 投放名单「不给投放方看」的判据（业主 2026-11-06：「投放方不显示投放名单，仅对面显示」）。纯函数，放 shared 里
+ * 是因为客户端（ui/confrontOverlay.js 的 ConfrontOverlay roster 分支 + ConfrontClash）与单测都要用，而客户端组件
+ * 本身依赖 preact 的 vendor 模块、node 里 import 不了。
+ *
+ * 攻方自己这一回合投了什么，MonsterDropFloat 已经逐条列出来了（已投 N 只 + 撤回），再弹一块整屏 / 角落名单纯属
+ * 重复且挡战场。判据只看「我这一队是不是本回合的进攻方」：`pub.attackingTeam` 由 views.js 平铺下发，非攻守回合是
+ * null ⇒ 返回 false（照常渲染，与改造前逐字节一致）；观战 / 没有队伍（myTeam == null）同样 false。
+ * @param {{ attackingTeam?: any }|null} pub
+ * @param {any} myTeam
+ * @returns {boolean}
+ */
+export function rosterHiddenFor(pub, myTeam) {
+  return myTeam != null && !!pub && pub.attackingTeam != null && myTeam === pub.attackingTeam;
+}
 export const COOP_HUNT = Object.freeze({
   enabled: false, startRounds: Object.freeze([4, 5, 6]), ...HUNT_RHYTHM, targets: Object.freeze(['self', 'mate']),
 });

@@ -157,8 +157,8 @@
       "bytes": 22978
     },
     "client/js/screens/game.js": {
-      "sha256": "60cfc72ba19a4fb22fc634e450c7e7c34a2f32d049c475607818b9e384bd5e95",
-      "bytes": 152302
+      "sha256": "085a93e162bd8eb75b83b5ff8aad802feb141411491f0e609fe60e854515ceee",
+      "bytes": 152383
     },
     "client/js/screens/loadout.js": {
       "sha256": "475a2a94b2f2b82bc769875dc6455816997302fb20e841083e4626e6754d7873",
@@ -249,8 +249,8 @@
       "bytes": 50684
     },
     "client/js/ui/confrontOverlay.js": {
-      "sha256": "71e6cc2d4d2c4942c56b85542f3797fc1201181b7a6d12d15c8824aebf607a66",
-      "bytes": 29810
+      "sha256": "b760a74cc9c09988141027637fd5e7834f7378cf0eae908c033c10920d60bf6e",
+      "bytes": 30890
     },
     "client/js/ui/connBanner.js": {
       "sha256": "619e0eea7ddd3b5e7585bcffc2de7a5d0d0cb9f242cb79ef2ad4db7ffd855487",
@@ -753,8 +753,8 @@
       "bytes": 1605
     },
     "server/match/match/confront.js": {
-      "sha256": "d46f904b124beb42a859c5b0b8255e060a048de3db5f89f4b520ab8587f9136e",
-      "bytes": 150280
+      "sha256": "51c9665e47517fe7a55637ff31e28210cbe8a4796d4c435d99988a2a7c11a5cd",
+      "bytes": 154817
     },
     "server/match/match/confrontFill.js": {
       "sha256": "8518d0b6f6f3dd807575e973774298ef1466f6243c3599ff7b34472f2734c730",
@@ -777,8 +777,8 @@
       "bytes": 68606
     },
     "server/match/match/infra.js": {
-      "sha256": "8904527279a959958b2c6b7192c682eeeb7d8b1ace11090a34db6f38a38fe352",
-      "bytes": 14230
+      "sha256": "a207b7f4dda119a1c0472fec0164adf0df6b17bce77732bf6c6e04bba663bf3b",
+      "bytes": 14456
     },
     "server/match/match/intents.js": {
       "sha256": "01778c1f8991a1b1e1e2647a1c32c00ebad214cc592ad00067db5dc0dcb4c62a",
@@ -805,8 +805,8 @@
       "bytes": 37755
     },
     "server/match/match/platform.js": {
-      "sha256": "7585b479c47eb12306bd9168b1961609ffbdc3eb2f6e1fb962d6786e72540f4f",
-      "bytes": 21900
+      "sha256": "4f0d82c0e43827f939faee40fe4b41cd676b6aa4736fb8bfe7d3a7f92c34ef00",
+      "bytes": 22317
     },
     "server/match/match/poolFill.js": {
       "sha256": "51cf6a09ec0fcfc1ed981d3a8723645d49f94dd9ac613a9b994d21cabf958df3",
@@ -833,8 +833,8 @@
       "bytes": 10631
     },
     "server/match/match/revival.js": {
-      "sha256": "53415b5de00aff170b72b1f149ceee6a7340e3691d256c4b2422c24ed5fa8550",
-      "bytes": 11879
+      "sha256": "822edb9bc46048e5877526d53bf7314ac82a1c742046040f828360070c6716bc",
+      "bytes": 12285
     },
     "server/match/match/settle.js": {
       "sha256": "9c2b2f8eeec5c2d45eadfd57a045fff9eb788a55eb4f0eb87326ddf52ea861bf",
@@ -869,8 +869,8 @@
       "bytes": 16575
     },
     "server/match/monsterBonds.js": {
-      "sha256": "5c627bd3c472ef48ecae1c4ad0ba1615f1c878e94be4d527f15ad58cee5e4801",
-      "bytes": 44117
+      "sha256": "b7134aba2f7ca03e4c6ee409a0329cd5e57954470c232811dc95c03a1990d9af",
+      "bytes": 45677
     },
     "server/match/monsterContract.js": {
       "sha256": "cbdef4c1f9d59df7c052251aaa3d3cbdeeb07ddcdfa2ddcfe40b5bf8acae09a1",
@@ -929,8 +929,8 @@
       "bytes": 5824
     },
     "server/match/player/round.js": {
-      "sha256": "72c40cee3235a8b6c34b1e25065215ac916732a3131e4933e022b448861f0c0c",
-      "bytes": 19822
+      "sha256": "ff44558e69b1c8be97907e7f514104fa252e469dd657501ed4d0dbdb78602e64",
+      "bytes": 20361
     },
     "server/match/player/support.js": {
       "sha256": "7281adb0ce518ae5ce9f41645ee112b0324b6b9da2d0c9052bb372ddefae9cd0",
@@ -3137,8 +3137,8 @@
       "bytes": 4111
     },
     "shared/constants.js": {
-      "sha256": "646075c8d4abb2725fa97b979dab08d08e86dccbe7839bad2a7211fab75faabb",
-      "bytes": 48950
+      "sha256": "112d748bf2c16e54bcf4b05b527623a1f95d2373768afb8eb1b3ac9f5b7ff86e",
+      "bytes": 50000
     },
     "shared/contractBountyEconomy.js": {
       "sha256": "6dc3df61c3671a79e0de20b47babd47ec60c78553623da0f373726c6ac361733",

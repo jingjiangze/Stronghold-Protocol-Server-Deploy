@@ -181,22 +181,23 @@ export class MatchInfra {
       // 整队全灭（或池归零到没人可领）：本队一个字段都不写，直接看下一队 —— 不能整体 return，否则另一队
       // 在同一次调用里也拿不到回写。
       if (!members.length) continue;
-      // 未走池的外部写入折进池（2026-11-06，业主报障「共享血池把未走池的扣血静默覆盖」）：rule 藏品 kingCrystal
-      // 「战斗结束后使目标生命 −2」等直接写 ps.lp（match/meltdown.js applyRelicLpDrain），而这里一覆盖就把它抹掉了。
-      // 只折「相对上次回写的净扣减」：Δ 按人算，所以中途退出 / 淘汰的队员（已不在 members 里）不会被误折 ——
-      // 他们那一份留在池里照常重新分给活着的队友。向上（加血类外部写入）不折，见报告 PENDING。
+      // 未走池的外部写入折进池（2026-11-06）：rule 藏品 kingCrystal「战斗结束后使目标生命 −2」等直接写 ps.lp
+      // （match/meltdown.js applyRelicLpDrain），而这里一覆盖就把它抹掉了。
+      // **双向折账**（2026-11-06 业主第 3 条）：旧码只折「净扣减」，加血类外部写入（meltdown 事件回血、revival
+      // 救援把 lp 拉回 1）下一次拆池就被覆盖 —— 玩家看到血条涨了又掉回去。现在按 (now − was) 的**代数和**折进池，
+      // 两个方向都不丢。Δ 按人算，所以中途退出 / 淘汰的队员（已不在 members 里）不会被误折 —— 他们那一份留在池里
+      // 照常重新分给活着的队友。`_teamLpShares` 记的是「上一次本函数写下去的值」，所以只有真·外部写入才有 Δ。
       let pool = this.teamLps.get(t) ?? 0;
       const prev = this._teamLpShares.get(t) || null;
       if (prev) {
-        let drain = 0;
+        let delta = 0;
         for (const p of members) {
           const was = prev.get(p.playerId);
           if (was == null) continue;
-          const now = Math.max(0, Number(p.lp) || 0);
-          if (now < was) drain += was - now;
+          delta += Math.max(0, Number(p.lp) || 0) - was;
         }
-        if (drain > 0) {
-          pool = Math.max(0, pool - drain);
+        if (delta !== 0) {
+          pool = Math.max(0, pool + delta);
           this.teamLps.set(t, pool);
           this.teamLp = [...this.teamLps.values()].reduce((s, v) => s + v, 0);
         }

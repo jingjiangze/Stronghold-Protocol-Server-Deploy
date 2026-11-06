@@ -331,6 +331,9 @@ export class MatchPlatform {
     if (!ps || ps.isBot || ps.left || this.disposed) return;
     this.guard(() => {
       ps.left = true;
+      // 投放权移交（2026-11-06 业主第 2 条）：solo / master 的队长在投放窗口里退出，权力落到下一位存活攻方 ——
+      // 商店要跟着交出去，否则这一回合剩下没人能买卡 / 投放（幂等；非对抗局 / 商店关着时什么都不做）。
+      try { if (typeof this.syncMonsterOperators === 'function') this.syncMonsterOperators(); } catch { /* ignore */ }
       this.cancelSetupVote();
       ps.connected = false;
       ps.autoplay = false;

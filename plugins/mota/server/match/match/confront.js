@@ -602,6 +602,78 @@ export class MatchConfront {
     return !!first && first.playerId === ps.playerId;
   }
 
+  /**
+   * 投放权移交的**纯决策**（业主 2026-11-06 第 2 条）。`syncMonsterOperators` 只负责把它执行出来。
+   *
+   * solo / master 的投放权只交给「每队第一位**存活**攻方」（monsterPlaceActor），而商店只在 `finishConfrontTargets`
+   * 给当时的第一位开过 —— 队长在投放窗口里阵亡 / 退出之后，权力按判据自动落到下一位，但那位手里只有只读帧，
+   * 整回合没人能买卡 / 投放。
+   *
+   * `open[i] = { ps, from }`：要给谁开店；`from` 是「手里还握着商店、但已经没有投放权」的那位（master 把草稿交给他）。
+   * `close`：有商店却没有投放权的席位（要关店 + 改发只读 / 关着帧）。
+   * `apply: false` ⇒ 非对抗 / 商店关着 / 不在投放窗口，一个字段都别写（与改造前逐字节一致）。
+   * @returns {{ apply: boolean, open: { ps: object, from: object|null }[], close: object[] }}
+   */
+  monsterOperatorPlan() {
+    const idle = { apply: false, open: [], close: [] };
+    if (!this.monsterShopOn || this.monsterMode === 'shared') return idle;
+    if (typeof this.confrontActive === 'function' && this.confrontActive() !== true) return idle;
+    // 只在投放窗口：PREP 且投放公示还没开始（与 finishConfrontTargets 的开店时机同一个判据）
+    if (this.phase !== PHASE.PREP || this.confrontStage != null) return idle;
+    const actors = typeof this.confrontActors === 'function' ? this.confrontActors() : [];
+    if (!actors.length) return idle;
+    const master = this.monsterMode === 'master';
+    const holders = this.order.filter((p) => p && p.monsterShop && p.monsterShop.readOnly !== true);
+    const open = [];
+    const close = [];
+    const used = new Set();
+    for (const ps of actors) {
+      const shouldOwn = this.monsterPlaceActor(ps) === true;
+      const holds = !!(ps.monsterShop && ps.monsterShop.readOnly !== true);
+      if (!shouldOwn) { if (holds) close.push(ps); continue; }
+      if (holds) continue;
+      // master 是队级资源 ⇒ 把上一位（已经失去投放权、但商店还开着）的草稿接过来；
+      // solo 是按人的池（poolKeyOf = playerId），跨人移交会指向别人池里的卡，所以只开一间干净的店。
+      const from = master ? (holders.find((p) => p !== ps && !used.has(p) && this.monsterPlaceActor(p) !== true) || null) : null;
+      if (from) { used.add(from); close.push(from); }
+      open.push({ ps, from });
+    }
+    // 已经不在 actors 里、却还握着商店的席位（阵亡 / 退出 / 换边）也要关掉 —— solo 没有草稿移交，它那间店直接作废；
+    // master 的情况下它已经作为 `from` 进了 close（used 防重复）。仍在自己队里正常持有的（actorSet）不动。
+    const actorSet = new Set(actors);
+    for (const p of holders) {
+      if (actorSet.has(p) || used.has(p) || close.includes(p)) continue;
+      close.push(p);
+    }
+    return { apply: true, open, close };
+  }
+
+  /**
+   * 把 `monsterOperatorPlan()` 执行出来（幂等：计划为空时一个字段都不写）。
+   * 调用点：阵亡（PlayerState.eliminate）、救援挂起（revivalDefer）、退出（platform.js 的 onLeave）。
+   */
+  syncMonsterOperators() {
+    const plan = this.monsterOperatorPlan();
+    if (!plan.apply) return;
+    const master = this.monsterMode === 'master';
+    for (const { ps, from } of plan.open) {
+      const carry = from && from.monsterDraft && Array.isArray(from.monsterDraft.picks) ? from.monsterDraft.picks.slice() : null;
+      const carrySeq = from && from.monsterDraft ? Number(from.monsterDraft.seq) || 0 : 0;
+      const carrySpent = from ? Math.max(0, Number(from.monsterSpentOwn) || 0) : 0;
+      try { openMonsterShop(this, ps); } catch (e) { this.reportError('monster shop open', e); continue; }
+      if (carry && carry.length && ps.monsterDraft) {
+        ps.monsterDraft.picks = carry;
+        ps.monsterDraft.seq = carrySeq;
+        ps.monsterSpentOwn = carrySpent;
+      }
+      try { if (ps.playerId) this.sendTo(ps.playerId, monsterShopFrame(this, ps)); } catch (e) { this.reportError('monster shop open', e); }
+    }
+    for (const ps of plan.close) {
+      try { closeMonsterShop(this, ps); } catch (e) { this.reportError('monster shop close', e); }
+      try { if (ps.playerId) this.sendTo(ps.playerId, master ? monsterShopReadOnlyFrame(this, ps) : monsterShopFrame(this, ps)); } catch (e) { this.reportError('monster shop close', e); }
+    }
+  }
+
   /** 攻方人数（纯玩家出怪时按人均分官方波次价值；取不到时按每队人数兜底）。 */
   attackingTeamSize() {
     if (this.attackingTeam == null || typeof this.teamIdOf !== 'function') return Math.max(1, Number(this.teamSize) || 1);
