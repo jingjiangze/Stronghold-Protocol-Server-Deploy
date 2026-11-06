@@ -249,8 +249,8 @@
       "bytes": 50684
     },
     "client/js/ui/confrontOverlay.js": {
-      "sha256": "b760a74cc9c09988141027637fd5e7834f7378cf0eae908c033c10920d60bf6e",
-      "bytes": 30890
+      "sha256": "904bb5c2ba39617d59593b75183f859d8b11301a54edf362206f2945592fd19c",
+      "bytes": 30894
     },
     "client/js/ui/connBanner.js": {
       "sha256": "619e0eea7ddd3b5e7585bcffc2de7a5d0d0cb9f242cb79ef2ad4db7ffd855487",
@@ -3137,8 +3137,8 @@
       "bytes": 4111
     },
     "shared/constants.js": {
-      "sha256": "112d748bf2c16e54bcf4b05b527623a1f95d2373768afb8eb1b3ac9f5b7ff86e",
-      "bytes": 50000
+      "sha256": "1ced489a0c360e438330f0fc071b0d994c89986984673b075293f82b9683b7e3",
+      "bytes": 50110
     },
     "shared/contractBountyEconomy.js": {
       "sha256": "6dc3df61c3671a79e0de20b47babd47ec60c78553623da0f373726c6ac361733",

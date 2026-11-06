@@ -10,18 +10,24 @@ import { Match } from '../../plugins/mota/server/match/Match.js';
 // ---------------------------------------------------------------------------
 // 1) 投放名单只给对面看（业主 2026-11-06：「投放方不显示投放名单，仅对面显示」）
 // ---------------------------------------------------------------------------
-test('投放名单：攻方那一队看不到，守方照常看', () => {
-  const pub = { attackingTeam: 'red', defenderTeam: 'blue' };
-  assert.equal(rosterHiddenFor(pub, 'red'), true, '攻方不该看投放名单');
-  assert.equal(rosterHiddenFor(pub, 'blue'), false, '守方要看');
+test('投放名单：攻方看不到，守方照常看（按玩家自己的 role 判）', () => {
+  assert.equal(rosterHiddenFor('attack'), true, '攻方不该看投放名单');
+  assert.equal(rosterHiddenFor('defend'), false, '守方要看');
 });
 
-test('投放名单：非攻守回合 / 观战 / 拿不到队伍 → 照常渲染（与改造前一致）', () => {
-  assert.equal(rosterHiddenFor({ attackingTeam: null }, 'red'), false);
-  assert.equal(rosterHiddenFor({}, 'red'), false);
-  assert.equal(rosterHiddenFor(null, 'red'), false);
-  assert.equal(rosterHiddenFor({ attackingTeam: 'red' }, null), false);
-  assert.equal(rosterHiddenFor({ attackingTeam: 'red' }, undefined), false);
+test('投放名单：非攻守回合 / 观战 / 拿不到 role → 照常渲染（与改造前一致）', () => {
+  assert.equal(rosterHiddenFor(null), false);
+  assert.equal(rosterHiddenFor(undefined), false);
+  assert.equal(rosterHiddenFor(''), false);
+  assert.equal(rosterHiddenFor('spectator'), false);
+});
+
+test('投放名单：不拿 pub.attackingTeam（队伍 id 0/1）跟 players[].team（red/blue）比 —— 真机就是这么漏的', () => {
+  // 回归：2026-11-06 第一版用 myTeam === pub.attackingTeam，'red' === 0 永远 false ⇒ 攻方照样看到名单。
+  const pub = { attackingTeam: 0 };
+  const me = { team: 'red', role: 'attack' };
+  assert.equal(me.team === pub.attackingTeam, false, '这就是当时的错误比较');
+  assert.equal(rosterHiddenFor(me.role), true, '按 role 判才对');
 });
 
 // ---------------------------------------------------------------------------

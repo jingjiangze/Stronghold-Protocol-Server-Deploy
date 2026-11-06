@@ -478,14 +478,17 @@ export const VERSUS_CONFRONT = Object.freeze({ targetSeconds: 10, ...HUNT_RHYTHM
  * 本身依赖 preact 的 vendor 模块、node 里 import 不了。
  *
  * 攻方自己这一回合投了什么，MonsterDropFloat 已经逐条列出来了（已投 N 只 + 撤回），再弹一块整屏 / 角落名单纯属
- * 重复且挡战场。判据只看「我这一队是不是本回合的进攻方」：`pub.attackingTeam` 由 views.js 平铺下发，非攻守回合是
- * null ⇒ 返回 false（照常渲染，与改造前逐字节一致）；观战 / 没有队伍（myTeam == null）同样 false。
- * @param {{ attackingTeam?: any }|null} pub
- * @param {any} myTeam
+ * 重复且挡战场。
+ *
+ * 判据用**玩家自己的 `role`**（服务端 players[] 里的 'attack' | 'defend'），**不要**拿 `pub.attackingTeam` 跟
+ * `players[].team` 比 —— 前者是队伍 id（0 / 1），后者是队伍名（'red' / 'blue'），2026-11-06 真机就是这么漏的
+ * （两边永远不相等 ⇒ 攻方照样看到名单）。非攻守回合 role 为 null ⇒ 返回 false（照常渲染，与改造前一致）；
+ * 观战 / 拿不到 role 同样 false。
+ * @param {string|null|undefined} myRole
  * @returns {boolean}
  */
-export function rosterHiddenFor(pub, myTeam) {
-  return myTeam != null && !!pub && pub.attackingTeam != null && myTeam === pub.attackingTeam;
+export function rosterHiddenFor(myRole) {
+  return myRole === 'attack';
 }
 export const COOP_HUNT = Object.freeze({
   enabled: false, startRounds: Object.freeze([4, 5, 6]), ...HUNT_RHYTHM, targets: Object.freeze(['self', 'mate']),
