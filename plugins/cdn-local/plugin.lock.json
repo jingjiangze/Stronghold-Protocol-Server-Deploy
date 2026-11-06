@@ -5,8 +5,8 @@
   "generator": "tools/plugin.mjs pack",
   "files": {
     "config/sources.json": {
-      "sha256": "61157ca91ed666afa9fde9e14e3d43947f2192e298917e8c0e4b2c8326eb4612",
-      "bytes": 6563
+      "sha256": "c41fe92bcda5584ab1cf7bbd3f959e95e9d498e9032f6d33a1af19c24c26384c",
+      "bytes": 6690
     },
     "config/stubs.json": {
       "sha256": "91c0f77997e2da7f0ea9020af79854cff411c94146f0da9b18af355658156d93",
