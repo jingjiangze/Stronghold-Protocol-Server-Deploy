@@ -87,6 +87,9 @@ export function makeMatch(o = {}) {
     externalReplay: o.externalReplay,
     botSliceMs: o.botSliceMs,
     clientCombat: o.clientCombat ?? false,
+    // 战斗中实时部署（方案 A）：生产默认开，测试默认关 —— 这些用例钉的是「同一 spec 的客户端/服务端结果一致」，
+    // 而 liveDeploy 会改变开局部署策略（真人场开局不自动部署），与部署策略无关的一致性断言必须显式关掉它。
+    liveDeploy: o.liveDeploy ?? false,
     verify: o.verify ?? 'off',
     headlessSliceMs: o.headlessSliceMs,
     aiPicksLast: o.aiPicksLast,

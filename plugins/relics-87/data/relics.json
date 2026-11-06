@@ -1,6 +1,7 @@
 {
   "version": "3.0.0",
   "count": 87,
+  "priceNotice": "价格映射（2026-11-06）：官方三档为 低 8 / 中 12 / 高 16（源石锭语义）。本合集只有 blue(青蓝) 与 red(红) 两档，取官方低档与高档 —— blue=8、red=16；中档 12 在数据里没有对应稀有度，故不出现。请勿把它当成官方三档全量价目。",
   "relics": [
     {
       "id": "n01",
@@ -19,7 +20,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n02",
@@ -45,7 +46,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n03",
@@ -69,7 +70,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n04",
@@ -94,7 +95,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n05",
@@ -124,7 +125,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n06",
@@ -151,7 +152,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n07",
@@ -174,7 +175,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n08",
@@ -200,7 +201,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n09",
@@ -224,7 +225,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n10",
@@ -242,7 +243,7 @@
         }
       },
       "tierNum": 2,
-      "price": 4
+      "price": 8
     },
     {
       "id": "n11",
@@ -259,7 +260,7 @@
         }
       },
       "tierNum": 2,
-      "price": 4
+      "price": 8
     },
     {
       "id": "n12",
@@ -281,7 +282,7 @@
         }
       },
       "tierNum": 2,
-      "price": 4
+      "price": 8
     },
     {
       "id": "n13",
@@ -298,7 +299,7 @@
         }
       },
       "tierNum": 2,
-      "price": 4
+      "price": 8
     },
     {
       "id": "n14",
@@ -316,7 +317,7 @@
         }
       },
       "tierNum": 2,
-      "price": 4
+      "price": 8
     },
     {
       "id": "n15",
@@ -331,7 +332,7 @@
         "refreshLimit": 5
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n16",
@@ -349,7 +350,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n17",
@@ -367,7 +368,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n18",
@@ -388,7 +389,7 @@
         }
       },
       "tierNum": 2,
-      "price": 4
+      "price": 8
     },
     {
       "id": "n19",
@@ -409,7 +410,7 @@
         }
       },
       "tierNum": 2,
-      "price": 4
+      "price": 8
     },
     {
       "id": "n20",
@@ -427,7 +428,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n21",
@@ -442,7 +443,7 @@
         "hand": -4
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n22",
@@ -457,7 +458,7 @@
         "lpCap": -12
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n23",
@@ -478,7 +479,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n24",
@@ -497,7 +498,7 @@
         "enemyMove": 0.3
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n25",
@@ -523,7 +524,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n26",
@@ -548,7 +549,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n27",
@@ -568,7 +569,7 @@
         }
       },
       "tierNum": 2,
-      "price": 4
+      "price": 8
     },
     {
       "id": "n28",
@@ -586,7 +587,7 @@
         }
       },
       "tierNum": 2,
-      "price": 4
+      "price": 8
     },
     {
       "id": "n29",
@@ -612,7 +613,7 @@
         }
       },
       "tierNum": 2,
-      "price": 4
+      "price": 8
     },
     {
       "id": "n30",
@@ -633,7 +634,7 @@
         }
       },
       "tierNum": 2,
-      "price": 4
+      "price": 8
     },
     {
       "id": "n31",
@@ -650,7 +651,7 @@
         }
       },
       "tierNum": 2,
-      "price": 4
+      "price": 8
     },
     {
       "id": "n32",
@@ -669,7 +670,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n33",
@@ -693,7 +694,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n34",
@@ -711,7 +712,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n35",
@@ -733,7 +734,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n36",
@@ -755,7 +756,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n37",
@@ -777,7 +778,7 @@
         }
       },
       "tierNum": 2,
-      "price": 4
+      "price": 8
     },
     {
       "id": "n38",
@@ -798,7 +799,7 @@
         }
       },
       "tierNum": 2,
-      "price": 4
+      "price": 8
     },
     {
       "id": "n39",
@@ -818,7 +819,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n40",
@@ -838,7 +839,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n41",
@@ -860,7 +861,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "n42",
@@ -884,7 +885,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p01",
@@ -902,7 +903,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p02",
@@ -921,7 +922,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p03",
@@ -938,7 +939,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p04",
@@ -956,7 +957,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p05",
@@ -973,7 +974,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p06",
@@ -995,7 +996,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p07",
@@ -1014,7 +1015,7 @@
         "postBountyMul": 1.5
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p08",
@@ -1031,7 +1032,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p09",
@@ -1050,7 +1051,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p10",
@@ -1068,7 +1069,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p11",
@@ -1088,7 +1089,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p12",
@@ -1106,7 +1107,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p13",
@@ -1125,7 +1126,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p14",
@@ -1145,7 +1146,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p15",
@@ -1162,7 +1163,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p16",
@@ -1180,7 +1181,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p17",
@@ -1198,7 +1199,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p18",
@@ -1216,7 +1217,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p19",
@@ -1235,7 +1236,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p20",
@@ -1255,7 +1256,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p21",
@@ -1275,7 +1276,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p22",
@@ -1293,7 +1294,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p23",
@@ -1312,7 +1313,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p24",
@@ -1331,7 +1332,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p25",
@@ -1350,7 +1351,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p26",
@@ -1369,7 +1370,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p27",
@@ -1386,7 +1387,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p28",
@@ -1407,7 +1408,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p29",
@@ -1425,7 +1426,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p30",
@@ -1444,7 +1445,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p31",
@@ -1466,7 +1467,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p32",
@@ -1485,7 +1486,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p33",
@@ -1504,7 +1505,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p34",
@@ -1523,7 +1524,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p35",
@@ -1545,7 +1546,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p36",
@@ -1564,7 +1565,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p37",
@@ -1583,7 +1584,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p38",
@@ -1602,7 +1603,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p39",
@@ -1622,7 +1623,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p40",
@@ -1640,7 +1641,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p41",
@@ -1658,7 +1659,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p42",
@@ -1676,7 +1677,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p43",
@@ -1693,7 +1694,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p44",
@@ -1710,7 +1711,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     },
     {
       "id": "p45",
@@ -1729,7 +1730,7 @@
         }
       },
       "tierNum": 4,
-      "price": 8
+      "price": 16
     }
   ]
 }

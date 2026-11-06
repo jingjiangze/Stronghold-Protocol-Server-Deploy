@@ -114,6 +114,39 @@ export class BattleSpawns {
   }
 
   /**
+   * 藏品的敌人通道 (`spec.enemyMods` / Battle opts `enemyMods`；生产侧 server/match/match/meltdown.js
+   * relicEnemyMods)：`defAdd` / `defShredPerHit` / `defShredMax`（戈渎不语「敌方防御力 +3000，每次受到伤害时防御力
+   * 下降 100，最多 30 次」）、`statusDurationMul`（精神治疗录像带：敌人受到的异常时长 ×N）、`eliteDmgTakenMul` /
+   * `eliteDmgDur`（生命蓝图：精英与领袖登场 30 秒内物理/法术承伤 ×N）。
+   *
+   * 只认有限数值；没有这个键的战场返回 null，于是生成敌人时逐位等于今天（spawns.js 的每一次读都是
+   * `rm && rm.x`）。结果缓存在本体上：一张战场只解析一次。
+   */
+  _relicEnemyMods() {
+    if (this._relicEnemyModsCache !== undefined) return this._relicEnemyModsCache;
+    const raw = this.opts && this.opts.enemyMods;
+    let out = null;
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      const num = (k) => (Number.isFinite(raw[k]) ? raw[k] : null);
+      const defShredPerHit = (() => { const p = num('defShredPerHit'); return p ? p : null; })();
+      const eliteMul = num('eliteDmgTakenMul');
+      const statusMul = num('statusDurationMul');
+      out = {
+        defAdd: num('defAdd') ?? 0,
+        defShredPerHit,
+        defShredMax: (() => { const m = num('defShredMax'); return m != null && m > 0 ? Math.trunc(m) : Infinity; })(),
+        statusDurationMul: statusMul != null && statusMul > 0 ? statusMul : 1,
+        eliteDmgTakenMul: eliteMul != null && eliteMul > 0 && eliteMul < 1 ? eliteMul : 1,
+        eliteDmgDur: (() => { const d = num('eliteDmgDur'); return d != null && d > 0 ? d : 30; })(),
+      };
+      // 全是缺省值 ⇒ 视作没有（一次都不进热路径）
+      if (!out.defAdd && out.defShredPerHit == null && out.statusDurationMul === 1 && out.eliteDmgTakenMul === 1) out = null;
+    }
+    this._relicEnemyModsCache = out;
+    return out;
+  }
+
+  /**
    * Spawn an enemy now. opts: { routeIndex, route, pos:[r,c], mods:{hpMul,atkMul,defMul,resMul,speedMul}, tag,
    * sourcePlayerId, ownerPlayerId, bounty:{coins,ownerPlayerId}, countInTotal }
    */
@@ -151,11 +184,14 @@ export class BattleSpawns {
     const m = { hpMul: mm(m0.hpMul, true), atkMul: mm(m0.atkMul), defMul: mm(m0.defMul), resMul: mm(m0.resMul), speedMul: mm(m0.speedMul) };
     const scaledRes=def.res*(m.resMul??1),resAdd=fin(m0.resAdd,0);
     const contractRes=resAdd>0?Math.max(scaledRes,Math.min(90,scaledRes+resAdd)):scaledRes+resAdd;
+    // 藏品的敌人通道（无 enemyMods 时为 null）：防御平加（戈渎不语 +3000）
+    const rm = this._relicEnemyMods();
+    const relicDefAdd = rm ? rm.defAdd : 0;
     const e = new Unit({
       id: ++this._idSeq, side: 'enemy', kind: ['trap','sceneMarker'].includes(def.raw?.nativeActorType)?'device':'enemy', def, defId: def.key ?? enemyKey, name: def.name,
       x: start[1], y: start[0], motion: def.motion, dir: def.raw?.nativeBountySummonV4?(opts.dir??def.raw.nativeFacing):undefined,
       base: {
-        maxHp: def.maxHp * (m.hpMul ?? 1), atk: def.atk * (m.atkMul ?? 1), def: def.def * (m.defMul ?? 1), res: contractRes,
+        maxHp: def.maxHp * (m.hpMul ?? 1), atk: def.atk * (m.atkMul ?? 1), def: Math.max(0, def.def * (m.defMul ?? 1) + relicDefAdd), res: contractRes,
         aspd: def.aspd + fin(m0.aspdAdd,0), bat: def.bat, blockCnt: 0, moveSpeed: def.moveSpeed * (m.speedMul ?? 1), spRecovery: 0,
         tauntLevel: def.tauntLevel, massLevel: def.massLevel, hpRecoveryPerSec: def.hpRecoveryPerSec + def.maxHp*(m.hpMul??1)*Math.max(0,fin(m0.hpRegenRatio,0)), rangeRadius: def.rangeRadius,
       },
@@ -221,6 +257,13 @@ export class BattleSpawns {
       if (this.sharedBoss) { e.bossPool = this.sharedBoss; this._syncBossHp(e); }
     }
     if(m0.damageTakenMul>0&&m0.damageTakenMul<1)this.addBuff(e,{key:'contract:hunt',mods:{dmgTakenMul:m0.damageTakenMul},persist:true});
+    // 藏品的敌人通道：受击掉防的次数上限（combat.js dealDamage 消费）与精英/领袖登场限时减伤（生命蓝图）
+    if (rm) {
+      if (rm.defShredPerHit != null) e.relicDefShred = { per: rm.defShredPerHit, max: rm.defShredMax, used: 0 };
+      if (rm.eliteDmgTakenMul < 1 && (e.def.rank === 'ELITE' || e.def.rank === 'BOSS' || e.isBoss)) {
+        this.addBuff(e, { key: 'relic:eliteDmgReduce', duration: rm.eliteDmgDur, mods: { physTakenMul: rm.eliteDmgTakenMul, artsTakenMul: rm.eliteDmgTakenMul } });
+      }
+    }
     e.hp = e.bossPool ? e.hp : e.s.maxHp;
     if(def.raw?.returnsToOwnField){const ratio=Number.isFinite(opts.returnHpPct)?opts.returnHpPct:Number.isFinite(m0.returnHpPct)?m0.returnHpPct:null;if(ratio!=null)e.hp=Math.max(1,e.s.maxHp*Math.max(0,Math.min(1,ratio)));}
     if(absorbEventSummon(this,e))return e;

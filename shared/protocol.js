@@ -932,6 +932,17 @@ export const C2S = {
   // the stats the own board's units start their next battle with (user playtest #4 item 7; prep phases): answered by
   // the push m.unitStats { seq, round, units: [unitStatsEntry] }; `seq` is echoed so the client keeps the newest answer
   'g.unitStats': { seq: (v) => isInt(v, 0, 2 ** 31), $optional: ['seq'] },
+  /*
+   * 战斗中实时部署 (方案 A, flags.liveDeploy — server/match/match/combat.js liveDeploy / liveRetreat).
+   *
+   * `g.deploy` puts one of the player's OWN board pieces — created held off the field at battle start — on the field
+   * during COMBAT, paying its `cost` in DP. `row`/`col` are the field tile the player tapped (stage coordinates;
+   * absent = the piece's own board tile). `g.retreat` withdraws a standing piece: it leaves the field, arms its
+   * redeploy timer and refunds no DP. Both are gated to the player's own uid (another player's piece answers 'unknown')
+   * and answer the SENDER only, on m.deploy — the order's acceptance is not the deployment's result.
+   */
+  'g.deploy': { uid: isUid, row: (v) => isInt(v, 0, GEO.ROWS - 1), col: (v) => isInt(v, 0, GEO.COLS - 1), $optional: ['row', 'col'] },
+  'g.retreat': { uid: isUid },
   'g.leave': {},
   // host test commands (DESIGN §34.8 phase 2). The server applies them only in a test match. `args` is checked
   // again by shared/testMode.js parseTestArgs (ids, bounds). Unknown keys inside args fail there, not here.
@@ -1013,6 +1024,12 @@ export const S2C = [
   'm.layer',
   // m.unitStats { seq, round, units: [unitStatsEntry] } — the answer to g.unitStats (the requester only)
   'm.unitStats',
+  // 战斗中实时部署 (方案 A): the answer to g.deploy / g.retreat, to the requester only —
+  // { ok: true, uid, dp?, retreat? } or { ok: false, error } with the engine's stable reason
+  // ('mode' | 'player' | 'unknown' | 'deployed' | 'removed' | 'respawn' | 'tile' | 'occupied' | 'down' | 'dp' |
+  // 'notdeployed' | 'finished'). `dp` (a deploy) is the battle's DP left; `retreat: true` names a withdrawal, whose ok
+  // removes the piece from the client's standing set.
+  'm.deploy',
   // client-side combat (DESIGN §14): b.start { battleId, fieldId, kind, spec, authoritative, startAt, serverNow, elapsed,
   // speed, watch?, bgmTheme? } — `bgmTheme` 是**自适应开战 BGM** 的主题名 (shared/bgmTheme.js):服务端在开战时算定
   // (关卡声明优先、敌人家族兜底),同一场战斗发给所有人都是同一个值,战斗中不变;null/缺失 = 走原来的回合曲子。

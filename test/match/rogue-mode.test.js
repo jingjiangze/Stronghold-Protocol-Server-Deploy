@@ -33,10 +33,11 @@ function fakeMatch({ isRogue = true, round = 1, seed = 20261101, relics = [], mo
   };
 }
 
-test('藏品节奏：肉鸽 = 开局 + 每 2 回合；协同共竞 = R4/R8/R12', () => {
-  const rogue = (r) => MatchMeltdown.prototype.relicDraftRound.call({ isRogue: true }, r);
+test('藏品节奏：肉鸽 = 事件 / 首领节点；协同共竞 = R4/R8/R12', () => {
+  const rogue = (nodeType) => MatchMeltdown.prototype.relicDraftRound.call({ isRogue: true, rogueNodeTypeFor: () => nodeType }, 5);
   const xie = (r) => MatchMeltdown.prototype.relicDraftRound.call({ isRogue: false }, r);
-  assert.deepEqual([1, 2, 3, 4, 5, 6].map(rogue), [true, true, false, true, false, true]);
+  assert.deepEqual(['wish', 'boss', 'battle', 'elite', 'shop', 'rest'].map(rogue),
+    [true, true, false, false, true, false]);
   assert.deepEqual([1, 2, 3, 4, 8, 12, 13].map(xie), [false, false, false, true, true, true, false]);
 });
 

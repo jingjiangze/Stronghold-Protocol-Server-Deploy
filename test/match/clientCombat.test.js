@@ -123,7 +123,7 @@ test('COMBAT: humans get their own spec (authoritative), bots are simulated by t
   m.dispose();
 });
 
-test('validation: implausible client results are rejected and replaced by the server\'s simulation', () => {
+test('validation: implausible client results are downgraded and kept — the server forwards, it does not re-simulate', () => {
   const cases = [
     ['coins beyond the bounties', (r) => { for (const p of Object.values(r.perPlayer)) p.coins = 999; return r; }],
     ['a leak of an enemy that never spawned', (r) => { const p = Object.values(r.perPlayer)[0]; p.leaked.push({ enemyKey: 'enemy_1502_crowns', mods: null, lpr: 1, sourcePlayerId: null, tag: null, counted: true }); p.perfect = false; return r; }],
@@ -139,12 +139,11 @@ test('validation: implausible client results are rejected and replaced by the se
     h.run(() => m.phase === PHASE.SETTLE || h.ended != null);
     const f = m.lastResults.get('p_0');
     assert.ok(f, name);
-    assert.ok(m.verifyStats.rejected >= 1, `${name}: rejected`);
-    assert.ok(m.verifyStats.takeovers >= 1, `${name}: server re-simulation`);
-    assert.ok(Object.values(f.layerGains || {}).every((n) => n <= 60 + 4 * m.round), `${name}: no forged layers`);
-    assert.ok(f.coins <= 50, `${name}: no forged coins`);
-    const takeover = h.clients.get('p_0').ends.find((x) => x.reason === 'takeover');
-    assert.ok(takeover, `${name}: the client was told the server took over`);
+    // 2026-11-05 业主「服务器仅转发」：可塑性校验失败的结果**降级保留**（记一次 downgraded，不重算、不接管）。
+    // 这里钉的就是新契约：结果来源是客户端那份，客户端也不会被告知「服务器接管了」。
+    // 代价是伪造的数值会被采纳 —— 这是业主明确接受的取舍，不再由服务端重算覆盖。
+    assert.ok((m.verifyStats.downgraded || 0) >= 1, `${name}: downgraded`);
+    assert.equal(h.clients.get('p_0').ends.some((x) => x.reason === 'takeover'), false, `${name}: no takeover`);
     m.dispose();
   }
   // unit checks of the validator
@@ -460,7 +459,8 @@ test('fuzz: random / hostile b.progress and b.result frames never throw, never c
   assert.equal(m.errorCount, 0, JSON.stringify(m.errors.slice(0, 2)));
   assert.ok(f0.progress.killed <= f0.progress.total);
   // a structurally valid but implausible result for p_0's field was replaced by the server's run, never trusted
-  if (f0.done) assert.equal(f0.resultSource, 'server');
+  // 2026-11-05「服务器仅转发」：通过结构校验的客户端结果直接采纳（不再由服务端重算替换）⇒ 来源是 client
+  if (f0.done) assert.equal(f0.resultSource, 'client');
   checkInvariants(m);
   m.dispose();
 });

@@ -8,6 +8,10 @@
       "sha256": "61157ca91ed666afa9fde9e14e3d43947f2192e298917e8c0e4b2c8326eb4612",
       "bytes": 6563
     },
+    "config/stubs.json": {
+      "sha256": "6bab885b52fd21f9611d83272af519957f352606135bdf47b571f8141e2dfea0",
+      "bytes": 27598
+    },
     "host/noop.js": {
       "sha256": "7dcdfff1a2f403f005d3858857ea490881355e4b5aa0f87fe91632907d51af4f",
       "bytes": 201
@@ -17,8 +21,8 @@
       "bytes": 865
     },
     "server/assetJump.js": {
-      "sha256": "d4e9094485b411f26a3c058158316244b9b08c7d4163fea8db547dcdcb1f69f6",
-      "bytes": 41163
+      "sha256": "64fd60855fe95fb459328b0d5e5235ffbdd1d303d0836649591a8094ba2c869f",
+      "bytes": 42895
     },
     "server/edge-sidecar.js": {
       "sha256": "c0cacb8c6228eab0e14526feb0d726ae1b222faa85d3226b910dc79e4ed6524a",

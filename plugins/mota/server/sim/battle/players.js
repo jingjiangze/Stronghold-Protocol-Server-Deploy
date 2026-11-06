@@ -13,7 +13,7 @@ import { isPotential, isCultivate } from '../../../shared/potential.js';
 import { setupUnitKit } from '../content/index.js';
 import { installTraitAttackSpeed } from '../content/traitMods.js';
 
-import { clone } from './util.js';
+import { clone, fin } from './util.js';
 
 export class BattlePlayers {
   _addPlayer(p) {
@@ -160,7 +160,9 @@ export class BattlePlayers {
     if (!def) { this.log(`unknown chess ${inp.chessId}${lo.diy ? ' (illegal 自选 pick)' : ''}`); return null; }
     // a DIY slot has no body of its own (甄选干员): it fights only as a 自选 piece (its `diy` pick)
     if (def.raw?.isDiy && !def.diyFor) { this.log(`自选 slot ${inp.chessId} without a pick`); return null; }
-    const u = this._makeAlly(ps, def, 'op', r, c, { uid: inp.uid, dir, skin: inp.skin });
+    // 藏品通道 (`relicMods`, spec.js sanitizeUnitLoadout): the operator-side effects of this player's relics. Handed to
+    // _makeAlly (base stats / SP / timing fields, _relicSetupAlly); a 召唤物 piece carries none of its own.
+    const u = this._makeAlly(ps, def, 'op', r, c, { uid: inp.uid, dir, skin: inp.skin, relic: inp.relicMods });
     u.items = [...(inp.items ?? [])];
     u.carry = inp.carryState ?? null;
     /*
@@ -229,18 +231,44 @@ export class BattlePlayers {
     return this.data.getToken(tokenId, owner ?? null);
   }
 
+  /**
+   * 藏品的己方通道 (`relicMods`, spec.js sanitizeUnitLoadout; 生产侧 server/match/player/round.js 与
+   * server/match/match/meltdown.js relicAllyMul 写)：只在这里读一次，静态部分落 `u.base`，其余字段挂到单位上，
+   * 由 `_setupUnit`（初始技力 / 技能类）、`deploy.js _deploy`（开战 debuff / 部署晕眩 / DoT / 负面庇护）和
+   * `status.js`（负面庇护的触发）消费。
+   *
+   * 无 `relicMods` 的单位（召唤物、装置、敌人、老存档）每个字段都是缺省值（乘算 1 / 加算 0），于是整条通道空转，
+   * 行为与没有这段代码逐位一致 —— 测试 relic-mods-channel 第 1 条就是这条。
+   */
+  _relicOf(extra) {
+    const rel = extra && extra.relic;
+    return rel && typeof rel === 'object' && !Array.isArray(rel) ? rel : null;
+  }
+
   _makeAlly(ps, def, kind, r, c, extra = {}) {
     const st = def.stats;
+    const relic = this._relicOf(extra);
+    // 乘算因子：有限且 > 0（一个坏因子会把属性清零）；加算因子：任意有限值（攻速可负）。
+    // 技力回复倍率例外：0 是有效值（「技力回复 ×0」），只拒负数。
+    const rMul = (k) => { const n = fin(relic?.[k], 1); return n > 0 ? n : 1; };
+    const rAdd = (k) => fin(relic?.[k], 0);
+    const spRegenRaw = fin(relic?.spRegenMul, 1);
+    const spRegenMul = spRegenRaw >= 0 ? spRegenRaw : 1;
     const u = new Unit({
       id: ++this._idSeq, side: 'ally', kind, def, defId: def.id, name: def.name, ownerId: ps ? ps.playerId : null,
       uid: extra.uid ?? null, ownerUnit: extra.ownerUnit ?? null, skin: extra.skin ?? null, x: c, y: r, tileR: r, tileC: c,
       dir: extra.dir != null ? normDir(extra.dir) : extra.facing != null ? normDir(extra.facing) : ps ? ps.dir : 'RIGHT',
       base: {
-        maxHp: st.maxHp, atk: st.atk, def: st.def, res: st.res, aspd: st.aspd, bat: st.bat, blockCnt: st.blockCnt,
-        moveSpeed: 0, spRecovery: st.spRecovery, tauntLevel: st.tauntLevel, massLevel: st.massLevel,
+        // 藏品：×ATK / ×maxHP / ×DEF 与 +攻速（本引擎 `aspd` 是攻速，越高越快；interval = bat×100/aspd）落基础值，
+        // 于是潜能 / 练度 / 盟约 / buff 各自独立相乘相加的既有口径不变
+        maxHp: st.maxHp * rMul('hpMul'), atk: st.atk * rMul('atkMul'), def: st.def * rMul('defMul'),
+        res: st.res, aspd: st.aspd + rAdd('aspdAdd'), bat: st.bat, blockCnt: st.blockCnt,
+        // 技力回复倍率（lpDrainRest 的低 LP 那半句）：乘在基础回复上，`s.spRecovery` 再乘 buff 的 spRecoveryMul
+        moveSpeed: 0, spRecovery: st.spRecovery * spRegenMul, tauntLevel: st.tauntLevel, massLevel: st.massLevel,
         hpRecoveryPerSec: st.hpRecoveryPerSec, cost: st.cost, respawnTime: st.respawnTime,
       },
     });
+    this._relicSetupAlly(u, relic, rAdd, spRegenMul);
     if(kind==='op')u.contractRedeployMul=ps?.input?.contractRedeployMul||1;
     if(kind==='op' && ps?.bandId==='band_closur' && ps.input?.closurDebt>0) { u.debtPenalty=.9; u.markDirty(); }
     u.alive = false;
@@ -252,6 +280,39 @@ export class BattlePlayers {
     this.allyUnits.push(u);
     if (ps) ps.units.push(u);
     return u;
+  }
+
+  /** 藏品字段挂到单位上 + 常驻庇护（shelter 藏品）；见 `_makeAlly` 的说明。 */
+  _relicSetupAlly(u, relic, rAdd, spRegenMul) {
+    const startDur = Math.max(0, rAdd('startDur'));
+    const dotPct = Math.max(0, rAdd('dotMaxHpPct'));
+    const skillAtkWindow = Math.max(0, rAdd('skillAtkWindow'));
+    const startSpMul = fin(relic?.startSpMul, 1);
+    const skillAtkMul = fin(relic?.skillAtkMul, 1);
+    u.relicMods = relic ? { ...relic } : null;
+    u.relicInitSp = rAdd('initSp');
+    u.relicSpRegenMul = spRegenMul;
+    u.relicStunOnDeploy = Math.max(0, rAdd('stunOnDeploy'));
+    u.relicShelter = Math.max(0, Math.min(1, rAdd('shelter')));
+    // 开战限时 debuff (startDebuff「战斗开始时我方攻击 −20%、攻速 −20、技力回复 −20%，持续 10 秒」)
+    u.relicStart = startDur > 0
+      ? { dur: startDur, atkPct: rAdd('startAtkPct'), aspd: rAdd('startAspd'), spMul: startSpMul > 0 ? startSpMul : 1 }
+      : null;
+    // 每秒固定伤害 (neuralDps) / 部署后限时按最大生命百分比掉血 (fogOnDeploy)
+    u.relicFlatDps = Math.max(0, rAdd('flatDps'));
+    u.relicDot = dotPct > 0 ? { pct: dotPct, dur: Math.max(0, rAdd('dotDur')) } : null;
+    // 负面庇护 (shelterOnDebuff：有干员陷入负面状态后全队 35% 庇护 + 无视 35% 防御/法抗，持续至战斗结束)
+    u.relicDebuffShelter = Math.max(0, Math.min(1, rAdd('debuffShelter')));
+    u.relicDebuffIgnore = Math.max(0, Math.min(1, rAdd('debuffIgnore')));
+    // 技能时序类 (spRegenStack / atkAfterSkill)，钩子在 _setupUnit 里按需注册
+    u.relicSkillSpPer = Math.max(0, rAdd('skillSpPer'));
+    u.relicSkillSpMax = Math.max(0, Math.trunc(fin(relic?.skillSpMax, 0)));
+    u.relicSkillAtk = skillAtkWindow > 0 ? { window: skillAtkWindow, mul: skillAtkMul > 0 ? skillAtkMul : 1 } : null;
+    // 庇护 (佣兵保单「所有我方单位获得 10% 庇护」): 常驻承伤乘区，即 `u.s.dmgTakenMul = 1 - shelter`
+    if (u.relicShelter > 0) {
+      this.addBuff(u, { key: 'relic:shelter', mods: { dmgTakenMul: 1 - u.relicShelter }, persist: true, duration: Infinity });
+    }
+    if (u.relicDebuffShelter > 0 || u.relicDebuffIgnore > 0) this._installRelicDebuffHook();
   }
 
   /** Resolve kit/profile/skill for a unit (called by content/index.js; safe to call again). */
@@ -277,6 +338,10 @@ export class BattlePlayers {
     }
     const spec = u.kit.skill || null;
     u.skill = new SkillRuntime(this, u, u.def.skill, spec, u.def.skill?.bb ?? {});
+    // 藏品：初始技力叠加（spInit / spOnDeploy 是负的，夹到 0 —— 初始技力不能为负）。部署时 SkillRuntime.reset
+    // 按 initSp 给技力，所以这里改的是"该干员这一次战斗的初始技力"。
+    if (u.relicInitSp) u.skill.initSp = Math.max(0, u.skill.initSp + u.relicInitSp);
+    this._installRelicSkillHooks(u);
     if (u.profile.install && !u._profInstalled) {
       u._profInstalled = true;
       this._safe(() => u.profile.install(this, u), 'profile.install', u);
@@ -293,5 +358,34 @@ export class BattlePlayers {
     // this rule both land on the same unit.
     this._safe(() => installTraitAttackSpeed(this, u), 'traitMods.attackSpeed', u);
     return u.kit;
+  }
+
+  /**
+   * 藏品里与技能时序有关的两项（都挂在内容钩子上；缺省字段时不注册任何钩子，行为不变）：
+   * - `skillSpPer` / `skillSpMax`（spRegenStack「技能每用一次，技力回复 +0.4，最多 5 层」）→ 常驻 spRecoveryFlat，
+   *   层数 = 本场已开启技能的次数（封顶 skillSpMax）
+   * - `skillAtkWindow` / `skillAtkMul`（atkAfterSkill「技能结束后 1 秒内攻击 +100%」）→ 限时 atkMul
+   */
+  _installRelicSkillHooks(u) {
+    if (!u || u._relicHooks) return;
+    const per = u.relicSkillSpPer > 0 ? u.relicSkillSpPer : 0;
+    const atk = u.relicSkillAtk;
+    if (!per && !atk) return;
+    u._relicHooks = true;
+    if (per) {
+      const max = u.relicSkillSpMax > 0 ? u.relicSkillSpMax : Infinity;
+      let stacks = 0;
+      this.on('skillStart', (ctx) => {
+        if (!ctx || ctx.unit !== u || !u.alive || stacks >= max) return;
+        stacks++;
+        this.addBuff(u, { key: 'relic:spRegenStack', mods: { spRecoveryFlat: per * stacks }, persist: true, allowDead: true });
+      }, { owner: u });
+    }
+    if (atk) {
+      this.on('skillEnd', (ctx) => {
+        if (!ctx || ctx.unit !== u || !u.alive) return;
+        this.addBuff(u, { key: 'relic:skillAtk', duration: atk.window, mods: { atkMul: atk.mul } });
+      }, { owner: u });
+    }
   }
 }

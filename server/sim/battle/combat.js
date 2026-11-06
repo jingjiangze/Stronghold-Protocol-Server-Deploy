@@ -4,10 +4,28 @@
 
 import { dealDamage as pipeDamage, heal as pipeHeal, applyHpLoss, makeDamageInfo, reduceElement, leaderHitDamage } from '../damage.js';
 import { effectiveProfile, performAttack, acquireTargets } from '../ai.js';
+import { fin } from './util.js';
 
 export class BattleCombat {
   dealDamage(source, target, dmg) {
-    try { return pipeDamage(this, source, target, dmg); } catch (e) { this._internalError('dealDamage', e); return 0; }
+    let dealt = 0;
+    try { dealt = pipeDamage(this, source, target, dmg); } catch (e) { this._internalError('dealDamage', e); return 0; }
+    // 藏品的敌人通道 (spec.enemyMods.defShredPerHit / defShredMax): 敌人每受到一次伤害，防御按该值变化（可负），
+    // 次数封顶。没有该修正的敌人（`relicDefShred` 未设置）完全不走这里。
+    if (dealt > 0 && target && target.side === 'enemy' && target.relicDefShred) this._relicDefShred(target);
+    return dealt;
+  }
+
+  /**
+   * 「敌方防御力 +3000，但每次受到伤害时防御力下降 100（最多 30 次）」(戈渎不语) rest half: one step of the per-hit
+   * DEF change, capped at `max` hits (`Infinity` = uncapped). `u.base.def` never goes below 0.
+   */
+  _relicDefShred(u) {
+    const s = u.relicDefShred;
+    if (!s || s.used >= s.max) return;
+    s.used += 1;
+    u.base.def = Math.max(0, fin(u.base.def, 0) + s.per);
+    u.markDirty();
   }
 
   heal(source, target, amount, opts = {}) {

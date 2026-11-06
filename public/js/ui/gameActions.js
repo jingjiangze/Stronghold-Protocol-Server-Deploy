@@ -102,4 +102,11 @@ export const actions = {
   // room-level intent (NOT g.*): the host frees a spectator seat while the match runs — the server takes room.removeSpectator at
   // any time (server/lobby.js removeSpectator), the game screen had no entry for it (ui/hud.js SpectatorPill; GitHub #120)
   removeSpectator: (playerId) => act('room.removeSpectator', { playerId }, { sfx: 'back' }),
+  // 战斗中实时部署 (方案 A, ui/realtimeDeploy.js): place one of the own board pieces while COMBAT runs. The local battle
+  // is the authority and already applied the order (battle/runner.js liveDeploy) — this only records it on the server
+  // (spec.cmds, so a takeover re-simulation replays it) and the answer arrives as m.deploy.
+  // row/col: the field tile tapped while the piece is armed (stage coordinates; omitted = the piece's board tile)
+  deploy: (uid, row, col) => act('g.deploy', Number.isInteger(row) && Number.isInteger(col) ? { uid, row, col } : { uid }, { sfx: 'confirm' }),
+  // withdraw a standing operator (arms its redeploy timer; no DP refund)
+  retreat: (uid) => act('g.retreat', { uid }, { sfx: 'back' }),
 };

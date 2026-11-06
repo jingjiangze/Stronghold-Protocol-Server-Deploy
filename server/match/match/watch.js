@@ -196,7 +196,10 @@ export class MatchWatch {
    * other contentInfo counters stay: battle effects read them (sim/content: handUnits, roundStats.gainedChess).
    */
   _spectatorSpec(f) {
-    if (!f.spectatorSpec) {
+    // 战斗中实时部署 (方案 A): `spec.cmds` grows while the field runs (match/combat.js _liveCmdRecord), so the cache is
+    // rebuilt when its length moved — the watcher's replica then replays every order the player made so far.
+    const n = f.spec && Array.isArray(f.spec.cmds) ? f.spec.cmds.length : 0;
+    if (!f.spectatorSpec || f.spectatorCmds !== n) {
       const s = f.spec;
       const strip = (p) => {
         if (!p || !p.contentInfo || !Object.hasOwn(p.contentInfo, 'funds')) return p;
@@ -204,7 +207,10 @@ export class MatchWatch {
         void funds;
         return { ...p, contentInfo };
       };
-      f.spectatorSpec = s && Array.isArray(s.players) ? { ...s, players: s.players.map(strip) } : s;
+      // a deep copy: the watcher's replica must not share the live field's order list
+      const cmds = s && Array.isArray(s.cmds) ? { cmds: s.cmds.map((c) => (Array.isArray(c) ? c.slice() : c)) } : null;
+      f.spectatorSpec = s && Array.isArray(s.players) ? { ...s, players: s.players.map(strip), ...(cmds || null) } : s;
+      f.spectatorCmds = n;
     }
     return f.spectatorSpec;
   }

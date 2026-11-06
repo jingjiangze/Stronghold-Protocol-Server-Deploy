@@ -7,6 +7,7 @@ import { COLD_FREEZE_DURATION, LEVITATE_HALF_WEIGHT, RESIST_DEFAULT } from '../c
 import { makeBuff, STATUS, RESIST_STATUSES } from '../buffs.js';
 import { palsyBuff } from '../damage.js';
 import { evadesGround } from '../targeting.js';
+import { negativeStatus } from '../negativeBuff.js';
 import { stampFear } from '../fear.js';
 
 export class BattleStatus {
@@ -186,6 +187,13 @@ export class BattleStatus {
       const rv = this.resistOf(target);
       if (rv > 0) duration *= 1 - rv;
     }
+    // 藏品的敌人通道 (spec.enemyMods.statusDurationMul, 精神治疗录像带「敌人受到的一次性晕眩、寒冷、冻结等异常效果
+    // 影响时间提高 150%」): after 抵抗 (which shortens the base), once per application — the 寒冷 → 冻结 recursion below
+    // passes `statusMulApplied` so the derived 冻结 is not multiplied twice.
+    if (!opts.statusMulApplied) {
+      const sm = this._relicStatusDurationMul(target);
+      if (sm !== 1) duration *= sm;
+    }
     // 浮空 / 缚地 (ba.levitate, ba.groundbind): "对重量大于3的单位持续时间减半"
     if ((key === 'levitate' || key === 'groundbind') && target.s.massLevel > LEVITATE_HALF_WEIGHT) duration /= 2;
     if (!(duration > 0)) return false;
@@ -200,7 +208,7 @@ export class BattleStatus {
       const spans = [prev.timeLeft, duration].filter((t) => t === Infinity || (Number.isFinite(t) && t > 0));
       const freezeFor = spans.length ? Math.max(...spans) : COLD_FREEZE_DURATION;
       const froze = this.applyStatus(target, 'freeze', {
-        duration: freezeFor, source: opts.source, force: opts.force,
+        duration: freezeFor, source: opts.source, force: opts.force, statusMulApplied: true,
         ...(spans.length ? { resistApplied: true } : {}),
       });
       if (!target.alive) return false;
@@ -335,4 +343,59 @@ export class BattleStatus {
   }
 
   removeStatus(target, key) { return this.removeBuff(target, key); }
+
+  // =============================================================================================================
+  // 藏品的己方通道（relicMods，spec.js sanitizeUnitLoadout）：负面庇护 + 敌人异常时长倍率
+
+  /**
+   * 敌人生效的异常时长倍率（spec.enemyMods.statusDurationMul；无该键时恒为 1，行为不变）。
+   * @param {object} target
+   */
+  _relicStatusDurationMul(target) {
+    if (!target || target.side !== 'enemy' || typeof this._relicEnemyMods !== 'function') return 1;
+    const rm = this._relicEnemyMods();
+    const mul = rm && Number.isFinite(rm.statusDurationMul) ? rm.statusDurationMul : 1;
+    return mul > 0 ? mul : 1;
+  }
+
+  /**
+   * 拥有 shelterOnDebuff 藏品的单位把「任一友方中负面 ⇒ 全队庇护」交给这个钩子（每个战场只装一次，
+   * 由 players.js `_relicSetupAlly` 按需调用；没这件藏品时不注册，钩子表保持原样）。
+   */
+  _installRelicDebuffHook() {
+    if (this._relicDebuffHook) return;
+    this._relicDebuffHook = this.on('statusApplied', (ctx) => this._relicOnStatusApplied(ctx), { owner: 'relicDebuff' });
+  }
+
+  /**
+   * shelterOnDebuff（养育者基因种）「有干员陷入负面状态后所有友方单位获得 35% 庇护，攻击无视目标 35% 法术抗性和
+   * 防御力，持续至战斗结束」: the first negative status on one of a player's operators arms the team effect for that
+   * player — permanently (later deployments take it in deploy.js `_relicOnDeploy`). Per ownerId: one player's relic
+   * never shelters a teammate's units on a 联防 field.
+   */
+  _relicOnStatusApplied(ctx) {
+    const t = ctx && ctx.target;
+    if (!t || t.side !== 'ally' || !negativeStatus(ctx.status)) return;
+    const owner = t.ownerId ?? '';
+    const armed = (this._relicDebuffActive ??= new Set());
+    if (armed.has(owner)) return;
+    armed.add(owner);
+    for (const a of this.allyUnits) if ((a.ownerId ?? '') === owner) this._relicApplyTeamDebuff(a);
+  }
+
+  /** Give one ally the team effect of its owner's shelterOnDebuff relic (the strongest of that owner's units). */
+  _relicApplyTeamDebuff(u) {
+    if (!u || u.side !== 'ally' || !u.alive || u.findBuff('relic:debuffShelter')) return;
+    let shelter = 0, ignore = 0;
+    for (const a of this.allyUnits) {
+      if ((a.ownerId ?? '') !== (u.ownerId ?? '')) continue;
+      if (a.relicDebuffShelter > shelter) shelter = a.relicDebuffShelter;
+      if (a.relicDebuffIgnore > ignore) ignore = a.relicDebuffIgnore;
+    }
+    if (!(shelter > 0) && !(ignore > 0)) return;
+    const mods = {};
+    if (shelter > 0) mods.dmgTakenMul = 1 - shelter;
+    if (ignore > 0) mods.defIgnorePct = ignore;
+    this.addBuff(u, { key: 'relic:debuffShelter', mods, persist: true, duration: Infinity });
+  }
 }

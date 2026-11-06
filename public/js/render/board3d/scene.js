@@ -74,6 +74,9 @@ const allBehind = (p) => {
  * @param {number} h 画框高（格）
  * @param {number} [margin] 四边（左右 / 远侧 / 近侧）的外扩（格）
  */
+/** `*_BG` / `*background` 类 material（远景大面、外景岩壁），与主场景 material 区分开。 */
+const isBgMaterial = (name) => typeof name === 'string' && /background|_BG/i.test(name);
+
 export function clipSceneChunkToFrame(c, w, h, margin = ROGUE_SCENE_CLIP_MARGIN) {
   const pos = c?.position, idx = c?.index;
   if (!pos || !idx || idx.length < 3) return c;
@@ -101,8 +104,11 @@ export function clipSceneChunkToFrame(c, w, h, margin = ROGUE_SCENE_CLIP_MARGIN)
       // 低平地面（maxZ≈0）跨过近边界时保留，否则画框近边露底
       if ((nearBand(a) || nearBand(b) || nearBand(d))
         && Math.max(pos[a + 2], pos[b + 2], pos[d + 2]) > ROGUE_SCENE_NEAR_OCCLUDER_Z) continue;
-      // 顶棚 / 树海顶盖（如 ro5 z≈6.3、ro6 z≈12.3）x/y 裁不掉；高度阈值只管整个三角形都在画框外的，任一顶点超高就丢
-      if (!inFrame(a) && !inFrame(b) && !inFrame(d) && (high(a) || high(b) || high(d))) continue;
+      // 顶棚 / 树海顶盖（如 ro5 z≈6.3、ro6 z≈12.3）x/y 裁不掉；高度阈值只管整个三角形都在画框外的，任一顶点超高就丢。
+      // 2026-11-06 收窄：只有 background 类 material 才走这条 —— 实测 highDrop 丢掉的上万个三角里 background 占比 0，
+      // 全是主场景 material 里的第三层装饰（树冠/瓦檐/plantMove），而它们都在画框远侧/左右、对遮挡零贡献
+      // （近侧高体早已被上面那条近侧规则清掉）。第三层装饰与地面共用同一个 material 名，只能按这条规则区分。
+      if (!inFrame(a) && !inFrame(b) && !inFrame(d) && isBgMaterial(c.material) && (high(a) || high(b) || high(d))) continue;
       keep.push(idx[i], idx[i + 1], idx[i + 2]);
     }
   }

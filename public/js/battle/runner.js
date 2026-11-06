@@ -353,6 +353,9 @@ export function createBattleRunner(deps) {
       battleId: e.battleId, fieldId: e.fieldId, kind: e.kind, authoritative: e.authoritative, watch: e.watch,
       done: e.done, own: e.own, members: e.members.slice(), loading: !!loading, speed: e.speed, paused: pausedAt != null,
       leaks: leakMap(), uniteLeft: uniteLeftMap(), bondLayers: layerMap(),
+      // 战斗中实时部署 (方案 A): the battle on screen holds its board until the player places it (spec.flags.liveDeploy) —
+      // the game screen shows the deploy strip only then (ui/realtimeDeploy.js)
+      liveDeploy: !!(e.battle && e.battle.flags && e.battle.flags.liveDeploy === true),
     };
   }
 
@@ -1114,6 +1117,28 @@ export function createBattleRunner(deps) {
       const list = Array.isArray(e.battle.allyUnits) ? e.battle.allyUnits : [];
       const u = list.find((x) => x && x.uid === uid && x.ownerId === ownerId);
       return u && Number.isInteger(u.id) ? u.id : null;
+    },
+    /**
+     * 战斗中实时部署 (方案 A): hand one order to the battle on screen. The browser is the authority of a client-side
+     * field, so it applies the order to its own Battle — `Battle.deployLive` (pay `cost`, place on `tile`, else the
+     * piece's board tile) / `Battle.retreatLive` (off the field, the redeploy timer arms, no DP refunded) — and the
+     * server only records it (g.deploy / g.retreat, spec.cmds) and answers m.deploy. A Worker host runs the battle off
+     * the page and has no such RPC, and a display replica (a watched field) never acts: both answer `mode`.
+     * @param {string} playerId @param {number} uid @param {number[]|null} [tile] @returns {{ ok: boolean, error?: string }}
+     */
+    liveDeploy(playerId, uid, tile = null) {
+      const e = cur;
+      if (!e || !e.battle || !e.authoritative || (e.host && e.host.remote)) return { ok: false, error: 'mode' };
+      try { return e.battle.deployLive(playerId, uid, Array.isArray(tile) ? tile : null) || { ok: false, error: 'mode' }; } catch { return { ok: false, error: 'mode' }; }
+    },
+    /**
+     * 战斗中实时部署 (方案 A): withdraw a standing operator of the battle on screen (see liveDeploy for the host rules).
+     * @param {string} playerId @param {number} uid @returns {{ ok: boolean, error?: string }}
+     */
+    liveRetreat(playerId, uid) {
+      const e = cur;
+      if (!e || !e.battle || !e.authoritative || (e.host && e.host.remote)) return { ok: false, error: 'mode' };
+      try { return e.battle.retreatLive(playerId, uid) || { ok: false, error: 'mode' }; } catch { return { ok: false, error: 'mode' }; }
     },
     /**
      * The operators `ownerId` fields in the battle on screen — their board in that battle, waiting to deploy, deployed

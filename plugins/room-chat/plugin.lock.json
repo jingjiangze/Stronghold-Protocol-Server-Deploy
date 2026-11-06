@@ -329,8 +329,8 @@
       "bytes": 17480
     },
     "client/js/ui/roomChat.js": {
-      "sha256": "cf2230a0c2756f1f6c0458a2415aac40a497087551e9d864a4f5ee44906eaaa2",
-      "bytes": 26504
+      "sha256": "b42f30fcb34022bbc8d836f7f2f07a4057f588c416a6af2efb29a5762983c6d6",
+      "bytes": 27302
     },
     "client/js/ui/roomDanmaku.js": {
       "sha256": "6f6c2987b7fa67e8112cdb5a454d2f01118713fe8d4765e1067aa96a4d0565eb",

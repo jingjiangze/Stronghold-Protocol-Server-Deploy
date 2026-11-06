@@ -29,8 +29,8 @@
       "bytes": 7134
     },
     "client/css/screens/hex.css": {
-      "sha256": "20e811f99d38d233a5fcfe8668e718ed0d8f5cda53f6f5e7693670333136fb06",
-      "bytes": 68718
+      "sha256": "443ed803d3d34f2a4c84f6127423ac99b4dddea43649d71a215ce9158a279f4a",
+      "bytes": 69098
     },
     "client/css/screens/loadout.css": {
       "sha256": "00732f46481b43b35d2b5ecf678675ee2b28b01fed0f4a00fd78e9c644d375d3",
@@ -49,8 +49,8 @@
       "bytes": 43453
     },
     "client/css/screens/rogue-panel.css": {
-      "sha256": "a29b3e2185fd6e6e330824a2bc6b6586ae9c0a690dc0281ca4be0e115edf26ee",
-      "bytes": 26907
+      "sha256": "944c9dee8eb828ef7a68cb5ce7253f5afddd324d8844fa1acf441facfe38eab7",
+      "bytes": 32404
     },
     "client/js/assets.js": {
       "sha256": "40ca0664da58db3e416fc3268cbfad7a914099ed5c16b0e3aab51e44f941996e",
@@ -93,8 +93,8 @@
       "bytes": 5601
     },
     "client/js/render/app.js": {
-      "sha256": "96020543b6593bc776e19d53cbc6a4b849b3c85107b8d9b825038820c1fc3cc3",
-      "bytes": 143569
+      "sha256": "dc09d32e6a6fc8aa38f5cd16110c7019879e97ca5325003bf5385aa03214ab80",
+      "bytes": 147231
     },
     "client/js/render/fx/arrivals.js": {
       "sha256": "617f94b266e3349b5d99f6d12423cd6573fdc32c56902e5af7b6fa6d8bcd7efe",
@@ -105,8 +105,8 @@
       "bytes": 4760
     },
     "client/js/render/units.js": {
-      "sha256": "ee8de2239bd647786fb047a6529e78cc76a4ec3f0b1c93532e6ec4237ab7c6cd",
-      "bytes": 152651
+      "sha256": "5424393b53d27067c095dffa4b015d6d2644f141cb19affbe0cacbafe63de15d",
+      "bytes": 152945
     },
     "client/js/render/vfx/wiring.js": {
       "sha256": "e1c19e7b07c0c9779c05ef45ec9553f4698257e78e76f2864da78b1d92c0547b",
@@ -153,8 +153,8 @@
       "bytes": 22978
     },
     "client/js/screens/game.js": {
-      "sha256": "4b7b174f4f2eaa4510daf87ff1d940ba9b8f73019e29ad8bc12abfc5c7da5a93",
-      "bytes": 136854
+      "sha256": "f165eddea641a9bdd937c2e27144aef373b8dc2ad3733bb41904397cc73ef251",
+      "bytes": 137793
     },
     "client/js/screens/loadout.js": {
       "sha256": "475a2a94b2f2b82bc769875dc6455816997302fb20e841083e4626e6754d7873",
@@ -397,20 +397,20 @@
       "bytes": 7147
     },
     "client/js/ui/relicOverlay.js": {
-      "sha256": "f17198c2059a6bddd05ef4f7288ee1fe865dab631ace3a0e81f11c7d8aa529af",
-      "bytes": 2799
+      "sha256": "031f4cd31571fc6f46816247dd233a73f9a142fa5308cea905d5db99201848c2",
+      "bytes": 9806
     },
     "client/js/ui/revivePlate.js": {
       "sha256": "c1e3632e9e01ff09bb598fd4b81813f00190b4b0cb7ba79b85ec6e47851a6f62",
       "bytes": 4463
     },
     "client/js/ui/rogueEventOverlay.js": {
-      "sha256": "58febcf6634b567318f9aefc110db35db9ebfdc176f642925ebfbe6a2726e57b",
-      "bytes": 2090
+      "sha256": "2f4099c287277d6b7a526e9790397b60dd61c36c550a0d1032a12ade93780e26",
+      "bytes": 4508
     },
     "client/js/ui/rogueHud.js": {
-      "sha256": "5556fde94453b1eb2557bbcdd92e0df90a30161bc5a6cba519dba32f89501ff7",
-      "bytes": 3833
+      "sha256": "73a26bda5ff81c3ed2f16bfd9f7a826dc39ab3e05c89f7b1ffafb11ca1b33f48",
+      "bytes": 3821
     },
     "client/js/ui/rogueMapDock.js": {
       "sha256": "0be99c3c43a441ab017fbe48ee347530488932858a921ed3fd415f140766112d",
@@ -425,8 +425,8 @@
       "bytes": 1011
     },
     "client/js/ui/roguePanel.js": {
-      "sha256": "ced82e9f48334a8a9710a08095d7a60f2ccc56893cad63ce0afa79a6e0c5965f",
-      "bytes": 34787
+      "sha256": "54d3feda36c6965275756e67f0a2c9606bebb1716f37def9b3becc920d4b7cc2",
+      "bytes": 48184
     },
     "client/js/ui/rosterPanel.js": {
       "sha256": "51d39b9e193e0fb664894c9446e6681af7f49e1c79cb14fbb6d425fd74f60c74",
@@ -773,8 +773,8 @@
       "bytes": 12715
     },
     "server/match/match/meltdown.js": {
-      "sha256": "6fdc9069cf8c852c4dfe559d51f82337199cdc8f1169cd836c0b37f2885f6097",
-      "bytes": 77088
+      "sha256": "aa54101c1d0ddd96e540d6e7858359d9fef614d9023534a61caa171c8b5dbc68",
+      "bytes": 100427
     },
     "server/match/match/messaging.js": {
       "sha256": "d72fe00e998f146d6ad2cfc26fc9cf76a13544f65c5bbcb115847a64d609e10b",
@@ -789,8 +789,8 @@
       "bytes": 3566
     },
     "server/match/match/phases.js": {
-      "sha256": "7ddf34d95d125c8c7bc12617847c8a647d2e5c8d44ede8b91c0a01fc01fd6a91",
-      "bytes": 35371
+      "sha256": "e03d5bae629bc0cf9ea1739f3097f687843fa63ce299f4df9ca866572de19c46",
+      "bytes": 35813
     },
     "server/match/match/platform.js": {
       "sha256": "3ae49bab6d84b40493644a0eb3eb5f432c2a70d8abbd442edd370f7cee70c4f4",
@@ -1177,12 +1177,12 @@
       "bytes": 8464
     },
     "server/sim/battle/combat.js": {
-      "sha256": "2504be7c7b215aee3ebf119fcfbcae0315d681cd8dc7929dc23bc2918c6ec36b",
-      "bytes": 3722
+      "sha256": "a163b714321647bad5290cf8bbe3d59f24d29b1755206711e11bc3d28a52bb2a",
+      "bytes": 4608
     },
     "server/sim/battle/deploy.js": {
-      "sha256": "20a00da451bc864c7539e3824ec4607f6a41ee656fff38bde7366a0e24921d25",
-      "bytes": 16757
+      "sha256": "1e4050105c901c46921037ae8d232d80691fb16259409286d20cfea0bb4c4002",
+      "bytes": 25091
     },
     "server/sim/battle/displacement.js": {
       "sha256": "7372f5ebf329b920a5a7214d9269ea8b4ae79198b9aa6b1e9c28bc27fe6b5543",
@@ -1201,24 +1201,24 @@
       "bytes": 8468
     },
     "server/sim/battle/lifecycle.js": {
-      "sha256": "d56136e78db73a6774e7b044032b3b50d40198e45fa2574ae7611517f5ffd281",
-      "bytes": 16445
+      "sha256": "62cba0112d6eda1e2eb920d9ccf6aa70ecfb4ec75917d8b84e24dfdc8c8849d6",
+      "bytes": 17250
     },
     "server/sim/battle/players.js": {
-      "sha256": "baa1f8478ed9817fe8610f505be2c792e3c06bad5ded431ebfebe8ff83e7db8e",
-      "bytes": 17194
+      "sha256": "bdbed070e0a2357aec2328085870fcc3a3a9b561cede6d15963829273319ab4e",
+      "bytes": 23253
     },
     "server/sim/battle/queries.js": {
       "sha256": "15e827a2f83a7efbd7808658020b3c2e5dc3ebded651e5f6c35da28c8c615f82",
       "bytes": 19735
     },
     "server/sim/battle/spawns.js": {
-      "sha256": "2bd6d6eb65e38e484bee69df69c96c29cf7e002e41bde68d593eec647ecda9cb",
-      "bytes": 17491
+      "sha256": "ac6ea824b2240f10e7196497d47aabae34635545f13ae844a73ec1955ecab445",
+      "bytes": 20265
     },
     "server/sim/battle/status.js": {
-      "sha256": "1c5f50c500355ac20a4249873db6b590a2fa2a3309dfa25b52202a8069e7c926",
-      "bytes": 20198
+      "sha256": "f23b3b6547ebe1e2e50f04e5406ee18a4573d5ae5edcfc4a3f40874db8bd8d07",
+      "bytes": 23571
     },
     "server/sim/battle/summons.js": {
       "sha256": "c04a4bd3947582264b0d19c28997d11e9d0405a9c1d69f7e75ca95919acd4ce5",
@@ -2801,8 +2801,8 @@
       "bytes": 16022
     },
     "server/sim/spec.js": {
-      "sha256": "25b18c3b24d9fa52c0019b5e8eaa80a0419abc58f965ff106a84be8e39360267",
-      "bytes": 32197
+      "sha256": "0adfcdf3f0dd450bdb35f9a3953ff412306886c61e4f1e44d87872ed861981b8",
+      "bytes": 36617
     },
     "server/sim/studioMirror.js": {
       "sha256": "765ae101e3a573c33b48d3e429fb07415139beae339a2740c900f1d13020ba55",
