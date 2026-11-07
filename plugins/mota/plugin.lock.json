@@ -664,9 +664,17 @@
       "sha256": "674411562d36025e4999c9d833900ae8106baedf63b54a874f50ddcf98360f84",
       "bytes": 114987
     },
+    "server/match/botContract.js": {
+      "sha256": "b59da32e5365adfaf1925e0ab524225cc3e3933a97b412c79acd051b2b29167e",
+      "bytes": 3322
+    },
     "server/match/botEmotes.js": {
       "sha256": "d617b26a4db1606cbd6c9d478f5f8c7c53026526b6f13dc7c8d808a735457bf7",
       "bytes": 3450
+    },
+    "server/match/botStrategies.js": {
+      "sha256": "2c872370cb3429b70aad98a3deb48ad5938516212e413102147d9726216043d6",
+      "bytes": 3092
     },
     "server/match/builtinMeta.js": {
       "sha256": "8350b5d572bccfa970af40b9dbe2cd21092ee01ed9e48adef22e173d3c150116",
@@ -855,6 +863,26 @@
     "server/match/match/watch.js": {
       "sha256": "5b30bcd034f28717e7dd0359a1b3c0e271c5cf499f07093e5145929346652d1d",
       "bytes": 16575
+    },
+    "server/match/monsterBonds.js": {
+      "sha256": "b7134aba2f7ca03e4c6ee409a0329cd5e57954470c232811dc95c03a1990d9af",
+      "bytes": 45677
+    },
+    "server/match/monsterContract.js": {
+      "sha256": "cbdef4c1f9d59df7c052251aaa3d3cbdeeb07ddcdfa2ddcfe40b5bf8acae09a1",
+      "bytes": 6032
+    },
+    "server/match/monsterPool.js": {
+      "sha256": "34f84292d1cd18807390229472cc66d59df64d7dac5de50a721a0b15ece180f7",
+      "bytes": 27855
+    },
+    "server/match/monsterShop.js": {
+      "sha256": "9345f3cee0de697f7b7a8df9f053d03f665bec608498ddd4a50ecbe64ef6ae50",
+      "bytes": 76189
+    },
+    "server/match/monsterStrategies.js": {
+      "sha256": "dd10ebb1b98fd617a1585fb37fee02c73f904497b1a0447f0b88c17d887b47d1",
+      "bytes": 8452
     },
     "server/match/operatorTraits.js": {
       "sha256": "b4e7a023e0784c611d71ef97ba9d9ff964095dc56433e6a18cc230a35e00a6bb",
