@@ -117,7 +117,8 @@ export function stageNote(stages) {
 /** 娱乐模式 → 肉鸽：直接进协议页时用的模式卡（MODE_CARDS 没有肉鸽这一格，标题与简介按它显示）。 */
 const ROGUE_CARD = {
   id: 'rogue', name: N_('肉鸽模式'), en: 'ROGUELIKE', icon: 'rogue',
-  desc: N_('开局与之后每 2 回合各抽一次藏品三选一（每人本局最多 3 件），每回合随机词缀、事件期出随机事件、每回合换战场；同时开启协同团队储备。'),
+  // 2026-11-07：藏品改成官方形态「按节点给」（得偿所愿/事件/商店），不再是每 2 回合发牌、也没有 3 件上限
+  desc: N_('藏品按节点给：得偿所愿与首领各一次免费三选一，商店按标价购买，事件里可用代价换；每回合随机词缀、事件期出随机事件、每回合换战场，同时开启协同团队储备。'),
 };
 
 /**
@@ -501,7 +502,7 @@ function FunSelect({ onClose, onPick, busy, lobbyStats = null, onJoinRoom = null
     { id: 'confront', name: t('对战 · 控怪'), en: 'CONFRONT', icon: 'confront', acc: 'var(--orange)',
       desc: t('出怪、路线、时机全部由你决定；守方遇到的怪约为官方的 1.5 倍。') },
     { id: 'rogue', name: t('肉鸽模式'), en: 'ROGUELIKE', icon: 'rogue', acc: 'var(--violet)',
-      desc: t('开局与每 2 回合各抽一次藏品三选一，外加随机词缀、随机事件与每回合换图。') },
+      desc: t('藏品按节点给（得偿所愿/事件/商店），外加随机词缀、随机事件与每回合换图。') },
   ];
   return html`<div class=${`modal${leaving ? ' is-leaving' : ''}`} role="presentation"
       onMouseDown=${(e) => { if (e.target === e.currentTarget) leave(); }}>

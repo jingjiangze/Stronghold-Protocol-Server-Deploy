@@ -161,8 +161,8 @@
       "bytes": 98875
     },
     "client/js/screens/lobby.js": {
-      "sha256": "4c4466ddcf798175dff4a2ad7bd503ee8e98075c49535a04a9527cef097d2bf3",
-      "bytes": 86868
+      "sha256": "8fd0afb06f46e9f16a93ed533f9d497fac0f10f9a483b573907c7a95e9c76dfb",
+      "bytes": 87050
     },
     "client/js/screens/lobbyLinks.js": {
       "sha256": "9bc64d256ebfa569878082119b997dc5f99f2b9cbdef52e7b9013aa429c9a953",
