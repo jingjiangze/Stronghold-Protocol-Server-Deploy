@@ -489,11 +489,6 @@ export function TopBar({ pub, priv, conn, hud, total, drawer, onExit, onDrawer, 
     : null;
   const myRole = versus && Array.isArray(pub?.players) ? (pub.players.find((p) => p.playerId === myId)?.role || null) : null;
   const poolOf = (t) => (versus && Number.isFinite(Number(pub.teamLps[t])) ? Math.max(0, Math.round(Number(pub.teamLps[t]))) : null);
-  // 两队剩余（对抗模式）：本队在左、对手在右，`is-own` / `is-foe` 两个类区分颜色。
-  // 观战席没有 myTeam —— 两队都按中立渲染，不猜。
-  const pools = versus
-    ? [0, 1].filter((t) => poolOf(t) != null).map((t) => ({ team: t, hp: poolOf(t), own: myTeam == null ? null : t === myTeam }))
-    : [];
   const lp = versus && poolOf(myTeam) != null
     ? poolOf(myTeam)
     : boss && Number.isFinite(pub?.teamLp) ? pub.teamLp : Number.isFinite(priv?.lp) ? priv.lp : null;
@@ -528,9 +523,6 @@ export function TopBar({ pub, priv, conn, hud, total, drawer, onExit, onDrawer, 
         ${pub?.difficulty ? html`<${DifficultyTag} difficulty=${pub.difficulty} size="sm" />` : null}
         ${versus ? html`<span class="gtop__versus" data-testid="versus-info" title=${t('对抗模式：两队共享生命值，攻守每回合轮换')}>
           <b class="gtop__vmode">${pub.teamSize}V${pub.teamSize}</b>
-          ${pools.length ? html`<span class="gtop__vlps" data-testid="versus-team-lps">
-            ${pools.map((x) => html`<b class=${`gtop__vlp ${x.own === true ? 'is-own' : x.own === false ? 'is-foe' : ''}`} data-team=${x.team} title=${x.own === true ? t('我方目标生命值') : x.own === false ? t('敌方目标生命值') : t('目标生命值')}>${x.hp}</b>`)}
-          </span>` : null}
           ${myRole ? html`<b class=${`gtop__vrole ${myRole === 'attack' ? 'is-attack' : 'is-defend'}`}>${myRole === 'attack' ? t('进攻') : t('防守')}</b>` : null}
         </span>` : null}
         ${pub?.test ? html`<${TestMark} class="gtop__test" />` : null}

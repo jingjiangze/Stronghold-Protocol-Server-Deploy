@@ -5,19 +5,15 @@ import { recordPrepLineups } from '../../lineupLibrary.js';
 // Installed on Match.prototype by server/match/Match.js (a method container: never instantiated; `this` is the match).
 
 import { PHASE } from '../../../shared/constants.js';
-// AI 策略按模式独立（Match.botStrategy，Match 构造期解析）；策略缺失时才回落到 LEGACY_BOT，即本文件改造前调用的那几个函数。
-import { LEGACY_BOT } from '../botContract.js';
+import { botPrepBeginSteps, botPrepEndSteps } from '../bot.js';
 import { testSlice } from '../testTrace.js';
 import { DELAYS } from './common.js';
 
 export class MatchPrep {
-  /**
-   * 本回合参加休整的玩家：**全体存活玩家**。
-   * 攻防回合也一样 —— 攻方在目标选择结束（finishConfrontTargets）后就进入这同一个 PREP：攻方用商店 / 投放，
-   * 守方照常布防，两边共用一个 deadline（gd.prepTime(round)），不再有独立的怪物投放窗口。
-   */
+  /** 本回合参加休整的玩家：攻防回合只有守方（攻方只投放）；普通回合全体存活玩家。 */
   prepPlayers() {
-    return this.alivePlayers();
+    if (typeof this.isRoleRound !== 'function' || !this.isRoleRound()) return this.alivePlayers();
+    return this.defenders();
   }
 
   enterPrep() {
@@ -34,13 +30,17 @@ export class MatchPrep {
       this.dispatch(ps, 'onPrepStart', { round: this.round });
       ps.recompute();
     }
-    // 攻方不再有「跳过休整、直接 Ready」的特例：攻守同进本 PREP（prepPlayers 已含全体存活玩家），
-    // 商店的开张在 finishConfrontTargets（目标选择结束时）已经完成。
-    // A co-op room waits for every alive seat's Ready (maybeEndPrep), so a human able to press it must have a
-    // deadline — otherwise that human's silence stalls the match forever (docs/PS100-MIGRATION.md §5, the
-    // 「1 真人 + N AI」 room: `prepFallbackGuard`). `soloUntimed` still governs the OTHER phases (INFO_CHECK,
-    // BAND_DRAFT, SP_DRAFT and the silent presentation steps); here the guard only hands that lone human the co-op
-    // prep timer it was missing.
+    // 攻方本回合没有战场：不进入休整，只做待合并装备的清理并直接 Ready，等待守方开打。
+    for (const ps of this.alivePlayers()) {
+      if (prep.includes(ps)) continue;
+      try { ps.checkItemMerges(); } catch { /* ignore */ }
+      ps.recompute();
+      ps.ready = true;
+      ps.dirty();
+    }
+    // 只有一个真人的房（独立模拟 / 单人肉鸽 / 「1 真人 + N AI」）没有休整倒计时：没有第二个玩家会来按准备，
+    // 倒计时只是逼自己 —— 与 `soloUntimed` 同一条规则（docs/PS100-MIGRATION.md §5，user playtest #4 item 3）。
+    // AI 席位会立刻 Ready，所以不计时也不会把 `maybeEndPrep` 卡住。
     //
     // 其余房间仍由数据决定：本回合声明了 `prepTime` 就用它；声明为 null 就是不计时（config 是权威 ——
     // `verification-slices.test.js` 的零延迟顺序依赖这一点）。`infoCheck` 25 s 兜底只给 `prepFallbackGuard`
@@ -123,7 +123,7 @@ export class MatchPrep {
     };
     const end = (job) => {
       let gen = null;
-      try { gen = (this.botStrategy?.prepEnd ?? LEGACY_BOT.prepEnd)(this, ps, job); } catch (e) { this.reportError(`bot ${ps.playerId}`, e); }
+      try { gen = botPrepEndSteps(this, ps, job); } catch (e) { this.reportError(`bot ${ps.playerId}`, e); }
       if (!gen) { ready(); return; }
       drive(gen, '', ready);
     };
@@ -147,7 +147,7 @@ export class MatchPrep {
     };
     this.later(this.scaled(DELAYS.BOT_ACTION + i * DELAYS.BOT_STAGGER), () => {
       if (!valid()) return;
-      drive((this.botStrategy?.prepBegin ?? LEGACY_BOT.prepBegin)(this, ps, { delegate: this.botRehearsalDelegate }), '', (job) => {
+      drive(botPrepBeginSteps(this, ps, { delegate: this.botRehearsalDelegate }), '', (job) => {
         if (!job) { end(null); return; }
         // A job is finished when it has nothing left to simulate: the server's own run over the candidates, or — with a
         // delegated one — the host's pick, which MatchRehearsal accepts as soon as it arrives, possibly while the
@@ -231,16 +231,13 @@ export class MatchPrep {
     } else if (r === this.gd.hiddenRound && this.isRogue !== true) {
       this.startFinalAssault(true);
     } else if (this.isRoleRound && this.isRoleRound() && this._confrontDoneRound !== this.round) {
-      // 攻防回合：目标选择在 PREP 开头就做完了（finishConfrontTargets → enterPrep），所以 PREP 结束时**不再**回 CONFRONT，
-      // 而是冻结投放（finishConfront：收尾未提交者 → this.confront → 悬赏名单 → COMBAT）。
-      // 只有「本回合还没做过目标选择」的旧/异常路径才回 CONFRONT 补做（防御性兜底，enterConfront 的 target 分支）。
-      if (this._confrontTargetsRound === this.round) this.finishConfront();
-      else this.enterConfront();
+      // 防御性兜底：攻防回合若还没投放，先回到攻方投放，再进守方休整
+      this.enterConfront();
     } else {
       this.startCombat();
     }
   }
 
-  /** 兼容入口：攻方投放结束后的休整（= enterPrep；当前流程里攻守同进一个 PREP，不再单独经过这里）。 */
+  /** 攻方投放结束后的守方休整（与 enterPrep 同一套逻辑，仅参战名单不同）。 */
   enterDefenderPrep() { this.enterPrep(); }
 }

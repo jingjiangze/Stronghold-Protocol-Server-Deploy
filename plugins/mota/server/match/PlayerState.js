@@ -160,18 +160,6 @@ export class PlayerState {
     /** 个人储备（业主 2026-10-26 三层资金）：回合末结余进这里，用于买装备（熔毁商店），跨回合保留。 */
     this.reserve = 0;
     this.pendingFunds = 0;
-    // ---- 攻方怪物资金（业主 2026-11-04 裁决：独立账户，跨回合结转）----
-    // 来源 = 每回合军费（match/confront.js grantMonsterFunds，发放点 finishConfrontTargets）+ 击杀 / 漏过奖励
-    // （match/settle.js）。买卡 / 刷新 / 投放都从这里扣（monsterShop.js 显式 spendMonsterFunds）。
-    // 与守方的 `funds` **完全分开**：不进 stats.gold / round.spent / totalSpent，`econSplitLeftover` 只碰 `ps.funds`
-    // 与 `ps.reserve`，不会清零它；`eliminate()` 也不动它（账户跟人走，不参与守方那套三层资金）。
-    // 注：商店的**等级**（2026-11-04「参考卫戍协议干员商店」）不在本类 —— 它跨回合持久，挂在 Match 的
-    // `m.monsterShopLevels`（monsterShop.js 的 monsterShopLevelOf / setMonsterShopLevel）；放这里会被每回合重建冲掉。
-    this.monsterFunds = 0;
-    /** 本回合发的军费（只给 m.monsterShop 帧显示；每次发军费时重置） */
-    this.monsterGrant = 0;
-    /** 本回合拿到的击杀 / 漏过奖励合计（同上，发军费时重置） */
-    this.monsterEarned = 0;
     // ---- 海克斯（TFT 式 augment，从 hexmod 移植）----
     /** 本局已选下的全部海克斯 id（按选择顺序）；hex = 第一张（兼容字段） */
     this.hexes = [];
@@ -314,36 +302,6 @@ export class PlayerState {
 
   /** The shared chess pool of this player's 4-player group (single pool before the match assigns poolId). */
   poolGroup() { return this.m.pools?.[this.poolId] ?? this.m.pool; }
-  /**
-   * 攻方怪物资金入账（军费 / 击杀与漏过奖励）。只加不减、整数、夹 >= 0；**不写守方统计**（不碰 stats.gold /
-   * round.spent / totalSpent、不碰 funds）—— 这是怪物方的独立账户（业主 2026-11-04）。
-   * @param {number} n
-   * @returns {number} 实际入账的数（非正 / 非法 → 0）
-   */
-  addMonsterFunds(n) {
-    if (!Number.isFinite(n)) return 0;
-    const v = Math.trunc(n);
-    if (!(v > 0)) return 0;
-    this.monsterFunds = Math.max(0, (Number(this.monsterFunds) || 0) + v);
-    this.dirty();
-    return v;
-  }
-
-  /**
-   * 从怪物资金扣款：**全有或全无**（余额不够就一分不扣，返回 false），供买卡 / 刷新 / 投放用。
-   * 不写守方统计（同上）。
-   * @param {number} n 单价 × 只数（非正 / 非法 → 视为 0，返回 true）
-   * @returns {boolean} 是否扣款成功
-   */
-  spendMonsterFunds(n) {
-    const v = Number.isFinite(n) ? Math.max(0, Math.trunc(n)) : 0;
-    if (!(v > 0)) return true;
-    const cur = Math.max(0, Number(this.monsterFunds) || 0);
-    if (v > cur) return false;
-    this.monsterFunds = cur - v;
-    this.dirty();
-    return true;
-  }
 }
 
 // the method modules, in this order (a name defined twice is an error, never a silent override)

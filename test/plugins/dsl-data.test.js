@@ -321,13 +321,10 @@ test('DSL literals above the official cap are refused; an in-range product is cl
     f.put('bounds', { permissions: ['data.add', 'dsl'], operators: ['op.json'] }, { 'op.json': operator('bounds', dsl) });
     return buildContentSet({ registry: f.registry, ids: ['bounds'] });
   };
-  // The caps are dataBound(official max) of the merged data tables, so a bigger official table moves them.
   const cases = [
     [{ dsl: 1, skill: { kind: 'passive', mods: { atkPct: 1e9 } } }, /黑板 atk/, /300/],
     [{ dsl: 1, skill: { kind: 'passive', ammo: 1e9 } }, /黑板 ammo/, /64/],
-    // 2026-11-05：怪物表并入肉鸽/剧情怪后，官方上限由 1200（原断言）升到 99990（数据驱动，非逻辑改动）。
-    // enemy_1327_cbrokt.skills[0].spCost = 9999 现为官方最大值，dataBound ×10。
-    [{ dsl: 1, skill: { kind: 'passive', spCost: 1e9 } }, /字段 skill\.spCost/, /99990/],
+    [{ dsl: 1, skill: { kind: 'passive', spCost: 1e9 } }, /字段 skill\.spCost/, /1200/],
     [{ dsl: 1, skill: { kind: 'passive', initSp: 1e9 } }, /字段 skill\.initSp/, /1100/],
     [{ dsl: 1, skill: { kind: 'passive', attack: { atkScale: 1e9 } } }, /黑板 atk_scale/, /80/],
   ];

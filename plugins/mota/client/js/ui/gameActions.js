@@ -12,8 +12,6 @@ import { t } from '../../shared/i18n.js';
 
 const SUCCESS_SFX = {
   'g.buy': 'buy', 'g.sell': 'sell', 'g.refresh': 'refresh', 'g.freeze': 'freeze', 'g.levelUp': 'levelup',
-  // 怪物卡池升级（2026-11-04「参考卫戍协议干员商店」）：与干员商店升级同一个音效
-  'g.monsterLevelUp': 'levelup',
   'g.move': 'drop', 'g.equip': 'equip', 'g.art': 'artPlace', 'g.reward': 'pick', 'g.choice': 'pick',
   'g.band': 'confirm', 'g.bandSkip': 'back', 'g.infoReady': 'ready', 'g.emote': 'emote', 'g.destroy': 'back',
   'g.unequip': 'back',
@@ -163,8 +161,6 @@ export const actions = {
   },
   freeze: () => act('g.freeze'),
   levelUp: () => act('g.levelUp'),
-  // 怪物卡池升级（攻方；等级挂 Match、整局持久）。无字段 —— 价钱由服务端按本回合军费算（帧里的 upgradePrice）。
-  monsterLevelUp: () => act('g.monsterLevelUp'),
   sell: (uid) => act('g.sell', { uid }),
   // `dir` (UP|RIGHT|DOWN|LEFT): the direction chosen with the deploy wheel (research 09 §6.1 — g.move / g.art carry it;
   // the server defaults to RIGHT when absent)

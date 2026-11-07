@@ -264,15 +264,7 @@ export class BattleLifecycle {
       if (web) pp.webTraits = web;
       perPlayer[ps.playerId] = pp;
     }
-    const res = { time: Math.round(this.time * 1000) / 1000, reason: this.reason, perPlayer, killed: this.killed, total: this.total, resolved: this.resolved, errors: this.errorCount };
-    // 对抗投放的结算数据（只增字段，老读者看不到就当没有）：perPlayer 之外，按投放席位汇总 ——
-    // confrontKills / confrontLeaks 是只数（老形状），confrontKillValue / confrontLeakValue 是同一批怪按阶位
-    // 阶梯价的合计（settle 按价值扣血 / 发奖）。人类（浏览器）战场跑 server/sim/**，bot / 服务端接管跑
-    // plugins/mota/server/sim/** —— 两棵必须同源（业主报障「扣血逻辑完全混乱」）。
-    if (Object.keys(this.confrontKills).length) res.confrontKills = { ...this.confrontKills };
-    if (Object.keys(this.confrontLeaks).length) res.confrontLeaks = { ...this.confrontLeaks };
-    if (Object.keys(this.confrontKillValue).length) res.confrontKillValue = { ...this.confrontKillValue };
-    if (Object.keys(this.confrontLeakValue).length) res.confrontLeakValue = { ...this.confrontLeakValue };
+    const res = { time: Math.round(this.time * 1000) / 1000, reason: this.reason, perPlayer, killed: this.killed, total: this.total, errors: this.errorCount };
     if (this.unspawned && this.unspawned.length) res.unspawned = this.unspawned;
     if (this.sharedBoss) res.bossHpLeft = Math.max(0, this.sharedBoss.hp);
     return res;

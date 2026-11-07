@@ -251,9 +251,7 @@ const BOUNTY_KILL = 2;
  * payout) minus the expected leaks × the value of an LP (2 + 20 / LP: dearer when low).
  */
 function bountyScore(m, ps, card) {
-  // 契约 hook（2026-11-04 复验修复 3a）：bountyKillChance 在 botContract.js 里是必选 hook，但引擎此前直接调本模块的
-  // 实现 —— 策略的覆盖永远不生效。这里走本局的 botStrategy，缺省（或不带该 hook，如测试里的假策略）回落本模块。
-  const p = (m.botStrategy?.bountyKillChance ?? bountyKillChance)(m, ps, card);
+  const p = bountyKillChance(m, ps, card);
   const n = Math.max(1, card.count || 1);
   const battles = Math.max(1, Math.min(3, card.rounds || 1));
   const lpCost = 2 + 20 / Math.max(1, ps.lp);

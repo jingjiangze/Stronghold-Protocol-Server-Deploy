@@ -578,9 +578,6 @@ export function compactResult(res) {
     perPlayer,
     errors: Math.max(0, Math.min(1e9, Math.trunc(fnum(r.errors)))),
   };
-  // 对抗投放的按席位计数（1 字节级小对象），压缩结果也要带上，否则 server 侧 settle 读不到
-  if (r.confrontKills && typeof r.confrontKills === 'object') out.confrontKills = { ...r.confrontKills };
-  if (r.confrontLeaks && typeof r.confrontLeaks === 'object') out.confrontLeaks = { ...r.confrontLeaks };
   if (Number.isFinite(r.resolved)) out.resolved = Math.max(0, Math.min(out.total, Math.trunc(r.resolved)));
   if (Array.isArray(r.unspawned) && r.unspawned.length) {
     out.unspawned = cap(r.unspawned, 400).filter((u) => u && isKey(u.enemyKey)).map((u) => ({

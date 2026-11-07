@@ -1,21 +1,17 @@
 // server/match/match/confront.js — Match methods: the 狩猎期. Two modes share this module:
 //
-//   2V2 ('versus') — PHASE.CONFRONT (targets) → PHASE.PREP (placement, shared with the defense). From the drawn contest
-//   round on, every ALIVE player intervenes once, against ONE opposing player:
+//   2V2 ('versus') — PHASE.CONFRONT. From the drawn contest round on, after each side's prep, every ALIVE player
+//   intervenes once, against ONE opposing player:
 //
-//   step 1 (targets, PHASE.CONFRONT, VERSUS_CONFRONT.targetSeconds): each player names the opponent they attack. Inside a
-//     team it is first come, first served — whoever submits first picks, and the teammate is given the opponent that is
-//     left (A takes C, B gets D), so the two teams are paired one-to-one and every player both attacks and is attacked. The
-//     step ends once every alive player holds a target (both sides — a side that finished early waits) or its window runs out.
-//     规则档（业主 2026-11-04）：**只有赏金档（versusRule === 'bounty'）有这一步**；对抗档（versusRule === 'confront'）
-//     没有目标选择模态 —— enterConfront 直接自动分配目标（assignConfrontTarget）并 finishConfrontTargets → 本回合 PREP
-//     + 开商店。客户端因此只在 bounty 档渲染遮罩（ui/confrontOverlay.js）。
-//   step 2 (monsters, 2026-11-04 单一 deadline): finishConfrontTargets opens the attackers' monster shop and enters the
-//     SAME PREP the defenders prepare in (deadline = gd.prepTime(round), attackers press Ready too). Each attacker fills
-//     their own VALUE BUDGET with monsters of ONE of the 6 groups, each on a gate (上路 'upper' / 下路 'lower') and all
-//     inserted at one place in the wave (position: front / mid / back = 25 / 50 / 75 % of the round's monster count).
-//     There is no separate placement window any more: the submissions freeze when the PREP ends (finishConfront →
-//     this.confront), so nobody waits on a second clock.
+//   step 1 (targets, VERSUS_CONFRONT.targetSeconds): each player names the opponent they attack. Inside a team it is
+//     first come, first served — whoever submits first picks, and the teammate is given the opponent that is left (A
+//     takes C, B gets D), so the two teams are paired one-to-one and every player both attacks and is attacked. The step
+//     ends once every alive player holds a target (both sides — a side that finished early waits) or its window runs out.
+//   step 2 (monsters): each player fills their own VALUE BUDGET with monsters of ONE of the 6 groups, each on a gate
+//     (上路 'upper' / 下路 'lower') and all inserted at one place in the wave (position: front / mid / back = 25 / 50 /
+//     75 % of the round's monster count). The step has no fixed length of its own: its window is THIS round's prep time
+//     (untimed when the prep is) and it is a CAP only — submitting ends it as soon as EVERY alive player has
+//     (maybeFinishConfront), so the sides never wait on a player who is already done.
 //
 //   同盟狩猎 (co-op, COOP_HUNT) — no phase, no submissions: the SYSTEM fills each alive player's 狩猎期 with its own
 //   deployment (coopHuntPlans), using the same rhythm / budget / bounty tables (huntCfg). The prey is INSERTED into that
@@ -31,21 +27,18 @@
 //
 // After the 2V2 roster is complete the 悬赏名单 is held for VERSUS_CONFRONT.rosterMs (CONFRONT_ROSTER_MS) before COMBAT.
 //
-// The budget the panel shows (confrontBudget) = **the attacker's monster-funds balance** (2026-11-06 价值同源): the old
-// 「wave value × the 5→15 % share (50 % on R13) × budgetMul」 round budget was a second number that disagreed with the
-// money actually spendable (two different scales, neither bound by the other). The monster shop off ⇒ the old formula
-// (confrontShareBudget) still runs, byte for byte.
-// The groups are the OFFICIAL 特训敌人 types (特异 / 飞行 / 频次 / 元素 / 持续 / 隐匿 / 折射), NOT equal
+// The budget (confrontBudget) = the round's own wave value × the 5→15 % share (50 % on the R13 最终狩猎 round) ×
+// VERSUS_CONFRONT.budgetMul, per PLAYER (each counts on its own) — both teams face the same (synced) wave, so both get
+// the same number. The groups are the OFFICIAL 特训敌人 types (特异 / 飞行 / 频次 / 元素 / 持续 / 隐匿 / 折射), NOT equal
 // value buckets: the player picks a flavour (user decision 2026-10-17). A monster's cost and the wave's value are one
-// unit — **the 阶位 ladder price** (MONSTER_PRICE_BY_TIER = 1 / 2 / 4 / 8 / 16 / 32, 业主 2026-11-05): a monster's tier
-// comes from its base stats (monsterPool.monsterTierOf(confrontValue(rec)), the trait grades no longer price anything),
-// so 「单价 = 阶梯价；波次价值 / 预算 = Σ阶梯价」 by construction (confrontValueOf).
+// unit: the formula carries the round's hp/atk scaling (confrontValue) AND the monster's graded 特性 score
+// (confrontTraits.js, 30 % of the whole table — confrontValueOf / confrontTraitStep).
 //
 // Applying: the placed monsters of an intervention land on ITS TARGET's wave only (confrontFor), replacing originals
-// worth **the money the submission paid** (2026-11-06; the old `share × the wave value`), priced with confrontValueOf and
-// closed to the nearest whole monsters, and inserted at the chosen position. The opponent never sees who is aiming at
-// whom (m.public isolation) — the panel shows the opponents as '?'. 同盟狩猎 is the one difference: its prey REPLACES
-// nothing (the wave keeps every original) and lands in the owning player's own wave (applyCoopHunt).
+// worth `share × the wave value` picked at random (as close to that value as whole monsters allow, priced with
+// confrontValueOf), inserted at the chosen position. The opponent never sees who is aiming at whom (m.public isolation)
+// — the panel shows the opponents as '?'. 同盟狩猎 is the one difference: its prey REPLACES nothing (the wave keeps
+// every original) and lands in the owning player's own wave (applyCoopHunt).
 // Installed on Match.prototype like the other method containers.
 import { sanitizeBotPickList } from './pureShares.js';
 import { PHASE, ERR, GEO, VERSUS_CONFRONT, COOP_HUNT, merchantRateFor, merchantCapFor } from '../../../shared/constants.js';
@@ -56,24 +49,6 @@ import { Grid } from '../../sim/grid.js';
 import { compileRoute } from '../../sim/ai.js';
 import { MOVE_SCALE } from '../../sim/constants.js';
 import { OK, fail } from './common.js';
-// 怪物卡池（2026-11-03）：卡池 / 商店 / 怪物方 AI 契约。只在 `monsterShopOn` 为真时用；为假时一行都不跑。
-// 2026-11-05：合法性判据从 `legalKeys`（按回合圈官方出怪）换成「卡池 + 阶位 ≤ 商店等级」（monsterShop 的 `cardBlocked`）。
-import { buildMonsterPool } from '../monsterPool.js';
-import { openMonsterShop, closeMonsterShop, monsterShopFrame, monsterShopReadOnlyFrame, monsterStockLeft, pushMonsterShops, monsterPriceOf, monsterFundsOf, addMonsterFundsTo, monsterPoolFor, spendMonsterFundsFrom, spendableMonsterFunds, monsterShopLevelOf, cardBlocked } from '../monsterShop.js';
-// 怪物盟约（2026-11-04 业主口径）：攻方投放的怪吃自己这一回合攒出来的乘区，与 roundMods 相乘（只乘不覆盖）。
-import { monsterBondMods, mergeMonsterBondMods, captureMonsterBondLeaks } from '../monsterBonds.js';
-import { monsterStrategyFor } from '../monsterStrategies.js';
-
-/**
- * 怪物方 AI 策略 hook 的安全调用（2026-11-03）：策略抛异常绝不能打断 botConfront / 收尾流程，
- * 记一次日志并返回 null = 「交回引擎既有实现」。
- * @param {any} m @param {any} strat @param {string} hook @param {any} ps
- */
-function callStrategyHook(m, strat, hook, ps) {
-  const fn = strat && strat[hook];
-  if (typeof fn !== 'function') return null;
-  try { return fn(m, ps); } catch (e) { m.reportError(`monster strategy ${hook}`, e); return null; }
-}
 
 /**
  * value(enemy, scale) — the 对抗期 STAT scoring formula: HP-primary, attack ×2, defence ×2, resistance ×15, the leader
@@ -81,9 +56,9 @@ function callStrategyHook(m, strat, hook, ps) {
  * them, so they are worth an extra block. `scale` is the round's hp/atk multiplier (gd.enemyScale), which makes a card's
  * value and the round's wave value comparable.
  *
- * This is the STAT half only — 2026-11-05 起它**只用来定档**（`monsterPool.js` 的 `monsterTierOf(confrontValue(rec))`
- * ⇒ 单价 = MONSTER_PRICE_BY_TIER[阶位]），不再直接出现在任何金额里（特性档位分 / 回合倍率都不再叠加，
- * 见 `confrontValueOf`）。
+ * This is the STAT half only. The 特性 (trait) half is an absolute addend added by Match.confrontValueOf from the graded
+ * table (confrontTraits.js) — so a pure stat stick keeps exactly this number, and the graded part takes
+ * VERSUS_CONFRONT.traitShare (30 %) of the whole value table.
  * @param {any} e data/enemies.json record
  * @param {{ hpMul?: number, atkMul?: number }|null} scale
  */
@@ -115,8 +90,7 @@ export function confrontValue(e, scale = null) {
 
 /**
  * 「赏金」档沿用的**旧**价值公式（2026-10-26 之前线上那套，一字未改）：业主口径「当前线上的旧构建独立为一个赏金模式」。
- * ⚠ 2026-11-05 起**两个规则档统一按阶位阶梯价**（见 confrontValueOf），本函数不再参与单价 / 波次价值；
- * 保留导出只为旧口径对照（`confrontTraitStep` 的统计仍按档取口径）与老调用方兼容。
+ * 与 confrontValue（新定义）唯一的区别就是这套手工系数。
  * @param {any} e data/enemies.json record
  * @param {{ hpMul?: number, atkMul?: number }|null} scale
  */
@@ -320,8 +294,7 @@ export class MatchConfront {
   /** Whether THIS round is the 最终狩猎 (R13) — the one with the flat, much larger share and the fixed 25 bounty. */
   confrontHunt() { return this.round === this.huntCfg().huntRound; }
 
-  /** The round's hp/atk scaling: spawn mods / replacement value stay in its unit (NOT the card price any more —
-   *  2026-11-05 起单价只由阶位决定，见 confrontValueOf). */
+  /** The round's hp/atk scaling: card costs and the wave value are both in its unit. */
   confrontScale() { return this.gd.enemyScale(this.round); }
 
   /**
@@ -329,9 +302,6 @@ export class MatchConfront {
    * `step × (grade − 1)`, and `step` is calibrated so the graded part is exactly `VERSUS_CONFRONT.traitShare`
    * (30 %) of the whole value table — Σ(step·(g−1)) = share/(1−share) · Σ(stat value) over the confront pool
    * (confrontTraits.js holds the grades). Recomputed when the round's scaling moves the stat values.
-   *
-   * ⚠ 2026-11-05 起**不再参与定价**：`confrontValueOf` / 波次价值 / 预算全部改成阶位阶梯价（MONSTER_PRICE_BY_TIER），
-   * 特性档位分不再叠加进任何金额。保留这个方法只为旧的统计口径与对照（没有调用方，别在新代码里用）。
    */
   confrontTraitStep() {
     const scale = this.confrontScale();
@@ -358,24 +328,27 @@ export class MatchConfront {
   }
 
   /**
-   * The price of ONE enemy in this match's currency: **its 阶位 ladder price** (`MONSTER_PRICE_BY_TIER`:
-   * 1 / 2 / 4 / 8 / 16 / 32, via monsterShop.monsterPriceOf). Every money value the 狩猎期 uses — the group rows,
-   * the wave total (`confrontWaveValue`), a submission's cost and the replacement share (`applyConfront`) — goes
-   * through here, so 「单价 = 阶梯价 / 波次价值 = Σ阶梯价」 are one number.
-   *
-   * 业主 2026-11-05：「怪物价值最低为 1，等比换算价值，别整这么多数字（包括赏金模式）」——
-   * 单价**只由阶位决定**（阶位 = `monsterTierOf(confrontValue(rec))`，基础属性口径，见 monsterPool.js），
-   * 所以这里既**不吃**回合倍率 `scale`，也**不再**叠加特性档位分 / 旧价值（赏金档与对抗档同价）。
-   * `scale` 参数保留只为调用方的老签名（波次 spawn 的 mods 仍会传进来），已不影响结果。
+   * The value of ONE enemy in this match's currency: its stats at `scale` (default: this round's) plus its graded 特性
+   * score. Every value the 狩猎期 uses — the group rows, the wave total, a submission's cost and a kill's bounty — goes
+   * through here, so the traits are priced exactly once.
    * @param {string} enemyKey
-   * @param {{ hpMul?: number, atkMul?: number }|null} _scale 已忽略（保留签名兼容）
+   * @param {{ hpMul?: number, atkMul?: number }|null} scale
    */
-  confrontValueOf(enemyKey, _scale = null) {
-    return monsterPriceOf(this, enemyKey);
+  confrontValueOf(enemyKey, scale = null) {
+    const en = (this.data && this.data.enemies) || {};
+    const e = en[enemyKey];
+    if (!e) return 0;
+    const step = this.huntCfg().traitStepScores[confrontTraitGrade(enemyKey) - 1] || 0;
+    const sc = scale || this.confrontScale();
+    // 「赏金」档沿用线上旧价值（含频次 ×1.5）；「对抗」档用新定义（官方权重、无手工加成）
+    if (!this.isConfrontRule()) {
+      const times = this.confrontTimesKeys().has(enemyKey) ? 1.5 : 1;
+      return Math.round(confrontValueLegacy(e, sc) * times) + this.confrontTraitStep() * step;
+    }
+    return Math.round(confrontValue(e, sc)) + this.confrontTraitStep() * step;
   }
 
-  /** The 频次怪 (TIMES) type's monster keys (pool + entries), cached — 旧价值公式（赏金档 ×1.5）与
-   *  `confrontTraitStep` 的统计口径仍按它取；2026-11-05 起**不参与**单价（单价只由阶位决定）。 */
+  /** The 频次怪 (TIMES) type's monster keys (pool + entries), cached — confrontValueOf prices them 1.5× (user 2026-10-21). */
   confrontTimesKeys() {
     if (!this._confrontTimesKeys) {
       const types = (this.data && this.data.factions && this.data.factions.types) || {};
@@ -550,130 +523,6 @@ export class MatchConfront {
   /** 「对抗」档（业主 2026-10-26）：完全由玩家控制出怪。「赏金」档（缺省）= 当前线上那套。 */
   isConfrontRule() { return this.isVersus && this.versusRule === 'confront'; }
 
-  /**
-   * 投放窗口（2026-11-04 单一 deadline）：攻守回合的 PREP —— 目标选择已经结束（`confrontStage == null`），
-   * 且不在投放公示（`'roster'`）里。`g.confront` / AI 的 botConfront / 怪物商店都用它当阶段闸门。
-   */
-  confrontWindowOpen() {
-    return this.phase === PHASE.PREP && this.confrontStage == null && typeof this.isRoleRound === 'function' && this.isRoleRound();
-  }
-
-  /**
-   * 怪物卡池是否开着（业主 2026-11-03：对抗局默认全开，`opts.monsterShop === false` 关掉回到旧平铺面板）。
-   * 关掉时 enterConfront 之后的卡池分支（finishConfrontTargets 的开张 / botConfront / finishConfront 的收尾）全部不执行
-   * —— 行为与改造前逐字节一致。
-   */
-  get monsterShopOn() {
-    // 回收盟约快照（2026-11-04 复验修复 3）：settle() 在发完攻方奖励、清 `this.fields`（settle.js:238）之前会读
-    // 这个 getter（settle.js:112）—— 漏怪快照只能在这之前钉住。shared 模式的奖励已经走 addMonsterFundsTo 捕获，
-    // 但 solo 模式走 PlayerState.addMonsterFunds（不经 monsterShop），所以在唯一的公共入口补一次：
-    // `captureMonsterBondLeaks` 幂等、fields 为空即 no-op、不读本 getter（不会自递归）。
-    captureMonsterBondLeaks(this);
-    return this.isVersus && this.opts?.monsterShop !== false;
-  }
-
-
-  /**
-   * 怪物模式的归属口径（业主 2026-11-04 / 2026-11-06，经房间选项 `opts.monsterMode` 透传；Match.js 不改）：
-   *   · `'shared'`（缺省）：**共有出怪** —— 同队共用一个出怪池，且同队攻方共用同一个目标（对面遇到的怪由怪物方一起出）；
-   *   · `'solo'`：**单人怪物模式** —— 池按人、且只有该队第一位存活攻方持有投放权（其余攻方的商店不开）；
-   *   · `'master'`：**单人掌握怪物** —— 整队仍是攻方、**资源全队级**（池 / 资金 / 商店等级 / 盟约与 shared 同口径），
-   *     但只有该队第一位存活攻方持有投放权（其余攻方收到一帧只读商店，客户端显示「队长操作中」）。
-   * 三值的归一化在房间层（server/lobby.js、versus-room/versusLobby.js）与客户端下拉里各做一次，别的值一律回 'shared'。
-   */
-  get monsterMode() {
-    const v = this.opts?.monsterMode;
-    return v === 'solo' || v === 'master' ? v : 'shared';
-  }
-
-  /**
-   * 这名玩家是否有投放权（solo / master 怪物模式：每队只交给**第一位存活攻方**；shared：全体攻方都有）。
-   * 座位顺序 = `this.order`（attackers() / _aliveOf() 都按它过滤，见 infra.js）。
-   * monsterShop.js 的所有开张 / 购买 / 投放闸门都问这一个判定（避免两份「第一位」实现漂移）。
-   * @param {object} ps
-   * @returns {boolean}
-   */
-  monsterPlaceActor(ps) {
-    if (!ps || ps.alive === false || ps.left === true) return false;
-    if (this.monsterMode === 'shared') return true;
-    if (this.attackingTeam != null && typeof this.teamIdOf === 'function' && this.teamIdOf(ps) !== this.attackingTeam) return false;
-    const team = typeof this.teamIdOf === 'function' ? this.teamIdOf(ps) : 0;
-    const first = this.confrontActors().find((p) => p && (typeof this.teamIdOf !== 'function' || this.teamIdOf(p) === team));
-    return !!first && first.playerId === ps.playerId;
-  }
-
-  /**
-   * 投放权移交的**纯决策**（业主 2026-11-06 第 2 条）。`syncMonsterOperators` 只负责把它执行出来。
-   *
-   * solo / master 的投放权只交给「每队第一位**存活**攻方」（monsterPlaceActor），而商店只在 `finishConfrontTargets`
-   * 给当时的第一位开过 —— 队长在投放窗口里阵亡 / 退出之后，权力按判据自动落到下一位，但那位手里只有只读帧，
-   * 整回合没人能买卡 / 投放。
-   *
-   * `open[i] = { ps, from }`：要给谁开店；`from` 是「手里还握着商店、但已经没有投放权」的那位（master 把草稿交给他）。
-   * `close`：有商店却没有投放权的席位（要关店 + 改发只读 / 关着帧）。
-   * `apply: false` ⇒ 非对抗 / 商店关着 / 不在投放窗口，一个字段都别写（与改造前逐字节一致）。
-   * @returns {{ apply: boolean, open: { ps: object, from: object|null }[], close: object[] }}
-   */
-  monsterOperatorPlan() {
-    const idle = { apply: false, open: [], close: [] };
-    if (!this.monsterShopOn || this.monsterMode === 'shared') return idle;
-    if (typeof this.confrontActive === 'function' && this.confrontActive() !== true) return idle;
-    // 只在投放窗口：PREP 且投放公示还没开始（与 finishConfrontTargets 的开店时机同一个判据）
-    if (this.phase !== PHASE.PREP || this.confrontStage != null) return idle;
-    const actors = typeof this.confrontActors === 'function' ? this.confrontActors() : [];
-    if (!actors.length) return idle;
-    const master = this.monsterMode === 'master';
-    const holders = this.order.filter((p) => p && p.monsterShop && p.monsterShop.readOnly !== true);
-    const open = [];
-    const close = [];
-    const used = new Set();
-    for (const ps of actors) {
-      const shouldOwn = this.monsterPlaceActor(ps) === true;
-      const holds = !!(ps.monsterShop && ps.monsterShop.readOnly !== true);
-      if (!shouldOwn) { if (holds) close.push(ps); continue; }
-      if (holds) continue;
-      // master 是队级资源 ⇒ 把上一位（已经失去投放权、但商店还开着）的草稿接过来；
-      // solo 是按人的池（poolKeyOf = playerId），跨人移交会指向别人池里的卡，所以只开一间干净的店。
-      const from = master ? (holders.find((p) => p !== ps && !used.has(p) && this.monsterPlaceActor(p) !== true) || null) : null;
-      if (from) { used.add(from); close.push(from); }
-      open.push({ ps, from });
-    }
-    // 已经不在 actors 里、却还握着商店的席位（阵亡 / 退出 / 换边）也要关掉 —— solo 没有草稿移交，它那间店直接作废；
-    // master 的情况下它已经作为 `from` 进了 close（used 防重复）。仍在自己队里正常持有的（actorSet）不动。
-    const actorSet = new Set(actors);
-    for (const p of holders) {
-      if (actorSet.has(p) || used.has(p) || close.includes(p)) continue;
-      close.push(p);
-    }
-    return { apply: true, open, close };
-  }
-
-  /**
-   * 把 `monsterOperatorPlan()` 执行出来（幂等：计划为空时一个字段都不写）。
-   * 调用点：阵亡（PlayerState.eliminate）、救援挂起（revivalDefer）、退出（platform.js 的 onLeave）。
-   */
-  syncMonsterOperators() {
-    const plan = this.monsterOperatorPlan();
-    if (!plan.apply) return;
-    const master = this.monsterMode === 'master';
-    for (const { ps, from } of plan.open) {
-      const carry = from && from.monsterDraft && Array.isArray(from.monsterDraft.picks) ? from.monsterDraft.picks.slice() : null;
-      const carrySeq = from && from.monsterDraft ? Number(from.monsterDraft.seq) || 0 : 0;
-      const carrySpent = from ? Math.max(0, Number(from.monsterSpentOwn) || 0) : 0;
-      try { openMonsterShop(this, ps); } catch (e) { this.reportError('monster shop open', e); continue; }
-      if (carry && carry.length && ps.monsterDraft) {
-        ps.monsterDraft.picks = carry;
-        ps.monsterDraft.seq = carrySeq;
-        ps.monsterSpentOwn = carrySpent;
-      }
-      try { if (ps.playerId) this.sendTo(ps.playerId, monsterShopFrame(this, ps)); } catch (e) { this.reportError('monster shop open', e); }
-    }
-    for (const ps of plan.close) {
-      try { closeMonsterShop(this, ps); } catch (e) { this.reportError('monster shop close', e); }
-      try { if (ps.playerId) this.sendTo(ps.playerId, master ? monsterShopReadOnlyFrame(this, ps) : monsterShopFrame(this, ps)); } catch (e) { this.reportError('monster shop close', e); }
-    }
-  }
-
   /** 攻方人数（纯玩家出怪时按人均分官方波次价值；取不到时按每队人数兜底）。 */
   attackingTeamSize() {
     if (this.attackingTeam == null || typeof this.teamIdOf !== 'function') return Math.max(1, Number(this.teamSize) || 1);
@@ -697,15 +546,15 @@ export class MatchConfront {
   }
 
   /**
-   * 只数下限（业主 2026-10-27；注释 2026-11-06 纠偏 —— 此前写的「0.9 × 波次价值 ÷ 攻方人数」与代码相反）。
+   * 只数下限（业主 2026-10-27：控怪的出怪量要接近官方、只要 90%）。
    *
-   * 为什么需要它：预算与**只数目标**是两回事。单只价值跨度极大（实测本局 8 ~ 1113，约 140 倍），
-   * 同一笔预算买最便宜的能放一百多只、买中位的只放 2 只 —— 只数目标完全没有保证。
-   * 审计实测（旧口径）：R1 官方 6 只、预算 45、中位单价 21 ⇒ 每名攻方只能放 2 只，两个攻方合计 4 只。
+   * 为什么需要它：预算是**价值预算**（`0.9 × 波次价值 ÷ 攻方人数`），而 90% 是**只数目标**。单只价值跨度极大
+   * （实测本局 8 ~ 1113，约 140 倍），同一笔预算买最便宜的能放一百多只、买中位的只放 2 只 —— 只数目标完全没有保证。
+   * 审计实测：R1 官方 6 只、预算 45、中位单价 21 ⇒ 每名攻方只能放 2 只，两个攻方合计 4 只 = 官方 67%。
    *
-   * 这里返回的是**预算下限** = 中位单价 × max(2, ceil(官方只数 × 1.5))（`CONFRONT_VOLUME_SHARE`，赏金档 ×1）：
-   * 保证「按中位价买得下 1.5 倍官方只数」的那笔钱一定够；想放更贵的怪就自然少放几只，
-   * 价值上限仍由调用方那条 base 约束（取 max，不封顶）。
+   * 这里把「按中位单价买下 90% 只数（按攻方人数摊）」作为预算下限，保证合格搭配一定买得到；
+   * 想放更贵的怪就自然少放几只，价值上限仍由 `confrontPurePlacement` 那条 base 约束（取 max，不封顶）。
+   * 赏金档（非控怪）不适用：那一档本来就是「替换一小部分」，官方波次才是主体。
    */
   confrontCountFloor() {
     // 控怪档：官方只数 × CONFRONT_VOLUME_SHARE（业主 2026-10-31 定为 1.5 倍）；
@@ -716,8 +565,7 @@ export class MatchConfront {
     return Math.round(median * need);
   }
 
-  /** 本回合可选池（第 1..N 回合出过的怪）的**单价中位数**（= 阶梯价中位；业主 2026-11-05 起与卡价同源）——
-   *  预算下限的基准，按回合缓存。 */
+  /** 本回合可选池（第 1..N 回合出过的怪）的价值中位数 —— 预算下限的基准，按回合缓存。 */
   confrontPoolMedianValue() {    if (this._confrontPoolMedian != null && this._confrontPoolMedianRound === this.round) return this._confrontPoolMedian;
     const en = (this.data && this.data.enemies) || {};
     const vals = [...this.confrontSeenKeys()].filter((k) => en[k]).map((k) => this.confrontValueOf(k)).sort((a, b) => a - b);
@@ -726,11 +574,7 @@ export class MatchConfront {
     return this._confrontPoolMedian;
   }
 
-  /**
-   * The value of the round's original wave = **Σ 阶位阶梯价 × 只数**（业主 2026-11-05：波次价值与单价同源）。
-   * 单价走 `confrontValueOf`（= monsterShop.monsterPriceOf，只由阶位决定），所以这里的 `s.mods` 本回合倍率
-   * **不再影响**金额（传进去只为签名一致，见 confrontValueOf）。
-   */
+  /** The value of the round's original wave, at this round's scaling. */
   confrontWaveValue() {
     const scale = this.confrontScale();
     let v = 0;
@@ -747,72 +591,28 @@ export class MatchConfront {
   }
 
   /**
-   * 本回合的「全队军费总额 G」—— 怪物商店**升级价**的基准（业主 2026-11-04「参考卫戍协议干员商店」）。
-   * = `confrontWaveValue() × CONFRONT_VOLUME_SHARE`：与 grantMonsterFunds 同源（每人军费 = G ÷ 攻方人数，
-   * 全队合计恰好 = G），**不在这里另算一遍公式**。monsterShop.js 的 monsterUpgradePriceOf 从这里取 G。
-   * @returns {number} >= 0
-   */
-  monsterUpgradeFundsG() {
-    return Math.max(0, Math.round((Number(this.confrontWaveValue()) || 0) * CONFRONT_VOLUME_SHARE));
-  }
-
-  /**
-   * 每名攻方本回合的**军费份额** = `round(官方波次价值 × CONFRONT_VOLUME_SHARE ÷ 攻方人数)`。
+   * 2V2's placement budget: the wave value × the share × VERSUS_CONFRONT.budgetMul — PER PLAYER (个算个的). The 2V2
+   * placement REPLACES originals, so its ×2 keeps the net addition at the share; the co-op hunt INSERTs its prey and
+   * therefore uses `wave value × share` only (coopHuntPlans).
    *
-   * 这就是 `grantMonsterFunds` 每人发的那一份（本方法的唯一调用方之一），也是 `monsterShop.js` 里
-   * **bot 只能花自己那一份**的上限（2026-11-05 真机 2V2：同队 1 人类 + 1 AI 共用队级账户，AI 开窗瞬间
-   * 把队资金花到 0，人类看到「怪物资金 0」三张卡全买不起）。公式只在这里定义一次，发放与上限共用，
-   * 不要在别处另算一遍（否则两处会漂移）。
-   * @returns {number} >= 0
+   * 对抗另加**下限**（业主 2026-10-26：早期回合 5% 的份额连一只中位怪都买不起，面板上点什么都提示「剩余价值不足」）：
+   * 至少放得下 `confrontMinUnits()` 只本回合可选池的中位怪。只动对抗，协同狩猎的 `huntDeployBudget()` 口径不变。
    */
-  monsterFundsSharePerAttacker() {
-    return Math.max(0, Math.round((Number(this.confrontWaveValue()) || 0) * CONFRONT_VOLUME_SHARE / this.attackingTeamSize()));
-  }
-
-  /**
-   * 面板上那个「剩余价值 / 剩余投放预算」= **真正能花的钱**（2026-11-06 价值同源）。
-   *
-   * 旧口径是「波次价值 × 份额 × budgetMul（+ 只数下限）」的**回合预算**，与 `monsterShop.funds`（账户余额）是两个数
-   * （口径不同、数量级也不同：面板上的钱不是余额，余额也不受面板约束，玩家看到「买得起」却提交不了、或反之）。
-   * 现在：
-   *   · 商店开着（`monsterShopOn`）⇒ 直接读**怪物资金账户**（`monsterFundsOf`，与 confrontPurchaseLimit 同源）；
-   *     `ps` 缺省时取「面板席位」= 第一个非 bot 存活攻方（没有人类就取第一位）—— 人类读数不受 bot 份额封顶，
-   *     与他自己 monsterShopFrame 的 `budget` 恒等；shared / master 是队级账户，同队两人读到同一个数。
-   *   · 商店关着 / 一个攻方都没有 ⇒ 旧公式原样保留（`confrontShareBudget`，行为逐字节不变）。
-   * @param {object} [ps] 指定席位（不传 = 面板席位）
-   * @returns {number}
-   */
-  confrontBudget(ps = null) {
-    if (this.monsterShopOn) {
-      const seat = ps || this.confrontPanelSeat();
-      if (seat) return Math.max(0, Number(monsterFundsOf(this, seat)) || 0);
-    }
-    return this.confrontShareBudget();
-  }
-
-  /** 面板读数的默认席位：第一个非 bot 存活攻方（没有人类就取第一位攻方；一个都没有 → null）。 */
-  confrontPanelSeat() {
-    const actors = typeof this.confrontActors === 'function' ? this.confrontActors() : null;
-    if (!Array.isArray(actors) || !actors.length) return null;
-    return actors.find((p) => p && !p.botControlled) || actors[0] || null;
-  }
-
-  /**
-   * 旧的回合预算（波次价值 × 份额 × budgetMul，再抬到只数下限）。**商店关着**的旧对局仍走这一条；
-   * 商店开着时面板 / 提交都不再用它（见 confrontBudget / confrontPurchaseLimit）。
-   *
-   * 对抗的 base = 「官方波次价值 × 1.5 ÷ 攻方人数」，下限取两者较大（① 至少放得下 N 只中位怪；② 只数下限
-   * 「按中位价买得下 1.5× 官方只数」）。2026-11-01 P1（审计 D1）：**不再**依赖 `confrontPurePlacement()`
-   * （它看「是否已有人提交」，草稿也计入）—— 否则同回合预算可跳 7.5 倍。
-   */
-  confrontShareBudget() {
+  confrontBudget() {
     const byShare = Math.round(this.confrontWaveValue() * this.confrontRatio() * this.huntCfg().budgetMul);
     // 只数下限（2026-10-27）：按中位价买得下「官方同等只数」。赏金档以前不加下限，R1 只够买 1 只（官方 5 只）。
     const countFloor = this.confrontCountFloor();
     // 「赏金」档：份额预算与只数下限取大
     if (!this.isConfrontRule()) return Math.max(byShare, countFloor);
     // 「对抗」档：攻方就是这一波怪的全部来源，每名攻方分到「官方波次价值 × 1.5 ÷ 攻方人数」。
-    const base = Math.round((this.confrontWaveValue() * CONFRONT_VOLUME_SHARE) / this.attackingTeamSize());
+    // 2026-11-01 P1（审计 D1）：**不再**依赖 `confrontPurePlacement()`（它看「是否已有人提交」，草稿也计入）
+    // —— 否则同回合预算可跳 7.5 倍：第一个提交的 bot 拿 byShare、后面的拿 1.5×base，还留了「先存草稿解锁大预算」的套利。
+    // 预算按 模式+回合+攻方人数 判定，与谁先提交无关；波次构造那条 purePlacement 语义不变。
+    const base = this.isConfrontRule()
+      ? Math.round((this.confrontWaveValue() * CONFRONT_VOLUME_SHARE) / this.attackingTeamSize())
+      : byShare;
+    // 下限取两者较大：① 老口径「至少放得下 N 只中位怪」；② 只数下限「按中位价买得下 90% 官方只数（按攻方摊）」。
+    // ② 是 2026-10-27 补的：没有它，价值预算与只数目标脱钩，实测 R1 只能放 4 只（官方 6 只的 67%）。
     const floor = Math.max(
       Math.round(this.confrontPoolMedianValue() * this.confrontMinUnits()),
       countFloor,
@@ -821,174 +621,21 @@ export class MatchConfront {
   }
 
   /**
-   * 发本回合的**怪物军费**（业主 2026-11-04 裁决：攻方有独立的怪物资金账户，跨回合结转）。
-   *
-   * 金额 = `round(官方波次价值 × CONFRONT_VOLUME_SHARE ÷ 攻方人数)`，**对每个攻方各发一份** ——
-   * 两人合计 = 1.5 × 波次价值。**「1.5 倍出怪量」现在就由这笔军费保证**（业主 2026-11-05：库存份数改按官方
-   * 干员商店 poolCopies 等比换算，见 monsterPool.js 的 MONSTER_COPIES_BY_TIER；份数不再跟着官方只数走，
-   * 库存也不再是 1.5× 的约束）。
-   * 账户（业主 2026-11-04 裁决 2）：shared 模式下这 N 份都进**同一个队级账户**（`m.teamMonsterFunds`，
-   * 见 monsterShop.js 的 addMonsterFundsTo），全队总军费仍是 1.5 × 波次价值；solo 各自进 `ps.monsterFunds`。
-   * 发放点 = `finishConfrontTargets`（目标选择刚结束：攻方名单 / 人数 / 本回合波次都已确定）。
-   * 只在 `monsterShopOn && isRoleRound()` 时发；调用方本来就套在这道闸门里，这里再判一次是为了防止
-   * 将来有人在别的阶段调它（`opts.monsterShop === false` ⇒ 一行都不跑，账户恒 0）。
-   * @returns {number} 每人拿到的军费（没发 → 0）
-   */
-  grantMonsterFunds() {
-    if (!this.monsterShopOn || typeof this.isRoleRound !== 'function' || this.isRoleRound() !== true) return 0;
-    // 每人一份 = `monsterFundsSharePerAttacker()`（单点定义：bot 的自有份额上限读的是同一个方法，
-    // 见 monsterShop.js 的 monsterOwnShare —— 发放与上限必须同源，否则「够不够花」会和「发了多少」漂移）。
-    const amount = this.monsterFundsSharePerAttacker();
-    for (const ps of this.confrontActors()) {
-      if (!ps) continue;
-      // 帧上的「本回合军费 / 本回合奖励」每回合重置一次（奖励在 settle 里累加）
-      ps.monsterGrant = amount;
-      ps.monsterEarned = 0;
-      // 账户走访问器（业主 2026-11-04 裁决 2）：shared → 同队一份队级账户（每人各发一份 = 全队拿到
-      // 「波次价值 × 1.5」，也就是本回合「1.5 倍出怪量」的资金保证）；solo → 各人自己的 ps.monsterFunds。
-      addMonsterFundsTo(this, ps, amount);
-    }
-    return amount;
-  }
-
-  /**
    * What ONE seat can spend this round in the current mode — the budget the type-draw's affordability floor must use.
-   * 2V2 spends `confrontBudget()` = 怪物资金账户余额（2026-11-06 价值同源；商店关着时回落旧的回合预算）；
-   * 同盟狩猎 inserts its prey, so a seat only gets `wave value × share` (coopHuntPlans). Using the 2V2 number for
-   * co-op would let an unplayable 4-type draw through.
+   * 2V2 spends `confrontBudget()` (×budgetMul = 2, per player); 同盟狩猎 inserts its prey, so a seat only gets
+   * `wave value × share` (coopHuntPlans). Using the 2V2 number for co-op would let an unplayable 4-type draw through.
    */
   huntDeployBudget() {
     if (this.isVersus) return this.confrontBudget();
     return Math.round(this.confrontWaveValue() * this.confrontRatio());
   }
 
-  /**
-   * Σ value of a set of picks, at this round's scaling.
-   * **必须与卡面同源**（业主 2026-11-04）：单价一律走 `monsterShop.js` 的 `monsterPriceOf`（含全局系数
-   * `MONSTER_PRICE_FACTOR`），不在这里另算一遍 confrontValueOf —— 否则「预算 / 卡价 / 提交校验」会不同尺度。
-   * `monsterPriceOf` 内部就是 `confrontValueOf(key)`（缺省 scale = 本回合），所以量纲与旧实现一致。
-   */
+  /** Σ value of a set of picks, at this round's scaling. */
   confrontSpent(picks) {
+    const scale = this.confrontScale();
     let v = 0;
-    for (const p of picks || []) v += monsterPriceOf(this, p && p.enemyKey);
+    for (const p of picks || []) v += this.confrontValueOf(p && p.enemyKey, scale);
     return v;
-  }
-
-  /**
-   * 一份投放最多能花多少（2026-11-04 复验修复 1）：**只按攻方的怪物资金余额**。
-   *
-   * 旧的「余额 + 草稿价」把草稿里已经付过款的卡再加回额度，等于给同一笔钱发了两遍额度
-   * （复验实测：空草稿直接提交 5 只、价值 160 → 成功，余额 168 不变、池库存不变 —— `g.confront` 是免费通道）。
-   * 现在提交侧只对**尚未付款**的部分收钱（`_confrontChargeFor`：草稿里的同 key 条数先抵扣），
-   * 所以额度不再需要加回草稿价；「已买的草稿 + 提交」也不会被自己的付款卡住（那部分 cost = 0）。
-   * 商店关着 / 取不到账户（老对局 / 没有怪物账户的席位）⇒ 回落到旧的回合预算，行为逐字节不变。
-   * @param {object} ps
-   * @returns {number}
-   */
-  confrontPurchaseLimit(ps) {
-    if (!this.monsterShopOn || !ps) return this.confrontBudget();
-    // 取不到账户（老对局 / 没有怪物账户的席位）⇒ 回落到旧的回合预算，行为逐字节不变。
-    // shared / master 读的是队级账户（恒为数字），不需要这道兜底；只有 solo 是个人账户（可能缺字段）。
-    if (this.monsterMode === 'solo' && !Number.isFinite(Number(ps.monsterFunds))) return this.confrontBudget();
-    // 账户读数走 monsterFundsOf（业主 2026-11-04 裁决 2）：shared = 队级账户余额（同队两人同额），solo = 个人账户。
-    return Math.max(0, Number(monsterFundsOf(this, ps)) || 0);
-  }
-
-  /**
-   * 一次提交里**哪些 pick 还没付过钱**（2026-11-04 复验修复 1）：先抵扣两边已经付过款的额度 ——
-   *   ① 草稿（`ps.monsterDraft.picks`）里的同 key 条数：那些卡在 `buyMonster` / `placeMonster` 时就已经扣过款、
-   *      也从同一个池 `take` 过份数（见 monsterShop.js）；
-   *   ② 本回合**已经为提交付过款**的同 key 条数（`this._confrontPaid`）：草稿可以反复覆盖（`commit` 之前），
-   *      同一笔付款绝不能收第二遍（复验要求 b）。
-   * 抵扣按 key 逐条消耗，与顺序无关（草稿 3 条 + 提交 5 条 ⇒ 只对多出来的 2 条收费）。
-   * @param {object} ps @param {Array<{ enemyKey: string }>} picks
-   * @returns {{ charge: object[], cost: number }} charge = 需要付款的 pick；cost = 它们的 Σ 单价（monsterPriceOf 同源）
-   */
-  _confrontChargeFor(ps, picks) {
-    const credit = new Map();
-    const add = (key, n) => { if (typeof key === 'string' && key) credit.set(key, (credit.get(key) || 0) + n); };
-    const draft = ps && ps.monsterDraft && Array.isArray(ps.monsterDraft.picks) ? ps.monsterDraft.picks : [];
-    for (const d of draft) if (d && typeof d.enemyKey === 'string') add(d.enemyKey, 1);
-    const pid = ps && ps.playerId;
-    const ledger = this._confrontPaid instanceof Map && pid != null ? this._confrontPaid.get(pid) : null;
-    if (ledger instanceof Map) for (const [key, n] of ledger) if (n > 0) add(key, n);
-    const charge = [];
-    let cost = 0;
-    for (const p of Array.isArray(picks) ? picks : []) {
-      if (!p || typeof p.enemyKey !== 'string') continue;
-      const left = credit.get(p.enemyKey) || 0;
-      if (left > 0) { credit.set(p.enemyKey, left - 1); continue; }
-      charge.push(p);
-      cost += monsterPriceOf(this, p.enemyKey);
-    }
-    return { charge, cost };
-  }
-
-  /**
-   * 结算一次提交的未付款部分（2026-11-04 复验修复 1）：**先算后扣、全有或全无**。
-   *   ① 库存预检（逐 key 合计需求 vs 池里剩余）→ 不足直接 SOLD_OUT，不动钱也不动库存；
-   *   ② 份额闸门（只有 bot：超「自己那一份 − 已花」→ CONFRONT_BUDGET，一分不扣）+ 扣款
-   *      （`spendMonsterFundsFrom`，余额不够也一分不扣）→ 失败 CONFRONT_BUDGET；
-   *   ③ 扣库存；理论上预检已过，仍防御性回滚（把钱与已取的库存一起还回去）后再 SOLD_OUT。
-   * @param {object} ps @param {{ charge: object[], cost: number }} settle `_confrontChargeFor` 的结果
-   * @returns {null|{ error: string }} null = 已付清（或无需付款）
-   */
-  _confrontPayPicks(ps, { charge, cost }) {
-    const list = Array.isArray(charge) ? charge : [];
-    if (!list.length) return null;
-    const pool = monsterPoolFor(this, ps);
-    const demand = new Map();
-    for (const p of list) demand.set(p.enemyKey, (demand.get(p.enemyKey) || 0) + 1);
-    for (const [key, n] of demand) if (pool.left(key) < n) return { error: ERR.SOLD_OUT };
-    // 共享军费留份（2026-11-05）：与 monsterShop.js 的 `payMonsterFunds` **同一口径** —— 份额闸门在扣款之前，
-    // 超了不碰队账户、也不碰库存（上面的库存预检是只读的）。判据单点在 monsterShop.js 的 `spendableMonsterFunds`
-    // （人类 / solo / 全 AI 队在那里恒等于账户余额），这里不复制公式。
-    const ownCost = Math.max(0, Number(cost) || 0);
-    const ownPrev = ps && ps.botControlled ? Math.max(0, Number(ps.monsterSpentOwn) || 0) : 0;
-    if (cost > 0 && ps && ps.botControlled && cost > spendableMonsterFunds(this, ps)) return { error: ERR.CONFRONT_BUDGET };
-    if (cost > 0 && !spendMonsterFundsFrom(this, ps, cost)) return { error: ERR.CONFRONT_BUDGET };
-    // bot 的「已花自己那一份」记账（与 payMonsterFunds 同口径，初始视为 0）—— 下面回滚时同步减回去，
-    // 否则这一笔会把份额永久占住（同 monsterShop.js 的 `refundMonsterFunds`）。
-    if (ps && ps.botControlled && ownCost > 0) ps.monsterSpentOwn = ownPrev + ownCost;
-    const taken = [];
-    for (const [key, n] of demand) {
-      const got = pool.take(key, n);
-      taken.push([key, got]);
-      if (got < n) {
-        for (const [k, g] of taken) if (g > 0) pool.give(k, g);
-        if (cost > 0) addMonsterFundsTo(this, ps, cost);
-        if (ps && ps.botControlled && ownCost > 0) ps.monsterSpentOwn = ownPrev;
-        return { error: ERR.SOLD_OUT };
-      }
-    }
-    // 记账（2026-11-04 复验修复 1 / 复验要求 b）：这次付过款的 pick 记进本回合的提交台账 ——
-    // 草稿可以在 `commit` 之前反复覆盖，同一笔付款不能收第二遍（`_confrontChargeFor` 会先抵扣它）。
-    const pid = ps && ps.playerId;
-    if (pid != null) {
-      if (!(this._confrontPaid instanceof Map)) this._confrontPaid = new Map();
-      const prev = this._confrontPaid.get(pid);
-      const next = new Map(prev instanceof Map ? prev : []);
-      for (const p of list) next.set(p.enemyKey, (next.get(p.enemyKey) || 0) + 1);
-      this._confrontPaid.set(pid, next);
-    }
-    return null;
-  }
-
-  /**
-   * bot 的投放预算（2026-11-04 复验修复 1 / 2026-11-06 价值同源）：
-   * 商店开着时 = min(**账户可花额**, 账户余额 + 草稿里已付过款的价值)。
-   * 2026-11-06 起 `confrontBudget(ps)` 本身就是账户余额口径（与面板 / 提交同源），所以这里实际等于
-   * `spendableMonsterFunds + 草稿已付` —— bot 只能派自己付得起的怪（`_confrontPayPicks` 会拒），
-   * 否则赏金档 bot 会整单落空。
-   * 共享军费留份（2026-11-05）：bot 在 shared 里看到的是「自己那一份 − 已花」
-   * （`spendableMonsterFunds`，与 monsterShop.js 同一单点定义）；solo / master / 全 AI 队下它恒等于账户余额。
-   * @param {object} ps @returns {number}
-   */
-  confrontBotBudget(ps) {
-    if (!this.monsterShopOn) return this.confrontBudget(ps);
-    const draft = ps && ps.monsterDraft && Array.isArray(ps.monsterDraft.picks) ? ps.monsterDraft.picks : [];
-    const funds = Math.max(0, Number(spendableMonsterFunds(this, ps)) || 0);
-    return Math.min(this.confrontBudget(ps), funds + this.confrontSpent(draft));
   }
 
   /**
@@ -1235,9 +882,8 @@ export class MatchConfront {
   /**
    * Insert ONE player's system-run prey into their spawn list (同盟狩猎). Co-op players each have their own wave, so each
    * plan is inserted into that player's list at the plan's own position, each monster on the route of its gate. The prey
-   * is a bonus target, `countInTotal: false`: it stays out of the 官方只数 / 完美作战 counters — but a leak is NOT free
-   * (2026-11-06 纠偏：注释此前写「a leak costs no 目标生命值」): with no `confrontSeat` settle charges it as an official
-   * uncounted leak (1 point each, match/match/settle.js), and a kill still pays the bounty.
+   * is a bonus target: `countInTotal: false` means a leak costs no 目标生命值 (exactly like a 2V2 placement), only a kill
+   * pays.
    *
    * The bounty is the plan's own per-kill split (`plan.coins`, priced at deployment) plus the receiver's 赏金嗅觉
    * (eventBountyBonusOf), and it always carries `bank: true`: 赏金 goes to 坎诺特's account, never to the purse.
@@ -1255,19 +901,15 @@ export class MatchConfront {
     const { routes, leader } = this._confrontRoutes();
     const out = spawns.slice();
     plan.picks.forEach((p, i) => {
-      // 2026-11-05：同门路线不存在时 `confrontRoutePlanFor` 会合成一条（route 非 null）—— 挂到 spawn 上让 sim 用它
-      const routing = this.confrontRoutePlanFor(p.enemyKey, p.gate);
-      const routeIndex = routing.routeIndex;
-      const route = routing.route || routes[routeIndex];
+      const routeIndex = this.confrontRouteFor(p.enemyKey, p.gate);
       out.push({
         time: start + i, enemyKey: p.enemyKey, count: 1, interval: 0,
         routeIndex,
-        ...(routing.route ? { route: routing.route } : {}),
         mods: { ...mods }, ownerPlayerId: ps.playerId,
         // the prep preview must show the REAL gate / movement class of an appended prey (previewOf otherwise defaults
         // to lower / ground); `prey` marks it display-only: it is not one of the stage's scheduled enemies, so it is
         // excluded from the HUD capsule's denominator (`countInTotal: false`).
-        preview: previewInfo(this.gd, p.enemyKey, route, false, leader),
+        preview: previewInfo(this.gd, p.enemyKey, routes[routeIndex], false, leader),
         prey: true,
         countInTotal: false,
         bounty: { coins: (plan.coins[i] || 0) + scent, ownerPlayerId: ps.playerId, total: plan.count, index: i, bank: true },
@@ -1353,13 +995,7 @@ export class MatchConfront {
   }
 
   /** Enter the 对抗期: step 1 (targets) opens. A team of BOTS decides at once; a team holding a human waits for it — the
-   *  human picks first and the bot teammate is filled in only then (or when the window closes). Step 2 is this round's
-   *  PREP (finishConfrontTargets), not a phase of its own.
-   *
-   *  规则档（业主 2026-11-04）：
-   *   · 赏金档（`versusRule === 'bounty'`，缺省）→ 保留目标选择模态（10 s）；
-   *   · 对抗档（`versusRule === 'confront'`）→ **没有目标选择**：进来就自动分配目标（assignConfrontTarget，shared
-   *     模式同队共用同一个 target）并直接 finishConfrontTargets → 本回合 PREP + 开商店，客户端不再有遮罩。 */
+   *  human picks first and the bot teammate is filled in only then (or when the window closes). */
   enterConfront() {
     this.phase = PHASE.CONFRONT;
     this.confrontStage = 'target';
@@ -1371,18 +1007,6 @@ export class MatchConfront {
     this._confrontRemoved = new Map();
     this.confrontTargets = new Map(); // attacker playerId → target playerId
     this.confrontSubs = new Map();    // attacker playerId → { target, group, position, picks, bosses, ratio, budget }
-    // 提交付款台账（2026-11-04 复验修复 1）：每回合清零 —— 上一回合为提交付过的款不能抵扣本回合的怪。
-    this._confrontPaid = new Map();
-    // 怪物卡池（2026-11-03）：这里只做阶段准备，**不再**开张商店 —— 2026-11-04 起投放窗口就是本回合的 PREP，
-    // 商店在目标选择结束那一刻开（finishConfrontTargets），买卡 / 提交 / 冻结全程同一个 deadline。
-    if (this.isConfrontRule()) {
-      // 对抗档：跳过目标选择（业主 2026-11-04「遮罩只在悬赏模式出」）。confrontStage 仍是 'target'
-      // 只为通过 finishConfrontTargets 的阶段闸门；它立刻被清成 null 并进 PREP。
-      for (const ps of this.alivePlayers()) ps.ready = false;
-      this.markPublic();
-      this.finishConfrontTargets();
-      return;
-    }
     this.setDeadline(this.soloUntimed ? null : VERSUS_CONFRONT.targetSeconds, () => this.finishConfrontTargets());
     for (const t of this.matchTeamIds()) {
       if (t !== attack || !this._allBots(t)) continue;
@@ -1447,39 +1071,13 @@ export class MatchConfront {
       }
       return best;
     };
-    /** 本队第一个已分配的目标（没有 → null）。shared 出怪「同队共用一个 target」的取值点。 */
-    const teamTarget = () => {
-      for (const mate of this._aliveOf(team)) {
-        const t = this.confrontTargets.get(mate.playerId);
-        if (t != null) return t;
-      }
-      return null;
-    };
-    /** 按既有规则给一个还没目标的玩家选对手；`allowWant` 为假时忽略指名（队友代分配那一次）。 */
-    const chooseFor = (playerId, allowWant) => {
-      if (this.confrontTargets.has(playerId)) return;
-      const free = oppIds.filter((pid) => !takenBy(team).includes(pid));
-      const chosen = allowWant && typeof want === 'string' && playerId === ps.playerId && free.includes(want)
-        ? want
-        : (free.length ? weakestOf(free) : leastAttacked());
-      if (chosen != null) this.confrontTargets.set(playerId, chosen);
-    };
     const pickFor = (playerId) => {
       if (this.confrontTargets.has(playerId)) return;
-      // 队级目标（monsterMode !== 'solo'，默认；业主 2026-11-04）：同队攻方共用同一个 target ——
-      // 取该队第一个已分配的目标；本队还没人分配就按既有规则给「队里第一位」分配，其余沿用它的目标。
-      // `master`（2026-11-06）沿用队级目标：整队仍是攻方，只是操作怪物的只有一个人。
-      if (this.monsterMode !== 'solo') {
-        const shared = teamTarget();
-        if (shared != null) { this.confrontTargets.set(playerId, shared); return; }
-        const first = this._aliveOf(team)[0];
-        if (first && first.playerId !== playerId) {
-          chooseFor(first.playerId, true);
-          const t = this.confrontTargets.get(first.playerId);
-          if (t != null) { this.confrontTargets.set(playerId, t); return; }
-        }
-      }
-      chooseFor(playerId, true);
+      const free = oppIds.filter((pid) => !takenBy(team).includes(pid));
+      const chosen = typeof want === 'string' && playerId === ps.playerId && free.includes(want)
+        ? want
+        : (free.length ? weakestOf(free) : leastAttacked());
+      if (chosen) this.confrontTargets.set(playerId, chosen);
     };
     pickFor(ps.playerId);
     if (!fillMates) return;
@@ -1493,90 +1091,37 @@ export class MatchConfront {
     if (alive.length && alive.every((p) => this.confrontTargets.has(p.playerId))) this.finishConfrontTargets();
   }
 
-  /**
-   * Close step 1 (anyone the window caught out gets what is left) and enter step 2 = THIS round's PREP (2026-11-04):
-   * every alive player prepares from now on, with ONE deadline (`gd.prepTime(round)`, armed by enterPrep). The attackers'
-   * monster shop opens here — the placement window IS the prep, there is no separate 'monster' stage.
-   */
+  /** Close step 1 (anyone the window caught out gets what is left) and open step 2, whose window is this round's prep. */
   finishConfrontTargets() {
     if (this.phase !== PHASE.CONFRONT || this.confrontStage !== 'target') return;
     for (const ps of this.confrontActors()) this.assignConfrontTarget(ps, null, true);
     this.setDeadline(0);
-    // 目标选择已经做完：PREP 结束时就冻结投放（endPrep → finishConfront），不再回 CONFRONT。
-    this._confrontTargetsRound = this.round;
-    // 投放窗 = 本回合的 PREP：stage 先清掉（PREP 里的冻结收尾与商店闸门都以「stage == null」判定目标选择已结束）。
-    this.confrontStage = null;
-    // 怪物卡池（2026-11-03）：攻方每人一张商店，同队共用一个池（按队建，Match.js 的构造函数不改）。
-    // 池来源（业主 2026-11-05）：`data/enemies.json` 全表 − tokenOnly − BOSS（商店不卖领袖），不再只取本回合官方出怪
-    // —— 见 monsterPool.js 的 monsterPoolKeys。合法性（能不能提交 / 买 / 投）= 「在池里 + tier ≤ 商店等级」，
-    // 与池来源是同一张表（`cardBlocked`），2026-11-05 起不再按回合走 `legalKeys`。
-    // 每回合**重建**（2026-11-04 复验修复 1，仍保留）：① 卡价是**本回合量纲**（confrontValueOf 含回合倍率与特性档位分），
-    // 复用旧池会把上一回合的价格一路卖到后面几回合；② 商店池按回合变（官方成员保证随 `_roundOfficialSpawns` 变）。
-    // 重建的代价是「上回合被买走的份数」被清空，这是**预期**的补货语义（每回合满库存），不是 bug。
-    // 开张时机（2026-11-04）：目标选择结束这一刻，且**在进 PREP 之前**就位 —— 同步调度下 PREP 可能立刻结束，
-    // 那时 finishConfront 的收尾（关店 / 补 bot 投放）必须已经能看到商店。
-    if (this.monsterShopOn) {
-      // 军费（业主 2026-11-04 裁决）：此刻攻方 / 人数 / 本回合波次都已确定 —— 给每个攻方发一份
-      // 「官方波次价值 × 1.5 ÷ 攻方人数」，shared 模式进队级账户、solo 进 ps.monsterFunds（跨回合结转）。
-      // 必须在开店 / 推首帧**之前**，否则第一帧显示的余额还是 0。
-      this.grantMonsterFunds();
-      // 商店等级（2026-11-04「参考卫戍协议干员商店」）：等级挂 Match（`m.monsterShopLevels`，跨回合持久，不挂
-      // ps.monsterShop —— 那玩意儿每回合重建）。开店前 seed 一次：首次碰到该队（solo：该人）时为 1 级。
-      // openMonsterShop 只**读**等级决定槽位数，不改等级；升级只走 g.monsterLevelUp。
-      for (const ps of this.confrontActors()) monsterShopLevelOf(this, ps);
-      this.monsterPools ||= new Map();
-      const solo = this.monsterMode === 'solo';
-      // `master`（2026-11-06 单人掌握怪物）：资源键仍按队（poolKeyOf 走 `!solo` 分支），只是投放权单人。
-      const master = this.monsterMode === 'master';
-      // 池的键：shared / master = teamId（同队必须共用同一个池，否则队友看不到对方买走的份数 / 退回来的份数）；
-      // solo = playerId（业主 2026-11-04「单人怪物模式」：池按人）。
-      const poolKeyOf = (ps) => (solo
-        ? ps.playerId
-        : (typeof this.teamIdOf === 'function' ? this.teamIdOf(ps) : 0));
-      // 谁开店：shared = 全体攻方；solo / master = 每队只有第一位存活攻方（monsterPlaceActor）—— 其余攻方的商店不开。
-      const actors = this.confrontActors().filter((ps) => (!solo && !master) || this.monsterPlaceActor(ps));
-      const keys = new Set();
-      for (const ps of actors) keys.add(poolKeyOf(ps));
-      for (const key of keys) this.monsterPools.set(key, buildMonsterPool(this));
-      for (const ps of actors) {
-        try { openMonsterShop(this, ps); } catch (e) { this.reportError('monster shop open', e); }
-        // 首帧（2026-11-03）：服务端主动推商店，客户端不必先发一次成功意图才知道开没开（否则死锁）
-        try { if (ps.playerId) this.sendTo(ps.playerId, monsterShopFrame(this, ps)); } catch (e) { this.reportError('monster shop open', e); }
-      }
-      // 没开店的队友也要收一帧收尾帧，面板才不会沿用上一回合的货架：
-      //   · solo   → 「关着」帧（open:false，与改造前逐字节一致）；
-      //   · master → **只读**帧（open:true、slots:[]、readOnly:true）：队级资金 / 等级照发，客户端显示「队长操作中」。
-      if (solo || master) {
-        for (const ps of this.confrontActors()) {
-          if (actors.includes(ps)) continue;
-          const frameOf = master ? monsterShopReadOnlyFrame : monsterShopFrame;
-          try { if (ps.playerId) this.sendTo(ps.playerId, frameOf(this, ps)); } catch (e) { this.reportError('monster shop open', e); }
-        }
-      }
-    }
-    // 进本回合的 PREP：全体存活玩家同一个 deadline（gd.prepTime(round)），攻方也在这里点准备。
-    this.enterPrep();
-    let botsActed = false;
-    for (const ps of this.confrontActors()) if (ps.botControlled) { this.botConfront(ps); botsActed = true; }
-    // 共享池同步（2026-11-04 第二轮复审修复 1）：bot 这一轮买走的份数必须推给人类队友 —— botConfront 自己也会推，
-    // 这里再推一次是本轮「最终态」的兜底（内容相同，客户端按整帧覆盖，不会出现半帧）。没有 bot 行动就不推。
-    if (botsActed) pushMonsterShops(this);
+    this.confrontStage = 'monster';
+    // Step 2 has no fixed length of its own: its window is THIS round's prep — the same time the players had to prepare —
+    // and it is only a CAP, since maybeFinishConfront ends it early as soon as every alive player has submitted. Untimed
+    // when the prep is (a single human — soloUntimed), and then the all-submitted end is the only way it closes.
+    this.setDeadline(this.soloUntimed ? null : this.gd.prepTime(this.round), () => this.finishConfront());
+    for (const ps of this.confrontActors()) if (ps.botControlled) this.botConfront(ps);
     this.markPublic();
+    this.maybeFinishConfront();
+  }
+
+  /** Step 2 ends when EVERY attacker has CONFIRMED (草稿不算). Its window is the round's prep time, so a player may keep
+   *  editing until the deadline (业主 2026-10-27：提交与确认出击拆成两步，截止前可改投放)。 */
+  maybeFinishConfront() {
+    if (this.phase !== PHASE.CONFRONT || this.confrontStage !== 'monster') return;
+    const alive = this.confrontActors();
+    if (alive.length && alive.every((p) => this.confrontSubs.get(p.playerId)?.committed === true)) this.finishConfront();
   }
 
   /** `g.confront { group, position, picks, bosses, commit }` in step 2: the monsters a player throws at their target.
    *  `bosses` (the 事件期 boss 格, user 2026-10-21) is optional — an old client never sends it. `commit` splits the flow in
    *  two (业主 2026-10-27): without it the submission is a **draft** that may be overwritten any number of times until the
-   *  PREP ends; with it the placement is final (the prep itself ends on Ready / its deadline — 2026-11-04 单一 deadline,
-   *  不再由「全员已确认」提前收尾). */
+   *  deadline; with it the placement is final and the phase advances once every attacker has confirmed. */
   submitConfront(ps, { group, position, picks, bosses, commit }) {
-    if (!this.confrontWindowOpen()) return fail(ERR.WRONG_PHASE);
+    if (this.phase !== PHASE.CONFRONT || this.confrontStage !== 'monster') return fail(ERR.WRONG_PHASE);
     if (!ps.alive) return fail(ERR.ELIMINATED);
     if (this.attackingTeam != null && this.teamIdOf(ps) !== this.attackingTeam) return fail(ERR.WRONG_PHASE, 'the defending team cannot place monsters');
-    // 投放权闸门（2026-11-06）：solo / master 只有每队第一位存活攻方能投放。商店闸门只挡「买 / 点卡」，
-    // 旧 `g.confront` 通道可以不经商店直接提交 —— 这里用**同一个**判据补上，堵住绕过「单人掌握怪物」的口子。
-    // shared（缺省）恒为 true，行为与改造前逐字节一致。
-    if (!this.monsterPlaceActor(ps)) return fail(ERR.WRONG_PHASE, 'single-operator monster mode: only the first attacker places');
     // 已确认出击 = 定局，不能再改；草稿可以反复覆盖（这一步以前是 ALREADY 一刀切，见 2026-10-27 的交互改版）
     const prev = this.confrontSubs.get(ps.playerId);
     if (prev && prev.committed === true) return fail(ERR.ALREADY);
@@ -1593,21 +1138,18 @@ export class MatchConfront {
     const sub = { ...member.sub, committed: commit === true };
     this.confrontSubs.set(ps.playerId, sub);
     // 收尾异常不得吞掉一次**已经成功**的提交（业主 2026-10-26：线上点提交恒报 INTERNAL，
-    // 而 pick 其实已入库）。2026-11-04 起提交不再提前结束阶段：投放窗口 = 本回合 PREP，由 Ready / deadline 收尾。
+    // 而 pick 其实已入库）。阶段收尾出错记日志、照常返回 OK。
     try { this.markPublic(); } catch (e) { this.reportError('confront markPublic', e); }
+    try { this.maybeFinishConfront(); } catch (e) { this.reportError('confront finish', e); }
     return OK;
   }
 
   /**
-   * Check a submission: every enemyKey is in the ROUND'S MONSTER POOL at a tier ≤ the shop level (2026-11-05 —
-   * 「卡池 = 全表按阶级，发牌上限 = 商店等级」；the old 特训敌人 / 官方波次 gate `legalKeys` is gone: it locked R1–R3's
-   * shelf to the 2–3 keys of the round's own wave), a legal gate and position, at most VERSUS_CONFRONT.maxPicks
-   * monsters, and — 2026-11-04 复验修复 1 — the money still OWED for it (the picks already paid through the 怪物商店
-   * draft / an earlier submission of the same round are credited) within the monster-funds balance. The player MAY MIX
-   * TYPES (user decision 2026-10-17: step into one type, spend part of the budget, step into another and add more), so
-   * `group` is display-only and only the union is checked. The AUTHORITATIVE cap (the client greys out what does not
-   * fit, this refuses it): over the balance ⇒ ERR.CONFRONT_BUDGET, out of stock ⇒ ERR.SOLD_OUT, over the count ⇒
-   * ERR.CONFRONT_COUNT.
+   * Check a submission: every enemyKey is offered by SOME 特训敌人 type, a legal gate and position, at most
+   * VERSUS_CONFRONT.maxPicks monsters, and the combined VALUE within the round's budget. The player MAY MIX TYPES (user
+   * decision 2026-10-17: step into one type, spend part of the budget, step into another and add more), so `group` is
+   * display-only and only the union is checked. The AUTHORITATIVE cap (the client greys out what does not fit, this
+   * refuses it): over the budget ⇒ ERR.CONFRONT_BUDGET, over the count ⇒ ERR.CONFRONT_COUNT.
    *
    * `bosses` (the 事件期 boss 格, user 2026-10-21) is checked on its own: every enemyKey must be in the 机变悬赏 pool
    * (confrontBossPool — and the round must be an event round at all), an enemyKey may appear at most ONCE per submission
@@ -1618,21 +1160,14 @@ export class MatchConfront {
    */
   _confrontMember(ps, group, position, picks, bosses = []) {
     const list = this.confrontGroups();
-    // 合法性（2026-11-05 业主裁决，与 monsterShop 的 buyMonster / placeMonster / rollCard **同一个判据**）：
-    // 「key 在卡池里」且「池里的 tier ≤ 商店等级」。卡池 = data/enemies.json 全表 − tokenOnly − BOSS
-    // （monsterPool.js 的 monsterPoolKeys，entries 里带 tier），不新造表；商店关着时没有等级概念 ⇒ 不设阶位上限。
-    // 之所以不再用 legalKeys：它把 R1–R3 的货架 / 提交卡成「本回合官方出怪」（2–3 个 key），池放宽到全表等于白放宽；
-    // 而且两份实现各算一套曾导致「卡进得了草稿但提交必被拒」。
-    const pool = monsterPoolFor(this, ps);
-    const levelCap = this.monsterShopOn ? monsterShopLevelOf(this, ps) : Number.MAX_SAFE_INTEGER;
-    const allowed = (key) => { const tier = pool.tier(key); return tier > 0 && tier <= levelCap; };
+    const allowed = new Set(list.flatMap((g) => g.rows.map((r) => r.key)));
     const arr = Array.isArray(picks) ? picks : [];
     const pos = VERSUS_CONFRONT.positions.includes(position) ? position : null;
     if (!pos) return null;
     const out = [];
     const timeLimit = Math.max(1, Number(this.wave && this.wave.timeLimit) || 60);
     for (const p of arr) {
-      if (!p || typeof p.enemyKey !== 'string' || !allowed(p.enemyKey)) return null;
+      if (!p || typeof p.enemyKey !== 'string' || !allowed.has(p.enemyKey)) return null;
       // 预设路线 + 投放时刻（可选）：**与 bot 走同一套清洗**（业主 2026-10-27：玩家手动提交不该因为路线/时刻被硬拒，
       // 线上表现是「服务器内部错误」——拒绝码在响应层的表里不存在，被兜底成 INTERNAL 了）。
       // 非法就就地退化：路线不可用 / 超长 → 回落默认路线；时刻夹进 [0, 时限-行程-2]，否则这只怪会晚于时限出场、
@@ -1656,19 +1191,9 @@ export class MatchConfront {
       });
     }
     if (out.length > VERSUS_CONFRONT.maxPicks) return { error: ERR.CONFRONT_COUNT };
-    // 路线**不计费**（2026-11-06 口径统一）：`buyMonster` / `placeMonster` 从来没收过路线费，只有这里曾按
-    // `routeLen × 1` 加进超支判据 —— 同一份投放「点卡」不超支、「提交」超支，玩家看到的就是莫名其妙的
-    // CONFRONT_BUDGET。这里删掉那条判据，两条路径从此同一个尺度（routeLen 只作路线行程信息用）。
-    // 预算判据（2026-11-04 复验修复 1：`g.confront` 曾经是免费投放通道）：
-    //   商店开着 → 只判**尚未付款**的部分（草稿里的同 key 卡在 buyMonster / placeMonster 时已扣过款、也 take 过库存），
-    //     上限 = 怪物资金账户余额（confrontPurchaseLimit，见那里的注释）；
-    //   商店关着 → 旧口径（回合预算 vs 整单价值），一个字节都不变。
-    // `confrontSpent` / `monsterPriceOf` 与卡面同源，所以这里与 buyMonster / placeMonster 是同一个尺度。
-    const settle = this.monsterShopOn ? this._confrontChargeFor(ps, out) : null;
-    const overBudget = settle
-      ? settle.cost > this.confrontPurchaseLimit(ps)
-      : this.confrontSpent(out) > this.confrontPurchaseLimit(ps);
-    if (overBudget) return { error: ERR.CONFRONT_BUDGET };
+    // 路线越长，占用预算越多（长度 ×2），让「绕远路」不能白嫖
+    const routeCost = out.reduce((n, p) => n + (Number(p.routeLen) || 0) * 2, 0);
+    if (this.confrontSpent(out) + routeCost > this.confrontBudget()) return { error: ERR.CONFRONT_BUDGET };
     const bArr = Array.isArray(bosses) ? bosses : [];
     // outside the 事件期 rounds the boss 格 does not exist, so the pool is empty and any boss is refused with it
     const bossAllowed = this.confrontBossOpen() ? new Set(this.confrontBossPool().map((r) => r.key)) : new Set();
@@ -1681,14 +1206,8 @@ export class MatchConfront {
     // the cap is the event's own ordinal (confrontBossCap: E1 = 1, E2 = 2, E3 = 3; user 2026-10-21 after playtest) —
     // over the cap is a count offence; off the event rounds the cap is 0 and the empty pool above already refused
     if (outB.length > this.confrontBossCap()) return { error: ERR.CONFRONT_COUNT };
-    // 收款（全有或全无，2026-11-04 复验修复 1）：到这里全部校验都已通过，才开始动钱 / 库存 ——
-    // 余额不足 → CONFRONT_BUDGET、库存不足 → SOLD_OUT，两种失败都**不会**留下任何部分扣款。
-    if (settle) {
-      const paid = this._confrontPayPicks(ps, settle);
-      if (paid) return { error: paid.error };
-    }
     const gi = Number.isInteger(group) && group >= 1 && group <= list.length ? group : 1;
-    return { sub: { target: this.confrontTargets.get(ps.playerId) ?? null, group: gi, position: pos, picks: out, bosses: outB, total: out.length, ratio: this.confrontRatio(), budget: this.confrontBudget(ps), seat: ps.seat } };
+    return { sub: { target: this.confrontTargets.get(ps.playerId) ?? null, group: gi, position: pos, picks: out, bosses: outB, total: out.length, ratio: this.confrontRatio(), budget: this.confrontBudget(), seat: ps.seat } };
   }
 
   /** An AI player's submission, and the one a player who never submits gets at the window's end.
@@ -1698,60 +1217,20 @@ export class MatchConfront {
    *  事件期 boss 格（2026-11-01 P1）：开放时按金币降序取到 `confrontBossCap()` 只 —— 原「AI 恒空」的 [ASSUMED] 作废。 */
   botConfront(ps) {
     if (this.attackingTeam != null && this.teamIdOf(ps) !== this.attackingTeam) return;
-    // solo / master 怪物模式（业主 2026-11-04 / 2026-11-06）：只有该队第一位存活攻方投放 —— 其余攻方也不补投放，
-    // 否则 bot 的引擎回落路径会绕过「商店不开」把队友的投放直接写进 confrontSubs。
-    if (this.monsterMode !== 'shared' && !this.monsterPlaceActor(ps)) return;
-    if (!this.confrontWindowOpen() || this.confrontSubs.has(ps.playerId)) return;
-    // 怪物卡池（2026-11-03）：只在商店开着时才问策略；`monsterShopOn` 为假 ⇒ strat = null ⇒ 下面全部走旧路径。
-    // 惰性初始化（Match.js 不改）：this.monsterBot 首次用到时才建。
-    const strat = this.monsterShopOn ? (this.monsterBot ||= monsterStrategyFor(this)) : null;
-    if (strat) {
-      const want = callStrategyHook(this, strat, 'pickTargets', ps);
-      // null = 交回引擎：目标仍由 assignConfrontTarget 在 step 1 / step 2 收尾时分配。
-      // 给了 playerId 就按 submitConfrontTarget 的同一套判据落地（存活的对手），非法值一并回落引擎。
-      if (typeof want === 'string') {
-        const target = this.players && typeof this.players.get === 'function' ? this.players.get(want) : null;
-        if (target && target.alive && !target.left && this.teamIdOf(target) !== this.teamIdOf(ps)) this.confrontTargets.set(ps.playerId, want);
-        else this.assignConfrontTarget(ps, null, false);
-      }
-    }
+    if (this.phase !== PHASE.CONFRONT || this.confrontStage !== 'monster' || this.confrontSubs.has(ps.playerId)) return;
     const groups = this.confrontGroups();
-    // bot 的花钱上限（2026-11-04 复验修复 1）：商店开着时 = min(回合预算, 账户余额 + 草稿里已付过款的价值)
-    // （confrontBotBudget）—— bot 只能派自己付得起的怪，否则下面 `_confrontPayPicks` 会整单拒掉、投放落空。
-    // 商店关着 = 旧的回合预算，行为逐字节不变。
-    const budget = this.confrontBotBudget(ps);
+    const budget = this.confrontBudget();
     const cap = this.confrontPlaceCap();
-    // 卡池闸门（2026-11-05，取代 2026-11-04 的 `legalKeys` 闸门）：候选必须是**卡池里 + 阶位 ≤ 商店等级**的怪
-    // （与 `_confrontMember` / 商店的 buyMonster / placeMonster **同一个判据** `cardBlocked`，不另算一套）。
-    // 商店开着时**先**把候选限定在卡池：赏金档的旧贪心（下面的 `ordered`）与对抗档的 `fillConfrontPicks`
-    // 共用这一条判据 —— 否则「便宜优先」会先被买不到 / 交不上的怪吃光预算，投完再过滤就成了空单。
-    // 商店关着（旧平铺面板）= 不做这道闸门，行为与改造前一致。
-    const deck = this.monsterShopOn ? monsterPoolFor(this, ps) : null;
-    const deckOk = (key) => !deck || cardBlocked(this, ps, key) == null;
-    const rowAllowed = (r) => !deck || !!(r && deckOk(r.key));
     const rows = [];
-    groups.forEach((g, gi) => (g.rows || []).forEach((r) => {
-      if (!rowAllowed(r)) return;
-      rows.push({ key: r.key, value: r.value, gi });
-    }));
+    groups.forEach((g, gi) => (g.rows || []).forEach((r) => rows.push({ key: r.key, value: r.value, gi })));
     const picks = [];
-    // 商店计划（2026-11-04 复验修复 3b）：契约声明了 shopPlan 就必须真的调用 —— 它的副作用是 ps.monsterDraft.picks，
-    // 下面 deployPlan 才可能拿到「这一回合买到的卡」。返回值只用于诊断/测试，允许 null；异常已在 callStrategyHook 里吞掉。
-    if (strat) callStrategyHook(this, strat, 'shopPlan', ps);
-    // 投放计划：策略返回 picks 数组就用它（仍会过 _botConfrontPlan + _sanitizeBotPicks）；返回 null 走旧贪心。
-    const planned = strat ? callStrategyHook(this, strat, 'deployPlan', ps) : null;
-    if (Array.isArray(planned)) {
-      for (const p of planned) {
-        if (p && typeof p.enemyKey === 'string') picks.push({ enemyKey: p.enemyKey, gate: p.gate === 'upper' ? 'upper' : 'lower' });
-      }
-    } else if (this.isConfrontRule()) {
+    if (this.isConfrontRule()) {
       const unitsTarget = Math.max(1, Math.round((this.confrontWaveCount() * CONFRONT_VOLUME_SHARE) / this.attackingTeamSize()));
       const filled = fillConfrontPicks({ rows, budget, unitsTarget, cap });
       filled.forEach((f, i) => picks.push({ enemyKey: f.enemyKey, gate: i % 2 ? 'upper' : 'lower' }));
     } else {
-      // 赏金档：旧实现原样保留（便宜优先 + 反复扫到没有进展为止，去掉「每种怪最多一只」）；
-      // 商店开着时先过 `rowAllowed`（卡池 + 阶位 ≤ 商店等级），不再「投完再被滤掉」。
-      const ordered = groups.map((g, i) => ({ i, rows: (g.rows || []).filter(rowAllowed).slice().sort((a, b) => a.value - b.value || String(a.key).localeCompare(String(b.key))) }));
+      // 赏金档：旧实现原样保留（便宜优先 + 反复扫到没有进展为止，去掉「每种怪最多一只」）
+      const ordered = groups.map((g, i) => ({ i, rows: (g.rows || []).slice().sort((a, b) => a.value - b.value || String(a.key).localeCompare(String(b.key))) }));
       let left = budget;
       const take = (list) => {
         let progressed = true;
@@ -1769,51 +1248,6 @@ export class MatchConfront {
       if (ordered.length) take(ordered[0].rows);
       if (picks.length < cap) for (let i = 1; i < ordered.length; i++) take(ordered[i].rows);
     }
-    // 卡池闸门（2026-11-05，取代 2026-11-04 的 legalKeys 闸门）：`_sanitizeBotPicks`（pureShares.sanitizeBotPickList）
-    // 只校验字段形态与预算，**不判** enemyKey 在不在卡池里；赏金档的 `confrontGroups` 又没有回合闸门
-    // （isConfrontRule 为假时只按「本局见过」筛），于是 bot 的贪心会从全类型池里挑 —— 实测本回合官方只出 2 个 key，
-    // 冻结进 this.confront 的 12 条里有 10 条是别的怪（apply 时多半被当成非法出怪丢掉）。
-    // 三条产出路径（策略 deployPlan / 对抗档 fillConfrontPicks / 赏金档贪心）都汇到这一个 picks 数组，所以在这里
-    // 过一道「卡池 + 阶位」（与 `_confrontMember` / 商店**同源**）就覆盖全部 return 路径，且先于 firstKey 与清洗。
-    // 商店关着 = 不闸门，保持旧行为。`deck` 已在上面（rows 的候选集）算过，这里复用。
-    if (deck) {
-      const kept = picks.filter((p) => p && deckOk(p.enemyKey));
-      if (kept.length !== picks.length) {
-        picks.length = 0;
-        for (const p of kept) picks.push(p);
-      }
-    }
-    // 共享池库存（2026-11-04 第二轮复审修复 5）：bot 从来不读 `MonsterPool.left` —— 实测官方只出 5 只，bot 投了 9 条。
-    // 逐 key 限量（每条 pick 消耗 1，超出的那一条单独丢弃，**不清空整单**），额度 = 本席**可用**份数
-    // （池里剩下的份数 − 给同队人类留的份数，见 monsterShop.js 的 `monsterStockLeft`）+ 本席草稿里
-    // 已经买下的份数（cardpool 策略买卡时已经从同一个池 `take` 过，只看 `left` 会把它自己买的卡全部丢掉）。
-    // 没有商店（`deck == null`）= 不做闸门，保持旧行为。
-    if (deck) {
-      // 共享池留份（2026-11-04 真机 2V2）：bot 的逐 key 额度必须与 monsterShop.js 的 buyMonster / placeMonster
-      // 走**同一个上限**（`monsterStockLeft` = 池里剩余 − 给同队人类攻方留的份数），否则 bot 的投放计划会绕过
-      // 商店把留给人类的那几份也占掉。扣的只是池里的剩余值，**不扣**本席草稿里已经买下的份数
-      // （那些已经从池里 take 走了，held 就是把它们加回来的额度）。
-      // 2026-11-05：额度改成**按需现算**（不再预铺一遍 legal 全集 —— 那个集合已经没有语义了）。
-      const held = new Map();
-      for (const d of (ps.monsterDraft && Array.isArray(ps.monsterDraft.picks) ? ps.monsterDraft.picks : [])) {
-        if (d && typeof d.enemyKey === 'string') held.set(d.enemyKey, (held.get(d.enemyKey) || 0) + 1);
-      }
-      const budgetLeft = new Map();
-      const leftOf = (key) => {
-        if (!budgetLeft.has(key)) budgetLeft.set(key, monsterStockLeft(this, ps, key) + (held.get(key) || 0));
-        return budgetLeft.get(key);
-      };
-      const keptPicks = [];
-      for (const p of picks) {
-        if (!p) continue;
-        const left = leftOf(p.enemyKey);
-        if (left <= 0) continue;
-        budgetLeft.set(p.enemyKey, left - 1);
-        keptPicks.push(p);
-      }
-      picks.length = 0;
-      for (const p of keptPicks) picks.push(p);
-    }
     const firstKey = picks.length ? picks[0].enemyKey : null;
     const gi = firstKey == null ? 0 : (rows.find((r) => r.key === firstKey)?.gi ?? 0);
     // 事件期 boss 格：按金币降序取到 cap（不占预算、不计 maxPicks —— 校验器与 _confrontBossSpawns 都是这么定的）
@@ -1826,25 +1260,12 @@ export class MatchConfront {
     // 业主 2026-10-26：AI 也要「操作怪物」—— 不再只丢默认路线，按怪物移动方式挑可用路线并错开投放时刻。
     // 插件可用 `server.modules.matchClass()` 包装 Match 覆写 `_botConfrontPlan` 做更强的决策（不碰引擎）。
     // 复审计 2026-10-27：bot 路径原先直接写库、绕过 _confrontMember 的全部校验
-    // （time / routeIndex / 投放预算）。这里走同一套判据，非法字段就地纠正。
-    // 2026-11-06 路线不计费：提交侧不再按 routeLen 加价（见 _confrontMember），bot 的 `_sanitizeBotPicks`
-    // 仍按纯函数里的老口径保守估算 —— 只影响 bot 少投几只，不影响任何一方的实际扣款。
-    // 复审计 2026-10-27：即使一条都买不起也必须写 sub —— 投放收尾（finishConfront）会给每个还没有 sub 的攻方
-    // 补一份 bot 投放，缺 sub 的那一队在 PREP 结束时才补，不如这里就给全。
-    // 同上（2026-11-04 复验修复 2）：合法集过滤后为空也照样写空 sub —— 旧不变式「即使一条都交不上也要有 sub」保留，
-    // 空 picks 是合法提交（apply 时什么都不替换），且避免 finishConfront 的兜底再走一遍同样的空结果。
-    let routed = this._sanitizeBotPicks(this._botConfrontPlan(ps, picks, 'mid'), budget);
-    // 结算（2026-11-04 复验修复 1）：bot 的投放同样要付得起 —— 草稿里的卡先抵扣，其余按单价扣款 + 扣库存；
-    // 付不起（余额 / 库存不足）就退回空投放（合法提交：apply 时什么都不替换），绝不写一笔没付钱的投放。
-    if (this.monsterShopOn) {
-      const chargeFor = this._confrontChargeFor(ps, routed);
-      if (this._confrontPayPicks(ps, chargeFor)) routed = [];
-    }
+    // （time / routeIndex / 路线长度 / routeCost 预算）。这里走同一套判据，非法字段就地纠正。
+    // 复审计 2026-10-27：即使一条都买不起也必须写 sub —— `maybeFinishConfront` 要求「人人有 sub」，
+    // 否则阶段要空等满 prepTime（65s）才由 deadline 收尾。
+    const routed = this._sanitizeBotPicks(this._botConfrontPlan(ps, picks, 'mid'), budget);
     this.confrontSubs.set(ps.playerId, { target: this.confrontTargets.get(ps.playerId) ?? null, group: gi + 1, position: 'mid', picks: routed, bosses, total: routed.length, ratio: this.confrontRatio(), budget, seat: ps.seat, committed: true });
     this.markPublic();
-    // 共享池同步（2026-11-04 第二轮复审修复 1）：bot 写完 sub 之后把商店的新帧推给人类队友
-    // （`shopPlan` 买卡 / 刷新已经改过共享池；bot 席位自己不收帧）。
-    pushMonsterShops(this);
   }
 
   /**
@@ -1907,55 +1328,20 @@ export class MatchConfront {
   }
 
   /**
-   * The PREP is over (endPrep, 2026-11-04): the monster-shop DRAFTS become submissions (a submission someone already
-   * made wins over their draft; a seat left with nothing gets a bot one only when it is botControlled — a human's empty
-   * draft means they throw nothing), the shops close and the placements FREEZE into `this.confront` — once, for this
-   * round. Then the roster (悬赏名单) is held for VERSUS_CONFRONT.rosterMs before the battles start
-   * (CONFRONT_ROSTER_MS, user 2026-10-17 addendum); without the hold (rosterMs 0) the battles start at once.
+   * Step 2 is over (its window ran out): anyone missing a submission gets a bot one, then the roster (悬赏名单) is held
+   * for VERSUS_CONFRONT.rosterMs before the battles start (CONFRONT_ROSTER_MS, user 2026-10-17 addendum). Without the
+   * hold (rosterMs 0) the old path goes straight to COMBAT.
    */
   finishConfront() {
-    if (this.phase !== PHASE.PREP || this.confrontStage != null) return;
+    if (this.phase !== PHASE.CONFRONT || this.confrontStage === 'roster') return;
     this.setDeadline(0);
-    this.confrontSubs ||= new Map();
-    // 点卡投放（2026-11-04 复验修复 1）：客户端已经不再发 `g.confront`，投放只写在 `ps.monsterDraft.picks` 里
-    // （monsterShop.js 的 buyMonster / placeMonster）。收尾必须**先把草稿转成正式提交**，否则「没有 sub 的攻方」
-    // 会被下一段 botConfront 用 bot 自选的怪覆盖 —— 赏金档的缺省策略是 legacy（三个 hook 全返回 null），
-    // 回落到旧贪心填充 ⇒ 玩家投的卡整单消失（实测：投 2 只 slime，冻结进 this.confront 的是 bot 的 6 只）。
-    // 判定顺序（业主口径）：
-    //   ① 已有 sub（含已确认的 committed）→ 不动，玩家自己的提交优先于草稿；
-    //   ② 草稿非空（人类或 bot 都算）→ 按 `submitConfront` 的同一套判据（`_confrontMember`：合法集 / 数量 / 预算 /
-    //      路线 / 时刻）转成正式提交，写进 confrontSubs 并标记 committed；
-    //   ③ 草稿为空 → 只有 botControlled 才补 bot 投放；人类空草稿 = 本回合什么都不投（保持空，不替人做主）。
-    // 转换被拒（越界 / 超预算 / 不在本回合合法集）不静默丢弃：记一条 error，再按 ③ 兜底。
-    for (const ps of this.confrontActors()) {
-      if (this.confrontSubs.has(ps.playerId)) continue;
-      const draft = ps.monsterDraft;
-      const picks = draft && Array.isArray(draft.picks) ? draft.picks : [];
-      if (picks.length > 0) {
-        const member = this._confrontMember(ps, 0, (draft && draft.position) || 'mid', picks, []);
-        if (member && member.sub) this.confrontSubs.set(ps.playerId, { ...member.sub, committed: true });
-        else this.reportError(`confront draft ${ps.playerId}`, (member && member.error) || 'illegal 对抗期 pick'); // i18n-ignore: 服务端内部日志
-      }
-      if (this.confrontSubs.has(ps.playerId)) continue;
-      if (ps.botControlled) this.botConfront(ps);
-    }
-    // 怪物卡池收尾（2026-11-03）：所有 sub 都已落到 confrontSubs（上面的 botConfront 也要能看到商店），
-    // 再把 ps.monsterShop / ps.monsterDraft 摘掉。关掉时整段不执行。
-    if (this.monsterShopOn) for (const ps of this.confrontActors()) closeMonsterShop(this, ps);
-    // 收尾帧（2026-11-03）：商店已摘掉 ⇒ monsterShopFrame 返回 { open:false, slots: [] }，客户端据此收起面板
-    if (this.monsterShopOn) {
-      for (const ps of this.confrontActors()) {
-        try { if (ps.playerId) this.sendTo(ps.playerId, monsterShopFrame(this, ps)); } catch (e) { this.reportError('monster shop close', e); }
-      }
-    }
+    for (const ps of this.confrontActors()) if (!this.confrontSubs.has(ps.playerId)) this.botConfront(ps);
     this.confront = new Map(this.confrontSubs);
     this._confrontDoneRound = this.round;
     const rosterMs = Math.max(0, Number(this.huntCfg().rosterMs) || 0);
     if (rosterMs > 0) {
-      // 公示期沿用改造前的阶段口径：phase = CONFRONT + stage 'roster'。休整已经结束（ps.endPrep 已跑），把阶段切回来
-      // 让休整意图（g.ready / g.buy / 商店 / 投放）与「取消准备」都被阶段闸门挡住，同时客户端照旧用
-      // m.public.confront.roster = { until, ms } 播 5 s 名单。
-      this.phase = PHASE.CONFRONT;
+      // the phase stays CONFRONT (stage 'roster'): m.public.confront still carries the applied submissions, and
+      // m.public.confront.roster = { until, ms } lets the client play its 5 s announcement before COMBAT.
       this.confrontStage = 'roster';
       this.confrontRosterAt = this.sched.now();
       this.setDeadline(rosterMs / 1000, () => this.finishConfrontRoster());
@@ -1963,15 +1349,15 @@ export class MatchConfront {
       return;
     }
     this.confrontStage = null;
-    this.startCombat();
+    this.enterDefenderPrep();
   }
 
-  /** The roster hold expired: the battles start (the PREP itself already ended; the freeze happened in finishConfront). */
+  /** The roster hold expired: the DEFENDING team now prepares against the placed monsters. */
   finishConfrontRoster() {
     if (this.phase !== PHASE.CONFRONT || this.confrontStage !== 'roster') return;
     this.setDeadline(0);
     this.confrontStage = null;
-    this.startCombat();
+    this.enterDefenderPrep();
   }
 
   /**
@@ -1996,105 +1382,17 @@ export class MatchConfront {
     return { routes, leader };
   }
 
-  /**
-   * 一条投放路线：**同门 + 同移动方式**的模板路线，没有就**合成一条从目标门出发的路线**（2026-11-05 修 bug）：
-   *
-   * 旧实现找不到同门路线时静默回落到「任意同移动方式的路线」（`routes.findIndex(motionOk)`），而 `data/waves.json`
-   * 里 R1–R3 的模板 `act1autochess_01/02/03` **根本没有上门路线**（routes 的 start 全是 (9,10)），
-   * 于是「投到上门」= 静默变成下门（业主 2026-11-05 报障）。现在改成合成路线：
-   *
-   *   · 形态与模板 routes 的元素同构（`{ motion, start, end, checkpoints }`），以**同 motion 的第一条模板路线**为模板，
-   *     只把 `start` 换成目标门的门格；同 motion 一条都没有才用任意路线的 `end` / `checkpoints`（motion 仍按怪物自己的
-   *     移动方式写死成 WALK / FLY，免得拿 FLY 的骨架给走地怪）。
-   *   · 门格坐标**不硬编码**，三级推导（见 `_confrontGateStart`）：① 模板里别的路线已经有这个门的起点 → 借用它的坐标
-   *     （escaped 场是 18 列，普通场是 10 列）；② 舞台 `data/stages.json` 的 `S`（tile_start）格子里 gateOf === 目标门的那个，
-   *     优先与参照起点同列；③ 用 gateOf 反推 pen 分界行（最小 r 使 gateOf([r, col]) === gate）。
-   *
-   * **门的分界到底是多少**（对齐说明，客户端不在本次改动范围）：
-   *   `waves.js:279` 的 `gateOf` 是**客户端 preview 栏的 pen 口径** —— target = 起点行 + 6（领袖场 +13），
-   *   再与 `PEN_UPPER_ROW = 18` 比 ⇒ 起点行 ≥ 12 才算上门（行 9–11 全是下门）。普通场（19×21，`S` 在 (9,10) /
-   *   (12,10)）就是这个分界；客户端 `ui/shopBar.js:201` 用 `GEO.FIELD.r1 - 1 = 11` 当分界，比服务端**早一行**，
-   *   那是客户端自己的近似（本文件不改客户端，只记下正确分界 = 起点行 ≥ 12 = 上门）。
-   *
-   * 返回值是**索引 + 可选路线**：调用了 `confrontRouteFor`（只回索引）的老调用方行为不变，
-   * 需要「真的从上门出来」的调用方（applyConfront / _confrontBossSpawns / applyCoopHunt）把 `route` 挂到 spawn 上
-   * —— sim 的 `spawns.js` 用 `opts.route ?? routes[routeIndex]`，所以合成路线能生效，且**不污染** `this.wave.routes`
-   * （那是 `gd.wave()` 的共享数据数组，push 进去会串到同模板的所有对局）。
-   * @param {string} enemyKey @param {'upper'|'lower'} gate
-   * @returns {{ routeIndex: number, route: object|null }} route = null ⇒ 用模板路线，无需覆盖
-   */
-  confrontRoutePlanFor(enemyKey, gate) {
+  /** The route index a placed monster uses: the template route matching its gate AND movement, else any of its class. */
+  confrontRouteFor(enemyKey, gate) {
     const en = (this.data && this.data.enemies) || {};
     const fly = !!(en[enemyKey] && en[enemyKey].isFlyEnemy);
     const { routes, leader } = this._confrontRoutes();
-    if (!routes.length) return { routeIndex: 0, route: null };
+    if (!routes.length) return 0;
     const motionOk = (r) => (fly ? r.motion === 'FLY' : r.motion !== 'FLY' && r.motion !== 'E_NUM');
     const j = routes.findIndex((r) => motionOk(r) && gateOf(r.start, leader) === gate);
-    if (j >= 0) return { routeIndex: j, route: null };
-    // 同门路线不存在 ⇒ 合成：以同 motion 的第一条为骨架，把 start 换到目标门的门格
-    const ref = routes.findIndex(motionOk);
-    const skeleton = routes[ref >= 0 ? ref : 0] || {};
-    const start = this._confrontGateStart(gate, skeleton.start, leader);
-    const copyPair = (v) => (Array.isArray(v) ? v.slice(0, 2) : null);
-    const end = copyPair(skeleton.end) || copyPair(start) || [0, 0];
-    const checkpoints = Array.isArray(skeleton.checkpoints)
-      ? skeleton.checkpoints.map((cp) => (Array.isArray(cp) ? cp.slice() : cp))
-      : [];
-    return {
-      // routeIndex 仍指向同 motion 的骨架：老调用方（只认索引）拿到的是一条「门不对但走得通」的路线，不会崩；
-      // 新调用方再加 route 覆盖，真正从上/下门出来。
-      routeIndex: ref >= 0 ? ref : 0,
-      route: { motion: fly ? 'FLY' : 'WALK', start, end, checkpoints },
-    };
-  }
-
-  /**
-   * 目标门的**门格**坐标（`confrontRoutePlanFor` 的合成起点）。三级推导，全部走现成的 `gateOf` 判据，不硬编码坐标：
-   *   ① 模板里别的路线已经有这个门的起点 → 直接借用（含列号；escaped 场是 18 列，普通场是 10 列）；
-   *   ② 舞台 `data/stages.json` 的 `S` 字形门格（`tile_start`）里 gateOf === 目标门的：优先与参照起点同列的那个。
-   *      普通场实测 `S` 在 (9,10) / (12,10) / (18 列) / (15,7)，同列筛完只剩 (9,10) 下门 / (12,10) 上门；
-   *   ③ 反推 pen 分界行：最小的 r 使 `gateOf([r, 参照列]) === gate`（普通场上门 = 12，领袖场 = 5），
-   *      与 `waves.js` 的 `PEN_UPPER_ROW = 18` − 行偏移（6 / 13）同一个结论。
-   * 全部落空 → 原样返回参照起点（最后兜底，至少不产生非法坐标）。
-   * @param {'upper'|'lower'} gate @param {number[]|null} refStart 参照起点 @param {boolean} leader
-   * @returns {number[]} [row, col]
-   */
-  _confrontGateStart(gate, refStart, leader) {
-    const { routes } = this._confrontRoutes();
-    const ref = Array.isArray(refStart) ? refStart.slice(0, 2) : null;
-    // ① 模板里已有的同门起点
-    for (const r of routes) {
-      if (Array.isArray(r && r.start) && gateOf(r.start, leader) === gate) return r.start.slice(0, 2);
-    }
-    const colHint = ref && Number.isFinite(ref[1]) ? ref[1] : null;
-    // ② 舞台的 S 字形门格（同列优先）
-    const rows = Array.isArray(this.stage && this.stage.rows) ? this.stage.rows : [];
-    let fallback = null;
-    for (let r = 0; r < rows.length; r++) {
-      const line = typeof rows[r] === 'string' ? rows[r] : Array.isArray(rows[r]) ? rows[r].join('') : '';
-      for (let c = 0; c < line.length; c++) {
-        if (line[c] !== 'S') continue;
-        if (gateOf([r, c], leader) !== gate) continue;
-        if (colHint != null && c === colHint) return [r, c];
-        if (!fallback) fallback = [r, c];
-      }
-    }
-    if (fallback) return fallback;
-    // ③ 反推 pen 分界行（普通场上门 = 12 行）
-    const c = colHint ?? 10;
-    for (let r = 0; r < GEO.ROWS; r++) if (gateOf([r, c], leader) === gate) return [r, c];
-    return ref || [GEO.ROWS - 1, c];
-  }
-
-  /**
-   * 一条投放路线的**索引**（兼容入口，老调用方只认整数）。
-   * 需要「真的从目标门出来」的调用方请用 `confrontRoutePlanFor` 并把它的 `route` 挂到 spawn 上
-   * （sim 的 `spawns.js` 用 `opts.route ?? routes[routeIndex]`）；这里只回索引 = 合成路线的骨架索引。
-   * @param {string} enemyKey @param {'upper'|'lower'} gate
-   * @returns {number} 模板 routes 的下标（永远可索引）
-   */
-  confrontRouteFor(enemyKey, gate) {
-    return this.confrontRoutePlanFor(enemyKey, gate).routeIndex;
+    if (j >= 0) return j;
+    const i = routes.findIndex(motionOk);
+    return i >= 0 ? i : 0;
   }
 
   /**
@@ -2152,9 +1450,8 @@ export class MatchConfront {
   }
 
   /**
-   * Replace originals of a player's wave with one attacker's monsters:
-   *   * originals worth **Σ the money this submission actually paid** (2026-11-06 价值同源；旧口径 `share × wave value`)
-   *     are dropped at random, closed with the whole monsters nearest that value;
+   * Replace a share of a player's original wave with one attacker's monsters:
+   *   * originals worth `share × the wave value` are dropped at random (within 2 % of that value);
    *   * the placed monsters are inserted together at the chosen position (25 / 50 / 75 % of the round's monster count),
    *     each on the route matching its gate and movement;
    *   * the 事件期 boss 格's bosses (sub.bosses) replace NOTHING and enter after every other spawn (_confrontBossSpawns).
@@ -2191,22 +1488,26 @@ export class MatchConfront {
     // 同上：pure 下「只交了 boss」不该把官方波次也一起清掉。
     if (!picks.length) return this._confrontBossSpawns((pure ? spawns : base).map((s) => ({ ...s, mods: s.mods ? { ...s.mods } : undefined })), sub, ps);
     const scale = this.confrontScale();
-    // price the originals EXACTLY like the card price / payment prices them (both = 阶位阶梯价 via confrontValueOf),
-    // so 「剔掉的价值 = 付掉的钱」在同一条量纲上（2026-11-06）。
-    // 2026-11-05：单价与波次价值同源（MONSTER_PRICE_BY_TIER），回合倍率 / 特性档位分都不再进金额。
+    // price the originals EXACTLY like confrontWaveValue prices the wave (confrontValueOf = stats + the graded 特性
+    // score at this round's scale), so the value actually dropped / the wave value is the nominal share (5→15 %, 50 %
+    // on R13) — a stat-only price would under-replace by the trait share (30 % of the table). The event card / 强力属性
+    // multipliers are deliberately NOT part of this price: confrontWaveValue and the budget use the base wave, and a
+    // replacement share must stay comparable with them.
     const valueOf = (key) => this.confrontValueOf(key, scale);
     const out = base.map((s) => ({ ...s, mods: s.mods ? { ...s.mods } : undefined }));
-    // 替换份额 = **这一单实际付掉的钱**（2026-11-06 价值同源）：Σ `monsterPriceOf`（卡面 / 扣款 / 提交同一个函数）。
-    // 旧口径 `confrontWaveValue() × sub.ratio` 与玩家实际花掉的钱完全脱钩 —— R13 花 1 价也能剔掉 168 价值的原怪。
-    // 现在花多少剔多少（R1 花 1 → 剔到 1 价值；R13 花 100 → 剔到 100 价值），不够一整只就按最接近的整只，
-    // 官方波次不够剔时自然剔到没有为止（units 用尽即止）。
-    // 同一 receiver 的多次投放**不再互相抵扣**：每一单各自付钱、各自剔自己那一份。`_confrontRemoved` 只留作
-    // 本回合累计剔除量的统计 / 审计，不参与目标值计算（旧注释里那套「later ones see 0 left」的口径已废）。
+    // The round's replacement share belongs to the RECEIVER, not to each attacker: when several placements land on the
+    // same player (a stack — see assignConfrontTarget), the LATER ones only add monsters — the original wave is shaved
+    // at most confrontRatio() in total. Without this a 4V4 stack would replace N × confrontRatio() of the wave (4 ×
+    // 5–15 %, and 2 × 50 % on R13 = the whole wave), silently exceeding the share the panel announces.
+    //
+    // A running per-receiver budget rather than `share / N`: this wave is coarse (14 bodies, ~8 000 value each), so a
+    // 2.5 % split falls below every single unit and would replace NOTHING for both attackers — the placement would turn
+    // purely additive. The first placement takes the share, the next ones see 0 left.
     if (!this._confrontRemoved) this._confrontRemoved = new Map();
-    const share = this.confrontSpent(picks);
+    const share = this.confrontWaveValue() * sub.ratio;
     const already = Math.max(0, Number(this._confrontRemoved.get(ps.playerId)) || 0);
     // 1) drop originals at random until the target value is (nearly) reached
-    const target = Math.max(0, share);
+    const target = Math.max(0, share - already);
     const units = [];
     const rowValue = new Map();
     out.forEach((s, i) => {
@@ -2277,13 +1578,9 @@ export class MatchConfront {
       const rest = c - (take.get(i) || 0);
       if (rest > 0) kept.push(rest === c ? s : { ...s, count: rest });
     });
-    // 3) the placed monsters, together at the chosen position. `confrontSeat` marks the SENDER (the target's client
-    //    outlines them and prints P<n> under them) and is also the key settle bills with: a killed / leaked placed
-    //    monster is charged to the sender's side (sim/battle/deploy.js confrontKills / confrontLeaks, match/settle.js) —
-    //    `sourcePlayerId` stays untouched, it drives the 联防 leak billing.
+    // 3) the placed monsters, together at the chosen position. `confrontSeat` is DISPLAY only (the target's client
+    //    outlines them and prints P<n> under them) — `sourcePlayerId` stays untouched, it drives the 联防 leak billing.
     const mods = roundMods(scale);
-    // 怪物盟约（2026-11-04）：投放者这一回合攒的乘区乘在官方乘区上（monsterShopOn 为假 → merge 原样返回）
-    const spawnMods = mergeMonsterBondMods(mods, monsterBondMods(this, this._confrontSubOwner(sub)));
     const start = this._confrontInsertTime(spawns, sub.position);
     const sentBy = Number.isInteger(sub.seat) ? sub.seat : null;
     // 赏金 (final rule, user 2026-10-17): the FIRST four bounty phases pay a fixed 1/1/2/2 by the kill ratio
@@ -2305,20 +1602,13 @@ export class MatchConfront {
     // the RECEIVER of the placement, so it is added here once per placed monster.
     const scent = typeof this.eventBountyBonusOf === 'function' ? this.eventBountyBonusOf(ps) : 0;
     sub.picks.forEach((p, i) => {
-      // 路线（2026-11-05）：玩家显式给的 routeIndex 优先；否则按门择路，**没有同门路线就合成一条**
-      // （`confrontRoutePlanFor.route`，由 sim 的 `spawns.js` 用 `opts.route ?? routes[routeIndex]` 生效）。
-      const preset = Number.isInteger(p.routeIndex) ? p.routeIndex : null;
-      const routing = preset == null ? this.confrontRoutePlanFor(p.enemyKey, p.gate) : null;
       kept.push({
         time: Number.isFinite(p.time) ? p.time : start + i * 1,
         enemyKey: p.enemyKey, count: 1, interval: 0,
-        routeIndex: preset == null ? routing.routeIndex : preset,
-        ...(routing && routing.route ? { route: routing.route } : {}),
-        mods: { ...spawnMods }, ownerPlayerId: ps.playerId, confrontSeat: sentBy, confrontPlaced: true,
-        // 对抗投放的扣血口径（2026-11-06）：`countInTotal: false` 只把它移出官方「只数 / 完美作战」计数 ——
-        // 漏过**不再免费**：settle 按 `confrontSeat` 归到这一笔、按 `confrontPrice`（= 阶位阶梯价）扣守方，
-        // 被击杀则按同一价值扣投放者。价格在 sim 里只是数据，结算口径在 match/match/settle.js。
-        confrontPrice: valueOf(p.enemyKey),
+        routeIndex: Number.isInteger(p.routeIndex) ? p.routeIndex : this.confrontRouteFor(p.enemyKey, p.gate),
+        mods: { ...mods }, ownerPlayerId: ps.playerId, confrontSeat: sentBy, confrontPlaced: true,
+        // 狩猎模拟: a placed monster leaks FOR FREE — `countInTotal: false` is exactly that (the flag drives both the
+        // LP charge and the 完美作战 counter), so only killing it matters: the bounty below pays the killer.
         countInTotal: false,
         // 经济补助: killing a monster the opponent placed pays its killer (the sim's bounty mechanic — the killer's
         // player, a 联防 helper included); anyone the death cannot be credited to pays the wave's owner instead.
@@ -2333,9 +1623,8 @@ export class MatchConfront {
   /**
    * The 事件期 boss 格's bosses on a wave (user 2026-10-21): appended AFTER every spawn the wave holds at this point
    * ([ASSUMED] start = max(time) + 10, +1 per boss — “只能排在波次最后入场”), each on the route of its gate, `count: 1`,
-   * `countInTotal: false` (it is not one of the round's own scheduled enemies — but a leak is NOT free: settle bills it
-   * to the sender's side through `confrontSeat` × `confrontPrice`, 2026-11-06) and `confrontSeat` = the sender's seat.
-   * The bounty pays the KILLER the pool's highest coin tier DIRECTLY as gold —
+   * `countInTotal: false` (a leaked boss costs no 目标生命值, exactly like a placed monster) and `confrontSeat` = the
+   * sender's seat (display only). The bounty pays the KILLER the pool's highest coin tier DIRECTLY as gold —
    * `bank: false` (economy.js addCoins → pendingFunds), never the 坎诺特 赏金 account, and it carries no batch
    * total / index (bosses are not part of the placement's bounty batch). A missed boss pays nothing.
    * @param {object[]} list the spawn list being built (mutated: the bosses are pushed onto it)
@@ -2347,40 +1636,18 @@ export class MatchConfront {
     const bosses = Array.isArray(sub.bosses) ? sub.bosses : [];
     if (!bosses.length) return list;
     const mods = roundMods(this.confrontScale());
-    // 怪物盟约（2026-11-04）：事件期 boss 也是投放者投的，吃同一份乘区
-    const spawnMods = mergeMonsterBondMods(mods, monsterBondMods(this, this._confrontSubOwner(sub)));
     const sentBy = Number.isInteger(sub.seat) ? sub.seat : null;
     let time = list.reduce((n, s) => Math.max(n, Number(s && s.time) || 0), 0) + 10;
     for (const p of bosses) {
-      // 2026-11-05：与投放怪同一条择路规则（没有同门路线就合成一条，挂在 spawn.route 上让 sim 用）
-      const routing = this.confrontRoutePlanFor(p.enemyKey, p.gate);
       list.push({
         time: time++, enemyKey: p.enemyKey, count: 1, interval: 0,
-        routeIndex: routing.routeIndex,
-        ...(routing.route ? { route: routing.route } : {}),
-        mods: { ...spawnMods }, ownerPlayerId: ps.playerId, confrontSeat: sentBy, confrontPlaced: true,
-        // 与投放怪同一套结算：漏过 / 被击杀按这个价值扣（settle 的 confrontKills / confrontLeaks）
-        confrontPrice: this.confrontValueOf(p.enemyKey),
+        routeIndex: this.confrontRouteFor(p.enemyKey, p.gate),
+        mods: { ...mods }, ownerPlayerId: ps.playerId, confrontSeat: sentBy, confrontPlaced: true,
         countInTotal: false,
         bounty: { coins: this.confrontBossCoin(p.enemyKey), ownerPlayerId: ps.playerId, bank: false },
       });
     }
     return list;
-  }
-
-  /**
-   * 投放者（攻方）的 PlayerState：`this.confront` / `this.confrontSubs` 都是 `Map<playerId, sub>`，而
-   * `applyConfront` / `_confrontBossSpawns` 只拿到 sub 本身 —— 靠**引用相等**反查回攻方，怪物盟约的乘区按他算。
-   * 取不到（直测 / 老对局 / sub 不在表里）→ null（盟约乘区整段不生效，与改造前一致）。
-   * @param {object} sub
-   * @returns {object|null}
-   */
-  _confrontSubOwner(sub) {
-    if (!sub) return null;
-    const map = this.confront && this.confront.size ? this.confront : this.confrontSubs;
-    if (!map || typeof map.entries !== 'function') return null;
-    for (const [pid, s] of map) if (s === sub) return this.players.get(pid) || null;
-    return null;
   }
 
   /** The insertion time of a position: walk the ORIGINAL wave by count to the 25 / 50 / 75 % mark. */

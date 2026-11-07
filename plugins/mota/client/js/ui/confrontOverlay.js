@@ -1,30 +1,27 @@
-// 对抗期 overlay (2V2, PHASE.CONFRONT) — 2026-11-04 起只剩两块：
-//   'target'（选目标）：限时 10 秒的必选题，保持模态（.spov__veil）。对手以 '?' + P 编号 + 队伍色列出，队内先到先得
-//     （服务端把剩下的那个发给队友）。**只在赏金档（pub.confront.versusRule === 'bounty'）出现** —— 业主 2026-11-04：
-//     对抗档没有目标选择（服务端 enterConfront 直接自动分配目标 → 进 PREP），遮罩不弹。
-//   'roster'（投放公示）：5 秒的只读名单 —— 右下角一张卡片（.rospov--conf，pointer-events: none），不拦截战场点击。
-//     两档都有（对抗档的服务端 finishConfront 同样会挂这 5 秒公示）。
-// 投放窗口（pub.confront.active === true && stage === null）整块不渲染：投放走商店条（ui/shopBar.js 的 MonsterCard
-// → g.monsterPlace：点一下投 1 只 / 长按多选 / 拖到上门·下门），游戏页的攻方状态条只留一个「查看投放 / 继续投放」入口
-// （本文件的 ConfrontDoneCard，每一行可撤回 → g.monsterDrop）。服务端 submitConfront 仍在（bot 与旧客户端会用），
-// 客户端不再调用。
-// 所以这里也**不再**有型号组 / 卡池 / 已放置 / 出怪位置 / boss 格 / 商店这一整套投放 UI。
-// 2026-11-06：攻方游戏页的「当前投放」搬到本文件末尾的 MonsterDropFloat（盟约条那一行右端的小悬浮窗，非模态）；
-// 原中央「本回合你是进攻方」绿块（.gm__attackwait）连同它的撤回按钮一起删掉。
+// 对抗期 overlay (2V2, PHASE.CONFRONT) — two steps, both sides in step:
+//   step 1 ('target'): pick the OPPONENT this seat attacks. The panel shows the opponents as '?' with their P number and
+//     their team's colour — no name, no avatar. Inside a team it is first come, first served (the server hands the
+//     teammate whatever is left).
+//   step 2 ('monster'): fill this seat's VALUE BUDGET (server confront.js confrontBudget — PER PLAYER, no count limit)
+//     with monsters of ONE of the OFFICIAL 特训敌人 types (特异 / 飞行 / 频次 / 元素 / 持续 / 隐匿 / 折射, data/factions.json
+//     — one group per type, named and iconed like the briefing's), each on a gate (上路 'upper' / 下路 'lower'), all
+//     inserted together at one position of the wave (靠前/靠中/靠后 = 25/50/75 % of the round's monster count). Submitting
+//     early is fine; the step ends as soon as every alive player has submitted.
 // Texts go through t() (docs/I18N.md).
 import { useEffect, useRef, useState } from '../../vendor/hooks.module.js';
-import { html, MicroLabel, Countdown } from '../ui/components.js';
+import { html, Button, Icon, MicroLabel, Countdown } from '../ui/components.js';
 import { Img, GIcon, PlayerAvatar, useGameData } from '../ui/gameComponents.js';
-import { enemyIconUrl } from '../ui/assetUrls.js';
+import { enemyIconUrl, factionIconUrl } from '../ui/assetUrls.js';
 import { useStore } from '../store.js';
+import { toast } from '../ui/toasts.js';
 import { RosterPanel } from './rosterPanel.js';
 import { FOE_NAMES, foeEffect, eliteEffect, eventFoeCard } from './eventFoe.js';
-// 撤回一次投放（`g.monsterDrop`）：与投放同一条通道（act 统一处理错误提示）。
-import { act } from './gameActions.js';
-import { t } from '../../../shared/i18n.js';
-import { rosterHiddenFor } from '../../../shared/constants.js';
+import { t, N_ } from '../../../shared/i18n.js';
+import { VERSUS_CONFRONT } from '../../../shared/constants.js';
 
 const cx = (...p) => p.flat().filter(Boolean).join(' ');
+// module-level, so the labels are msgids (N_) and translated where they are shown (t(label))
+const POSITIONS = [['front', N_('靠前')], ['mid', N_('靠中')], ['back', N_('靠后')]];
 /** Bounty rows show every placed monster up to this many; the rest collapse into a +N chip. */
 const MAX_BOUNTY_ICONS = 25;
 /**
@@ -39,6 +36,14 @@ const typeLabel = (name) => String(name || '').replace(t('特训敌人·'), '');
  * or before the overlays have loaded).
  */
 const groupName = (gd, g) => (g && gd.factions?.types?.[g.id]?.name) || (g && g.name) || '';
+const groupDesc = (gd, g) => (g && gd.factions?.types?.[g.id]?.desc) || (g && g.desc) || '';
+/** The localized name of one monster row (`gd.enemy`), the server's Chinese name as the fallback. */
+const enemyName = (gd, key, sent) => (gd.enemy(key)?.name) || sent || key;
+/**
+ * The squad this browser last submitted (module-level: the overlay unmounts between rounds, the page does not). The
+ * 沿用上轮 button refits these kinds to the CURRENT round's budget — values and the groups' membership move per round.
+ */
+let lastSquad = null;
 
 /** P1 / P2 … of a player row (the seat number) — how the panel tells hidden opponents apart. */
 const pNo = (p) => (p && Number.isInteger(p.seat) ? `P${p.seat + 1}` : '');
@@ -128,33 +133,176 @@ function coopRosterPanel(gd, pub, conf, players) {
   });
   const until = Number(roster.until) || Number(pub.deadline) || 0;
   return html`<${RosterPanel} title=${t('本回合投放公示')} micro=${'DELIVERY // ' + t('本回合投放公示')} tone="gold"
-    className="rospov--conf" testid="coop-roster" rows=${rows} until=${until} note=${t('猎物漏过不扣目标生命')}>
+    testid="coop-roster" rows=${rows} until=${until} note=${t('猎物漏过不扣目标生命')}>
     ${rosterFoe(pub, conf.round != null ? conf.round : pub.round)}
   <//>`;
 }
 
+
+/** A small enemy chip: icon + name + value (used in the group cards and the placement panel).
+ *  `blocked` = the monster does not fit the remaining budget: greyed and marked `aria-disabled`, and a tap only shows
+ *  the hint — never a request the server would refuse (user's "防止无效请求" rule). `disabled` is the hard state (the
+ *  step is over): the button is natively disabled. */
+function EnemyChip({ m, rec, count, onAdd, disabled, blocked, hint }) {
+  const gd = useGameData();
+  const name = enemyName(gd, rec.key, rec.name);
+  const off = !!disabled || !!blocked;
+  return html`<button type="button" class=${cx('cchip', off && 'is-disabled')} disabled=${disabled}
+      aria-disabled=${off ? 'true' : 'false'} data-testid="confront-chip"
+      onClick=${() => { if (blocked && !disabled) hint && hint(rec); else onAdd && onAdd(rec); }}
+      title=${`${name}（${rec.value}）`}>
+    <span class="cchip__icon"><${Img} src=${enemyIconUrl(m, rec.key)} fallback=${html`<${GIcon} name="target" />`} /></span>
+    <span class="cchip__name">${name}</span>
+    <span class="cchip__val num">${rec.value}</span>
+    ${count ? html`<span class="cchip__count num">×${count}</span>` : null}
+  </button>`;
+}
+
 /**
- * The confront panel of a 2V2 round: 'target' (the 10 s mandatory pick — modal) and 'roster' (the 5 s 投放公示 — a
- * read-only card in the bottom-right corner that lets clicks through).
- * The 投放窗口 (`active === true && stage === null`) renders NOTHING here: placement lives in the shop bar, and the game
- * screen's attacker status bar owns the single 「查看投放」 entry (`ConfrontDoneCard`).
- * @param {{ pub:any, busy?:boolean, onTarget:(targetPlayerId:string)=>void }} props
+ * @param {{ pub:any, busy?:boolean, onTarget:(targetPlayerId:string)=>void, onConfirm:(group:number, position:string, picks:object[], commit?:boolean)=>void }} props
  */
-export function ConfrontOverlay({ pub, busy = false, onTarget }) {
+export function ConfrontOverlay({ pub, busy = false, onTarget, onConfirm }) {
   const gd = useGameData();
   const myId = useStore((s) => s.me.playerId);
   const conf = pub && pub.confront;
-  // 阶段按**原值**读：投放窗口是 stage === null（旧写法 `conf.stage || 'target'` 会把它误判成选目标）
-  const stage = conf && conf.stage != null ? conf.stage : null;
-  // 业主 2026-11-04：目标选择遮罩**只在赏金档出**。对抗档（versusRule === 'confront'）服务端已经跳过目标选择
-  // （confront.js 的 enterConfront 直接自动分配目标 → 进 PREP），这里再按规则档兜一道，任何残留的 'target' 帧都不弹模态。
-  const picking = !!conf && conf.versusRule === 'bounty' && conf.active === true && stage === 'target';
-  const roster = !!conf && stage === 'roster';
-  // 选目标列表横滑：对手多（10V10 有 10 个）时要能横向滑；滚动条已隐藏，靠滚轮/拖动/触控。
-  // hooks 无条件调用 —— 投放窗口整块不渲染，阶段切换时渲染次数会变。
+  const [group, setGroup] = useState(null);
+  const [picks, setPicks] = useState([]); // [{ enemyKey, gate, routeIndex?, time? }]
+  const [position, setPosition] = useState('mid');
+  // 事件期 boss 格（2026-11-01 P1）：独立于预算/只数上限的投放，击杀直接给金币；服务端视图 conf.bosses 给池与上限
+  const [bosses, setBosses] = useState([]); // [{ enemyKey, gate }]
+  // 路线按**种类**生效（业主 2026-10-26：不同种类可以不同路线，同一只不单独设）：改一行的路线 = 同 enemyKey 的
+  // 所有已放置怪一起改；时刻仍逐只可调（那是投放节奏，不是路线）。
+  const patchPick = (i, patch) => setPicks((arr) => {
+    const key = arr[i] && arr[i].enemyKey;
+    if (patch && Object.hasOwn(patch, 'routeIndex') && key) {
+      return arr.map((p) => (p.enemyKey === key ? { ...p, ...patch } : p));
+    }
+    return arr.map((p, k) => (k === i ? { ...p, ...patch } : p));
+  });
+  useEffect(() => { setGroup(null); setPicks([]); setPosition('mid'); setBosses([]); }, [conf && conf.round]);
+  if (!conf || !conf.active) return null;
+  const m = gd.m;
+  const groups = Array.isArray(conf.groups) ? conf.groups : [];
+  const players = pub.players || [];
+  const me = players.find((p) => p.playerId === myId) || null;
+  const myTeam = me ? me.team : null;
+  const mates = players.filter((p) => p.team != null && p.team === myTeam);
+  const foes = players.filter((p) => p.team != null && myTeam != null && p.team !== myTeam);
+  const targets = conf.targets || {};
+  const myTarget = targets[myId] || null;
+  const stage = conf.stage || 'target';
+  // every monster a type offers, deduped (a monster may belong to TWO 特训敌人 types): the player MAY MIX TYPES — step
+  // into one, spend part of the budget, step into another and add more — so the budget, not the type, is the cap.
+  const rowByKey = new Map();
+  for (const g of groups) for (const r of g.rows || []) if (!rowByKey.has(r.key)) rowByKey.set(r.key, r);
+  const allRows = [...rowByKey.values()];
+  const sel = group != null && groups[group - 1] ? groups[group - 1].rows || [] : [];
+  // step 2: the placement cap is this seat's VALUE budget — no count limit, only Σ value ≤ budget
+  const budget = Math.max(0, Number(conf.budget) || 0);
+  // the share of the opponent's wave this round's intervention replaces (and spends) — 5→15 %, 50 % on the 最终狩猎 round
+  const pct = Math.round((Number(conf.ratio) || 0) * 100);
+  const valOf = (key) => (rowByKey.get(key) || {}).value || 0;
+  /** The greedy fill (cheapest that fits) of `rows` up to the budget — the same walk the AI uses.
+   *  2026-10-27：改成**便宜优先**。旧实现按最贵优先，预算一大就只能放一两只，出怪量离官方波次很远
+   *  （线上实测：budget 3061 / 官方 7 只，AI 只放 1 只）。便宜优先才能在预算内把数量堆到上限。 */
+  const plan = (rows) => {
+    const out = [];
+    let left = budget;
+    const cap = Math.max(1, Number(conf.maxPicks) || VERSUS_CONFRONT.maxPicks);
+    const sorted = rows.slice().sort((a, b) => a.value - b.value || String(a.key).localeCompare(String(b.key)));
+    // 2026-10-31 业主：「去掉每种怪最多一只」。旧实现单趟扫 ⇒ 同一 enemyKey 只放一次，只数被锁死在怪种数上。
+    // 改成反复扫到没有进展为止：每轮把还买得起的都放一遍，直到预算不够或到 cap（单价最小 1 ⇒ 必然收敛）。
+    let progressed = true;
+    while (progressed && out.length < cap) {
+      progressed = false;
+      for (const r of sorted) {
+        if (out.length >= cap) break;
+        if (r.value > left) continue;
+        left -= r.value;
+        out.push({ enemyKey: r.key, gate: out.length % 2 ? 'upper' : 'lower' });
+        progressed = true;
+      }
+    }
+    return out;
+  };
+  /** The tab (1-based) of the first 特训敌人 type offering `key` — where to land after 自动选择 / 沿用上轮. */
+  const groupOfKey = (key) => {
+    const i = groups.findIndex((g) => (g.rows || []).some((r) => r.key === key));
+    return i >= 0 ? i + 1 : 1;
+  };
+  const spent = picks.reduce((s, p) => s + valOf(p.enemyKey), 0);
+  const remaining = Math.max(0, budget - spent);
+  const fits = (rec) => !busy && rec.value <= remaining;
+  const overBudget = (rec) => rec.value > remaining;
+  // 本回合还能放 n 只 (user 2026-10-17): the remaining value ÷ the CURRENT type's cheapest monster, recomputed on every
+  // render — switching the type tab or placing/removing a monster updates it at once. Bounded by the protocol's picks
+  // cap too, so the panel never invites a request the server would refuse (ERR.CONFRONT_COUNT).
+  const poolRows = sel.length ? sel : allRows;
+  const cheapest = poolRows.reduce((lo, r) => Math.min(lo, Number(r.value) || 0), Infinity);
+  const byValue = Number.isFinite(cheapest) && cheapest > 0 ? Math.floor(remaining / cheapest) : 0;
+  const maxPicks = Math.max(1, Number(conf.maxPicks) || VERSUS_CONFRONT.maxPicks);
+  const canPlace = Math.max(0, Math.min(byValue, maxPicks - picks.length));
+  /** A tap on a greyed (unaffordable) monster: a light hint, never a submit/place. */
+  const notEnough = () => toast(t('剩余价值不足，放不下这只怪物'), 'warn');
+  const add = (rec) => {
+    // 只数上限（2026-10-27）：手动点选此前不查只数，靠服务端 CONFRONT_COUNT 兜底；现在在客户端就挡住，
+    // 免得玩家辛苦排好一队再被整单拒掉。
+    if (picks.length >= maxPicks) { toast(t('本回合最多只能放 {n} 只', { n: maxPicks }), 'warn'); return; }
+    if (overBudget(rec)) return notEnough();
+    if (!fits(rec)) return;
+    setPicks((p) => [...p, { enemyKey: rec.key, gate: 'lower' }]);
+  };
+  const remove = (i) => setPicks((p) => p.filter((_, k) => k !== i));
+  // 队列交互: a placed monster defaults to 下路 — TAP it to switch the gate, PRESS AND HOLD it to drag it in the order.
+  // (The up/down buttons and the per-row gate buttons are gone: both actions live on the row itself.)
+  const [dragIdx, setDragIdx] = useState(null);
+  const [overIdx, setOverIdx] = useState(null);
+  const press = useRef({ i: null, timer: null, x: 0, y: 0, armed: false });
+  const toggleGate = (i) => setPicks((p) => p.map((x, k) => (k === i ? { ...x, gate: x.gate === 'lower' ? 'upper' : 'lower' } : x)));
+  const moveTo = (from, to) => setPicks((p) => {
+    if (from === to || from < 0 || to < 0 || from >= p.length || to >= p.length) return p;
+    const c = p.slice();
+    const [x] = c.splice(from, 1);
+    c.splice(to, 0, x);
+    return c;
+  });
+  const rowDown = (e, i) => {
+    if (submitted) return;
+    const s = press.current;
+    clearTimeout(s.timer);
+    s.i = i;
+    s.x = e.clientX;
+    s.y = e.clientY;
+    s.armed = false;
+    s.timer = setTimeout(() => { if (press.current.i === i) { press.current.armed = true; setDragIdx(i); setOverIdx(i); } }, 380);
+  };
+  const listMove = (e) => {
+    const s = press.current;
+    if (s.i == null) return;
+    if (!s.armed) {
+      if (Math.hypot(e.clientX - s.x, e.clientY - s.y) > 12) { clearTimeout(s.timer); s.i = null; }
+      return;
+    }
+    if (e.cancelable) e.preventDefault();
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const row = el && typeof el.closest === 'function' ? el.closest('[data-qidx]') : null;
+    if (row) setOverIdx(Number(row.getAttribute('data-qidx')));
+  };
+  const listUp = () => {
+    const s = press.current;
+    clearTimeout(s.timer);
+    if (s.i != null) {
+      if (s.armed) { if (overIdx != null && overIdx !== s.i) moveTo(s.i, overIdx); }
+      else toggleGate(s.i);
+    }
+    s.i = null;
+    s.armed = false;
+    setDragIdx(null);
+    setOverIdx(null);
+  };
+  // 选目标列表：对手多（10V10 有 10 个）时要能横向滑；滚动条已隐藏，靠滚轮/拖动/触控
   const foesRef = useRef(null);
   useEffect(() => {
-    if (!picking) return undefined;
     const el = foesRef.current;
     if (!el) return undefined;
     const onWheel = (e) => {
@@ -202,33 +350,86 @@ export function ConfrontOverlay({ pub, busy = false, onTarget }) {
       el.removeEventListener('pointerup', onUp);
       el.removeEventListener('pointercancel', onUp);
     };
-  }, [picking]);
+  }, [stage]);
 
-  // 投放窗口（stage === null）与任何未知阶段：整块不渲染（投放由商店条 + 游戏页的入口按钮负责）
-  if (!conf || (!picking && !roster)) return null;
-
-  const players = pub.players || [];
-  const me = players.find((p) => p.playerId === myId) || null;
-  const myTeam = me ? me.team : null;
-  const mates = players.filter((p) => p.team != null && p.team === myTeam);
-  const foes = players.filter((p) => p.team != null && myTeam != null && p.team !== myTeam);
-  const targets = conf.targets || {};
-  const myTarget = targets[myId] || null;
-  // the share of the opponent's wave this round's intervention replaces (5→15 %, 50 % on the 最终狩猎 round)
-  const pct = Math.round((Number(conf.ratio) || 0) * 100);
+  const mine = conf.subs ? conf.subs[myId] : null;
+  // 两步提交（业主 2026-10-27）：草稿（committed=false）可反复改，只有「确认出击」才锁面板。
+  const submitted = !!(mine && mine.committed === true);
+  const drafted = !!mine && !submitted;
   const foesPicked = mates.every((p) => targets[p.playerId]);
+  /**
+   * 自动选择: fill the budget the way the AI does — the server bot fills by the remaining budget per remaining unit
+   * (confrontFill.js, 2026-11-01), the panel's convenience plan walks types in order by value and mixes them; the
+   * player tweaks from there — and a player who never submits gets the server's own fill at the window's end.
+   */
+  const autoPick = () => {
+    if (submitted || busy) return;
+    const out = plan(allRows);
+    if (!out.length) return;
+    setGroup(groupOfKey(out[0].enemyKey));
+    setPicks(out);
+    setPosition('mid');
+  };
+  /**
+   * 沿用上轮: the kinds this browser submitted last time, in the same order, refitted to THIS round's budget — and the
+   * LEFTOVER is topped up with the auto-selection's greedy walk (when nothing more fits, the leftover simply stays).
+   */
+  const reuse = () => {
+    if (submitted || busy || !lastSquad || !lastSquad.keys.length) return;
+    const out = [];
+    const cap = Math.max(1, Number(conf.maxPicks) || VERSUS_CONFRONT.maxPicks);
+    let left = budget;
+    // 上轮的种类按原顺序重放（现在允许重复 key —— 本局已放开「每种最多一只」，重放必须忠实）
+    for (const key of lastSquad.keys) {
+      if (out.length >= cap) break;
+      const rec = rowByKey.get(key);
+      if (!rec || rec.value > left) continue;
+      left -= rec.value;
+      const j = out.length;
+      out.push({
+        enemyKey: key,
+        gate: lastSquad.gates[j] || (j % 2 ? 'upper' : 'lower'),
+        ...(lastSquad.routes && Number.isInteger(lastSquad.routes[j]) ? { routeIndex: lastSquad.routes[j] } : {}),
+        ...(lastSquad.times && Number.isFinite(lastSquad.times[j]) ? { time: lastSquad.times[j] } : {}),
+      });
+    }
+    // 余额：便宜优先**反复**补（同一只可重复），直到预算不够或到 cap
+    const sortedAll = allRows.slice().sort((a, b) => a.value - b.value || String(a.key).localeCompare(String(b.key)));
+    let progressed = true;
+    while (progressed && out.length < cap) {
+      progressed = false;
+      for (const r of sortedAll) {
+        if (out.length >= cap) break;
+        if (r.value > left) continue;
+        left -= r.value;
+        out.push({ enemyKey: r.key, gate: 'lower' });
+        progressed = true;
+      }
+    }
+    if (!out.length) return;
+    setGroup(groupOfKey(out[0].enemyKey));
+    setPicks(out);
+    setPosition(lastSquad.position || 'mid');
+  };
+  const confirm = (commit = true) => {
+    if (!picks.length) return;
+    lastSquad = {
+      keys: picks.map((p) => p.enemyKey),
+      gates: picks.map((p) => p.gate),
+      routes: picks.map((p) => p.routeIndex),
+      times: picks.map((p) => p.time),
+      position,
+    };
+    onConfirm(group, position, picks, commit, bosses);
+  };
 
-  // 悬赏名单 / 投放公示 (the server's roster hold): the submissions are final, the battles have not started. Only the
-  // announced list is shown, as a corner card (ui/rosterPanel.js) that does not intercept the battlefield's clicks.
-  if (roster) {
+  // 悬赏名单 / 投放公示 (the server's roster hold): the submissions are final, the battles have not started. The pick /
+  // submit UI is GONE here — only the announced list and the countdown are shown (ui/rosterPanel.js).
+  if (stage === 'roster') {
     if (conf.roster && conf.roster.coop) return coopRosterPanel(gd, pub, conf, players);
-    // 2026-11-06 业主：「投放方不显示投放名单，仅对面显示」。攻方这一回合的名单他们自己在 MonsterDropFloat 里看得见
-    // （已投 N 只 + 逐条撤回），不需要这块公示；守方才看。身份读 `pub.attackingTeam`（views.js 平铺下发，非攻守回合
-    // 是 null ⇒ 照常渲染，行为与改造前一致）。
-    if (rosterHiddenFor(me && me.role)) return null;
     const until = Number(conf.roster && conf.roster.until) || Number(pub && pub.deadline) || 0;
     return html`<${RosterPanel} title=${t('投放名单')} micro=${'SORTIE LIST // ' + t('投放名单')} tone="gold"
-      className="rospov--conf" testid="confront-roster" rows=${clashRows(gd, pub, conf, myTeam)} until=${until}
+      testid="confront-roster" rows=${clashRows(gd, pub, conf, myTeam)} until=${until}
       note=${t('对面投放的怪物，清掉它们')} />`;
   }
 
@@ -237,18 +438,41 @@ export function ConfrontOverlay({ pub, busy = false, onTarget }) {
     <div class="spov__inner">
       <header class="spov__head">
         <div class="spov__titles">
-          <h2 class="spov__title"><span class="spov__name"><${MicroLabel} tone="mint">HUNTING PHASE // ${t('狩猎期')}</${MicroLabel}>${t('选择你要针对的对手')}</span>
-            <span class="spov__bar">|</span><span class="spov__desc">${t('第 {r} 回合 · 对手以 ? 显示，只看编号', { r: conf.round })}</span></h2>
-          <p class="spov__sub">${myTarget ? t('已锁定目标，等待队友与对手') : t('点击一个 ? 头像框锁定你的目标')}</p>
+          ${stage === 'target'
+            ? html`<h2 class="spov__title"><span class="spov__name"><${MicroLabel} tone="mint">HUNTING PHASE // ${t('狩猎期')}</${MicroLabel}>${t('选择你要针对的对手')}</span>
+                <span class="spov__bar">|</span><span class="spov__desc">${t('第 {r} 回合 · 对手以 ? 显示，只看编号', { r: conf.round })}</span></h2>`
+            : html`<h2 class="spov__title"><span class="spov__name"><${MicroLabel} tone="mint">HUNTING PHASE // ${t('狩猎期')}</${MicroLabel}>${t('为 {p} 定制怪物', { p: myTarget ? pNo(foes.find((f) => f.playerId === myTarget)) || '?' : '?' })}</span>
+                <span class="spov__bar">|</span><span class="spov__desc">${t('第 {r} 回合 · 你的怪只会出现在这个对手的波次', { r: conf.round })}</span></h2>`}
+          <p class="spov__sub">${stage === 'target'
+            ? (myTarget ? t('已锁定目标，等待队友与对手') : t('点击一个 ? 头像框锁定你的目标'))
+            : (submitted ? t('你已确认出击，等待其他玩家')
+              : (drafted ? t('草稿已保存 · 截止前可以继续改，确认出击才锁定') : t('点怪加入；可切换类型继续添加（不限数量，只限总价值）')))}</p>
         </div>
         <div class="spov__turn">
           ${conf.hunt ? html`<span class="spov__turntxt is-final">${t('最终狩猎')}</span>` : null}
           <span class="spov__turntxt t-dim">${t('本轮替换 {pct}%', { pct })}</span>
           ${Number(pub?.deadline) > 0 ? html`<${Countdown} deadline=${pub.deadline} size="sm" />` : null}
+          ${stage === 'monster'
+            ? (submitted
+              ? html`<span class="spov__turntxt is-done"><${Icon} name="check" />${t('已确认')}</span>`
+              : html`<span class="spov__turntxt${drafted ? ' is-draft' : ''}">${t('已用价值 {spent}/{budget}', { spent, budget })}</span>`)
+            : null}
+          ${stage === 'monster' && !submitted ? html`<${Button} variant="secondary" size="md" title=${t('按价值自动挑满预算，之后可以手动调整')} onClick=${autoPick}>${t('自动选择')}<//>` : null}
+          ${stage === 'monster' && !submitted && lastSquad ? html`<${Button} variant="secondary" size="md" title=${t('沿用上一轮的编队（按本轮预算重新装填）')} onClick=${reuse}>${t('沿用上轮')}<//>` : null}
+          ${stage === 'monster' && !submitted && group != null ? html`<${Button} variant="secondary" size="md" title=${t('先存一份草稿：截止前可以继续改，不会推进阶段')}
+            disabled=${picks.length === 0 || busy} onClick=${() => confirm(false)}>${t('保存草稿')}<//>` : null}
+          ${stage === 'monster' && !submitted && group != null ? html`<${Button} variant="primary" size="lg" icon="check" loading=${busy}
+            disabled=${picks.length === 0} onClick=${() => confirm(true)}>${t('确认出击（{n} 只 · {spent}/{budget}）', { n: picks.length, spent, budget })}<//>` : null}
         </div>
       </header>
 
-      <div class="confov__targets">
+      ${stage === 'monster' ? html`<p class="confov__remain" data-testid="confront-remain">
+        <b class="num">${t('本回合还能放 {n} 只', { n: canPlace })}</b>
+        <span class="num t-dim">${t('（剩余价值 {left} / {budget}）', { left: remaining, budget })}</span>
+        <span class="t-dim" data-testid="confront-pool-round">${t('可选：第 1–{r} 回合出过的怪', { r: conf.round })}</span>
+      </p>` : null}
+
+      ${stage === 'target' ? html`<div class="confov__targets">
         <div class="confov__foes" ref=${foesRef}>
           ${foes.map((f) => html`<button key=${f.playerId} type="button" class=${cx('conffoe', `conffoe--${f.team === 0 ? 'blue' : 'red'}`, myTarget === f.playerId && 'is-sel')}
             disabled=${!!myTarget || busy} onClick=${() => onTarget(f.playerId)}>
@@ -262,197 +486,98 @@ export function ConfrontOverlay({ pub, busy = false, onTarget }) {
             <span class="confpair__state">${targets[p.playerId] ? t('已选择') : t('未选择')}</span>
           </span>`)}
         </div>
-        <p class="confov__hint t-dim">${foesPicked ? t('双方都选好了，进入投放窗口') : t('对手被随机分配：先选的先得，队友自动拿剩下的那一个')}</p>
+        <p class="confov__hint t-dim">${foesPicked ? t('双方都选好了，马上开始定制怪物') : t('对手被随机分配：先选的先得，队友自动拿剩下的那一个')}</p>
+      </div>` : html`
+      <div class="confov__groups">
+        ${groups.map((g, i) => {
+          const total = (g.rows || []).reduce((s, r) => s + r.value, 0);
+          const isSel = group === i + 1;
+          return html`<button key=${g.id || i} type="button" class=${cx('confgroup', isSel && 'is-sel')} disabled=${submitted}
+            title=${groupDesc(gd, g) || typeLabel(groupName(gd, g))} onClick=${() => setGroup(i + 1)}>
+            <span class="confgroup__head">
+              <b class="confgroup__name">${g.icon ? html`<${Img} src=${factionIconUrl(m, g.icon)} class="confgroup__ficon" />` : null}${typeLabel(groupName(gd, g)) || `G${i + 1}`}</b>
+              <span class="confgroup__meta num">${(g.rows || []).length} ${t('种')} · ${t('总价值 {v}', { v: total })}</span>
+            </span>
+            <span class="confgroup__icons">
+              ${(g.rows || []).map((r) => html`<span key=${r.key} class="confgroup__ic" title=${`${enemyName(gd, r.key, r.name)}（${r.value}）`}><${Img} src=${enemyIconUrl(m, r.key)} fallback=${html`<${GIcon} name="target" />`} /></span>`)}
+            </span>
+          </button>`;
+        })}
       </div>
+
+      ${group != null ? html`<div class="confov__body">
+        <section class="confov__pool">
+          <h3 class="confov__h">${t('{g} 的怪物（点击加入）', { g: typeLabel(groupName(gd, groups[group - 1])) || t('G{n}', { n: group }) })} <span class="num t-dim">${t('剩余价值 {v}', { v: remaining })}</span></h3>
+          <div class="confov__chips">
+            ${sel.map((r) => html`<${EnemyChip} key=${r.key} m=${m} rec=${r} count=${picks.filter((p) => p.enemyKey === r.key).length} disabled=${submitted} blocked=${overBudget(r)} hint=${notEnough} onAdd=${add} />`)}
+          </div>
+        </section>
+        <section class="confov__placed">
+          <h3 class="confov__h">${t('已放置（出怪顺序）')} <span class="num">${picks.length} · ${spent}/${budget}</span></h3>
+          <p class="confov__tip t-dim">${t('点一下换门 · 长按拖动排序（默认下路） · 路线越长占预算越多（长度×2）')}</p>
+          ${picks.length ? html`<ol class="confov__list" onPointerMove=${listMove} onPointerUp=${listUp} onPointerCancel=${listUp} onPointerLeave=${listUp}>
+            ${picks.map((p, i) => {
+              const rec = rowByKey.get(p.enemyKey) || { key: p.enemyKey, name: p.enemyKey, value: 0 };
+              return html`<li key=${`${p.enemyKey}:${i}`} data-qidx=${i}
+                  class=${cx('confrow', p.gate === 'upper' && 'is-upper', dragIdx === i && 'is-drag', overIdx === i && dragIdx != null && dragIdx !== i && 'is-over')}
+                  title=${t('点击换门 · 长按拖动排序')} onPointerDown=${(e) => rowDown(e, i)}>
+                <span class="confrow__idx num">${i + 1}</span>
+                <span class="confrow__icon"><${Img} src=${enemyIconUrl(m, rec.key)} fallback=${html`<${GIcon} name="target" />`} /></span>
+                <span class="confrow__name">${enemyName(gd, rec.key, rec.name)}</span>
+                <span class="confrow__gate2">${t(p.gate === 'upper' ? '上路' : '下路')}</span>
+                <span class="confrow__plan" onPointerDown=${(e) => e.stopPropagation()}>
+                  <select value=${p.routeIndex ?? ''} disabled=${submitted} aria-label=${t('路线')}
+                    onChange=${(e) => patchPick(i, { routeIndex: e.currentTarget.value === '' ? undefined : Number(e.currentTarget.value) })}>
+                    <option value="">${t('自动路线')}</option>
+                    ${(conf.routes || []).map((r) => html`<option key=${r.i} value=${r.i}>${t('路线 {n}', { n: r.i + 1 })} · ${r.motion === 'FLY' ? t('飞') : t('走')}${r.gate === 'upper' ? '↑' : '↓'}</option>`)}
+                  </select>
+                  <input type="number" min="0" step="0.5" inputmode="decimal" placeholder=${t('时刻')} value=${p.time ?? ''} disabled=${submitted}
+                    onChange=${(e) => patchPick(i, { time: e.currentTarget.value === '' ? undefined : Math.max(0, Number(e.currentTarget.value)) })} />
+                </span>
+                <span class="confrow__order">
+                  <button type="button" disabled=${submitted} onPointerDown=${(e) => e.stopPropagation()} onClick=${() => remove(i)} aria-label=${t('移除')}><${Icon} name="close" /></button>
+                </span>
+              </li>`;
+            })}
+          </ol>` : html`<p class="confov__empty t-dim">${t('还没有放置怪物')}</p>`}
+          <p class="confov__hint t-dim">${t('猎物漏过不扣目标生命')}</p>
+          <h3 class="confov__h">${t('出怪位置')}</h3>
+          <div class="confpos">
+            ${POSITIONS.map(([id, label]) => html`<button key=${id} type="button" class=${cx('confpos__opt', position === id && 'is-on')}
+              disabled=${submitted} onClick=${() => setPosition(id)}>${t(label)}<span class="confpos__pct num">${id === 'front' ? '25%' : id === 'mid' ? '50%' : '75%'}</span></button>`)}
+          </div>
+          ${conf.bosses && conf.bosses.open ? html`<div class="confboss">
+            <h3 class="confov__h">${t('事件期 boss 格（击杀给金，不占预算）')}<span class="num t-dim"> ${bosses.length}/${conf.bosses.cap}</span></h3>
+            <div class="confov__chips">
+              ${(conf.bosses.pool || []).map((b) => {
+                const on = bosses.some((x) => x.enemyKey === b.key);
+                const full = !on && bosses.length >= Math.max(0, Number(conf.bosses.cap) || 0);
+                return html`<button key=${b.key} type="button" class=${cx('confpos__opt', on && 'is-on')} disabled=${submitted || full}
+                  title=${t('击杀 +{n} 金币 · 上限 {c} 只', { n: b.coin, c: conf.bosses.cap })}
+                  onClick=${() => setBosses(on ? bosses.filter((x) => x.enemyKey !== b.key) : [...bosses, { enemyKey: b.key, gate: bosses.length % 2 ? 'upper' : 'lower' }])}>
+                  ${enemyName(gd, b.key, b.name)}<span class="num"> +${b.coin}</span></button>`;
+              })}
+            </div>
+            <p class="confov__hint t-dim">${t('事件期 boss 格：独立于预算与只数上限，击杀直接给金币')}</p>
+          </div>` : null}
+        </section>
+      </div>` : html`<p class="confov__hint t-dim">${t('先选择上面的一个怪物组')}</p>`}
+      `}
     </div>
   </div>`;
 }
-
-/** The localized name of a pick's monster (`m.public.confront.subs[].picks[].enemyKey`), the key as the fallback. */
-const pickName = (gd, key) => {
-  try {
-    const rec = gd.enemy ? gd.enemy(key) : null;
-    return (rec && rec.name) || String(key || '');
-  } catch { return String(key || ''); }
-};
-
-/**
- * 攻方「查看投放 / 继续投放」的已投清单（2026-11-04）：投放窗口（pub.confront.active === true && stage === null）里由游戏页
- * 攻方状态条的入口按钮打开。列出本回合已投放的怪与剩余价值预算，每一行都能**撤回**（业主 2026-11-04 裁决：
- * 场上 / 清单里已投的怪要能撤销）；投放本身走商店条（点一下 / 长按多选 / 拖到门），这里不重复投放 UI，
- * 也没有全屏遮罩（卡片以外不拦截战场点击）。
- * 数据源（服务端实测口径，见报告）：`g.monsterPlace` 只写 ps.monsterDraft，随 `m.monsterShop` 帧下发
- * （monsterShop.js placeMonster / monsterShopFrame），**不进** pub.confront.subs；pub.confront.subs 只有
- * submitConfront / botConfront 才会写。所以商店帧开着时以 `shop.draft.picks` + `shop.left/budget` 为准，否则回落到
- * `pub.confront.subs[myId].picks` 与按 confront.groups 单价现算的剩余。
- * `shop` = store.match.monsterShop（攻方私有帧）。
- * @param {{ pub:any, shop?:any }} props
- */
-export function ConfrontDoneCard({ pub, shop = null }) {
-  const gd = useGameData();
-  const myId = useStore((s) => s.me.playerId);
-  // 正在撤回的行（服务端 picks 的下标）：同一行不发第二次；成功后服务端推帧 ⇒ picks 变短，下面的 effect 清空它。
-  // 只有商店草稿的 picks 能撤回（那是 ps.monsterDraft，g.monsterDrop 摘的就是它）；旧对局的 confront.subs 是提交后的
-  // 只读名单，没有撤回按钮。
-  const [undoing, setUndoing] = useState([]);
-  const conf = pub && pub.confront;
-  const mine = conf && conf.subs ? conf.subs[myId] : null;
-  const shopOn = !!shop && shop.open === true;
-  // 投放期真正的「已投」列表在商店帧的草稿里（点卡即投放）；没有商店帧的旧对局 / 提交路径回落到 confront.subs
-  const picks = shopOn
-    ? (Array.isArray(shop.draft && shop.draft.picks) ? shop.draft.picks : [])
-    : (Array.isArray(mine && mine.picks) ? mine.picks : []);
-  useEffect(() => { setUndoing([]); }, [picks.length]);
-  // 价值表：本回合的 confront.groups（服务端已按本回合口径发好单价）
-  const valueOf = new Map();
-  for (const g of (Array.isArray(conf && conf.groups) ? conf.groups : [])) {
-    for (const r of g.rows || []) if (!valueOf.has(r.key)) valueOf.set(r.key, Math.max(0, Number(r.value) || 0));
-  }
-  const budget = Math.max(0, Number(shopOn ? shop.budget : conf && conf.budget) || 0);
-  const spent = shopOn ? Math.max(0, Number(shop.spent) || 0)
-    : picks.reduce((s, p) => s + (valueOf.get(p && p.enemyKey) || 0), 0);
-  const left = Math.max(0, budget - spent);
-  const upper = picks.filter((p) => p && p.gate === 'upper').length;
-  /**
-   * 撤回第 i 条草稿：`g.monsterDrop { index, id? }` → 服务端摘掉那一条、把它的库存与资金退回（monsterShop.js
-   * dropMonster）。定位优先用**稳定 id**（`shop.draft.picks[i].id`，服务端的 seq）：多端同时撤回时下标会整体前移，
-   * 用 id 才撤得对那一条；老帧 / 老存档没有 id 就回落到下标（服务端两种都认）。成功后服务端推帧 ⇒ picks 变短，
-   * 这张卡跟着重画（不本地删行）。同一行在飞行中不发第二次。
-   */
-  const undoPick = (i, id) => {
-    if (undoing.includes(i)) return;
-    setUndoing((cur) => (cur.includes(i) ? cur : [...cur, i]));
-    const payload = Number.isInteger(id) ? { index: i, id } : { index: i };
-    void act('g.monsterDrop', payload, { sfx: 'back' }).then((ok) => {
-      if (!ok) setUndoing((cur) => cur.filter((x) => x !== i));   // 被拒：放开按钮（toast 已经说了原因）
-    });
-  };
-  return html`<div class="confdone" id="confront-done-card" role="status" data-testid="confront-done">
-    <div class="confdone__head">
-      <b class="confdone__title">${t('本回合已投放')}</b>
-      <span class="confdone__stat num">${t('共 {n} 只', { n: picks.length })}</span>
-      <span class="confdone__stat num" data-testid="confront-done-left">${t('剩余价值 {v}', { v: left })}</span>
-    </div>
-    ${picks.length
-      ? html`<ul class="confdone__list">
-          ${picks.map((p, i) => html`<li key=${`${p && p.enemyKey}:${i}`} class="confdone__row">
-            <span class="confdone__icon"><${Img} src=${enemyIconUrl(gd.m, p && p.enemyKey)} fallback=${html`<${GIcon} name="target" />`} /></span>
-            <span class="confdone__name">${pickName(gd, p && p.enemyKey)}</span>
-            <span class=${cx('confdone__gate', p && p.gate === 'upper' && 'is-upper')}>${t(p && p.gate === 'upper' ? '上路' : '下路')}</span>
-            ${/* 撤回：只有商店草稿能撤（confront.subs 是提交后的只读名单） */ null}
-            ${shopOn
-              ? html`<button type="button" class="confdone__undo" data-testid="confront-undo" disabled=${undoing.includes(i)}
-                  title=${t('撤回这一只：库存与投放资金退回')} aria-label=${t('撤回这一只')}
-                  onClick=${() => undoPick(i, p && p.id)}>${t('撤回')}</button>`
-              : null}
-          </li>`)}
-        </ul>`
-      : html`<p class="confdone__empty t-dim">${t('还没有投放怪物：在下方商店条点卡投放')}</p>`}
-    ${picks.length ? html`<p class="confdone__sum t-dim">${t('上路 {u} 只 · 下路 {l} 只', { u: upper, l: picks.length - upper })}</p>` : null}
-  </div>`;
-}
-
-/**
- * 攻方「当前投放」小悬浮窗（2026-11-06 业主：中央那块「✓ 本回合你是进攻方 / 怪物已投放，等待守方布阵与作战…」
- * 太挡棋盘，去掉；改在盟约条那一行的右端挂一个小窗看当前投放）。由游戏页的 HUD 渲染（screens/game.js 的
- * `.gm__hud`，与 `.gm__bonds` 并列），**不是**整屏名单：`pointer-events` 只在自己这块小窗里，战场照常可点。
- *
- * 数据源两态（与 ConfrontDoneCard 同一口径）：
- *   · 投放窗口 —— 游戏页传实时草稿 `m.monsterShop.draft.picks`（点卡即投放），`live` 为真 ⇒ 每一行可「撤回」；
- *   · 公示 / COMBAT / SETTLE —— 回落 `pub.confront.subs[myId].picks` 的冻结值，`live` 为假 ⇒ 不画撤回按钮
- *     （那是提交后的只读名单，服务端没有可撤的草稿）。
- * 撤回只转发 `onUndo(index, id)`（游戏页 → `g.monsterDrop { index, id? }`，服务端 monsterShop.js dropMonster 退款 /
- * 退库存）；成功后服务端推帧 ⇒ picks 变短，这里跟着重画，不本地删行。
- * 渲染闸门（角色 / 阶段 / 有没有对抗档）在调用方 screens/game.js 里，本组件只管画。
- * @param {{ picks?: any[], live?: boolean, busy?: boolean, onUndo?: (index:number, id:any)=>void }} props
- *   picks: `{ id, enemyKey, gate }[]`（草稿或提交后名单）；live: 这一份是不是可撤回的草稿；busy: 撤回飞行中；
- */
-export function MonsterDropFloat({ picks = [], live = false, busy = false, onUndo = null }) {
-  const gd = useGameData();
-  const rows = Array.isArray(picks) ? picks : [];
-  const upper = rows.filter((p) => p && p.gate === 'upper').length;
-  return html`<div class="mdropfloat" data-testid="monster-drop-float">
-    <div class="mdropfloat__head">
-      <b class="mdropfloat__t">${t('本回合已投放')}</b>
-      <span class="mdropfloat__n num" data-testid="monster-drop-count">${t('已投 {n} 只', { n: rows.length })}</span>
-    </div>
-    ${rows.length
-      ? html`<ul class="mdropfloat__list">
-          ${rows.map((p, i) => {
-            // 最后一条就是「撤回上一只」那一只（原中央状态条的按钮，2026-11-06 搬进来）；其余行按稳定 id 撤自己那一条
-            const last = i === rows.length - 1;
-            return html`<li key=${`${p && p.enemyKey}:${i}`} class="mdropfloat__row" data-testid="monster-drop-row">
-              <span class="mdropfloat__icon"><${Img} src=${enemyIconUrl(gd.m, p && p.enemyKey)} fallback=${html`<${GIcon} name="skull" />`} /></span>
-              <span class="mdropfloat__name">${pickName(gd, p && p.enemyKey)}</span>
-              <span class=${cx('mdropfloat__gate', p && p.gate === 'upper' && 'is-upper')}>${t(p && p.gate === 'upper' ? '上路' : '下路')}</span>
-              ${live
-                ? html`<button type="button" class="mdropfloat__undo" data-testid=${last ? 'monster-undo-last' : 'monster-undo'}
-                    disabled=${busy} onClick=${() => onUndo && onUndo(i, p && p.id)}
-                    title=${t(last ? '撤回最后投放的那一只：库存与投放资金退回' : '撤回这一只：库存与投放资金退回')}
-                    aria-label=${t('撤回这一只')}>${t('撤回')}</button>`
-                : null}
-            </li>`;
-          })}
-        </ul>`
-      : html`<p class="mdropfloat__empty t-dim">${t('还没有投放怪物：在下方商店条点卡投放')}</p>`}
-    <p class="mdropfloat__sum t-dim">${t('上路 {u} 只 · 下路 {l} 只', { u: upper, l: rows.length - upper })}</p>
-  </div>`;
-}
-
-/** 「本局」的身份：房间码 + 模式 + 战场 + 参战名单 —— 换房间 / 换模式 / 换图 / 换人 ⇒ 换局（public 上没有 matchId）。 */
-const clashMatchKey = (pub, roomCode) => {
-  const ids = (Array.isArray(pub?.players) ? pub.players : []).map((p) => (p && p.playerId) || '').join(',');
-  return `${roomCode == null ? '' : roomCode}|${pub?.modeId || ''}|${pub?.stageId || ''}|${ids}`;
-};
-
-/**
- * 「本局已弹过一次」的记位（模块级：ConfrontClash 每个回合的 COMBAT 都重新挂载，组件里的 ref / state 活不过一次挂载
- * —— `applied` 只在 COMBAT / SETTLE 为真，PREP 里整块不渲染 ⇒ 改造前每个回合都重新弹一次，一局弹 13 次）。
- * 同款范式：ui/stats.js 的 liveMatch（模块常量 + 每次观察改写）。
- * @type {{ key: string, round: number } | null}
- */
-let clashSeen = null;
-
-/**
- * 投放名单整屏卡的「本局只弹一次」判据（业主 2026-11-05 第 3 条）。纯函数，便于自检：
- *   · 同局（key 相同）且回合没有回落 ⇒ 不再弹（第一次之后的每一次 COMBAT 都走这里）；
- *   · 换局（key 变了：房间 / 模式 / 战场 / 参战名单），或回合数回落（同一房间同一批人重开一局，round 从 1 重新数）
- *     ⇒ 重置并弹出。
- * @param {{ key: string, round: number }|null} seen 上一次弹过的那一局（调用方持有）
- * @param {{ key: string, round: number }|null} cur 本帧的对局身份与回合，null = 不在对局里
- * @returns {{ show: boolean, seen: { key: string, round: number }|null }} show = 这一帧要不要弹；seen = 写回的新记位
- */
-export function clashFirstOfMatch(seen, cur) {
-  if (!cur) return { show: false, seen: null };
-  const round = Number(cur.round) || 0;
-  const prev = seen && seen.key === cur.key ? seen : null;
-  const prevRound = prev ? (Number(prev.round) || 0) : 0;
-  // 同一局：身份相同，且回合没有回落（回落 = 重开一局）
-  if (prev && round >= prevRound) return { show: false, seen: { key: cur.key, round: Math.max(round, prevRound) } };
-  return { show: true, seen: { key: cur.key, round } };
-}
-
-/**
- * 投放名单「不给投放方看」的判据在 shared/constants.js（`rosterHiddenFor`）—— 服务端与客户端共用一份，
- * 也是唯一能被 node 单测直接 import 的地方（本文件依赖 preact 的 vendor 模块，测试里 import 不了）。
- */
 
 /**
  * The 悬赏名单 AFTER the phase: once the battles start, the applied submissions stay on the public view for a moment —
  * both teams' boards are revealed (who sent what at whom, and what killing it pays). Display only: it fades out by
  * itself. The roster hold itself is rendered by this file's ConfrontOverlay (stage 'roster').
- * 本局只弹一次（业主 2026-11-05 第 3 条）：判据见 clashFirstOfMatch，记位是模块级的 clashSeen。
  * @param {{ pub:any }} props
  */
 export function ConfrontClash({ pub }) {
   const gd = useGameData();
   const myId = useStore((s) => s.me.playerId);
-  // 房间码只参与「本局」身份（上面的 clashMatchKey）；拿不到（旧帧 / 不在房间）就是 null
-  const roomCode = useStore((s) => (s.room && typeof s.room.code === 'string' ? s.room.code : null));
   const conf = pub && pub.confront;
   const [shown, setShown] = useState(true);
-  // 本次挂载的裁决：null = 还没判，true = 本局第一次（画），false = 本局已弹过（不画）
-  const firstOfMatch = useRef(null);
   const round = conf && conf.round;
   useEffect(() => {
     setShown(true);
@@ -463,21 +588,8 @@ export function ConfrontClash({ pub }) {
   const players = pub.players || [];
   const me = players.find((p) => p.playerId === myId) || null;
   const myTeam = me ? me.team : null;
-  // 投放方不看投放名单（2026-11-06 业主）—— 与 ConfrontOverlay 的 roster 分支同一个判据（rosterHiddenFor）。
-  // 注意放在「本局已弹」记位**之前**：攻方本来就不该看，不该吃掉守方那一局的一次。
-  if (rosterHiddenFor(me && me.role)) return null;
   const rows = clashRows(gd, pub, conf, myTeam);
   if (!rows.length) return null;
-  // 「本局已弹」只在**真的画出来**时占用：上面任何一条短路（不在 COMBAT / 名单为空 / 已经淡出）都没显示过名单，
-  // 不该吃掉这一局的这一次。
-  if (firstOfMatch.current == null) {
-    const d = clashFirstOfMatch(clashSeen, { key: clashMatchKey(pub, roomCode), round: Number(round) || 0 });
-    firstOfMatch.current = d.show;
-    // 记位每次都跟着回合前进（不只是弹的那一次）：换局判据要读「本局记录到的最大回合数」，不然一局打到第 9 回合，
-    // 下一局从 1 重新数时比的是第一次弹的回合数（例如 1），回落判据就失效了。
-    if (d.seen) clashSeen = d.seen;
-  }
-  if (!firstOfMatch.current) return null;
   return html`<${RosterPanel} title=${t('投放名单')} micro=${'SORTIE LIST // ' + t('投放名单')} tone="gold"
     className="rospov--clash" testid="confront-clash" rows=${rows} note=${t('对面投放的怪物，清掉它们')} />`;
 }

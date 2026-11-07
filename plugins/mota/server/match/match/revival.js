@@ -71,9 +71,6 @@ export class MatchRevival {
     ps.alive = false;
     ps.pendingDeath = true;
     ps.dirty();
-    // 投放权移交（2026-11-06 业主第 2 条）：挂起等救援的席位已经不算「存活攻方」，solo / master 的投放权会落到
-    // 下一位 —— 这里补一次对账，把商店交给接手的人（幂等；非对抗局 / 商店关着时什么都不做）。
-    try { if (typeof this.syncMonsterOperators === 'function') this.syncMonsterOperators(); } catch { /* ignore */ }
     this.toast(ps, 'warn', '你的目标生命值耗尽，等待救援（需要全体队友同意）');
     if (!this.revival) this.revival = { round: this.round, windowOpen: true, consents: new Map() };
     this.revival.round = this.round;

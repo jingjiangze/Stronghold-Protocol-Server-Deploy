@@ -5,7 +5,7 @@
 // joins an existing co-op room right here with its 同盟密钥 (user decision 2026-10-08: 添加邀请码加入) — the lobby's
 // own join box, down to the shared normalisation/code helpers, so both doors behave identically.
 import { useEffect, useRef, useState } from '../../vendor/hooks.module.js';
-import { difficultyOptionsFor, ROOM_CODE_LEN } from '../../../shared/constants.js';
+import { DIFFICULTIES, ROOM_CODE_LEN } from '../../../shared/constants.js';
 import { html, Button, MicroLabel, Panel, TextField, PingPill, AvatarFrame, Spinner, doctorNo } from '../ui/components.js';
 import { toast, toastError } from '../ui/toasts.js';
 import { GuideButton } from '../ui/guide.js';
@@ -25,7 +25,7 @@ export function XieRoomScreen() {
   useData('config');
   const [difficulty, setDifficulty] = useState(() => {
     const d = loadPref('lobby.difficulty', 'FUNNY');
-    return difficultyOptionsFor('coop').includes(d) ? d : 'FUNNY';
+    return DIFFICULTIES.includes(d) ? d : 'FUNNY';
   });
   const [busy, setBusy] = useState(null);
   const [code, setCode] = useState('');
@@ -103,7 +103,7 @@ export function XieRoomScreen() {
       <section class="lobby-left">
         <div class="section-label"><span class="section-label__idx num">01</span>${t('模拟难度')}<${MicroLabel}>DIFFICULTY<//></div>
         <div class="diff-list">
-          ${difficultyOptionsFor('coop').map((d) => html`<${ProtoCard} key=${d} roomMode="coop" difficulty=${d} modeVariant="xie"
+          ${DIFFICULTIES.map((d) => html`<${ProtoCard} key=${d} roomMode="coop" difficulty=${d} modeVariant="xie"
             selected=${difficulty === d} onSelect=${pickDifficulty} />`)}
         </div>
         <div class="create-box">

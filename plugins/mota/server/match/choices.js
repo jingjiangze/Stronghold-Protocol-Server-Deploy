@@ -205,28 +205,6 @@ export function cardTargetBonds(gd, effectId) {
 }
 
 /**
- * Buff keys that do nothing but raise the layers of the **operator** bonds (`PlayerState.addLayers`) — the 盟誓 cards
- * (data/effects.json `allybuff_select_2_*`, all eight of them carry only this one buff). Every other buff key in the
- * data does something else, so this is the whole list today.
- */
-export const OPERATOR_LAYER_BUFF_KEYS = new Set(['global_special_choice_bond_addlayer']);
-
-/**
- * Whether a tactic card **only** raises operator-bond layers — i.e. it is a no-op for the attacking team of a role round
- * (the attacker has no operator bonds: `PlayerState.addLayers` refuses every gain there, player/economy.js). A card with
- * any other buff is not "layers only": that other buff still does something. The 机变 draft keeps such a card out of an
- * attacker's candidates (MatchSpDraft.spCardBlocked); `addLayers` stays the last line of defence on the apply path.
- * @param {{effect?: (id: string) => object|null}} gd @param {string} effectId the card's `id` (= effects.json effectId)
- * @returns {boolean}
- */
-export function cardAddsOnlyOperatorLayers(gd, effectId) {
-  const eff = gd && typeof gd.effect === 'function' && effectId ? gd.effect(effectId) : null;
-  const buffs = eff && Array.isArray(eff.buffs) ? eff.buffs.filter(Boolean) : [];
-  if (!buffs.length) return false;
-  return buffs.every((b) => OPERATOR_LAYER_BUFF_KEYS.has(b && b.key));
-}
-
-/**
  * A bounty card the 悬赏决策 draft may offer (choices.json cards.bounty `draft`, tools/build-data.mjs
  * bountyDraftExclusion: no 战术特训, no 鸭爵 set — user playtest #6 item 4 —, nothing no official draft showed — player
  * feedback #2). Data without the flag (older builds, test fixtures) falls back to the kill bounties. With `kind`

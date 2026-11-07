@@ -269,9 +269,6 @@ import { strategyBoostEnabled } from '../../shared/strategyBoost.js';
 import { stagesWithScene } from '../../../../server/match/sceneStages.js';
 // 肉鸽「地图主题池」 (opts.mapPool, shared/rogueThemes.js): 'all' | 'ro1'…'ro6' 的常量表与校验。
 import { isPool } from '../../../../shared/rogueThemes.js';
-import { botStrategyFor } from './botStrategies.js';
-// 怪物资金账户的唯一入口（业主 2026-11-04 裁决 2「共同出怪 = 同队一份资金」）：见下方构造函数的改道安装。
-import { addMonsterFundsTo, spendMonsterFundsFrom } from './monsterShop.js';
 
 export { FLOW_TICKER_PRIORITY, DELAYS, BAND_TURN_SECONDS } from './match/common.js';
 
@@ -337,13 +334,9 @@ export class Match {
     this.roomVariant = typeof opts.variant === 'string' ? opts.variant : null;
     this.coopHuntOn = false;   // 同盟狩猎未启用（对抗模式不需要）
     this.teamSize = this.isVersus && Number.isInteger(opts.teamSize) && opts.teamSize > 0 ? opts.teamSize : (this.isVersus ? 2 : 1);
-    // 对抗规则档（玩家 2026-10-26 / 2026-11-04 定两档）：'bounty' = 赏金（线上那套）/ 'confront' = 对抗（纯玩家出怪）
-    // modeId 前缀（子进程通道，isXie 同款）仍映射到 confront；其余（含已撤的 'ai'）一律回落 bounty
-    this.versusRule = !this.isVersus ? null
-      : (opts.versusRule === 'bounty' || opts.versusRule === 'confront') ? opts.versusRule
-      : /^mode_confront_/.test(String(opts.modeId || '')) ? 'confront' : 'bounty';
-    // 按模式独立的 AI 策略（2026-11-03）：未显式指定时按 mode 表解析，默认 legacy = 改造前的行为。
-    this.botStrategy = botStrategyFor(this, opts.botStrategy ?? null);
+    // 对抗规则档（玩家 2026-10-26）：'bounty' = 赏金（线上那套）/ 'confront' = 对抗（纯玩家出怪）
+    // 「对抗」档两条判据都认：opts.versusRule（直连）或 modeId 前缀（子进程通道，isXie 同款）
+    this.versusRule = this.isVersus && (opts.versusRule === 'confront' || /^mode_confront_/.test(String(opts.modeId || ''))) ? 'confront' : 'bounty';
     /** 赏金档倍速（业主 2026-10-31）：1 / 1.5 / 2，只放大「守方这一回合遇到的敌人数量」；控怪档恒 1。 */
     this.versusSpeed = this.isVersus && (opts.versusSpeed === 1.5 || opts.versusSpeed === 2) ? opts.versusSpeed : 1;
     // 是否每回合交换攻守（业主 2026-10-26）：缺省 true；「纯对抗」里可以关掉 → 恒为首攻方进攻。
@@ -354,8 +347,6 @@ export class Match {
     this.defenderTeam = null;
     /** 本回合的狩猎期（投放）是否已经结束：防止守方 PREP 结束后又跳回 CONFRONT。 */
     this._confrontDoneRound = 0;
-    /** 本回合的目标选择是否已经做完（enterConfront → finishConfrontTargets）：PREP 结束时据此决定冻结投放还是回 CONFRONT。 */
-    this._confrontTargetsRound = 0;
     this.difficulty = opts.difficulty;
     // 肉鸽（独立模式 mode==='rogue'，或老写法 variant==='rogue'）的 mode 记录是 `mode_rogue_<难度>`：宿主通常直接给
     // opts.modeId，这一路是没给时的兜底 —— 不带上 rogue，两参调用只会落到 `mode_multi_*`，读的是多人的表。
@@ -588,12 +579,6 @@ export class Match {
     this.eventUsedAlly = new Set(); this.eventUsedFoe = new Set();
     this.foeEvent = null; this.eventFoeHistory = []; this._eventDoneRound = 0;
     this.confront = null; this.confrontSubs = null; this.confrontTargets = null; this.confrontStage = null;
-    /**
-     * 队级怪物资金账户（业主 2026-11-04 裁决 2）：key = teamId，value = 余额（shared 模式；solo 不用）。
-     * 惰性建表（monsterShop.js 的 teamMonsterFunds），这里只声明字段。
-     * @type {Map<number, number>|null}
-     */
-    this.teamMonsterFunds = null;
 
     /** @type {Map<string, PlayerState>} */
     this.players = new Map();
@@ -611,21 +596,6 @@ export class Match {
      * 离场不得把已经做出的判断砍半。没有合约时 `crisisActive` 为 false、开关是关的，与改动前的每一局一致。
      */
     this.gd.strategyBoost = strategyBoostEnabled(this.contracts, this.difficulty, this.order.filter((p) => p.alive).length);
-    /**
-     * 队级怪物资金（业主 2026-11-04 裁决 2「共同出怪 = 同队一份资金」）：shared 模式下同队共用一个账户
-     * （`m.teamMonsterFunds`，见 monsterShop.js 的 monsterFundsOf / addMonsterFundsTo / spendMonsterFundsFrom）。
-     *
-     * 这里把每个席位的 `addMonsterFunds` / `spendMonsterFunds` 改道到 Match 侧访问器 —— 本次改动清单之外的模块
-     * （match/match/settle.js 的击杀 / 漏过奖励）因此自动进同一个账户，不必各自改一行；solo 模式不装改道，
-     * `ps.monsterFunds` 就是唯一账户（与改造前逐字节一致）。只在商店开着时装：`opts.monsterShop === false` 与
-     * 非对抗局一行都不跑。
-     */
-    if (this.isVersus && this.monsterShopOn === true && this.monsterMode !== 'solo') {
-      for (const ps of this.order) {
-        ps.addMonsterFunds = (n) => addMonsterFundsTo(this, ps, n);
-        ps.spendMonsterFunds = (n) => spendMonsterFundsFrom(this, ps, n);
-      }
-    }
     /**
      * Spectator seats (opts.spectators / addSpectator): playerId → a stand-in every watch path treats like an eliminated
      * human (alive false; no PlayerState, never a field's player or authority).

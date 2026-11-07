@@ -86,7 +86,7 @@ import { useFieldView } from '../ui/fieldHost.js';
 import { TopBar, liveLp, ownLeaks, uniteRemaining, tempInfo, tempReadyReason, EffectsColumn } from '../ui/hud.js';
 import { BondStrip, BondPopup } from '../ui/bondStrip.js';
 import { TeamPanel } from '../ui/teamPanel.js';
-import { ShopBar, MonsterBondStrip } from '../ui/shopBar.js';
+import { ShopBar } from '../ui/shopBar.js';
 import { BorrowPlate } from '../ui/borrowPlate.js';
 import { RevivePlate } from '../ui/revivePlate.js';
 import { econBarModel } from '../ui/econBar.js';
@@ -100,7 +100,7 @@ import { EnemyDrawer } from '../ui/enemyDrawer.js';
 import { Ticker } from '../ui/ticker.js';
 import { EmoteWheel } from '../ui/emotes.js';
 import { ChatBox } from '../ui/chatBox.js';
-import { ConfrontOverlay, ConfrontClash, MonsterDropFloat } from '../ui/confrontOverlay.js';
+import { ConfrontOverlay, ConfrontClash } from '../ui/confrontOverlay.js';
 import { HexOverlay, normalizeHexOffer } from '../ui/hexOverlay.js';
 import { RelicOverlay, normalizeRelicOffer } from '../ui/relicOverlay.js';
 import { RoguePanel } from '../ui/roguePanel.js';
@@ -115,7 +115,7 @@ import { SettingsModal, settingsStore, useSettings } from '../ui/settings.js';
 import { ExitModal, AwayOverlay, awayStore } from '../ui/matchChrome.js';
 import { RoundPopup, PhasePopup, phasePopupOf, roundsToBoss, preloadPopupArt } from '../ui/matchPopups.js';
 import { openGuide } from '../ui/guide.js';
-import { actions, act, onRefreshBusy } from '../ui/gameActions.js';
+import { actions, onRefreshBusy } from '../ui/gameActions.js';
 import { FacingWheel, holdPiece, setPieceDir, syncPieceDirs, showRange, useTileScreen } from '../ui/facingWheel.js';
 import { Underframe, underframeRect, TempRowNotice, warmPlateMasks } from '../ui/underframe.js';
 import { StandInTags } from './game/standInTags.js';
@@ -228,18 +228,6 @@ export function GameScreen() {
 /** A card of a unit of the battle on screen: a unit's, or a crate's / turret's (a device card with its `unitId`, #228). */
 const inBattleCard = (d) => d?.kind === 'unit' || (d?.kind === 'device' && d.device?.unitId != null);
 
-/**
- * 攻方战场取景（2026-11-04 拖拽投放时启用；2026-11-05 业主第 2 条起只用于**拖拽期间**与「返回战场」）：攻方在上门
- * (12,10) / 下门 (9,10) 里挑一个，拖拽要判门 ⇒ 两扇门必须同时留在画面里 —— rows 9–12 是战场、cols 2–10 把两扇门与
- * 场上站位都收进来，与守方看到的 normal 战场同一个范围，只是走拟合路径 (`fit: true`)。实测 prep 那套取景
- * （`GEO.NORMAL_RECT` + prep 预设）只占屏 46.6%，这一套占 70%。
- * 投放期的**常态**取景是出怪预览区（pen，见 prepCamRequest / attackPenCam）：pen 只框 rows 14–18 / cols 7–13，
- * 两扇门都在框外 ⇒ 拖拽（以及 🔍「返回战场」）才换成这一套。
- * `hud` 走不通：render/app.js 的 hudBands 对 `normal` 返回 null，presetCamera 也只在官方预设（`!fit`）路径上用 hud，
- * 所以这里没有 hud 键 —— 底栏与战场的间距来自 fitCamera 的 padding（defaultPadding('normal')）。
- */
-const DROP_CAM = { kind: 'normal', opts: { rect: { r0: 9, r1: 12, c0: 2, c1: 10 }, side: 'L', fit: true } };
-
 function MatchScreen() {
   useDocClass('sp-in-match');
   useEffect(() => { preloadPopupArt(); }, []);
@@ -294,10 +282,6 @@ function MatchScreen() {
   const [watching, setWatching] = useState(null);
   // 对抗模式（2V2 / 4V4）的面板忙态
   const [confBusy, setConfBusy] = useState(false);
-  // 攻方投放的「撤回」（业主 2026-11-04：投放方**不看**已投名单，但必须保留撤销能力）—— 一次一条草稿，飞行中
-  // 其余行一起禁用（服务端 dropMonster 会退款 / 退库存，成功后推帧 ⇒ 只数自己变回来）。2026-11-06 起入口在
-  // 盟约条那一行右端的小窗（ui/confrontOverlay.js 的 MonsterDropFloat），原中央绿块的按钮已删。
-  const [dropUndoBusy, setDropUndoBusy] = useState(false);
   const [eventBusy, setEventBusy] = useState(false);        // fieldId the player chose to watch (null = home)
   const [watchWho, setWatchWho] = useState(null);        // { fieldId, playerId }: the teammate picked with 前往查看
   const [drawer, setDrawer] = useState(null);            // 'enemies' | 'info' | null
@@ -358,10 +342,6 @@ function MatchScreen() {
   const [armedCard, setArmedCard] = useState(null);     // the shop bar's armed card { kind, id } (merge tile cue)
   const cc = isClientCombat(pub);
   const battleState = useStore((s) => s.match.battle, shallowEqual); // local battle runner (client-side combat)
-  // 怪物卡池（2026-11-04）：攻方商店的私有帧 —— main.js 把 m.monsterShop 路由进 store.match.monsterShop，服务端只在
-  // 商店开着时发给攻方。攻方靠它拿回「商店条」的显示权（下面 showShop），守方 / 没有这一帧的旧对局行为不变。
-  const monsterShop = useStore((s) => (s.match ? s.match.monsterShop : null));
-  const monsterShopOpen = !!monsterShop && monsterShop.open === true;
 
   // ---- 战斗中实时部署 (方案 A, ui/realtimeDeploy.js) ----------------------------------------------------------------
   // The own battle holds the player's operators off the field until they place them (spec.flags.liveDeploy): a chip
@@ -426,44 +406,6 @@ function MatchScreen() {
   // 攻防角色（2V2/4V4）：attack=本回合只投放怪物，defend=本回合下干员防守；非攻防回合 null
   const myRole = meP?.role || null;
   const mySub = myRole === 'attack' ? (pub?.confront?.subs?.[myId] || null) : null;
-  // 对抗面板的阶段（2026-11-04）：'target' = 选目标 10 秒（模态）/ 'roster' = 投放公示 5 秒 / null = 投放窗口。
-  // 按**原值**读 —— 投放窗口就是 stage === null（server/match/match/views.js 只在 PREP 且选目标已结束时这么发）。
-  const confStage = pub?.confront ? (pub.confront.stage != null ? pub.confront.stage : null) : null;
-  // 规则档（2026-11-04 业主裁决）：目标选择遮罩**只在赏金档出**；对抗档（'confront'）服务端跳过目标选择，客户端不弹模态。
-  const confBounty = pub?.confront?.versusRule === 'bounty';
-  // 投放窗口（只有攻方有入口）：面板整块不渲染，投放走下方商店条；盟约条那一行右端的小悬浮窗（2026-11-06）
-  // 显示「本回合已投放 · N 只」与每一条的「撤回」—— 已投**名单**仍然只给对面（守方的 conf.roster 公示 /
-  // priv.incoming 预览），投放方自己只看这一个小窗（业主 2026-11-04：投放方不显示投放名单）。
-  // 这个值同时作为 `monsterEditable` 传给 ShopBar（2026-11-06）：攻方的 `editable` 恒 false（下面 384 行的
-  // `myRole !== 'attack'`），怪物卡池的等级卡只能靠它判定「可操作」；口径与服务端 inMonsterStage 一致。
-  const confDropWindow = !!pub?.confront && pub.confront.active === true && confStage === null && myRole === 'attack';
-  // 投放窗口里「已投 N 只」读的是**本回合草稿**（m.monsterShop.draft.picks，点卡投放每投一只加一条）——
-  // 这时还没有提交，m.confront.subs[myId] 不存在，旧文案只能画「等待投放结算」（2026-11-04 视觉验收第 3 条）。
-  // 投放结束后（stage 进入 roster、active 变 false、或进 COMBAT / SETTLE）仍走下面的 mySub.picks。
-  const dropPicks = monsterShopOpen && Array.isArray(monsterShop.draft?.picks) ? monsterShop.draft.picks : [];
-  const dropPlaced = dropPicks.length;
-  // 「当前投放」小悬浮窗（2026-11-06 业主：中央绿块去掉，改挂盟约条那一行的右端）：数据源两态 —— 投放窗口读实时
-  // 草稿（可撤回），公示 / COMBAT / SETTLE 回落提交后的 mySub.picks（冻结值，不可撤回）。闸门 = 攻方 + 对抗/赏金档
-  // （pub.confront）+ 投放相关阶段；守方（myRole === 'defend'）/ 协同 / 单人没有这一块。
-  const dropFloatOn = myRole === 'attack' && !!pub?.confront
-    && (phase === PHASE.PREP || phase === PHASE.COMBAT || phase === PHASE.SETTLE);
-  const dropFloatPicks = dropPlaced ? dropPicks : (Array.isArray(mySub?.picks) ? mySub.picks : []);
-  // 只有草稿能撤（`g.monsterDrop` 摘的是 ps.monsterDraft）；提交后的 subs 是只读名单。再按投放窗口收一道：
-  // 公示 / COMBAT 里服务端不再收 g.monsterDrop，按钮不该亮着。
-  const dropFloatLive = dropPlaced > 0 && confDropWindow;
-  /**
-   * 撤回草稿里的第 `index` 条：`g.monsterDrop { index, id? }` → 服务端摘掉那一条、把库存与投放资金退回
-   * （server/match/monsterShop.js dropMonster）。定位优先用**稳定 id**（`draft.picks[i].id`，服务端的 seq）：
-   * 多端同时撤回时下标会整体前移，用 id 才撤得对那一条；老帧 / 老存档没有 id 就回落到下标（服务端两种都认）。
-   * 成功后服务端推帧 ⇒ 草稿变短、只数自己变回来（不本地删）。原「撤回上一只」= 这里传最后一条的下标
-   * （ui/confrontOverlay.js 的 MonsterDropFloat 把那一行的 data-testid 留在 monster-undo-last 上）。
-   */
-  const undoDropAt = (index, id) => {
-    if (!Number.isInteger(index) || index < 0 || index >= dropPlaced || dropUndoBusy) return;
-    const payload = Number.isInteger(id) ? { index, id } : { index };
-    setDropUndoBusy(true);
-    void act('g.monsterDrop', payload, { sfx: 'back' }).finally(() => setDropUndoBusy(false));
-  };
   // a spectator seat watches like an eliminated player (it has no m.private and no row in m.public)
   const alive = spectator ? false : priv ? priv.alive !== false : meP?.alive !== false;
   // 协议已失效 (ui/downedPlate.js): once, when the player's own `alive` — as read from real data, never a reload's empty
@@ -491,9 +433,7 @@ function MatchScreen() {
   const prepLoadoutOpen = ruleOption(roomRules, 'prepLoadout') === 'prep';
   const hasOffers = !!pub?.offers?.length;
   const editable = !offerBlocksPrep(pub?.offers) && phase === PHASE.PREP && !!priv && alive && !priv.ready && !watchingOther && !hasPersonalChoice && myRole !== 'attack';
-  // 攻方也画商店条（2026-11-04）：他这一回合不摆干员，但要用怪物卡池买 / 投放怪物 —— 只放开**显示**，editable 不动
-  // （攻方依旧不能摆干员）。没有怪物商店帧时与改造前逐字节一致：myRole === 'attack' ⇒ 整条不画。
-  const showShop = !!priv && alive && (myRole !== 'attack' || monsterShopOpen) && (phase === PHASE.PREP || phase === PHASE.SP_DRAFT || phase === PHASE.ROUND_START) && !watchingOther;
+  const showShop = !!priv && alive && myRole !== 'attack' && (phase === PHASE.PREP || phase === PHASE.SP_DRAFT || phase === PHASE.ROUND_START) && !watchingOther;
   const layersDisabled = phase === PHASE.UNITE || isBossPhase(phase);
   const sp = phase === PHASE.SP_DRAFT ? normalizeSp(pub?.sp, players) : null;
   const total = phaseTotalSeconds(pub, gd.config, myId);
@@ -561,30 +501,15 @@ function MatchScreen() {
     getChess: (id) => { const c = gd.chess(id); return ownDiyRecord(c, priv, { chess: data.get('chess'), backups: data.get('backups') }) || c; },
     getToken: gd.token, getItem: gd.item, getEffect: gd.effect, backups: gd.backups, morphMode,
   }), [priv, pub?.stageId, editable, gd.ready, deployField, data.locale(), morphMode]);
-  live.current = { pub, priv, field, view, editable, hasPersonalChoice, placeCtx, watching, watchWho, watchingOther, home, myId, alive, spectator, detail, drawer, bondOpen, emoteOpen, settingsOpen, exitOpen, roguePanel, drag, facing, sel, selBusy, pen, collapsedNow: collapsed, localDone: false, canPause: false, paused, monsterShopOpen };
+  live.current = { pub, priv, field, view, editable, hasPersonalChoice, placeCtx, watching, watchWho, watchingOther, home, myId, alive, spectator, detail, drawer, bondOpen, emoteOpen, settingsOpen, exitOpen, roguePanel, drag, facing, sel, selBusy, pen, collapsedNow: collapsed, localDone: false, canPause: false, paused };
 
   // ---- camera: every request goes through setCam, which remembers it for the pen's way back -----------------------
-  // 攻方（攻防回合的进攻方）没有自己的棋盘：投放窗口的**初始取景是出怪预览区（pen）**——普通玩家休整期看「这一波有几只、
-  // 什么类型」的那块区域，也就是 HUD 🔍▶▶ 拉过去的那个取景（2026-11-05 业主第 2 条；前一条「守方战场占满画面」被此条
-  // 取代）。走的是同一条 'pen' 相机（setCam('pen') → render/app.js setCamera('pen') → render/projection.js
-  // CAMERA_PRESETS.pen / app.js camRect 的 pen 矩形），这里只给 kind + side，不复制任何相机数字。
-  // COMBAT 观战落回 field.kind 的那一支（与「观战该 field」一致）。
   // the own prep board: the normal board, or — in the prep of a boss round — the player's half of the boss field
   // (research 09 §1.2: the right-hand player's board mirrored; gameLogic prepCamera). The DOM fallback view keeps the
   // own board's layout there (every coordinate the UI handles is a board coordinate either way) and draws the tiles of
   // that half (ui/fallbackField.js: the legal fence tiles are floor, not the normal field's walls; user playtest #5 item 7).
   const prepCam = prepCamera(pub, myId, stageLayout);
-  // 攻方投放期的两个取景（2026-11-05 业主第 2 条）：
-  //   attackPenCam —— 常态（初始 / 松手之后）= pen 视图，与 🔍▶▶ 一模一样；
-  //   attackCam    —— 战场那一套（DROP_CAM）：拖拽期间用它（两扇门要同时在画面里才判得了门），也是 🔍「返回战场」
-  //                   要回到的取景（setCam 的第三个参数 wayBack）。
-  // `myRole` 只在攻防回合为 'attack'；boss 轮的准备期仍是 bossPrep 取景（prepCam.kind === 'bossPrep'）⇒ 这一支只接管
-  // **普通作战场**的攻方准备期。守方 / 协同 / 单人 / 其它阶段：两者都是 null ⇒ 全部原样走 prepCameraFor，逐字节不变。
-  const attackCam = myRole === 'attack' && prepCam.kind === 'prep' ? DROP_CAM : null;
-  const attackPenCam = attackCam ? { kind: 'pen', opts: { side: prepCam.opts.side || 'L' } } : null;
-  // 2026-11-05 真机：攻方进入投放期的首帧 myRole 还没到，先按 prep 请求了一次；角色到达后 prepCamKey
-  // （kind:side）没变 ⇒ effect 早退 ⇒ 相机永远停在 prep。把「攻方 pen」这一位并进 key，角色到达时触发重请求。
-  const prepCamKey = `${prepCam.kind}:${prepCam.opts.side}:${attackPenCam ? 'pen' : '-'}`;
+  const prepCamKey = `${prepCam.kind}:${prepCam.opts.side}`;
   const prepCamSeen = useRef(prepCamKey);                // the prep camera last requested
   const camRef = useRef({ kind: 'prep', opts: { rect: mapRectOf(stageLayout, 'prep'), side: 'L' } });
   // the previous frame applied the deploy zoom, so turning 设置「部署时收起商店」 off mid-drag can give it back.
@@ -605,47 +530,16 @@ function MatchScreen() {
     else setCollapsed(change === 'fold');
   }, [phase, pub?.round, priv?.ready, !!priv, alive, watchingOther]);
   const cancelFacingRef = useRef(() => {});
-  /**
-   * @param {string} kind camera kind (render/app.js setCamera)
-   * @param {{ [k: string]: any }} [opts] its framing options
-   * @param {{ kind: string, opts?: object }} [wayBack] the camera 🔍 returns to (togglePen off / a deploy zoom's
-   *   release) when it is not the one just requested — the attack's pen view (attackPenCam) is a detour of the field
-   *   camera DROP_CAM, so the way back must stay the field. Omitted ⇒ the camera just requested, as before.
-   */
-  const setCam = useCallback((kind, opts, wayBack) => {
+  const setCam = useCallback((kind, opts) => {
     // remembered without its flight time: the pen's way back (togglePen) repeats the framing, and a fold zoom's
     // FOLD_CAMERA_MS would replace the pen's own 0.25 s return (render/app.js PEN_CAMERA_MS)
     const { ms: _ms, instant: _instant, ...framing } = opts || {};
-    camRef.current = wayBack ? { kind: wayBack.kind, opts: { ...(wayBack.opts || {}) } } : { kind, opts: framing };
+    camRef.current = { kind, opts: framing };
     setCamKind(kind);
     if (penRef.current.on) { penRef.current.on = false; setPen(false); setCollapsed(penRef.current.collapsed); }
     view?.setCamera(kind, opts);
   }, [view]);
-  // 拖拽投放的取景（2026-11-04）：攻方在上门 (12,10) / 下门 (9,10) 里挑一个，拖住怪物卡期间换成 DROP_CAM（整块战场，
-  // 两扇门都在视野里），商店条由 ShopBar 自己走 onCollapse → setCollapsed 折叠。
-  // 2026-11-05 业主第 2 条：攻方投放期的**常态**取景是出怪预览区（pen，上面的 attackPenCam），pen 只框 rows 14–18 /
-  // cols 7–13，两个门格都在框外 ⇒ 拖拽期间必须换成 DROP_CAM（否则判门判不到），松手再回 pen。
-  // 只有攻方商店会调它（ui/shopBar.js 的 monsterOn 分支）⇒ 守方 / coop 的相机请求与改造前逐字节一致。
-  const dropCamPrev = useRef(null);
-  const setDropCam = useCallback((on) => {
-    if (attackPenCam) {
-      // 攻方：拖拽中 = 战场取景（判门），松手 = 回到 pen；camRef（🔍 的「返回战场」）始终是 DROP_CAM
-      setCam(on ? DROP_CAM.kind : attackPenCam.kind, on ? DROP_CAM.opts : attackPenCam.opts, DROP_CAM);
-      return;
-    }
-    if (on) {
-      if (!dropCamPrev.current) dropCamPrev.current = camRef.current;
-      setCam(DROP_CAM.kind, DROP_CAM.opts);
-      return;
-    }
-    const back = dropCamPrev.current;
-    if (!back) return;
-    dropCamPrev.current = null;
-    setCam(back.kind, back.opts);
-  }, [setCam, attackPenCam]);
   // 休整期 only; never while a piece is being placed (the wheel sits on a tile of the board camera)
-  // 角色无关（2026-11-05 业主第 3 条）：攻方投放期的**初始**取景就是这块区域（attackPenCam），🔍「敌方情报 / 返回战场」
-  // 仍要一直可用 —— 别在这里加 myRole 判断（攻方按下时相机不动，但它把 pen 状态切上，返回键才有「返回战场」可回）。
   const penAvail = phase === PHASE.PREP && !!view && viewKind !== 'loading';
   /** Pan to the enemy preview pen (on) or back to the camera in use before (off). */
   const togglePen = useCallback((on) => {
@@ -719,15 +613,6 @@ function MatchScreen() {
   // the own prep board then takes the official shop-collapsed camera (public issue #5, gameLogic prepCameraFor);
   // a deploy interaction folds it for the interaction's duration (public issue #602).
   const shopFolded = showShop && (pen ? penRef.current.collapsed : (collapsed || deployFold));
-  // 本帧的准备期相机请求（2026-11-05 业主第 2 条）：攻方投放期 = 出怪预览区（pen，上面的 attackPenCam），其余原样走
-  // prepCameraFor（商店收起与否的 shop 标志也在里面）。两处 prep 请求（进入准备期 / 准备期换板）都走这一条。
-  const prepCamRequest = () => (attackPenCam || prepCameraFor(pub, myId, shopFolded, stageLayout));
-  // 应用它：攻方的 pen 是战场取景的「绕路」⇒ camRef 记 DROP_CAM（🔍「返回战场」与拖拽松手后的落点都靠它），
-  // 其余情形 camRef 就是刚请求的那台相机（与改造前逐字节一致）。
-  const applyPrepCam = () => {
-    const pc = prepCamRequest();
-    setCam(pc.kind, pc.opts, attackCam || undefined);
-  };
   // the shop bar / board layout's displayed fold: the player's 收起 state, temporarily folded while deploying.
   const barCollapsed = collapsed || deployFold;
 
@@ -791,9 +676,8 @@ function MatchScreen() {
         // the battle we just left (or whatever was stored before mount) must not be re-entered next combat;
         // an m.field that arrives during prep (the upcoming battle) is a new object and will be entered
         staleFieldRef.current = field;
-        // 攻方（进攻方）没有自己的棋盘：投放期走 prepCamRequest 的 pen 分支（出怪预览区），其余仍是
-        // 原样的 prepCameraFor 请求
-        applyPrepCam();
+        const pc = prepCameraFor(pub, myId, shopFolded, stageLayout);
+        setCam(pc.kind, pc.opts);
         prepCamSeen.current = prepCamKey;
         viewModeRef.current = 'prep';
         lastFieldRef.current = null;
@@ -849,7 +733,6 @@ function MatchScreen() {
     // a lone player's boss field (solo modes, the odd player of a co-op Final Assault: the `_s` templates route every
     // enemy to the left objective) is framed on its own half like the ‹ › half view; pairs start on 全景
     const lone = kind === 'boss' && members.length === 1;
-    // 攻方（进攻方）在 COMBAT 观战里没有自己的 field，取景与「观战该 field」完全一致：走下面这一支原样的 kind/rect
     setCam(kind, helperHalf ? layerCamera(field, helperHalf, side)
       : lone ? { rect: field.rect, side, half: true } : { rect: field.rect, side, ...(field.prep ? { shop: false } : {}) });
     audio.setFieldUnits(field.units);
@@ -983,8 +866,8 @@ function MatchScreen() {
     if (!view || viewModeRef.current !== 'prep' || !showPrep) return;
     if (live.current.facing) cancelFacingRef.current();
     setSel(null);
-    // 攻方没有自己的棋盘：投放期仍是 pen（prepCamRequest / applyPrepCam），其余原样 prep 请求
-    applyPrepCam();
+    const pc = prepCameraFor(pub, myId, shopFolded, stageLayout);
+    setCam(pc.kind, pc.opts);
   }, [view, prepCamKey, showPrep]);
 
   // the shop bar folded (收起) or unfolded on the own prep board (public issue #5: the board did not grow, while the
@@ -1000,11 +883,6 @@ function MatchScreen() {
   // during the held drag makes that release frame return null; the zoom stays owed until the pen closes
   // (deployZoomRemember). [ASSUMED] no official source settles that order.
   useEffect(() => {
-    // 攻方投放期（2026-11-05 业主第 2 条）：常态取景固定是出怪预览区（pen），收起 / 展开商店（拖拽开始也会折叠一次）
-    // 都不该再请求 prep 取景 —— 两套参数交替就是抖动（拖拽期间的 DROP_CAM 由 setDropCam 自己换）。
-    // 攻方不可摆干员（editable 对 attack 恒假）⇒ deployFold 恒假、这里跳过不会留下一个欠着的部署缩放
-    // （deployZoomedRef 也就一直是 false）。
-    if (attackCam) return;
     const step = deployZoomStep(deployZoomedRef.current, deployFold);
     const next = prepDeployCamera({
       pub, myId, deployFold, releaseDeploy: step.release, folded: shopFolded,
@@ -1016,7 +894,7 @@ function MatchScreen() {
     deployZoomedRef.current = deployZoomRemember(step, { next, pen });
     // the fold zoom and the restore fly with the short FOLD_CAMERA_MS, not a generic camera flight
     if (next) setCam(next.kind, { ...next.opts, ms: FOLD_CAMERA_MS });
-  }, [view, deployFold, shopFolded, showPrep, pen, !!drag, !!facing, prepCamKey, attackCam]);
+  }, [view, deployFold, shopFolded, showPrep, pen, !!drag, !!facing, prepCamKey]);
 
   // 联防 / 最终攻势: the ‹ › pill moves the camera between the field's halves and 全景 (research 09 §3.1)
   useEffect(() => {
@@ -1074,12 +952,7 @@ function MatchScreen() {
       setBanner(null);
       setRoundPop({ round: pub.round, left: roundsToBoss(pub), sub: b.sub, watching: spectator || !alive, key: phaseKey });
     } else if (plate) setBanner({ ...plate, plate: true, key: phaseKey });
-    // 攻方本回合的准备期就是投放窗口，不是休整期，不放这块 ROUND NN // REST 横幅：2026-11-05 真机（对抗档第 2 回合，
-    // shots/v-12-3d-battle.png）里它横在屏幕中部（y 306–413、x ≈170–1109），把右下出怪口的红色投放框（x 957–1073 /
-    // y 293–389）盖到只剩顶边 y 293–305，同帧上方投放面板却写着「正在投放」。判据复用 confDropWindow（攻方 + 投放
-    // 窗口开着：pub.confront.active 且 stage == null，server/match/match/views.js 只在本回合攻防的 PREP 这么发）；
-    // 守方 / 协同 / 单人等 pub.confront 缺失或本席不是攻方的局面它恒为 false，行为与改动前逐字节一致。
-    else if (b && !(phase === PHASE.PREP && confDropWindow)) setBanner({ ...b, key: phaseKey });
+    else if (b) setBanner({ ...b, key: phaseKey });
     if (phase === PHASE.ROUND_START) audio.sfx('roundStart');
     else if (phase === PHASE.PREP) audio.sfx('rest', { volume: 0.7 });
     else if (phase === PHASE.COMBAT) audio.sfx('battleStart');
@@ -1824,12 +1697,6 @@ function MatchScreen() {
         toggleReady(!L.priv.ready);
         return;
       }
-      // 攻方按 D = 升级**怪物卡池**（业主 2026-11-04「参考卫戍协议干员商店」；等级挂 Match、跨回合持久）。
-      // **怪物升级不受干员商店的 editable 限制**（2026-11-06）：`editable` 带 `myRole !== 'attack'`（384 行）⇒ 攻方
-      // 恒 false；这一条原先排在下面那句「editable 为假就早退」之后，D 键对攻方永远到不了（也排不到干员商店的
-      // shopBlockReason 之前）。只把这一条提到早退之前：其余热键（买 / 刷新 / 冻结 / 退场 / 出售）照旧按
-      // editable 早退，守方 / 干员商店行为不变。
-      if (act === 'levelUp' && L.monsterShopOpen) { actions.monsterLevelUp(); return; }
       if (!L.editable) return;
       if (act === 'buy') {
         if (L.drag || L.facing || !pointer || pointer.buttons) return;
@@ -2046,12 +1913,6 @@ function MatchScreen() {
         speed=${playRate} onSpeed=${battleRunner ? (n) => setPlayRate(battleRunner.setRate(n)) : null}
         spectators=${specFacts.list} myId=${myId} isHost=${specFacts.isHost} onRemoveSpectator=${removeSpectator} room=${modRoom} />
 
-      ${/* 攻方「当前投放」小悬浮窗（2026-11-06 业主：中央「本回合你是进攻方」绿块太挡棋盘，去掉；改在盟约条那一行的
-           右端挂一个小窗）。投放窗口读实时草稿（每条可撤回），公示 / COMBAT / SETTLE 回落到 mySub.picks 的冻结值；
-           守方 / 协同 / 单人（没有 pub.confront 或角色不是 attack）整块不渲染。非模态，不弹名单。 */ null}
-      ${dropFloatOn ? html`<${MonsterDropFloat} picks=${dropFloatPicks} live=${dropFloatLive}
-        busy=${dropUndoBusy} onUndo=${undoDropAt} />` : null}
-
       ${showBonds ? html`<div class="gm__bonds">
         <button type="button" class="bonds-toggle" aria-expanded=${!bondsCollapsed} aria-controls="match-bond-strip"
           aria-label=${bondsCollapsed ? t('展开盟约') : t('收起盟约')} title=${bondsCollapsed ? t('展开盟约') : t('收起盟约')}
@@ -2064,12 +1925,8 @@ function MatchScreen() {
             setBondsCollapsed(!bondsCollapsed);
           }}><${Icon} name=${bondsCollapsed ? 'chevronRight' : 'chevronLeft'} /></button>
         <div id="match-bond-strip" class="gm__bond-list" hidden=${bondsCollapsed}>
-          ${/* 攻方回合（2026-11-04 业主口径）：他**没有**干员盟约，只有怪物方的独立盟约 —— 这条闸门按角色判，
-               不看 strip 指向谁：COMBAT 里攻方 watch 的是守方的战场，此时 stripBonds 是**守方**的干员盟约，同样不画。 */ null}
-          ${myRole === 'attack'
-            ? html`<${MonsterBondStrip} bonds=${monsterShop && monsterShop.round === pub?.round ? (monsterShop.bonds || null) : null} />`
-            : html`<${BondStrip} bonds=${stripBonds} layersDisabled=${layersDisabled} openId=${bondPop && bondPop.ownerId === strip.ownerId ? bondPop.bondId : null}
-            owner=${strip.name} onOpen=${(id) => openBond(id, strip.ownerId, 'strip')} />`}
+          <${BondStrip} bonds=${bondRows} layersDisabled=${layersDisabled} openId=${bondPop && bondPop.ownerId === strip.ownerId ? bondPop.bondId : null}
+            owner=${strip.name} onOpen=${(id) => openBond(id, strip.ownerId, 'strip')} />
         </div>
       </div>` : null}
 
@@ -2092,26 +1949,17 @@ function MatchScreen() {
       <${RevivePlate} revival=${pub?.revival} myId=${myId}
         onRevive=${(playerId) => actions.revive(playerId, pub?.revival?.round)} />
 
-      ${/* 单人掌握怪物（2026-11-06 业主）：master 模式下只有每队第一位存活攻方能操作怪物商店，
-           其余攻方收到的是只读帧（open:true / readOnly:true / slots:[]）—— 这里只加一行提示，不动别的 UI。 */ null}
-      ${myRole === 'attack' && pub?.confront?.monsterMode === 'master' && monsterShop && monsterShop.open === true && monsterShop.readOnly === true
-        ? html`<div class="gm__watching" role="status"><${GIcon} name="eye" /><span>${t('队长操作中')}</span></div>` : null}
-
       ${showShop ? html`<${ShopBar} priv=${priv} editable=${editable} collapsed=${barCollapsed} refreshBusy=${refreshBusy} onCollapse=${setCollapsed}
         barRef=${barRef} offBonds=${offBonds} econ=${econ}
-        monsterShop=${myRole === 'attack' ? monsterShop : null}
-        monsterEditable=${confDropWindow}
-        view=${view} onDropCam=${setDropCam}
         onOpenShop=${String(pub?.modeId || '').startsWith('mode_xie_') ? () => { net.request('g.meltOpen', {}).catch(() => {}); } : null}
-        onBuy=${buy} onLevel=${() => actions.levelUp()} onMonsterLevel=${() => actions.monsterLevelUp()} onRefresh=${() => actions.refresh()} onFreeze=${() => actions.freeze()}
+        onBuy=${buy} onLevel=${() => actions.levelUp()} onRefresh=${() => actions.refresh()} onFreeze=${() => actions.freeze()}
         onDetail=${(id, kind, hint) => setDetail({ kind: kind === 'item' ? 'item' : 'chess', id, hint: hint || null, tap: ++cardTap.current })}
         onDetailClose=${() => setDetail((d) => (d?.kind === 'chess' || d?.kind === 'item' ? null : d))}
         onRefuse=${(reason) => { toast(reason, 'warn'); audio.sfx('error', { volume: 0.5 }); }}
         reward=${phase === PHASE.PREP && !rewardMin ? priv?.shop?.rewardOffer || null : null}
         onReward=${(i) => actions.reward(i)} onRewardLater=${() => setRewardMin(true)} onArm=${setArmedCard} />` : null}
 
-      ${/* 攻方没有干员商店 ⇒ 晋升奖励（RewardOverlay）对他没有意义：点了也只会得到 WRONG_PHASE（2026-11-04 业主口径） */ null}
-      ${phase === PHASE.PREP && myRole !== 'attack' && priv?.shop?.rewardOffer ? html`<${RewardOverlay} priv=${priv} minimized=${rewardMin || barCollapsed}
+      ${phase === PHASE.PREP && priv?.shop?.rewardOffer ? html`<${RewardOverlay} priv=${priv} minimized=${rewardMin || barCollapsed}
         onMinimize=${(m) => { setRewardMin(m); if (!m) setCollapsed(false); }} />` : null}
 
       ${combat || mode === 'settle' ? html`<${CombatHud} pub=${pub} myId=${myId} watching=${watchingNow} hud=${hud} myDone=${!!myDone && alive}
@@ -2175,16 +2023,18 @@ function MatchScreen() {
       ${showMetrics && metricsOpen ? html`<${CombatMetricsPanel} myId=${myId} onClose=${() => setMetricsOpen(false)} />` : null}
       ${pub?.phase === PHASE.EVENT ? html`<${EventOverlay} pub=${pub} busy=${eventBusy}
         onPick=${async (target) => { setEventBusy(true); try { await actions.eventPick(target); } finally { setEventBusy(false); } }} />` : null}
-      ${pub?.confront && ((myRole === 'attack' && confBounty && pub.confront.active === true && confStage === 'target') || confStage === 'roster')
-        ? html`<${ConfrontOverlay} pub=${pub} busy=${confBusy}
-        onTarget=${async (targetPlayerId) => { setConfBusy(true); try { await actions.confrontTarget(targetPlayerId); } finally { setConfBusy(false); } }} />` : null}
-      ${/* 投放名单整屏卡：悬赏档（versusRule === 'bounty'）**不画**（2026-11-05 业主第 4 条，只留右下角那块 5 秒公示）。
-           控怪档本局只弹一次（ui/confrontOverlay.js 的 clashFirstOfMatch），并且**只给守方**（2026-11-06 业主：
-           「投放方不显示投放名单，仅对面显示」）—— 攻方自己有 MonsterDropFloat，不再吃这块整屏。 */ null}
-      ${pub?.confront && pub.confront.applied && !confBounty && myRole !== 'attack'
-        ? html`<${ConfrontClash} pub=${pub} />` : null}
-      ${/* 原中央「本回合你是进攻方」绿块（.gm__attackwait，role="status"）2026-11-06 删：业主嫌它挡棋盘。
-           它的「已投 N 只」与「撤回上一只」搬进了上面的 MonsterDropFloat（那个小窗在 .gm__hud 顶部渲染）。 */ null}
+      ${pub?.confront && ((myRole === 'attack' && (pub.confront.active || pub.confront.roster)) || (myRole === 'defend' && pub.confront.roster)) ? html`<${ConfrontOverlay} pub=${pub} busy=${confBusy}
+        onTarget=${async (targetPlayerId) => { setConfBusy(true); try { await actions.confrontTarget(targetPlayerId); } finally { setConfBusy(false); } }}
+        onConfirm=${async (group, position, picks, commit, bosses) => { setConfBusy(true); try { await actions.confront(group, position, picks, commit, bosses); } finally { setConfBusy(false); } }} />` : null}
+      ${pub?.confront && pub.confront.applied ? html`<${ConfrontClash} pub=${pub} />` : null}
+      ${myRole === 'attack' && (phase === PHASE.ROUND_START || phase === PHASE.PREP || phase === PHASE.COMBAT || phase === PHASE.SETTLE) ? html`<div class="gm__attackwait" role="status" data-testid="attack-wait">
+        <div class="gm__attackwait__in">
+          <span class="gm__attackwait__micro">${'HUNTING PHASE // ' + t('进攻')}</span>
+          <div class="gm__attackwait__t"><${Icon} name="sword" />${t('本回合你是进攻方')}</div>
+          <p>${t('怪物已投放，等待守方布阵与作战。点击左侧头像可实时观战。')}</p>
+          ${mySub ? html`<span class="num">${t('本回合投放 {n} 只', { n: mySub.total })}</span>` : html`<span class="t-dim">${t('等待投放结算')}</span>`}
+        </div>
+      </div>` : null}
       ${myRole === 'defend' && phase === PHASE.PREP && Array.isArray(priv?.incoming) && priv.incoming.length ? html`<div class="gm__incoming" data-testid="incoming">
         <div class="gm__incoming__in">
           <div class="gm__incoming__t"><${Icon} name="sword" />${t('来袭怪物')} <b class="num">${priv.incoming.length}</b></div>

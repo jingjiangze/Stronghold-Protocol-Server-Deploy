@@ -99,17 +99,6 @@ export const DIFFICULTY_NAMES = {
 };
 export const DIFFICULTY_COLORS = { ...LEGACY_COLORS, ...TIER_DIFFICULTY_COLORS };
 
-/**
- * 2026-11-05 业主裁决：除肉鸽外，难度一律走「四个正常难度」（标准 / 险境 / 绝境 / 终极模拟）。
- * 肉鸽保留 20 档（它的关卡与名称是按 N 档铺的）。
- * 注意：DIFFICULTIES 本身不动 —— 那是数据侧 20 档的完整清单，服务端校验与版本回退仍要用它。
- * @param {string} roomMode 房间模式（'solo' | 'coop' | 'versus' | 'rogue' | 'xie' …）
- * @returns {readonly string[]}
- */
-export function difficultyOptionsFor(roomMode) {
-  return roomMode === 'rogue' ? DIFFICULTIES : LEGACY_DIFFICULTIES;
-}
-
 // 救援（促融共竞 / DESIGN §29）: LP 归零不再当场淘汰。结算期开一个窗口，**其余全体存活队友同意**后，从共享池
 // 按人头各扣 REVIVAL_COST_PER 点（第 2 次起每人 +REVIVAL_COST_STEP，依次叠加）把目标救回 1 点 LP。
 // 窗口只在结算期、且队伍还没输（teamLp 仍为 null）时开放。
@@ -471,26 +460,6 @@ const HUNT_RHYTHM = Object.freeze({
   merchantRoundCap: 4, merchantUncappedRound: 15,
 });
 export const VERSUS_CONFRONT = Object.freeze({ targetSeconds: 10, ...HUNT_RHYTHM, maxBosses: 32 });
-
-/**
- * 投放名单「不给投放方看」的判据（业主 2026-11-06：「投放方不显示投放名单，仅对面显示」）。纯函数，放 shared 里
- * 是因为客户端（ui/confrontOverlay.js 的 ConfrontOverlay roster 分支 + ConfrontClash）与单测都要用，而客户端组件
- * 本身依赖 preact 的 vendor 模块、node 里 import 不了。
- *
- * 攻方自己这一回合投了什么，MonsterDropFloat 已经逐条列出来了（已投 N 只 + 撤回），再弹一块整屏 / 角落名单纯属
- * 重复且挡战场。
- *
- * 判据用**玩家自己的 `role`**（服务端 players[] 里的 'attack' | 'defend'），**不要**拿 `pub.attackingTeam` 跟
- * `players[].team` 比 —— 前者是队伍 id（0 / 1），后者是队伍名（'red' / 'blue'），2026-11-06 真机就是这么漏的
- * （两边永远不相等 ⇒ 攻方照样看到名单）。非攻守回合 role 为 null ⇒ 返回 false（照常渲染，与改造前一致）；
- * 观战 / 拿不到 role 同样 false。
- * @param {string|null|undefined} myRole
- * @returns {boolean}
- */
-export function rosterHiddenFor(myRole) {
-  return myRole === 'attack';
-}
-
 export const COOP_HUNT = Object.freeze({
   enabled: false, startRounds: Object.freeze([4, 5, 6]), ...HUNT_RHYTHM, targets: Object.freeze(['self', 'mate']),
 });

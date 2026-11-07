@@ -83,9 +83,15 @@ export function sanitizeBotPickList(picks, { timeLimit = 60, cap = 64, metricsOf
   }
   const lim = Number(budget) || 0;
   if (!(lim > 0)) return [];
-  // 路线不计费（2026-11-06 与服务端同源）：match/confront.js 的提交 / 投放判据只看 settle.cost —— 旧码这里
-  // 还按 `routeLen × 1` 额外扣 bot 预算，bot 因此比人类少投几只（只影响 bot 报价，不影响任何一方实际扣款）。
-  const total = () => Number(spentOf(out));
+  const routeCost = () => out.reduce((n, x) => n + (Number(x.routeLen) || 0) * 2, 0);
+  const total = () => Number(spentOf(out)) + routeCost();
+  while (total() > lim && out.some((x) => (Number(x.routeLen) || 0) > 0)) {
+    let worst = -1;
+    let worstLen = 0;
+    out.forEach((x, i) => { const L = Number(x.routeLen) || 0; if (L > worstLen) { worstLen = L; worst = i; } });
+    if (worst < 0) break;
+    delete out[worst].routeIndex; delete out[worst].routeLen; delete out[worst].time;
+  }
   while (out.length && total() > lim) out.pop();
   return out;
 }

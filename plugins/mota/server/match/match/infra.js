@@ -164,48 +164,18 @@ export class MatchInfra {
       this.teamLps.set(t, hp);
     }
     this.teamLp = [...this.teamLps.values()].reduce((s, v) => s + v, 0);
-    this._teamLpShares = null;   // 建池重来：外部写入折算的基线作废（_syncVersusTeamLp 重新记）
     this._syncVersusTeamLp();
   }
   teamHpPool(team) { return this.teamLps ? (this.teamLps.get(team) ?? 0) : null; }
   /** 把池按人数拆分回每个队员的 ps.lp（池是权威，ps.lp 只用于既有 UI / 淘汰判据）。 */
   _syncVersusTeamLp() {
     if (!this.isVersus || !this.teamLps) return;
-    // 每次回写后记下「这一队每人当时的 ps.lp」= 下一次折账的基线（见下面的外部写入折算）。
-    if (!this._teamLpShares) this._teamLpShares = new Map();   // team → Map<playerId, lp as last written>
     for (const t of this.matchTeamIds()) {
-      // 只拆给**存活**队员（2026-11-04 复验修复 5）：淘汰者的 ps.lp 必须留在 0。此前把阵亡者也当分母/受体，
-      // 于是阵亡者被写回非 0（踩 audit 的「eliminated with LP」）且 Σ alive lp 永远小于池（踩 startFinalAssault 的
-      // `team LP != Σ alive LP`）。
-      const members = this.order.filter((p) => p.alive && this.teamIdOf(p) === t);
-      // 整队全灭（或池归零到没人可领）：本队一个字段都不写，直接看下一队 —— 不能整体 return，否则另一队
-      // 在同一次调用里也拿不到回写。
-      if (!members.length) continue;
-      // 未走池的外部写入折进池（2026-11-06）：rule 藏品 kingCrystal「战斗结束后使目标生命 −2」等直接写 ps.lp
-      // （match/meltdown.js applyRelicLpDrain），而这里一覆盖就把它抹掉了。
-      // **双向折账**（2026-11-06 业主第 3 条）：旧码只折「净扣减」，加血类外部写入（meltdown 事件回血、revival
-      // 救援把 lp 拉回 1）下一次拆池就被覆盖 —— 玩家看到血条涨了又掉回去。现在按 (now − was) 的**代数和**折进池，
-      // 两个方向都不丢。Δ 按人算，所以中途退出 / 淘汰的队员（已不在 members 里）不会被误折 —— 他们那一份留在池里
-      // 照常重新分给活着的队友。`_teamLpShares` 记的是「上一次本函数写下去的值」，所以只有真·外部写入才有 Δ。
-      let pool = this.teamLps.get(t) ?? 0;
-      const prev = this._teamLpShares.get(t) || null;
-      if (prev) {
-        let delta = 0;
-        for (const p of members) {
-          const was = prev.get(p.playerId);
-          if (was == null) continue;
-          delta += Math.max(0, Number(p.lp) || 0) - was;
-        }
-        if (delta !== 0) {
-          pool = Math.max(0, pool + delta);
-          this.teamLps.set(t, pool);
-          this.teamLp = [...this.teamLps.values()].reduce((s, v) => s + v, 0);
-        }
-      }
-      const n = members.length;
+      const pool = this.teamLps.get(t) ?? 0;
+      const members = this.order.filter((p) => this.teamIdOf(p) === t);
+      const n = members.length || 1;
       const base = Math.floor(pool / n);
       members.forEach((p, i) => { p.lp = base + (i < pool - base * n ? 1 : 0); });
-      this._teamLpShares.set(t, new Map(members.map((p) => [p.playerId, p.lp])));
     }
   }
   /** 从某队共享池扣血（不为负），返回剩余。 */

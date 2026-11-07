@@ -5,11 +5,10 @@
 // Installed on Match.prototype by server/match/Match.js (a method container: never instantiated; `this` is the match).
 
 import { PHASE, ERR } from '../../../shared/constants.js';
-import { generateDraft, applyCard, bountyBattles, isMultiRoundBounty, bountyCard, cardAddsOnlyOperatorLayers } from '../choices.js';
+import { generateDraft, applyCard, bountyBattles, isMultiRoundBounty, bountyCard } from '../choices.js';
 import { onPickCard } from '../botEmotes.js';
 import { weightedPick } from '../waves.js';
-// AI 策略按模式独立（Match.botStrategy，Match 构造期解析）；策略缺失时才回落到 LEGACY_BOT 的 botPickCard。
-import { LEGACY_BOT } from '../botContract.js';
+import { botPickCard } from '../bot.js';
 import { OK, fail, DELAYS } from './common.js';
 
 /** Cards of the personal choice (PRTS 卫戍协议：盟约 下半 §法术 教鞭: "于3个战术特训的悬赏任务中选择一项"). */
@@ -41,32 +40,6 @@ export class MatchSpDraft {
 
   spCardAvailable(card) { return !!card && this.sp?.taken[card.idx] == null && (card.kind !== 'item' || this.itemPool.canGain(card.id)); }
 
-  /**
-   * 这一手**对这个玩家**没有意义的卡（2026-11-04 体验修复）：攻方回合的「只加干员盟约层数」战术卡（盟誓 /
-   * global_special_choice_bond_addlayer）是空操作 —— 攻方没有干员盟约，`PlayerState.addLayers` 在攻方回合直接
-   * return 0（player/economy.js），而卡照常被消耗、没有任何提示。这类卡不进攻方候选，超时 / bot 也不会自动挑到它。
-   * 判据与 `monsterShop.js` / `views.js` 同一口径（`isRoleRound()` + 攻方），守方、coop、solo 一律不受影响
-   * （`isRoleRound()` 只在对抗局的攻守回合为真）。**不改** `addLayers` 本身：它仍是最后一道闸门。
-   * 注：客户端仍然把整副卡画出来（public 帧不带候选标记，views.js / 客户端不在本次范围内）——
-   * 攻方手点这类卡会得到 BAD_TARGET（明确的拒绝 + 提示），不再是「静默消耗」。
-   */
-  spCardBlocked(ps, card) {
-    if (!ps || !card || card.kind !== 'tactic') return false;
-    if (typeof this.isRoleRound !== 'function' || this.isRoleRound() !== true) return false;
-    if (typeof this.isAttacker !== 'function' || this.isAttacker(ps) !== true) return false;
-    return cardAddsOnlyOperatorLayers(this.gd, card.id);
-  }
-
-  /** 这一手可以给 `ps` 的卡：可用（没被拿走 / 道具还能拿）**且**对他有意义（见 spCardBlocked）。 */
-  spCardPickable(ps, card) { return this.spCardAvailable(card) && !this.spCardBlocked(ps, card); }
-
-  /** `ps` 此刻的候选卡（超时随机、bot 选择、意图校验、以及「还有没有牌可选」都走这一个列表）。 */
-  spCardsFor(ps) {
-    const s = this.sp;
-    if (!s) return [];
-    return s.cards.filter((c) => this.spCardPickable(ps, c));
-  }
-
   startSpTurn() {
     const s = this.sp;
     this.cancel(this._turnTimer);
@@ -76,9 +49,7 @@ export class MatchSpDraft {
       if (ps && ps.alive && s.picks[ps.playerId] == null) break;
       s.idx++;
     }
-    // 候选 = 当前这一手玩家的可用卡（攻方滤掉「只加干员盟约层数」的卡，见 spCardBlocked）：
-    // `s.order[s.idx]` 越界时 players.get 给 undefined ⇒ 不过滤，与改造前一致（只用于「还有没有牌可选」）
-    const available = this.spCardsFor(this.players.get(s.order[s.idx])).map(c => c.idx);
+    const available = s.cards.filter(c => this.spCardAvailable(c)).map(c => c.idx);
     if (s.idx >= s.order.length || !available.length) { this.setDeadline(0); this.later(0, () => this.finishSpDraft()); return; }
     const token = ++this._turnToken;
     if (!s.untimed) {
@@ -88,7 +59,7 @@ export class MatchSpDraft {
         if (this.phase !== PHASE.SP_DRAFT || token !== this._turnToken) return;
         const ps = this.players.get(this.spTurn());
         if (!ps) return;
-        const avail = this.spCardsFor(ps).map(c => c.idx);
+        const avail = s.cards.filter(c => this.spCardAvailable(c)).map(c => c.idx);
         if (!avail.length) { this.finishSpDraft(); return; }
         this._applyCard(ps, avail[Math.floor(this.rngDraft() * avail.length)]);
       });
@@ -107,9 +78,9 @@ export class MatchSpDraft {
       if (this.phase !== PHASE.SP_DRAFT || token !== this._turnToken || !this.sp) return;
       const ps = this.players.get(this.spTurn());
       if (!ps || !ps.botControlled) return;
-      const avail = this.spCardsFor(ps).map(c => c.idx);
+      const avail = this.sp.cards.filter(c => this.spCardAvailable(c)).map(c => c.idx);
       if (!avail.length) return;
-      this._applyCard(ps, (this.botStrategy?.pickCard ?? LEGACY_BOT.pickCard)(this, ps, this.sp.cards, avail));
+      this._applyCard(ps, botPickCard(this, ps, this.sp.cards, avail));
     });
   }
 
@@ -119,8 +90,6 @@ export class MatchSpDraft {
     if (this.sp.picks[ps.playerId] != null) return fail(ERR.ALREADY);
     if (this.spTurn() !== ps.playerId) return fail(ERR.NOT_YOUR_TURN);
     if (!Number.isInteger(idx) || idx < 0 || idx >= this.sp.cards.length) return fail(ERR.BAD_TARGET);
-    // 攻方手点一张「只加干员盟约层数」的卡：明确拒绝（不再静默消耗、也不发一张无效的卡），见 spCardBlocked
-    if (this.spCardBlocked(ps, this.sp.cards[idx])) return fail(ERR.BAD_TARGET, 'this card does nothing for the attacking team'); // i18n-ignore: 服务端内部 detail
     if (!this.spCardAvailable(this.sp.cards[idx])) return fail(ERR.SOLD_OUT);
     this._applyCard(ps, idx);
     return OK;
@@ -128,8 +97,7 @@ export class MatchSpDraft {
 
   _applyCard(ps, idx) {
     const s = this.sp;
-    // 候选的最终闸门（与 spCardsFor / pickCard 同一判据）：攻方的纯加层卡不落地
-    if (!s || s.picks[ps.playerId] != null || !this.spCardPickable(ps, s.cards[idx])) return;
+    if (!s || s.picks[ps.playerId] != null || !this.spCardAvailable(s.cards[idx])) return;
     const card = s.cards[idx];
     if (!card) return;
     s.picks[ps.playerId] = idx;
@@ -195,7 +163,7 @@ export class MatchSpDraft {
     if (!pending) return undefined;
     const indices = pending.cards.map((c, i) => i);
     const idx = mode === 'bot'
-      ? (this.botStrategy?.pickCard ?? LEGACY_BOT.pickCard)(this, ps, pending.cards.map((c) => bountyCard(this.gd, c)), indices)
+      ? botPickCard(this, ps, pending.cards.map((c) => bountyCard(this.gd, c)), indices)
       : this.rngMeta.pick(indices);
     return this.pickPersonalChoice(ps, idx, pending.id);
   }

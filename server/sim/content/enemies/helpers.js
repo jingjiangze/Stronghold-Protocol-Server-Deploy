@@ -329,10 +329,6 @@ export function spawnChildren(b, parent, key, n, opts = {}) {
     const c = b.spawnEnemy(key, {
       pos, route, mods, tag: opts.tag ?? null, countInTotal: opts.countInTotal, dir: opts.dir,
       ownerPlayerId: parent.ownerId ?? null, sourcePlayerId: parent.sourcePlayerId ?? null,
-      // 对抗投放归属（2026-11-06）：分裂 / 召唤出来的子怪也算投放者的 —— 不继承的话，投放怪的子怪
-      // 漏过 / 被击杀都记不到投放席位上（settle 的 confrontKills / confrontLeaks 只认 seat）。
-      // 价格不继承：子怪按一只 1 点计（confrontPrice 缺省 = 1）。插件树 plugins/mota/server/sim 同款。
-      confrontSeat: Number.isInteger(parent.confrontSeat) ? parent.confrontSeat : null,
     });
     if (c) out.push(c);
   }

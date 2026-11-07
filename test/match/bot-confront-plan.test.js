@@ -35,22 +35,16 @@ test('窗口为负时不给 time（等同人类省略）', () => {
   assert.equal(r[0].routeIndex, 0);
 });
 
-test('路线不计费：预算只看 spentOf，长路线不被让出（2026-11-06 口径统一）', () => {
-  // 旧契约：路线长度 ×1 也算进 bot 预算，超支时先让最长的那条。2026-11-06 起服务端（confront.js 的提交 / 投放
-  // 判据）只看 settle.cost，路线费整条删除 —— bot 的报价必须同源，否则它会比人类少投几只。
+test('预算超支：先让最长路线（不是按输入顺序）', () => {
+  // 两条路线成本 2 与 60，预算 40 ⇒ 只应让出长的那条
   const metricsOf = (i) => (i === 1 ? { len: 30, travel: 1 } : { len: 1, travel: 1 });
   const r = sanitizeBotPickList(
     [{ enemyKey: 'a', routeIndex: 0 }, { enemyKey: 'b', routeIndex: 1 }],
     { timeLimit: 60, cap: 8, metricsOf, spentOf: () => 20, budget: 40 },
   );
   assert.equal(r.length, 2);
-  assert.equal(r[0].routeIndex, 0);
-  assert.equal(r[1].routeIndex, 1, '长路线不再占预算，不该被让出');
-});
-
-test('超支按只数从尾部削（spentOf 已经超过预算）', () => {
-  const r = sanitizeBotPickList(pick(4), { timeLimit: 60, cap: 8, metricsOf: ok, spentOf: () => 50, budget: 10 });
-  assert.equal(r.length, 0);
+  assert.equal(r[0].routeIndex, 0, '短的合法路线被误删');
+  assert.equal(r[1].routeIndex, undefined, '长路线应被让出');
 });
 
 test('预算 <= 0 返回空（与人类路径一致）', () => {

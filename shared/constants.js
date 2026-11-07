@@ -105,17 +105,6 @@ export const DIFFICULTY_COLORS = { FUNNY: '#f6a329', NORMAL: '#e85a1a', HARD: '#
 export const TRAINING_DIFFICULTY = 'TRAINING';
 export const TRAINING_MODE_ID = 'mode_training_1';
 
-/**
- * 2026-11-05 业主裁决：除肉鸽外，难度一律走「四个正常难度」（标准 / 险境 / 绝境 / 终极模拟）。
- * 肉鸽保留 20 档（它的关卡与名称是按 N 档铺的）。
- * 注意：DIFFICULTIES 本身不动 —— 那是数据侧 20 档的完整清单，服务端校验与版本回退仍要用它。
- * @param {string} roomMode 房间模式（'solo' | 'coop' | 'versus' | 'rogue' | 'xie' …）
- * @returns {readonly string[]}
- */
-export function difficultyOptionsFor(roomMode) {
-  return roomMode === 'rogue' ? DIFFICULTIES : LEGACY_DIFFICULTIES;
-}
-
 // modeId in data/config.json = `mode_${type}_${difficulty.toLowerCase()}` with type single|multi.
 // 训练模式 has no single/multi family in its id: it is always `mode_training_1` (whatever the room mode — a LOCAL mode
 // is single-player by gamedata `isSolo`, the caller gates which room modes may ask for it).

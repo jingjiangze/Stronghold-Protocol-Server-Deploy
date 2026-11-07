@@ -9,12 +9,10 @@ import { TEST_PUBLIC_LOG } from '../../../shared/testMode.js';
 import { boardOrder, pieceDir } from '../board.js';
 import { bondList, offBondCounts } from '../bondsMeta.js';
 import { cardView } from '../choices.js';
-import { bountySpawns, previewOf, gateOf, isFlyKey } from '../waves.js';
+import { bountySpawns, previewOf, gateOf } from '../waves.js';
 import { timelineAt } from '../fields.js';
 import { bossFieldPlacement } from '../finalAssault.js';
 import { battleProgress } from '../../sim/spec.js';
-// 攻方回合（2026-11-04 业主口径）：公共行的干员盟约同样置空（与 m.private 同一个判据）。
-import { isAttackerRound } from '../monsterBonds.js';
 
 /** Milliseconds since the match started. A stamp before the start, or a bad stamp, is 0. The stored log keeps the epoch. */
 function auditClock(at, startedAt) {
@@ -40,38 +38,6 @@ function cultivationInfo(lo) {
   const out = {};
   if (lo && Number.isInteger(lo.potential) && lo.potential < 6) out.potential = lo.potential;
   if (lo && Number.isInteger(lo.cultivate)) out.cultivate = lo.cultivate;
-  return out;
-}
-
-/**
- * 攻方投放草稿（`ps.monsterDraft.picks`，monsterShop.js 的 buyMonster / placeMonster 写）→ `previewOf` 的 spawn-like 列表。
- * 攻方本回合没有棋盘，`nextEnemiesFor` 既有的几条分支给不出内容（它们都是守方的波次 / 首领组），预备区因而是空的；
- * 业主 2026-11-05：攻方投放期的预备区要显示「我投放的怪」（数量 / 类型 / 门），所以由草稿自己造预览。
- * 每条 pick = 1 只（`count: 1`）—— 同 key 连投 3 只就是 3 条，客户端 `layoutPen` 按条摆、`count` 只参与稀疏化，
- * 条数即只数。`fly` / `elite` 取官方口径（waves.js 的 isFlyKey / previewInfo）：怪表里查不到就 `false`，绝不抛。
- * @param {object} gd @param {object} ps
- * @returns {Array<{ enemyKey: string, count: number, time: number, preview: object }>}
- */
-function monsterDraftSpawns(gd, ps) {
-  const picks = ps && ps.monsterDraft && Array.isArray(ps.monsterDraft.picks) ? ps.monsterDraft.picks : [];
-  const out = [];
-  for (const p of picks) {
-    const key = p && typeof p.enemyKey === 'string' && p.enemyKey ? p.enemyKey : null;
-    if (!key) continue;
-    let fly = false;
-    let rank = null;
-    try {
-      fly = isFlyKey(gd, key);
-      const e = gd && typeof gd.enemy === 'function' ? gd.enemy(key) : null;
-      rank = e && typeof e.rank === 'string' ? e.rank : null;
-    } catch { fly = false; rank = null; }
-    out.push({
-      enemyKey: key,
-      count: 1,
-      time: 0,
-      preview: { gate: p.gate === 'upper' ? 'upper' : 'lower', fly, elite: rank === 'ELITE', boss: false },
-    });
-  }
   return out;
 }
 
@@ -160,30 +126,19 @@ export class MatchViews {
       // 事件期（R4/R5/R6 起）：EventOverlay 读 pub.event —— eventView() 以前从未被合并，事件期面板永远不显示。
       ...(this.huntMode ? { event: this.eventView() } : {}),
       // 狩猎期：只带本队可见的提交（对手由 messaging 屏蔽）；名单公示用 roster.until 播动画
-      // 2026-11-04：投放窗口 = 攻守回合的 PREP（选目标已结束、投放公示未开始 ⇒ confrontStage == null）。此时 this.confront
-      // 还没冻结（phases.js 每回合清成 null，finishConfront 才快照），面板必须读活的 confrontSubs；COMBAT / SETTLE 才读冻结值。
       ...(this.isVersus && this.confrontActive && this.confrontActive()
-        && (this.phase === PHASE.CONFRONT
-          || (this.phase === PHASE.PREP && this.confrontStage == null && typeof this.isRoleRound === 'function' && this.isRoleRound())
-          || (this.confront && this.confront.size)) ? (() => {
-        // 投放中（CONFRONT 选目标 / PREP 投放）读活数据；其余阶段读冻结快照
-        const placing = this.phase === PHASE.CONFRONT
-          || (this.phase === PHASE.PREP && this.confrontStage == null && typeof this.isRoleRound === 'function' && this.isRoleRound());
-        const src = placing ? (this.confrontSubs || new Map()) : (this.confront || new Map());
+        && (this.phase === PHASE.CONFRONT || (this.confront && this.confront.size)) ? (() => {
+        const src = this.phase === PHASE.CONFRONT ? (this.confrontSubs || new Map()) : (this.confront || new Map());
         const subs = {};
         for (const [pid, s2] of src) subs[pid] = s2 ? { group: s2.group, position: s2.position || null, picks: s2.picks || [], total: (s2.picks || []).length, target: s2.target || null, coins: this.confrontBountyOf(s2.picks), committed: s2.committed === true } : null;
         return {
           confront: {
-            active: placing,
+            active: this.phase === PHASE.CONFRONT,
             stage: this.phase === PHASE.CONFRONT ? (this.confrontStage || 'target') : null,
             roster: this.phase === PHASE.CONFRONT && this.confrontStage === 'roster' ? { until: this.deadline, ms: VERSUS_CONFRONT.rosterMs } : null,
             round: this.round,
             ratio: this.confrontRatio ? this.confrontRatio() : null,
-            // 2026-11-06 价值同源：面板预算 = **怪物资金账户余额**（confrontBudget 现在读 monsterFundsOf，与
-            // monsterShopFrame 的 `budget` 是同一个口径；商店关着才回落到旧的回合预算公式）。
             budget: this.confrontBudget ? this.confrontBudget() : null,
-            // 怪物模式（2026-11-06）：shared / solo / master —— 客户端据此在攻方只读时显示「队长操作中」。
-            monsterMode: this.monsterMode || null,
             // 2026-11-01 P1（审计 D12/D13/死 UI）：规则档与同盟狩猎标记下发（客户端 conf.hunt 以前读不到）；
             // 事件期 boss 格下发（池 + 上限），客户端据此渲染选择区 —— boss 不占预算、不计只数上限
             versusRule: this.versusRule || null,
@@ -195,9 +150,7 @@ export class MatchViews {
                 ? (this.confrontBossPool ? this.confrontBossPool() : []).map((r) => ({ key: r.key, name: r.name, coin: r.coin }))
                 : [],
             },
-            // 本回合一次最多放几只：协议硬上限 maxPicks（防一次误提交塞爆消息）。注释 2026-11-06 纠偏 ——
-            // 真正的约束**不是**「Σ价值 ≤ 预算」：商店开着时判据是「尚未付款的 Σ单价 ≤ 怪物资金账户余额」
-            // （confrontPurchaseLimit），另有一道「池里 tier ≤ 商店等级」的卡池闸门；`maxPicks` 只管条数上限。
+            // 本回合一次最多放几只：协议硬上限 maxPicks（防一次误提交塞爆消息），真正的约束是 Σ价值 ≤ 预算
             maxPicks: this.confrontPlaceCap ? this.confrontPlaceCap() : VERSUS_CONFRONT.maxPicks,
             targets: this.confrontTargets ? Object.fromEntries(this.confrontTargets) : {},
             groups: (this.confrontGroups ? this.confrontGroups() : []).map((g) => ({ id: g.id, name: g.name, icon: g.icon, desc: g.desc, rows: (g.rows || []).map((r) => ({ key: r.key, name: r.name, value: r.value })) })),
@@ -314,8 +267,7 @@ export class MatchViews {
       // nobody can watch an eliminated player (g.watch refuses them, they have no field) and the result screen reads
       // m.result's own bonds, so their layers would only cost every m.public bytes for the rest of the match
       // (the mode-off bonds with members included, `off: true`, as in m.private — bondsMeta.offBondCounts)
-      // 攻方回合（2026-11-04 业主口径）：他这一回合只有怪物方盟约 ⇒ 公共行也给 []（队友 / 观战不再看到干员盟约条）。
-      bonds: ps.alive && !isAttackerRound(this, ps) ? bondList(this.gd, ps.bondsView(), { off: offBondCounts(ps.gd || this.gd, ps) }) : [],
+      bonds: ps.alive ? bondList(this.gd, ps.bondsView(), { off: offBondCounts(ps.gd || this.gd, ps) }) : [],
       fieldId: this.fieldOf(ps),
       status: this.statusOf(ps),
       autoplay: ps.autoplay,
@@ -387,52 +339,19 @@ export class MatchViews {
    */
   _pendingLpView(ps) {
     if (!ps || !ps.alive || (this.phase !== PHASE.COMBAT && this.phase !== PHASE.UNITE)) return {};
-    // 2026-11-06 与 settle() 对齐（业主报障「扣血逻辑完全混乱」的显示侧那一半）：
-    //   ① 官方「不计数」怪（unharmful / part）也扣 1 点 —— 旧码只数 `counted`，显示上永远少报；
-    //   ② 带 `confrontSeat` 的条目属于「投放怪」那一笔（按阶位阶梯价、记到队上），这里不重复计。
-    const lossUnits = (r) => (r && Array.isArray(r.leaked)
-      ? r.leaked.filter((l) => l && l.confrontSeat == null && l.uniteRuntime !== true).length : 0);
+    const counted = (r) => (r && Array.isArray(r.leaked) ? r.leaked.filter((l) => l && l.counted !== false).length : 0);
     // 联防: a leaker's enemies still standing on the 联防 field (uncapped), the loss capped like settle()
     const left = this._uniteLeft(ps);
     if (left != null) {
       const loss = Math.min(this.gd.lpCapPerRound, left);
       return loss > 0 ? { uniteLeft: left, pendingLp: loss } : { uniteLeft: left };
     }
-    const ownLossOf = (pid) => {
-      if (this.lastResults.has(pid)) return lossUnits(this.lastResults.get(pid));
-      if (this.phase !== PHASE.COMBAT) return 0;
-      const f = this.fields.find((x) => x && x.kind === 'normal' && Array.isArray(x.players) && x.players.includes(pid));
-      if (!f) return 0;
-      if (f.cc) return f.done && f.result ? lossUnits(f.result.perPlayer && f.result.perPlayer[pid]) : Number(f.progress && f.progress.leaks) || 0;
-      if (f.battle) { try { return battleProgress(f.battle).leaks; } catch { return 0; } }
-      return 0;
-    };
-    let n = ownLossOf(ps.playerId);
-    // 对抗：settle 是**逐队**一次 min(cap, Σ) —— 这里同样按队聚合，否则 2V2 会低报队友那份。
-    if (this.isVersus && this.teamLps) {
-      const myTeam = this.teamIdOf(ps);
-      for (const o of this.alivePlayers()) {
-        if (!o || o.playerId === ps.playerId || this.teamIdOf(o) !== myTeam) continue;
-        n += ownLossOf(o.playerId);
-      }
-      // 投放怪漏过（按价值）也记在队上；未出结果的场在 settle 时才计，这里只看已出结果的
-      for (const f of this.fields || []) {
-        if (!f || !f.done) continue;
-        const fr = f.result && typeof f.result === 'object' ? f.result : null;
-        if (!fr || !fr.confrontLeaks) continue;
-        const teams = new Set();
-        for (const pid of new Set(f.players || [])) {
-          const o = this.order.find((x) => x && x.playerId === pid);
-          if (o) teams.add(this.teamIdOf(o));
-        }
-        if (!teams.has(myTeam)) continue;
-        let c = 0, v = 0;
-        for (const [seat, cnt] of Object.entries(fr.confrontLeaks || {})) {
-          c += Math.max(0, Number(cnt) || 0);
-          v += Math.max(0, Number(fr.confrontLeakValue && fr.confrontLeakValue[seat]) || 0);
-        }
-        n += Math.max(c, v);
-      }
+    let n = 0;
+    if (this.lastResults.has(ps.playerId)) n = counted(this.lastResults.get(ps.playerId));
+    else if (this.phase === PHASE.COMBAT) {
+      const f = this.fields.find((x) => x && x.kind === 'normal' && Array.isArray(x.players) && x.players.includes(ps.playerId));
+      if (f && f.cc) n = f.done && f.result ? counted(f.result.perPlayer && f.result.perPlayer[ps.playerId]) : Number(f.progress && f.progress.leaks) || 0;
+      else if (f && f.battle) { try { n = battleProgress(f.battle).leaks; } catch { n = 0; } }
     }
     const loss = Math.min(this.gd.lpCapPerRound, Math.max(0, Math.trunc(Number(n) || 0)));
     return loss > 0 ? { pendingLp: loss } : {};
@@ -463,16 +382,6 @@ export class MatchViews {
   /** nextEnemies preview for m.private. */
   nextEnemiesFor(ps) {
     if (!ps.alive) return [];
-    // 攻方投放期（业主 2026-11-05）：攻方本回合没有棋盘，下面的分支给的全是**守方**的波次（`this.wave` / 首领组），
-    // 预备区因此是空的。攻方要看见「我投放的怪」——草稿里的每一条 pick 就是一只，按门 / 飞行 / 精英摆进预备区。
-    // 闸门严格四重：PREP + 商店开着（对抗局，`opts.monsterShop !== false`）+ 本席是攻方 + 本席的商店真的开张
-    // （`ps.monsterShop`，monsterShop.js 的 openMonsterShop 只给有投放权的攻方建）—— 守方 / 协同 / 单人 /
-    // 目标选择期（CONFRONT）/ R14·R15（`attackingTeam == null` ⇒ isAttacker false）与投放结束后的收尾帧一律走原路径。
-    // 草稿为空 ⇒ `[]`（攻方看自己的投放，不回落守方波次）。
-    if (this.phase === PHASE.PREP && this.monsterShopOn === true && ps.monsterShop
-      && typeof this.isAttacker === 'function' && this.isAttacker(ps)) {
-      return previewOf(monsterDraftSpawns(this.gd, ps));
-    }
     if (this.bossWaves) {
       const g = this.bossGroupOf(ps);
       if (!g) return [];
