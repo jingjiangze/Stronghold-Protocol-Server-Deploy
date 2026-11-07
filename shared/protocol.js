@@ -746,6 +746,9 @@ export const C2S = {
   'room.setIncompleteMaps': { on: isBool },
   // the host resizes the room before the match: `capacity` is one of ROOM_CAPACITIES and never below the seats taken
   'room.setCapacity': { capacity: (v) => ROOM_CAPACITIES.includes(v) },
+  // 2026-11-07 房间席位数（默认 4）：客户端 ⚙ 的滑条发这条，服务端拒绝小于「已占用最高座位」的值。
+  // 与 `room.setCapacity` 并存 —— 那条是历史键、服务端从未处理；这条才是真正接通的。
+  'room.setSeatCap': { code: (v) => isStr(v, ROOM_CODE_LEN + 2) && /^[A-Za-z0-9]+$/.test(v), seatCap: (v) => ROOM_CAPACITIES.includes(v) },
   /*
    * 危机合约 (shared/contracts.js): the host replaces the room's selection with `contracts` — a small array of
    * contract ids. Validated against the room's size server-side (`contractsValidFor`), so the client only has to send

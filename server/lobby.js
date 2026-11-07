@@ -4,9 +4,10 @@
 // Rules (the choices where DESIGN is silent are marked ▸):
 //   * Rooms are keyed by 4-letter codes from an unambiguous alphabet (no I/O, letters only). Join codes are
 //     case-insensitive.
-//   * 'solo' rooms hold exactly one human and never bots. Every room allocates MAX_SEATS slots and any free one takes a
-//     player, so 'coop' rooms seat up to MAX_SEATS humans (the lobby's mode text advertises the same); a versus room is
-//     the only one that narrows that with `seatCap` (teamSize × 2, 2026-10-27).
+//   * 'solo' rooms hold exactly one human and never bots. Every room opens with DEFAULT_SEATS (4) slots and any free one
+//     takes a player, so a 'coop' room seats 4 humans until its host raises the cap — room.setSeatCap { code, seatCap }
+//     (2026-11-07, 业主: 房主滑条默认 4 人) takes one of ROOM_CAPACITIES (4/8/12/16/20). A versus room's cap is its
+//     teamSize × 2 and has no setter (2026-10-27). The room's `seats` array IS that cap: `seatCap === seats.length`.
 //     Humans and bots take the lowest free seat index; seat indexes never compact.
 //   * ▸ Being in a LOBBY room and sending room.create / room.join implicitly leaves it. While your room is
 //     in a match, create/join of another room fails with ROOM_STARTED (send g.leave or room.leave first).
@@ -14,8 +15,8 @@
 //     host changes it in the room — the event's 联合模拟 creates the room first (research 06 §3.2), the starting
 //     difficulty is not recorded [ASSUMED: 标准, the first one unlocked; the event room research 06 §3.2 describes shows
 //     ♜ 标准模拟 in its footer pill]. The game's own lobby always sends the remembered one.
-//   * Host-only: room.setDifficulty, room.setAiPicksLast, room.setSoloUnlimited, room.setIncompleteMaps, room.addBot,
-//     room.removeBot, room.kick, room.start.
+//   * Host-only: room.setDifficulty, room.setAiPicksLast, room.setSoloUnlimited, room.setIncompleteMaps,
+//     room.setSeatCap, room.addBot, room.removeBot, room.kick, room.start.
 //     ▸ Changing the difficulty or the AI-picks-last option (co-op only) un-readies the other humans.
 //     ▸ 「不限时」 (room.setSoloUnlimited { on }, DESIGN §35.23.10): a solo room of a version whose rules.soloTimed is
 //       true, off by default. On, the match is built with opts.soloUnlimited (preparation and 机变 untimed — the existing
@@ -231,7 +232,7 @@
 
 import { aiTakeover, aiTakeoverDirect, resetAiTakeover, reconcileAiTakeover, maybeRandomAiTakeover } from './aiTakeover.js';
 import { randomBytes, randomInt } from 'node:crypto';
-import { DIFFICULTIES, LEGACY_DIFFICULTIES, TRAINING_DIFFICULTY, difficultyRank, difficultiesFor, ERR, MAX_SEATS, MAX_SPECTATORS, ROOM_CODE_LEN, modeIdFor } from '../shared/constants.js';
+import { DIFFICULTIES, LEGACY_DIFFICULTIES, TRAINING_DIFFICULTY, difficultyRank, difficultiesFor, ERR, DEFAULT_SEATS, MAX_SPECTATORS, ROOM_CAPACITIES, ROOM_CODE_LEN, modeIdFor } from '../shared/constants.js';
 import { getData } from './data.js';
 import { checkLoadout, checkLoadoutOps, cultivationCharIds, checkNotOwned, checkDiyPicks, charPotentialChanges, checkSkinSelection, operatorCharIds } from '../shared/protocol.js';
 import { contractsValidFor, resolvePicked } from '../shared/contracts.js';
@@ -373,7 +374,8 @@ function sameSkins(a, b) {
   return ka.length === kb.length && ka.every((k) => a[k] === b[k]);
 }
 
-/** One room: 4 seat slots, host, difficulty, optional running match. */
+/** One room: `seatCap` seat slots (4 by default; the host raises it, a versus room: teamSize × 2), host, difficulty,
+ * optional running match. */
 /** 已占用的玩家座位数（bot 也算；观众不算）——对抗房用它把人数封在 2 × teamSize。 */
 const takenSeats = (room) => room.seats.reduce((n, s) => n + (s ? 1 : 0), 0);
 
@@ -439,8 +441,14 @@ export class Room {
     this.hostId = null;
     /** lobby 级插件扩展（code.lobby）：room.state 的额外字段与房间事件从这里来 */
     this.ext = null;
+    /**
+     * 座位上限 (2026-11-07 业主：默认 4 席): the room opens with DEFAULT_SEATS slots and its host raises / lowers it
+     * with room.setSeatCap — `seats.length` IS this number (`seatCap === seats.length`, always). A versus room's cap is
+     * its teamSize × 2 and has no setter (create). MAX_SEATS is the ceiling of ROOM_CAPACITIES, not the size.
+     */
+    this.seatCap = DEFAULT_SEATS;
     /** @type {(Seat | null)[]} */
-    this.seats = new Array(MAX_SEATS).fill(null);
+    this.seats = new Array(this.seatCap).fill(null);
     /** @type {{ playerId: string, name: string, connected: boolean }[]} spectator seats, ≤ MAX_SPECTATORS (header) */
     this.spectators = [];
     /** @type {any} running Match instance */
@@ -500,6 +508,21 @@ export class Room {
   /** Lowest free seat index, or -1. */
   freeSeat() { return this.seats.indexOf(null); }
 
+  /**
+   * 座位上限 (room.setSeatCap): make the room exactly `cap` slots wide — new tail slots are null, a shrink drops the
+   * tail only. A shrink that would drop a seated player or AI is REFUSED here (`false`, nothing changes): the host's
+   * slider asks for at least the highest occupied seat + 1, and a stale page cannot evict anybody.
+   * @param {number} cap @returns {boolean} whether the room now has `cap` slots
+   */
+  resizeSeats(cap) {
+    if (cap === this.seats.length) { this.seatCap = cap; return true; }
+    if (cap < this.seats.length && this.seats.slice(cap).some((s) => s)) return false;
+    if (cap > this.seats.length) this.seats.push(...new Array(cap - this.seats.length).fill(null));
+    else this.seats.length = cap;
+    this.seatCap = cap;
+    return true;
+  }
+
   /** Humans that have not departed, in seat order. @returns {Seat[]} */
   activeHumans() { return this.seats.filter((s) => s && !s.isBot && !s.left); }
 
@@ -523,9 +546,10 @@ export class Room {
       // ticked. Omitted when empty, so a room without contracts keeps its room.state byte-identical.
       ...(this.contracts.length ? { contracts: this.contracts.slice() } : {}),
       inMatch: !!this.match,
-      // 座位上限（2026-10-27）：对抗房 = 2 × teamSize。此前没有这个字段，客户端按 MAX_SEATS(20) 画满，
-      // 2V2 房也显示 20 个座位（线上反馈）。
-      ...(this.mode === 'versus' && this.teamSize ? { seatCap: this.teamSize * 2 } : {}),
+      // 座位上限：对抗房 = 2 × teamSize（2026-10-27）；其余房间 = 房主选的 seatCap（2026-11-07 业主：默认 4 席，
+      // 客户端滑条改的就是它）。此前非对抗房不下发这个键，客户端按 MAX_SEATS(20) 画满 —— 4 人房也显示 20 个空座位。
+      // 键恒存在：客户端据此画几张座位卡（plugins/*/client/js/screens/room.js normalizeSeats）。
+      seatCap: this.mode === 'versus' && this.teamSize ? this.teamSize * 2 : this.seatCap,
       // 玩法变体（xie / rogue）：客户端按它区分入口与文案
       ...(typeof this.variant === 'string' && this.variant ? { variant: this.variant } : {}),
       seats: this.seats.map((s) => (s
@@ -934,6 +958,7 @@ export class Lobby {
       case 'room.setAiPicksLast': return this.setAiPicksLast(session, msg);
       case 'room.setSoloUnlimited': return this.setSoloUnlimited(session, msg);
       case 'room.setIncompleteMaps': return this.setIncompleteMaps(session, msg);
+      case 'room.setSeatCap': return this.setSeatCap(session, msg);
       case 'room.setAiTakeover': return this.setAiTakeover(session, msg);
       case 'room.setAiRandom': return this.setAiRandom(session, msg);
       case 'room.aiRequest':
@@ -1114,6 +1139,9 @@ export class Lobby {
     // 插件房的分边人数（每队人数，总人数 = 2 × teamSize）：核心只存这一个选项，怎么用由插件的 matchOptions 决定。
     // 2026-10-27 业主：从「只认 2/4」放开到 1..10（总人数 2..20 偶数自定义）。
     if (mode === 'versus') room.teamSize = Number.isInteger(teamSize) && teamSize >= 1 && teamSize <= 10 ? teamSize : 2;
+    // 对抗房的座位数由 teamSize 定（2 × 每队人数，≤ 20）：座位数组跟着它长，room.state.seatCap 同口径。
+    // 其它房间保持构造器给的 DEFAULT_SEATS（4）—— 房主之后用 room.setSeatCap 改。
+    if (mode === 'versus') room.resizeSeats(room.teamSize * 2);
     // 插件房的规则集（例如 协同共竞 'xie'）：核心只存原样字符串，怎么解释由插件的 matchOptions 决定。
     if (typeof variant === 'string' && /^[A-Za-z0-9_.:-]{1,64}$/.test(variant)) room.variant = variant;
     // 对抗是否每回合交换攻守（业主 2026-10-26）：缺省 true（交替）；显式 false 才固定首攻。
@@ -1154,9 +1182,10 @@ export class Lobby {
     if (cur && cur.match) return fail(ERR.ROOM_STARTED, 'leave your running match first');
     if (room.match) return fail(ERR.ROOM_STARTED);
     if (room.mode === 'solo') return fail(ERR.ROOM_FULL, 'solo room');
-    // 对抗房的座位上限 = 2 × 每队人数（2026-10-27）：此前只受 seats 数组长度（20）约束，
-    // 于是 2V2 房能被坐进 5 个人，直到开局 beforeStart 才被拒。
+    // 座位上限：对抗房 = 2 × 每队人数（2026-10-27）；其它房间 = 房主选的 seatCap（2026-11-07 默认 4，此前恒为 20）。
+    // 因为 seats 数组长度就是 seatCap，下面 freeSeat() < 0 已经等价于满员；这里仍先按上限判一次，读起来就是「满」。
     if (room.mode === 'versus' && room.teamSize && takenSeats(room) >= room.teamSize * 2) return fail(ERR.ROOM_FULL);
+    if (takenSeats(room) >= room.seatCap) return fail(ERR.ROOM_FULL);
     const idx = room.freeSeat();
     if (idx < 0) return fail(ERR.ROOM_FULL);
     // a human takes a player seat: the version vote is void (header "Official versions") — before the seat is taken, so
@@ -1420,6 +1449,34 @@ export class Lobby {
       room.soloUnlimited = next;
       this.broadcastState(room);
     }
+    return OK;
+  }
+
+  /**
+   * 房间人数上限 (room.setSeatCap { code, seatCap }; 2026-11-07 业主: 默认 4 席,房主用房间里的滑条改): host-only, before
+   * the match. `seatCap` must be one of ROOM_CAPACITIES (4/8/12/16/20 — the same multiples of 4 the protocol's own
+   * check allows) and it must still hold everybody seated: a shrink never evicts a player or AI, so the lowest accepted
+   * cap is the highest occupied seat + 1 (the client's slider asks for exactly that bound). `code` is the alliance key
+   * the page believes it is in, so a stale tab cannot resize another room. The room's `seats` array grows / shrinks
+   * with the cap (`seatCap === seats.length`) and room.state carries the new number on the next broadcast.
+   * A versus room is BAD_TARGET: its seats come from teamSize (2 × teamSize, room.state.seatCap).
+   */
+  setSeatCap(session, { code, seatCap } = {}) {
+    const room = this.roomOf(session);
+    if (!room) return fail(ERR.NOT_IN_ROOM);
+    if (room.spectatorOf(session.playerId)) return fail(ERR.SPECTATOR);
+    if (room.hostId !== session.playerId) return fail(ERR.NOT_HOST);
+    if (room.match) return fail(ERR.ROOM_STARTED);
+    if (typeof code === 'string' && code.toUpperCase() !== room.code) return fail(ERR.BAD_TARGET, 'stale room code');
+    if (!ROOM_CAPACITIES.includes(seatCap)) return fail(ERR.BAD_TARGET, `seat cap must be one of ${ROOM_CAPACITIES.join('/')}`);
+    if (room.mode === 'versus') return fail(ERR.BAD_TARGET, 'a versus room takes its seats from teamSize');
+    if (seatCap === room.seats.length) return OK;
+    // the seats array is the cap: a shrink into an occupied seat is refused (resizeSeats), never silently clamped —
+    // and a refusal leaves everything else alone (the host's result replay included)
+    if (!room.resizeSeats(seatCap)) return fail(ERR.BAD_TARGET, 'that cap would drop a seated player');
+    this.dropReplay(room, session.playerId);
+    this.log.info(`[lobby] ${room.code} seat cap → ${seatCap}`);
+    this.broadcastState(room);
     return OK;
   }
 
@@ -1959,8 +2016,9 @@ export class Lobby {
     if (room.match) return fail(ERR.ROOM_STARTED);
     this.dropReplay(room, session.playerId);
     if (room.mode === 'solo') return fail(ERR.ROOM_FULL, 'solo rooms cannot have AI teammates');
-    // 对抗房：bot 也算座位，封在 2 × 每队人数（2026-10-27）
+    // 对抗房：bot 也算座位，封在 2 × 每队人数（2026-10-27）；其它房间封在房主选的 seatCap（2026-11-07 默认 4）
     if (room.mode === 'versus' && room.teamSize && takenSeats(room) >= room.teamSize * 2) return fail(ERR.ROOM_FULL);
+    if (takenSeats(room) >= room.seatCap) return fail(ERR.ROOM_FULL);
     const idx = room.freeSeat();
     if (idx < 0) return fail(ERR.ROOM_FULL);
     const used = new Set(room.seats.filter((s) => s && s.isBot).map((s) => s.name));

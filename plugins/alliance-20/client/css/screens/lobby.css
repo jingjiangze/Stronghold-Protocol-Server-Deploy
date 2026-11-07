@@ -1592,7 +1592,11 @@ button.ally-card:disabled { filter: grayscale(.7) brightness(.7); cursor: defaul
 .rs--big .rs-seats { justify-content: flex-start; gap: .16rem; }
 .rseat { --w: min(18vw, 3.4rem, calc((100vw - 1.6rem) / var(--n, 4) - .3rem)); position: relative; flex: none; width: var(--w); display: flex; flex-direction: column;
   animation: sw-in 260ms var(--ease-out) backwards; animation-delay: calc(var(--i) * 60ms); }
-.rs--big .rseat { /* 宽度见上面的自适应规则 */ }
+/* 人数上限 > 4（room.js 加 .rs--big）时按实际席位数均分（--n 由 room.js 内联注入 = seats.length），两头夹住：
+   4 席 = 3.4rem（与 .rseat 的 min() 结果一致，零回归）；8 席 ≈ 190px、12 席 ≈ 117px；20 席触到 120px 下限后由
+   .rs-seats 已有的 overflow-x:auto 横向滚动，不再压成薄片。
+   ⚠ 同一段 .rs-* 在本文件里有两份（本处 + 文件末尾「the room (room.js)」段），两处必须同步 —— 同权重下后写的生效。 */
+.rs--big .rseat { --w: clamp(120px, calc((100vw - 1.6rem) / var(--n, 4) - .3rem), 3.4rem); }
 .rs--solo .rseat { --w: min(2.7rem, 34vw); }
 .rseat__clip { position: absolute; left: 50%; top: -.14rem; width: .16rem; height: .2rem; transform: translateX(-50%); background: #3a3e3d; border: 2px solid #1a1c1c; z-index: 2; }
 .rseat.is-ready .rseat__clip { background: #4fe8c0; }
@@ -3918,7 +3922,11 @@ button.ally-card:disabled { filter: grayscale(.7) brightness(.7); cursor: defaul
 .rs--big .rs-seats { justify-content: flex-start; gap: .16rem; }
 .rseat { --w: min(18vw, 3.4rem, calc((100vw - 1.6rem) / var(--n, 4) - .3rem)); position: relative; flex: none; width: var(--w); display: flex; flex-direction: column;
   animation: sw-in 260ms var(--ease-out) backwards; animation-delay: calc(var(--i) * 60ms); }
-.rs--big .rseat { --w: max(1.7rem, 120px); }
+/* 按实际席位数均分（--n = room.state.seatCap，room.js 内联注入），两头夹住：4 席 = 3.4rem（零回归）、8 席 ≈ 190px、
+   12 席 ≈ 117px，20 席触到 120px 下限后交给 .rs-seats 的 overflow-x:auto 横向滚动，不再压成薄片（2026-11-07 业主：
+   「任意人数不挤压」，此前这里写死 max(1.7rem, 120px)，把人数一多就挤成薄片）。
+   ⚠ 同一段 .rs-* 在本文件里有两份（本处 + 上文同名段），两处必须同步 —— 同权重下后写的这份生效。 */
+.rs--big .rseat { --w: clamp(120px, calc((100vw - 1.6rem) / var(--n, 4) - .3rem), 3.4rem); }
 .rs--solo .rseat { --w: min(2.7rem, 34vw); }
 .rseat__clip { position: absolute; left: 50%; top: -.14rem; width: .16rem; height: .2rem; transform: translateX(-50%); background: #3a3e3d; border: 2px solid #1a1c1c; z-index: 2; }
 .rseat.is-ready .rseat__clip { background: #4fe8c0; }

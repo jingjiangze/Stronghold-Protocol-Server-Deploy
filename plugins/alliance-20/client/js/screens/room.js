@@ -71,11 +71,12 @@ const MAX_SEATS = Number(SEAT_CONST.MAX_SEATS) || 4;
 const DEFAULT_SEATS = Number(SEAT_CONST.DEFAULT_SEATS) || MAX_SEATS;
 
 /**
- * Upper bound on the seat cards the client will pad out from `room.state.seatCap`. The server owns the real cap
- * (server/lobby.js LOBBY_DEFAULTS.maxSeats, 20 by default since 业主裁令 2026-10-12), so this is a SANITY CLAMP, not
- * policy: without it a bogus/hostile `seatCap` (1e9) loops 10⁹ times and dies with `RangeError: Invalid array length`
- * instead of drawing a room. Above it the extra seats are simply not drawn — they can hold nobody the client could
- * address anyway.
+ * Upper bound on the seat cards the client will pad out from `room.state.seatCap`. The server owns the real cap: the
+ * room opens at `shared/constants.js` DEFAULT_SEATS (4) and its host raises it with room.setSeatCap up to MAX_SEATS (20;
+ * the accepted values are `shared/constants.js` ROOM_CAPACITIES), while a versus room's cap is its teamSize × 2 — so
+ * this is a SANITY CLAMP, not policy: without it a bogus/hostile `seatCap` (1e9) loops 10⁹ times and dies with
+ * `RangeError: Invalid array length` instead of drawing a room. Above it the extra seats are simply not drawn — they
+ * can hold nobody the client could address anyway.
  */
 const MAX_RENDERED_SEATS = 256;
 
@@ -266,24 +267,31 @@ export function seatCapRoomRange(room, serverMax) {
  * everybody else the room already says how many seats it has through its seat cards, and `room.state.seatCap` is what
  * pads them (`normalizeSeats`).
  *
- * The server answers a refusal with a NAMED code (`SEAT_CAP_TOO_SMALL` when the new cap cannot hold the people already
- * here, `BAD_MSG` when the number itself is not a legal seat count), and `run` toasts it — the slider never silently
- * becomes a different number than the host asked for. `asked` keeps that request on screen until the room's own frame
- * agrees (or the request fails), so a slow round trip does not snap the control back under the host's finger.
+ * The server answers a refusal with a named code (`BAD_TARGET` when the new cap cannot hold the people already here, or
+ * when the number is not one of ROOM_CAPACITIES), and `run` toasts it — the slider never silently becomes a different
+ * number than the host asked for. `asked` keeps that request on screen until the room's own frame agrees (or the
+ * request fails), so a slow round trip does not snap the control back under the host's finger.
  * @param {{ room: any, isHost: boolean, onPick: (n: number) => Promise<boolean> }} props
  */
 function SeatCapSetter({ room, isHost, onPick }) {
-  // 对抗房（2V2 / 4V4）：座位数由 teamSize 锁定成 teamSize*2，不给滑条（服务端 setMaxSeats 也会拒绝）。
+  // 对抗房（2V2 / 4V4）：座位数由 teamSize 锁定成 teamSize*2，不给滑条（服务端 room.setSeatCap 也会拒绝）。
   const range = isHost && room?.mode !== 'versus' ? seatCapRoomRange(room, serverSeatMaxOf()) : null;
   const [asked, setAsked] = useState(null);
   useEffect(() => {
     if (asked != null && room && room.seatCap === asked) setAsked(null);
   }, [asked, room]);
   if (!range) return null;
-  const shown = asked != null && asked >= range.min && asked <= range.max ? asked : range.value;
-  const pct = Math.round(((shown - range.min) / (range.max - range.min)) * 100);
+  // 滑条的档位**就是** ROOM_CAPACITIES（4/8/12/16/20）在 [range.min…range.max] 里的那段：服务端只收这几个值，于是
+  // 房主能拖到的每一档都会被接受。此前 step=2 会拖出 6 / 10 / 14 / 18，全被服务端拒 ⇒ 滑条一半是死的（2026-11-07）。
+  const caps = (Array.isArray(SEAT_CONST.ROOM_CAPACITIES) ? SEAT_CONST.ROOM_CAPACITIES : [])
+    .filter((n) => n >= Math.max(4, range.min) && n <= range.max);
+  if (caps.length < 2) return null;   // 只有一档可拖 = 死控件（range 已经滤掉了这类房间）
+  const lo = caps[0], hi = caps[caps.length - 1], step = caps[1] - caps[0];
+  const nearest = (v) => caps.reduce((best, n) => (Math.abs(n - v) < Math.abs(best - v) ? n : best), lo);
+  const shown = asked != null && caps.includes(asked) ? asked : nearest(range.value);
+  const pct = Math.round(((shown - lo) / (hi - lo)) * 100);
   const commit = async (v) => {
-    const want = Math.min(Math.max(Math.round(v / 2) * 2, Math.max(4, Math.ceil(range.min / 2) * 2)), range.max);
+    const want = nearest(v);
     if (want === range.value) { setAsked(null); return; }
     setAsked(want);
     if (!(await onPick(want))) setAsked(null);   // the frame (or the refusal) is the truth again
@@ -291,7 +299,7 @@ function SeatCapSetter({ room, isHost, onPick }) {
   return html`<div class="seat-cap seat-cap--room">
     <${MicroLabel} tone="mint">SEATS<//>
     <span class="seat-cap__name">${t('本房间人数上限')}</span>
-    <input class="seat-cap__slider" type="range" min=${Math.min(Math.max(4, Math.ceil(range.min / 2) * 2), range.max)} max=${range.max} step="2" value=${shown}
+    <input class="seat-cap__slider" type="range" min=${lo} max=${hi} step=${step} value=${shown}
       style=${`--pct:${pct}%`} aria-label=${t('本房间人数上限')}
       aria-valuemin=${range.min} aria-valuemax=${range.max} aria-valuenow=${shown}
       title=${t('不能小于同盟内现有人数（含 AI 队友）')}
