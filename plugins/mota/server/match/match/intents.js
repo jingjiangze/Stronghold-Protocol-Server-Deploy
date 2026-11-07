@@ -9,6 +9,8 @@ import { PHASE, ERR, EMOTES, EMOTE_COOLDOWN_MS, GEO } from '../../../shared/cons
 import { deriveSeed } from '../../sim/rng.js';
 import { OK, fail } from './common.js';
 import { onHumanEmote } from '../botEmotes.js';
+// 怪物卡池（2026-11-03）：攻方的怪物商店（买卡进投放草稿 / 刷新 / 冻结 / 撤回草稿）
+import { buyMonster, rollMonsterShop, freezeMonster, dropMonster, placeMonster, upgradeMonsterShop, monsterShopFrame, pushMonsterShops } from '../monsterShop.js';
 
 export class MatchIntents {
   _handle(ps, msg) {
@@ -16,6 +18,18 @@ export class MatchIntents {
       // 对抗模式（2V2 / 4V4）：狩猎期目标 / 布阵 / 悬赏提取、事件期选择
       case 'g.confrontTarget': return this.submitConfrontTarget(ps, msg);
       case 'g.confront': return this.submitConfront(ps, msg);
+      // 怪物卡池（2026-11-03）：怪物商店 —— index 是格子下标（缺省/非整数 ⇒ BAD_TARGET）
+      case 'g.monsterBuy': return this.monsterShopReply(ps, buyMonster(this, ps, Number(msg.index)));
+      case 'g.monsterRefresh': return this.monsterShopReply(ps, rollMonsterShop(this, ps));
+      case 'g.monsterFreeze': return this.monsterShopReply(ps, freezeMonster(this, ps, Number(msg.index)));
+      // 撤回一张投放草稿（复验修复 1.4）：id = 草稿条目的稳定 id（优先，多端撤回按它定位）；
+      // 没给 id 才用 index（老客户端回落），库存退回本队的池
+      case 'g.monsterDrop': return this.monsterShopReply(ps, dropMonster(this, ps, msg.index == null ? null : Number(msg.index), msg.id == null ? null : Number(msg.id)));
+      // 点卡即投放（业主 2026-11-04）：卡直接投到上/下出怪口，count 可选（缺省 1）；用掉后该格自动补位
+      case 'g.monsterPlace': return this.monsterShopReply(ps, placeMonster(this, ps, Number(msg.index), msg.gate, msg.count == null ? 1 : Number(msg.count)));
+      // 升级怪物卡池（业主 2026-11-04「参考卫戍协议干员商店」）：无字段；等级挂 Match、跨回合持久，
+      // 满级回 MAX_LEVEL，扣款全有或全无。回包走 monsterShopReply（本席 + 同队各推一帧新的 level/upgradePrice）。
+      case 'g.monsterLevelUp': return this.monsterShopReply(ps, upgradeMonsterShop(this, ps));
       case 'g.hex': return this.hexPick(ps, msg.hexId);
       case 'g.hexReroll': return this.hexReroll(ps, msg.slot);
       case 'g.meltOpen': return this.meltdownRequest(ps);
@@ -119,6 +133,25 @@ export class MatchIntents {
       case 'b.rehearsalResult': this._onRehearsalResult(ps, msg); return OK;
       default: return fail(ERR.BAD_MSG);
     }
+  }
+
+  /**
+   * 怪物商店意图的回包（2026-11-03）。失败照旧返回错误码（platform.js 会把 `{ error }` 原样回给客户端）；
+   * 成功时把商店私有态推一帧 `m.monsterShop` —— 公共帧（match/views.js）刻意不带商店，客户端靠这一帧更新。
+   * 推送失败不影响已经成功的操作。
+   */
+  monsterShopReply(ps, res) {
+    if (res && res.error) return fail(res.error, res.detail);
+    try { this.sendTo(ps.playerId, monsterShopFrame(this, ps)); } catch (e) { this.reportError('monster shop frame', e); }
+    // 共享池同步（2026-11-04 第二轮复审修复 1）：这些意图会改共享池 / 队友也要看到的草稿态，
+    // 同队其他人类必须收到新帧（自己上面已经推过，排除掉 —— 不重复推同一席）。
+    try { pushMonsterShops(this, { except: ps }); } catch (e) { this.reportError('monster shop push', e); }
+    // 预备区即时刷新（业主 2026-11-05）：投放 / 撤回改的是 `ps.monsterDraft.picks`，而预备区画的是
+    // `m.private.nextEnemies`（views.js 的 nextEnemiesFor 攻方分支）—— 只推商店帧 pen 不会重画。
+    // 标一次 private 即可：handle() 末尾的 flush() 逐席构建 privateView 并按 JSON 去重（内容没变不重发，
+    // 买卡 / 刷新 / 冻结 / 升级这类不改草稿的意图因此不会多出帧），所以这一行是顺手且幂等的。
+    try { this.markPrivate(ps); } catch (e) { this.reportError('monster shop private', e); }
+    return OK;
   }
 
   emote(ps, id) {

@@ -118,6 +118,12 @@
 .gtop__vpool { display: inline-flex; align-items: center; gap: .03rem; }
 .gtop__vpool.is-self { color: #d7fbe9; }
 .gtop__vhunt { opacity: .85; }
+/* 两队剩余血量（对抗模式）：本队 is-own / 对手 is-foe；观战席两队都不带类，按中立色 */
+.gtop__vlps { display: inline-flex; align-items: baseline; gap: .18rem; margin: 0 .18rem; font-variant-numeric: tabular-nums; }
+.gtop__vlp { font-size: .58rem; line-height: 1; padding: 0 .12rem; border-radius: .08rem; }
+.gtop__vlp.is-own { color: var(--ice, #9fd4ff); }
+.gtop__vlp.is-foe { color: var(--orange, #e85a1a); }
+.gtop__vlp::before { content: ''; display: inline-block; width: .1rem; height: .1rem; border-radius: 50%; background: currentColor; margin-right: .08rem; vertical-align: middle; }
 /* 攻防角色（进攻/防守） */
 /* 进攻方等待面板 / 守方来袭预告 */
 /* a match with gameplay plugins (DESIGN §32.6): the HUD corner's MOD mark */

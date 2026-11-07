@@ -118,6 +118,11 @@ export function buildResult(m, outcome) {
     });
     // the team's clear counts for the players still in; an eliminated / departed teammate did not pass the boss round
     const cleared = victory && ps.alive;
+    // 对抗局的攻方没有干员盟约（业主 2026-11-04：攻方只有怪物方的独立盟约）—— 结算页别把他当守方时攒下的那套给他看。
+    // 判据只在 versus 成立（`isAttacker` 自带 attackingTeam == null 的保护，R14/R15 这类事件回合返回 false ⇒ 照旧）；
+    // coop / solo 的 `isVersus` 不是 true ⇒ 走原来那一行，结算页逐字节不变。怪物盟约 `m.monsterBonds` 每回合重置
+    // （phases.js 的回合边界 closeMonsterBondRound 把它清成 null），结算时没有可发的最终快照 ⇒ 空数组。
+    const attackerInVersus = m.isVersus === true && typeof m.isAttacker === 'function' && m.isAttacker(ps) === true;
     return {
       playerId: ps.playerId,
       seat: ps.seat,
@@ -134,7 +139,7 @@ export function buildResult(m, outcome) {
       lp: Math.max(0, ps.lp),
       bandId: ps.bandId,
       lineup,
-      bonds: bondList(gd, ps.bonds).filter((b) => b.active || b.layers > 0),
+      bonds: attackerInVersus ? [] : bondList(gd, ps.bonds).filter((b) => b.active || b.layers > 0),
       stats: {
         dmgDealt: Math.round(ps.stats.dmgDealt), kills: ps.stats.kills, leaks: ps.stats.leaks, gold: ps.stats.gold,
         refreshes: ps.stats.refreshes, merges: ps.stats.merges, itemsEquipped: ps.stats.itemsEquipped,

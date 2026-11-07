@@ -51,7 +51,7 @@ export function wireOptions(opts) {
   // `variant` 必须在这里：房间变体（协同共竞 'xie' / 肉鸽 'rogue'）由 lobby 放进 opts，但 modded 房跑在子进程宿主里，
   // 走的是**白名单**序列化 —— 名单里没有它就会被静默丢掉，引擎侧 `Match.roomVariant` 恒 null、`isRogue` 恒 false，
   // 肉鸽的藏品/事件/词缀/换图全部不生效（2026-10-31 与 server/lobby.js 的透传一起修）。
-  for (const k of ['roomCode', 'mode', 'teamSize', 'difficulty', 'modeId', 'variant', 'aiPicksLast', 'soloUnlimited', 'seats', 'spectators', 'seed', 'matchNo', 'cs', 'vs', 'requireCs', 'kitted', 'version', 'code', 'versusRule', 'versusAlt', 'versusSpeed']) {
+  for (const k of ['roomCode', 'mode', 'teamSize', 'difficulty', 'modeId', 'variant', 'aiPicksLast', 'soloUnlimited', 'seats', 'spectators', 'seed', 'matchNo', 'cs', 'vs', 'requireCs', 'kitted', 'version', 'code', 'versusRule', 'versusAlt', 'versusSpeed', 'monsterMode', 'monsterShop']) {
     if (opts[k] !== undefined) out[k] = opts[k];
   }
   // A test room must arrive as a test match. Forwarding these only when the flag is set keeps every other

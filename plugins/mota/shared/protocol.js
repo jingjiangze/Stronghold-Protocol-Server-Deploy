@@ -628,6 +628,18 @@ export const C2S = {
   'g.meltClose': {},
   'g.confront': { group: nullable((v) => isInt(v, 1, 16)), position: (v) => typeof v === 'string' && ['front', 'mid', 'back'].includes(v), picks: (v) => isList(v, 128, (p) => isPlain(p) && isId(p.enemyKey) && (p.gate === undefined || p.gate === 'upper' || p.gate === 'lower') && (p.routeIndex === undefined || isInt(p.routeIndex, 0, 63)) && (p.time === undefined || (typeof p.time === 'number' && Number.isFinite(p.time) && p.time >= 0 && p.time <= 1e6))), bosses: (v) => isList(v, 32, (p) => isPlain(p) && isId(p.enemyKey) && (p.gate === undefined || p.gate === 'upper' || p.gate === 'lower')), commit: isBool, $optional: ['bosses', 'commit'] },
   'g.confront.withdraw': { gold: (v) => isInt(v, 1, 100000) },
+  // 怪物卡池（2026-11-03）：攻方怪物商店 —— 买卡（进投放草稿）/ 刷新 / 冻结
+  'g.monsterBuy': { index: (v) => Number.isInteger(v) && v >= 0 && v <= 8 },
+  'g.monsterRefresh': {},
+  'g.monsterFreeze': { index: (v) => Number.isInteger(v) && v >= 0 && v <= 8 },
+  // 撤回草稿：index = 草稿下标（老客户端）；id = 草稿条目的稳定 id（多端撤回按它定位，见 monsterShop.js 的 seq）。
+  // id 缺省时退回 index，所以它是可选项；给了一个找不到的 id 由服务端回 BAD_TARGET
+  'g.monsterDrop': { index: (v) => Number.isInteger(v) && v >= 0 && v <= 8, id: (v) => Number.isInteger(v) && v >= 0, $optional: ['id'] },
+  // 点卡即投放（业主 2026-11-04）：index = 商店格，gate = 上/下出怪口，count = 只数（可选，缺省 1）
+  'g.monsterPlace': { index: (v) => Number.isInteger(v) && v >= 0 && v <= 8, gate: (v) => v === 'upper' || v === 'lower', count: (v) => Number.isInteger(v) && v >= 1 && v <= 20, $optional: ['count'] },
+  // 升级怪物卡池（业主 2026-11-04「参考卫戍协议干员商店」）：无字段 —— 等级挂在 Match 上、整局持久，
+  // 升级价由服务端按本回合军费算出（帧里的 upgradePrice），客户端只发这一条意图。
+  'g.monsterLevelUp': {},
   'g.event.pick': { target: (v) => EVENT_TARGETS_ALL.includes(v) },
   // 随机地图开关（2026-10-22；房主，开局前）
   'room.setRandomStage': { randomStage: isBool },
@@ -770,6 +782,10 @@ export const S2C = [
   'm.layer',
   // m.unitStats { seq, round, units: [unitStatsEntry] } — the answer to g.unitStats (the requester only)
   'm.unitStats',
+  // m.monsterShop { open, round, slots, draft, budget, spent, left, refreshPrice, freeRefreshes, refreshes } — the
+  // 怪物卡池 shop of one 对抗 actor (server/match/monsterShop.js monsterShopFrame, the requester only), and the
+  // closing { open: false, round, slots: [], draft } frame that tells its client to put the panel away
+  'm.monsterShop',
   // client-side combat (DESIGN §14): b.start { battleId, fieldId, kind, spec, authoritative, startAt, serverNow, elapsed,
   // speed, watch? } · b.pool { hp, max, teamLp, acked: { [fieldId]: cumulative boss damage counted } } ·
   // b.end { battleId, fieldId, reason }

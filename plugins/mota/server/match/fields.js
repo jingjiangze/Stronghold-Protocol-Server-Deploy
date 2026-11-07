@@ -32,7 +32,7 @@
 //                                          (keySourceCounts only; settlement bills that same set)
 //   syntheticResult(players, progress)     stand-in when a boss field's client never reported
 import { TICK, SNAPSHOT_EVERY } from '../sim/constants.js';
-import { layerGainRoom } from '../../shared/constants.js';
+import { layerGainRoom, MAX_SEATS } from '../../shared/constants.js';
 import { uniteLeft } from '../sim/spec.js';
 import { diyTokenOwner, diyRecordOf } from '../../shared/diy.js';
 import { requiresTraitLayerAuthority } from './operatorTraits.js';
@@ -859,6 +859,9 @@ export function validateClientResult(spec, raw, { gd = null } = {}) {
         const lpr = finiteIn(l.lpr, 0, 1000) ? l.lpr : 1;
         const e = { enemyKey: key, mods, lpr, sourcePlayerId, tag: src ? (src.tag ?? null) : (typeof l.tag === 'string' ? l.tag : null), counted, spawned: true };
         if (keepRuntime) e.uniteRuntime = true; // stored only after the derived take succeeded, and only for a 联防 spec
+        // 对抗投放（sim/battle/deploy.js _recordLeak）：这条漏怪是某位攻方投放的 ⇒ settle 据此把它从「官方漏怪」那笔里
+        // 排除（否则官方 counted 与投放怪 confrontLeaks 各扣一次）。座位必须是一个真实的、本局座位表内的整数。
+        if (Number.isInteger(l.confrontSeat) && l.confrontSeat >= 0 && l.confrontSeat < MAX_SEATS) e.confrontSeat = l.confrontSeat;
         if (l.boss) e.boss = true;
         leaked.push(e);
       }
@@ -944,6 +947,30 @@ export function validateClientResult(spec, raw, { gd = null } = {}) {
       }
       if (unspawned.length > B.spawnCount) return bad('unspawned');
       if (unspawned.length) result.unspawned = unspawned;
+    }
+    // 对抗模式 counters (对称血量, match/settle.js): the sim tallies, per placed-monster SENDER seat, how many of that
+    // sender's monsters this field killed / leaked (sim/battle/deploy.js confrontKills / confrontLeaks) and what that
+    // batch was WORTH — the same seats in confrontKillValue / confrontLeakValue, the ladder price summed (2026-11-06,
+    // settle bills / pays by value). Keys String(seat); sim/battle/lifecycle.js puts all four on the client's own result.
+    // Rebuilt here like every other field — a client's object is never trusted whole: plain objects only, integer seat
+    // keys below MAX_SEATS (a seat never leaves the room's seat array, lobby.js), finite integers clamped to 0..10000, at
+    // most one entry per seat; a shape without a usable entry attaches no key (the shape of an older result).
+    for (const k of ['confrontKills', 'confrontLeaks', 'confrontKillValue', 'confrontLeakValue']) {
+      const src = raw[k];
+      if (!src || typeof src !== 'object' || Array.isArray(src)) continue;
+      const proto = Object.getPrototypeOf(src);
+      if (proto !== Object.prototype && proto !== null) continue;
+      const seatKeys = Object.keys(src);
+      if (seatKeys.length === 0 || seatKeys.length > MAX_SEATS) continue;
+      const seats = {};
+      let good = true;
+      for (const key of seatKeys) {
+        const seat = /^(?:0|[1-9]\d*)$/.test(key) ? Number(key) : NaN;
+        const n = src[key];
+        if (!Number.isInteger(seat) || seat >= MAX_SEATS || !Number.isInteger(n)) { good = false; break; }
+        seats[key] = Math.min(10000, Math.max(0, n));
+      }
+      if (good) result[k] = seats;
     }
     return { ok: true, result };
   } catch (e) {

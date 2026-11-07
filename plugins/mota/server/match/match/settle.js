@@ -6,6 +6,56 @@ import { flushMatchLineups } from '../../lineupLibrary.js';
 
 const REVIVAL_WINDOW_MS = 30_000; // 救援窗口（业主 2026-10-17：固定 30 秒，期间冻结推进）
 
+/**
+ * 怪物资金的奖励**按单价**发（2026-11-06「价值同源」，业主报障「扣血量与价值完全脱钩」）：
+ *   击杀 = max(只数, monsterKillReward(Σ阶梯价))、漏过 = max(只数, monsterLeakReward(Σ阶梯价)) ——
+ *   两个函数在 `../monsterShop.js`（单只口径 `max(1, round(price × 0.25 / 0.5))`，与 monsterBonds.js 的「回收」
+ *   盟约同一个函数）。按**合计价**套用同一条式子是刻意的：sim 只按席位汇总 Σ价 与只数（sim/battle/deploy.js
+ *   tallySeat），不逐只回传单价；混批时与「逐只求和」相差不超过几只 1 元保底，方向一致。
+ *   漏过给得比击杀多（×0.5 vs ×0.25）：漏怪对攻方是「达成本回合目的」（守方掉血），击杀是「被防住」但仍然是消耗。
+ * 改这些口径不影响价格 / 军费（价格在 monsterShop.js 的 monsterPriceOf / MONSTER_PRICE_BY_TIER，军费在
+ * confront.js 的 CONFRONT_VOLUME_SHARE）。
+ * @deprecated 下面是旧口径的定额常量（一杀 1 / 一漏 2），2026-11-06 起奖励按单价 —— 保留导出只为老调用方不炸，
+ * 新代码请用 monsterShop.monsterKillReward / monsterLeakReward。
+ */
+export const MONSTER_KILL_REWARD = 1;
+export const MONSTER_LEAK_REWARD = 2;
+
+/**
+ * 一个战场结果里「投放怪战果」的来源（settle 与战役结算读同一份）：优先 `f.result`，没有就问 battle.result()。
+ * 对抗模式的 confrontKills / confrontLeaks 就挂在这份结果上（sim/battle/lifecycle.js）。
+ * @param {any} f field
+ * @returns {object|null}
+ */
+function placedFieldResult(f) {
+  let fr = f && f.result;
+  if (!fr && f && f.battle && typeof f.battle.result === 'function') { try { fr = f.battle.result(); } catch { fr = null; } }
+  return fr && typeof fr === 'object' ? fr : null;
+}
+
+/**
+ * 一张按席位汇总的 map（`{ [seat]: 只数 }`）⇒ 合计正整数；坏值按 0。
+ * 结果里有四张：confrontKills / confrontLeaks（只数）与 confrontKillValue / confrontLeakValue（同批怪按阶位阶梯价
+ * 合计，sim/battle/deploy.js tallySeat）。老页面 / 服务端老 sim 只发前两张 —— 那时价值项回落为只数（一只 1 点）。
+ */
+function seatTotal(map) {
+  let n = 0;
+  for (const v of Object.values(map || {})) n += Math.max(0, Number(v) || 0);
+  return n;
+}
+
+/** 只数 + 价值：`value` 不小于 `count`（每只至少 1 点），缺价值表 ⇒ value = count。 */
+function seatBatch(counts, values) {
+  const count = seatTotal(counts);
+  return { count, value: Math.max(count, seatTotal(values)) };
+}
+
+/** 单个席位（同一张只数表 + 价值表）：只数 + 价值。 */
+function seatPair(counts, values, seatStr) {
+  const count = Math.max(0, Number(counts && counts[seatStr]) || 0);
+  return { count, value: Math.max(count, Math.max(0, Number(values && values[seatStr]) || 0)) };
+}
+
 import { PHASE, layerGainRoom } from '../../../shared/constants.js';
 import { uniteSurvivors } from '../unite.js';
 import { buildResult } from '../results.js';
@@ -13,6 +63,7 @@ import { FLOW_TICKER_PRIORITY, DELAYS } from './common.js';
 import { msg } from '../../../shared/i18n.js';
 import { onSettle, resetRoundCounters } from '../botEmotes.js';
 import { creditedKillsOf } from '../../sim/spec.js';
+import { monsterKillReward, monsterLeakReward } from '../monsterShop.js';
 
 export class MatchSettle {
   settle(plan, uniteResult) {
@@ -46,11 +97,113 @@ export class MatchSettle {
     if (this.revivalEnabled) {
       this.revival = { round: this.round, windowOpen: false, consents: new Map() };
     }
+    // 对抗模式（业主 2026-11-03）：对称血量。两笔扣血都按「投放席位」统计，而这份统计挂在**场的顶层结果**上
+    // （sim Battle._buildResult → compactResult 透传）。注意 this.lastResults 只存 perPlayer（combat.js _finishCombat），
+    // 顶层字段到不了那里 —— 所以这里读 this.fields 的结果，而不是 lastResults。
+    //
+    // 2026-11-06 口径统一（业主报障「扣血逻辑完全混乱」，审计 8 类问题的 2/6/7 类）：
+    //   ① 逐队封顶：每队整回合只吃一次 min(cap, Σ本回合损失)。旧码守方按「逐人 counted + 本场投放怪」各扣一次，
+    //      2V2 守方因此最多掉 2×cap；攻方本来就是整队一次 —— 现在两边同口径。
+    //   ② 不双计：带 `confrontSeat` 的漏怪只算「投放怪」那一笔（confrontLeaks），官方 `counted` 那一笔把它排除。
+    //   ③ 不免费：官方 `countInTotal:false`（unharmful / part）漏过也扣 1 点 —— 旧码 0 扣，还记「完美作战」。
+    //   ④ 按价值：投放怪按阶位阶梯价扣（sim 逐只带 spawn spec 的 `confrontPrice`，结果里按席位给出只数 +
+    //      Σ价 两张表：confrontKills / confrontLeaks 与 confrontKillValue / confrontLeakValue），
+    //      不再是「一漏 1 点、一杀 1 点」。缺价值表（老页面）时价值回落为只数。
+    const versusLossByTeam = new Map();     // team → 本回合该队的损失（点数，未封顶）
+    const addTeamLoss = (t, n) => { if (n > 0) versusLossByTeam.set(t, (versusLossByTeam.get(t) || 0) + n); };
+    const placedLeaksByPlayer = new Map();  // 守方 playerId → 自己场上漏过去的投放怪只数（stats / 完美作战用）
+    // 攻方奖励的归属（业主 2026-11-04：发给**投放者本人**）：键都是投放席位 String(seat)，用 this.order 查回 playerId。
+    // playerId → { killed, killValue, leaked, leakValue }，value 按阶梯价（与扣血同一份 confrontKills / Leaks）。
+    const placedRewardsByPlayer = new Map();
+    const rewardOf = (owner) => {
+      let r = placedRewardsByPlayer.get(owner.playerId);
+      if (!r) { r = { killed: 0, killValue: 0, leaked: 0, leakValue: 0 }; placedRewardsByPlayer.set(owner.playerId, r); }
+      return r;
+    };
+    if (this.isVersus) {
+      for (const f of this.fields || []) {
+        const fr = placedFieldResult(f);
+        if (!fr) continue;
+        // 守方：这块场漏过去的投放怪。按「场」记一次 —— 同场多名守方只给队伍记一次损失（逐队封顶的前提），
+        // 玩家只数各记一份（stats.leaks / 完美作战要逐人看）。
+        const leaks = seatBatch(fr.confrontLeaks, fr.confrontLeakValue);
+        if (leaks.count > 0) {
+          const teams = new Set();
+          for (const pid of new Set(f.players || [])) {
+            const ps = this.order.find((x) => x && x.playerId === pid);
+            if (!ps) continue;
+            teams.add(this.teamIdOf(ps));
+            placedLeaksByPlayer.set(pid, (placedLeaksByPlayer.get(pid) || 0) + leaks.count);
+          }
+          for (const t of teams) addTeamLoss(t, leaks.value);
+        }
+        // 攻方：自己投放的怪被击杀。**不再** `!owner.alive` 就整条跳过 —— 被淘汰的攻方所属队伍可能还有池血，
+        // 这一笔仍然记到队上（奖励照样不发：发放在下面按 ps.alive 过滤）。
+        for (const seatStr of Object.keys(fr.confrontKills || {})) {
+          const owner = this.order.find((x) => x && x.seat === Number(seatStr));
+          if (!owner) continue;
+          const kill = seatPair(fr.confrontKills, fr.confrontKillValue, seatStr);
+          addTeamLoss(this.teamIdOf(owner), kill.value);
+          const r = rewardOf(owner);
+          r.killed += kill.count;
+          r.killValue += kill.value;
+        }
+        // 漏过的投放怪同样按席位归到投放者（上面那段是「守方掉血」，这里是「攻方领钱」，两份互不影响）
+        for (const seatStr of Object.keys(fr.confrontLeaks || {})) {
+          const owner = this.order.find((x) => x && x.seat === Number(seatStr));
+          if (!owner) continue;
+          const leak = seatPair(fr.confrontLeaks, fr.confrontLeakValue, seatStr);
+          const r = rewardOf(owner);
+          r.leaked += leak.count;
+          r.leakValue += leak.value;
+        }
+      }
+    }
+    // 发奖（业主 2026-11-04；2026-11-06 改为**按阶梯价**）：击杀 = max(只数, monsterKillReward(Σ价))、
+    // 漏过 = max(只数, monsterLeakReward(Σ价))（`../monsterShop.js` 的两个函数，与 monsterBonds 的「回收」盟约同源），
+    // 直接进投放者的**怪物资金**账户（跨回合结转，玩家可以留到下回合用）。一只最低 1 元，32 价的大怪按价值给钱。
+    // 只在商店开着时发 —— `opts.monsterShop === false` 时整段不跑；席位查不到人 / 本人已淘汰就不发。
+    if (this.monsterShopOn === true) {
+      for (const [playerId, r] of placedRewardsByPlayer) {
+        const ps = this.order.find((x) => x && x.playerId === playerId);
+        if (!ps || !ps.alive || typeof ps.addMonsterFunds !== 'function') continue;
+        const pay = Math.max(r.killed, monsterKillReward(r.killValue)) + Math.max(r.leaked, monsterLeakReward(r.leakValue));
+        if (!(pay > 0)) continue;
+        ps.monsterEarned = Math.max(0, Number(ps.monsterEarned) || 0) + pay;
+        ps.addMonsterFunds(pay);
+      }
+    }
     const alive = this.alivePlayers();
+    // 每名玩家自己场上「漏过去」的怪：官方 counted + 官方「不计数」怪（unharmful / part —— 旧码 0 扣，是
+    // 「怪物方赢了对面不扣血」的另一半）。带 confrontSeat 的条目属于投放怪那一笔，这里排除（见上 ②，否则双计）。
+    const ownLeaks = new Map();
+    for (const ps of alive) {
+      const r = this.lastResults.get(ps.playerId) || null;
+      const leaked = (r && Array.isArray(r.leaked) ? r.leaked : []).filter((l) => l && l.confrontSeat == null && l.uniteRuntime !== true);
+      const counted = leaked.filter((l) => l.counted !== false).length;
+      ownLeaks.set(ps.playerId, { counted, free: leaked.length - counted, units: leaked.length });
+      // 对抗：官方漏怪（含「不计数」怪）记到队上；投放怪的漏过已在上面按价值记过
+      if (this.isVersus && this.teamLps) addTeamLoss(this.teamIdOf(ps), leaked.length);
+    }
+    // 对抗：两队各算一次 min(cap, Σ) 并落池（在淘汰判定之前）。上界再取「池里还剩多少」—— stats.lpLost 记真掉的血。
+    const versusLossApplied = new Map();
+    if (this.isVersus && this.teamLps) {
+      for (const [t, raw] of versusLossByTeam) {
+        const pool = Math.max(0, this.teamHpPool(t) ?? 0);
+        const loss = Math.min(cap, Math.max(0, raw), pool);
+        if (loss > 0) this._versusTeamLpLoss(t, loss);
+        versusLossApplied.set(t, loss);
+      }
+    }
     for (const ps of alive) {
       const r = this.lastResults.get(ps.playerId) || { leaked: [], perfect: true, coins: 0, layerGains: {}, killed: 0, damageDealt: 0 };
-      const counted = (r.leaked || []).filter((l) => l && l.counted !== false).length;
-      const loss = uniteRan && plan.leakers.includes(ps) ? Math.min(cap, survivors.get(ps.playerId) || 0) : Math.min(cap, counted);
+      const own = ownLeaks.get(ps.playerId) || { counted: 0, free: 0, units: 0 };
+      const placedLeaks = this.isVersus ? (placedLeaksByPlayer.get(ps.playerId) || 0) : 0;
+      // 漏怪只数（逐人统计 / 完美作战用）：官方 counted + 官方「不计数」+ 自己场上漏过去的投放怪
+      const leakUnits = own.units + placedLeaks;
+      const loss = this.isVersus && this.teamLps
+        ? (versusLossApplied.get(this.teamIdOf(ps)) ?? 0)   // 对抗：整队一次 min(cap, Σ)，上面已落池
+        : (uniteRan && plan.leakers.includes(ps) ? Math.min(cap, survivors.get(ps.playerId) || 0) : Math.min(cap, leakUnits));
       // 肉鸽 rule 藏品 homeCooked：本回合零损失 = 一场完美作战（计数用于 +10%/场）
       if (loss === 0) { ps.relicPerfectBattles = (Number(ps.relicPerfectBattles) || 0) + 1; }
       // 肉鸽 rule 藏品 kingVessel：零损失**连续**回合数（上一回合没掉目标生命 ⇒ 下一战生命 +80%，连 3 回合 +200%）
@@ -58,11 +211,10 @@ export class MatchSettle {
       // 肉鸽 rule 藏品 survivor：打完的场数（desc 明写「不包括联防」）⇒ 每场再 +20%
       if (!uniteRan) ps.relicBattles = (Number(ps.relicBattles) || 0) + 1;
       if (this.uniteResultView) this.uniteResultView.losses[ps.playerId] = loss;
-      // 对抗模式：扣的是**整队共享池**（队友的漏怪一起算），队员的 ps.lp 由 _syncVersusTeamLp 拆分回写。
-      if (this.isVersus && this.teamLps) this._versusTeamLpLoss(this.teamIdOf(ps), loss);
-      else ps.lp -= loss;
+      // 对抗模式：扣的是**整队共享池**（队友的漏怪一起算），已按队扣过；队员的 ps.lp 由 _syncVersusTeamLp 拆分回写。
+      if (!(this.isVersus && this.teamLps)) ps.lp -= loss;
       ps.stats.lpLost += loss;
-      ps.stats.leaks += counted;
+      ps.stats.leaks += leakUnits;
       ps.stats.kills += Number(r.killed) || 0;
       ps.stats.dmgDealt += Number(r.damageDealt) || 0;
       ps.stats.healing += Number(r.healingDone) || 0;
@@ -80,7 +232,7 @@ export class MatchSettle {
         }
       };
       mergeUnits(r.unitStats);
-      if (r.perfect !== false && counted === 0) ps.stats.perfectRounds++;
+      if (r.perfect !== false && leakUnits === 0) ps.stats.perfectRounds++;
       // bounty coins (own battle + unite kills) are credited to the next prep
       let coins = Math.max(0, Math.trunc(Number(r.coins) || 0));
       const up = uniteResult && uniteResult.perPlayer && uniteResult.perPlayer[ps.playerId];
@@ -92,7 +244,7 @@ export class MatchSettle {
       }
       ps.creditedKills += creditedKillsOf(r) + creditedKillsOf(up);
       // perfect-payout bounties (战术特训): own phase perfect
-      for (const b of ps.bounties) if (b.card.payout === 'perfect' && counted === 0 && r.perfect !== false) coins += b.card.coin;
+      for (const b of ps.bounties) if (b.card.payout === 'perfect' && leakUnits === 0 && r.perfect !== false) coins += b.card.coin;
       // rule 藏品：赏金倍率（bountyMul ×2 / loseAllFunds ×0.5 / postBountyMul ×1.5）—— 照 desc 连乘
       if (coins > 0 && typeof this.relicBountyMul === 'function') {
         const bm = this.relicBountyMul();
@@ -118,9 +270,11 @@ export class MatchSettle {
         this.dispatch(ps, 'onLayers', { bondId, from: before, to: ps.layers[bondId], reason: 'battle' });
       }
       this._charDamageTickers(ps, r);
-      this.dispatch(ps, 'onBattleResult', { result: r, lpLoss: loss, perfect: counted === 0 && r.perfect !== false, unite: uniteResult || null });
+      this.dispatch(ps, 'onBattleResult', { result: r, lpLoss: loss, perfect: leakUnits === 0 && r.perfect !== false, unite: uniteResult || null });
       ps.recompute();
     }
+    // 对抗模式（业主 2026-11-03）：对称血量 —— 攻方「自己投放的怪被击杀」那一笔已在上面和守方漏怪一起按队汇总、
+    // 各算一次 min(cap, Σ) 并落池（逐队封顶、在淘汰判定之前），这里不再单独扣一次。
     // 联防奖励（业主 2026-10-18）：自家阵地与联防都没有穿透才发钱。
     //   全员都防住（没有任何一家漏）→ 高的一档；有人漏但联防 0 穿透 → 低的一档；联防也漏了 → 不发。
     if (this.teamEcon && !this.teamEcon.borrowOnly) {

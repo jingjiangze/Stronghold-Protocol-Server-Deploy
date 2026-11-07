@@ -12,6 +12,12 @@ export class PlayerPrep {
   _gate({ allowWhenReady = false } = {}) {
     if (!this.alive) return fail(ERR.ELIMINATED);
     if (this.m.phase !== PHASE.PREP) return fail(ERR.WRONG_PHASE);
+    // 对抗局的攻方本轮没有战场：不放干员、不买干员，只用怪物商店（intents 里不经过 _gate）。
+    // 2026-11-04 第二轮复审修复 3：此前攻方在 PREP 里 `g.buy` 返回 ok（扣资金、占共享干员池），
+    // 与「攻方不出干员」冲突；改造前（pristine）是 WRONG_PHASE。
+    if (typeof this.m?.isRoleRound === 'function' && this.m.isRoleRound() && typeof this.m?.isAttacker === 'function' && this.m.isAttacker(this)) {
+      return fail(ERR.WRONG_PHASE, 'attacker'); // i18n-ignore: 服务端内部 detail
+    }
     if (this.ready && !allowWhenReady) return fail(ERR.WRONG_PHASE, 'ready');
     return null;
   }

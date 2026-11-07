@@ -80,6 +80,10 @@ export class PlayerRound {
   eliminate(round) {
     this.alive = false;
     this.ready = false;
+    // 投放权移交（2026-11-06 业主第 2 条）：solo / master 的队长在投放窗口里阵亡时，权力按判据落到下一位存活攻方，
+    // 但商店只给当时的第一位开过 —— 不在这里重新对账，这一回合剩下没人能买卡 / 投放。Match 侧的实现是幂等的，
+    // 非对抗局 / 商店关着 / 不在投放窗口时它一行都不写。
+    try { if (this.match && typeof this.match.syncMonsterOperators === 'function') this.match.syncMonsterOperators(); } catch { /* ignore */ }
     // 三层资金：永久淘汰时个人储备一并清空（与 funds / pendingFunds 同口径）。
     // 注意：救援分支（revival)只置 alive=false，**不**走这里；若将来加「淘汰后复活」，这里的清零会丢储备。
     this.reserve = 0;
