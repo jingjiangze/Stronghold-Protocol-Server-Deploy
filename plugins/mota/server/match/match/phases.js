@@ -11,8 +11,11 @@ import { layoutOf } from '../../../shared/layout.js';
 import { pairPlayers } from '../finalAssault.js';
 import { createRng, deriveSeed } from '../../sim/rng.js';
 import { isPool } from '../../../../../shared/rogueThemes.js';
-import { botPickBand } from '../bot.js';
+// AI 策略按模式独立（Match.botStrategy，Match 构造期解析）；策略缺失时才回落到 LEGACY_BOT 的 botPickBand。
+import { LEGACY_BOT } from '../botContract.js';
 import { OK, fail, DELAYS, BAND_TURN_SECONDS } from './common.js';
+// 怪物盟约（2026-11-04 业主口径）：只影响本回合 ⇒ 每回合在回合边界收尾 + 清空。
+import { closeMonsterBondRound } from '../monsterBonds.js';
 
 /**
  * 「试玩时直接发到手上」—— 哪些干员要在第一回合进手牌（业主 2026-10-08 提的开关）。
@@ -165,8 +168,8 @@ export class MatchPhases {
       const ps = this.players.get(this.draftTurn());
       if (!ps || !ps.botControlled) return;
       // a strategy a teammate already took is not selectable (队友已选): the bot re-draws, else the first free one
-      let id = botPickBand(this, ps);
-      for (let k = 0; k < 8 && this.bandTaken(id, ps.playerId); k++) id = botPickBand(this, ps);
+      let id = (this.botStrategy?.pickBand ?? LEGACY_BOT.pickBand)(this, ps);
+      for (let k = 0; k < 8 && this.bandTaken(id, ps.playerId); k++) id = (this.botStrategy?.pickBand ?? LEGACY_BOT.pickBand)(this, ps);
       if (this.bandTaken(id, ps.playerId)) id = this.gd.bandIds().find((b) => !this.bandTaken(b, ps.playerId)) || id;
       this._applyBand(ps, id, { dedupe: true });
     });
@@ -491,6 +494,7 @@ export class MatchPhases {
     this.attackingTeam = role ? role.attack : null;
     this.defenderTeam = role ? role.defend : null;
     this._confrontDoneRound = 0;
+    this._confrontTargetsRound = 0;
     // 战场刷新（业主 2026-10-22 定稿）：
     //   * 「随机地图」开着（默认）：协同共竞**每回合**抽一张新图（原有规则）；其他玩法沿用官方规则（开局一张，只在 boss 关换）。
     //   * 关掉：开局前已经随机抽了一张（Match 的 setupMatchWaves），整局不换，**只在 boss 关（含隐藏 boss 关）刷新一次**。
@@ -513,6 +517,13 @@ export class MatchPhases {
       this.pickBossStage(r);
     }
     this._revivalHeld = false; // 救援冻结是一次性的（每回合最多挂起一次）
+    // 怪物盟约（2026-11-04 业主口径：只影响本回合）：资金类盟约（增援 / 回收）要读**上一回合**的战果 ——
+    // 官方只数读 `_roundOfficialSpawns`（下面清），投放怪漏过数读 `m._bondRoundStats` 快照（settle 在发完
+    // 攻方奖励、清 `this.fields` 之前钉下的；见 monsterBonds.js 的 captureMonsterBondLeaks 与 settle.js:238）。
+    // 注意：`this.fields` 在 settle() 结尾就已经被清空，所以这里即使排在 `this.fields = []` 之前也读不到战场结果 ——
+    // 「回收」必须靠快照，不能靠 fields。函数本身也把 m.monsterBonds / 快照清空（这就是「每回合重置」）。
+    // `monsterShopOn` 为假 ⇒ no-op。
+    if (this.monsterShopOn === true) closeMonsterBondRound(this);
     this.fields = [];
     this.watchers.clear();
     this.unitePlan = null;
@@ -520,10 +531,17 @@ export class MatchPhases {
     this.sp = null;
     this.wave = null;
     this.bossWaves = null;
+    // 卡池快照跟随波次一起在回合边界清掉（boss 回合不建普通波次 ⇒ 保持 null，卡池回落 confrontGroups）。
+    this._roundOfficialSpawns = null;
     // 对抗模式：上一回合的 狩猎期 / 事件期状态不得漏进本回合的 PREP / 视图
     if (this.isVersus) {
       this.confrontStage = null; this.confront = null; this.confrontSubs = null; this.confrontTargets = null;
       this._confrontRemoved = null;
+      // 提交付款台账（2026-11-04 复验修复 1）：跨回合不结转（enterConfront 也会重建，这里兜一道）
+      this._confrontPaid = null;
+      // 怪物盟约（2026-11-04）：本回合从零开始（收尾 / 清空已在上面 closeMonsterBondRound 做过；这里兜一道，
+      // 保证任何一条到达这里的路径都不会把上一回合的层数带进 PREP / 帧）。
+      this.monsterBonds = null;
     }
     // 熔毁代价的「每回合全属性」档：每回合把 debt.round 累加进 growth（业主 2026-10-26 接线）
     if (this.melt && this.melt.debt) {
@@ -543,6 +561,10 @@ export class MatchPhases {
     } else {
       // stageId: a workshop stage may bind its own wave table to a round (shared/waveAuthoring.js; waves.js buildNormalWave)
       this.wave = buildNormalWave(this.gd, this.rngWaves, this.factions, r, this.stageId);
+      // 怪物卡池真源（业主 2026-11-04）：本回合卡池 = **该回合的官方出怪**，然后随机。
+      // 只读快照（enemyKey + count）：**不得原地修改 this.wave.spawns** —— 那是守方战斗输入，
+      // 波次价值 / 替换份额 / 预算全以它为准；卡池只另存一份「本回合官方出了哪些怪、各几只」。
+      this._roundOfficialSpawns = (this.wave?.spawns || []).map((s) => ({ enemyKey: s.enemyKey, count: Math.max(1, Number(s.count) || 1) }));
       // 对抗：记下本回合真正生成的怪 —— 狩猎期「只能选该回合往前出过的怪」以它为真源（业主 2026-10-26）
       if (this.isVersus) {
         try { this.confrontRecordWave(r, this.wave); } catch (e) { this.reportError('confrontRecordWave', e); }

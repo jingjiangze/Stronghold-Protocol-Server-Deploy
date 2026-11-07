@@ -36,7 +36,9 @@ export class BattleSpawns {
       const p = {
         time: Math.max(0, fin(s.time, 0)) + i * interval, enemyKey: s.enemyKey, routeIndex: s.routeIndex ?? 0, route: s.route ?? null,
         mods: s.mods ?? null, sourcePlayerId: s.sourcePlayerId ?? null, bounty: s.bounty ?? null, tag: s.tag ?? null,
-        ownerPlayerId: s.ownerPlayerId ?? null, pos: s.pos ?? null, seq: ++this._spawnSeq, countInTotal: s.countInTotal,
+        ownerPlayerId: s.ownerPlayerId ?? null, confrontSeat: Number.isInteger(s.confrontSeat) ? s.confrontSeat : null,
+        confrontPrice: s.confrontPrice,
+        pos: s.pos ?? null, seq: ++this._spawnSeq, countInTotal: s.countInTotal,
         centerLeader:isCentralLeaderSpawn(def?.raw),centerLeaderWarning:this.kind!=='unite'&&fixedLeader(def?.raw),
       };
       if(p.centerLeader&&p.ownerPlayerId==null)p.ownerPlayerId=this._ownerForTile(p.pos??this._routeFor(p.routeIndex,p.route)?.start);
@@ -149,6 +151,9 @@ export class BattleSpawns {
   /**
    * Spawn an enemy now. opts: { routeIndex, route, pos:[r,c], mods:{hpMul,atkMul,defMul,resMul,speedMul}, tag,
    * sourcePlayerId, ownerPlayerId, bounty:{coins,ownerPlayerId}, countInTotal }
+  /**
+   * Spawn an enemy now. opts: { routeIndex, route, pos:[r,c], mods:{hpMul,atkMul,defMul,resMul,speedMul,aspdMul}, tag,
+   * sourcePlayerId, ownerPlayerId, bounty:{coins,ownerPlayerId}, countInTotal, inTotal, confrontSeat, confrontPrice }
    */
   spawnEnemy(enemyKey, opts = {}) {
     if(this._eventActor?.mods?.eventTeam&&opts.mods?.eventTeam==null)opts={...opts,mods:{...opts.mods,eventTeam:this._eventActor.mods.eventTeam},ownerPlayerId:this._eventActor.ownerId,countInTotal:false,tag:'eventSupport'};
@@ -181,7 +186,7 @@ export class BattleSpawns {
     // multipliers: finite and ≥ 0 (hp > 0), anything else counts as 1
     const mm = (v, pos = false) => { const n = fin(v, 1); return n < 0 || (pos && n <= 0) ? 1 : n; };
     const m0 = opts.mods || {};
-    const m = { hpMul: mm(m0.hpMul, true), atkMul: mm(m0.atkMul), defMul: mm(m0.defMul), resMul: mm(m0.resMul), speedMul: mm(m0.speedMul) };
+    const m = { hpMul: mm(m0.hpMul, true), atkMul: mm(m0.atkMul), defMul: mm(m0.defMul), resMul: mm(m0.resMul), speedMul: mm(m0.speedMul), aspdMul: mm(m0.aspdMul) };
     const scaledRes=def.res*(m.resMul??1),resAdd=fin(m0.resAdd,0);
     const contractRes=resAdd>0?Math.max(scaledRes,Math.min(90,scaledRes+resAdd)):scaledRes+resAdd;
     // 藏品的敌人通道（无 enemyMods 时为 null）：防御平加（戈渎不语 +3000）
@@ -192,7 +197,7 @@ export class BattleSpawns {
       x: start[1], y: start[0], motion: def.motion, dir: def.raw?.nativeBountySummonV4?(opts.dir??def.raw.nativeFacing):undefined,
       base: {
         maxHp: def.maxHp * (m.hpMul ?? 1), atk: def.atk * (m.atkMul ?? 1), def: Math.max(0, def.def * (m.defMul ?? 1) + relicDefAdd), res: contractRes,
-        aspd: def.aspd + fin(m0.aspdAdd,0), bat: def.bat, blockCnt: 0, moveSpeed: def.moveSpeed * (m.speedMul ?? 1), spRecovery: 0,
+        aspd: def.aspd * (m.aspdMul ?? 1) + fin(m0.aspdAdd,0), bat: def.bat, blockCnt: 0, moveSpeed: def.moveSpeed * (m.speedMul ?? 1), spRecovery: 0,
         tauntLevel: def.tauntLevel, massLevel: def.massLevel, hpRecoveryPerSec: def.hpRecoveryPerSec + def.maxHp*(m.hpMul??1)*Math.max(0,fin(m0.hpRegenRatio,0)), rangeRadius: def.rangeRadius,
       },
     });
@@ -208,6 +213,10 @@ export class BattleSpawns {
     e.bounty = opts.bounty ?? null;
     e.sourcePlayerId = opts.sourcePlayerId ?? null;
     e.ownerId = opts.ownerPlayerId ?? this._ownerForTile(start);
+    // 对抗投放归属：confrontSeat = 投放者席位，confrontPrice = 该怪的阶位阶梯价（confront.js applyConfront 写入）。
+    // 只用于「投放怪被击杀 / 漏过」的汇总（deploy.js），不参与 counted / inTotal 的官方计数。
+    e.confrontSeat = Number.isInteger(opts.confrontSeat) ? opts.confrontSeat : null;
+    e.confrontPrice = Number.isFinite(opts.confrontPrice) && opts.confrontPrice > 0 ? opts.confrontPrice : null;
     e.spawnX = e.x; e.spawnY = e.y;
     if(def.raw?.returnsToOwnField||m0.contractBossLoop){
       e.returningId=opts.returningId||m0.returningId||m0.bountyId||'return:'+e.id;

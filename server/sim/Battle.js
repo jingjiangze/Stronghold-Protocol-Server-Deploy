@@ -171,6 +171,15 @@ export class Battle {
     // the official LP / 完美作战 reading: every `counted` enemy, runtime splits and summons included.
     this.killedInTotal = 0;
     this.leakedInTotal = 0;
+    // 对抗投放（2V2 对称血量，match/settle.js）：按**投放席位**汇总本场投放怪的结局 ——
+    // `{ [String(seat)]: 只数 }` 两张，外加按**阶位阶梯价**合计的两张 `{ [String(seat)]: Σ价 }`
+    // （价随 spawn spec 的 `confrontPrice` 进来，spawns.js；缺价时每只记 1，deploy.js tallySeat）。
+    // 人类（浏览器）战场跑 server/sim/**（server/boot-main.js 的 simDir），bot / 服务端接管跑
+    // plugins/mota/server/sim/** —— 两棵必须同源：只写在一棵时，只有那些场才扣血（业主报障「扣血逻辑完全混乱」）。
+    this.confrontKills = Object.create(null);       // 投放席位 → 本场被击杀的投放怪只数
+    this.confrontLeaks = Object.create(null);       // 投放席位 → 本场漏过去的投放怪只数
+    this.confrontKillValue = Object.create(null);   // 投放席位 → 同上，按阶位阶梯价合计
+    this.confrontLeakValue = Object.create(null);   // 投放席位 → 同上，按阶位阶梯价合计
     this.errors = [];
     this.errorCount = 0;
     this._errKeys = new Set();

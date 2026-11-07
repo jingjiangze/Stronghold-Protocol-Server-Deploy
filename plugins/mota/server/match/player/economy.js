@@ -9,6 +9,8 @@ import { ruleOption } from '../../../shared/plugins/rules.js';
 import { freeSlot } from '../board.js';
 import { computeBonds } from '../bondsMeta.js';
 import { OK, fail } from './common.js';
+// 攻方回合（2026-11-04 业主口径）：干员盟约的写入口闸门。
+import { isAttackerRound } from '../monsterBonds.js';
 
 export class PlayerEconomy {
   addFunds(n, { reason = '' } = {}) {
@@ -71,6 +73,10 @@ export class PlayerEconomy {
    */
   addLayers(bondId, n, { requireActive = false, reason = '' } = {}) {
     if (!this.gd.bond(bondId) || !Number.isFinite(n) || n <= 0) return 0;
+    // 攻方回合（2026-11-04 业主口径）：干员盟约的写入口闸门 —— 在 gd.bond 检查之后、任何写入之前直接拒绝：
+    // 不加层、不 recompute、也不发 `m.layer`（否则客户端会闪一条「层数 +N」）。**不清**已有层数：ps.layers / ps.bonds
+    // 是整局持久的（赏金档下一回合他就变守方，且 invariants.js 钉死 ps.bonds === computeBonds(ps)）。
+    if (isAttackerRound(this.m, this)) return 0;
     if (requireActive && !(this.bonds[bondId] && this.bonds[bondId].active)) return 0;
     const before = this.layers[bondId] || 0;
     const add = layerGainRoom(before, Math.floor(n));

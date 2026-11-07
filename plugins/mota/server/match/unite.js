@@ -44,7 +44,9 @@ import { layerGainRoom } from '../../shared/constants.js';
  * @returns {null | { helpers: any[], leakers: any[], leaked: object[], notReentered: Map<string, number> }}
  */
 export function planUnite(m, results) {
-  if (m.isSolo) return null;
+  // Versus: both sides settle their own round, so 联防 (a co-op fallback) has no meaning here — and it would read
+  // "one player leaked, the other did not" as a 联防 and recompute the LP loss from it. Never in a versus round.
+  if (m.isSolo || m.isVersus) return null;
   const alive = m.alivePlayers();
   const leakers = [];
   const perfects = [];

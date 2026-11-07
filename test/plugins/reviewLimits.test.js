@@ -3,12 +3,24 @@ import assert from 'node:assert/strict';
 import { makeBattle, chessRec, enemyRec } from '../helpers/battleHarness.js';
 import { branchSpawn } from '../../server/sim/content/bosses.js';
 import { MAX_ALIVE_ENEMIES } from '../../server/sim/constants.js';
-import { PLUGIN_SPAWN_TOTAL, PLUGIN_TIMES_MAX, PLUGIN_GAIN_COUNT_MAX, boundedCount } from '../../shared/plugins/limits.js';
+import { PLUGIN_SPAWN_TOTAL, PLUGIN_TIMES_MAX, PLUGIN_GAIN_COUNT_MAX, boundedCount, dataBound } from '../../shared/plugins/limits.js';
 import { getData } from '../../server/data.js';
 import { applyCard } from '../../server/match/choices.js';
 import { DATA, makeMatch } from '../match/harness.js';
 
 const walker = (o = {}) => enemyRec({ key: 'enemy_w', hp: 1000, speed: 0, ...o });
+
+/**
+ * A loop cap follows the dataBound formula (10 × the official absolute maximum, floor 64; shared/plugins/limits.js),
+ * so a larger official input raises the cap by itself instead of breaking a hand-written ceiling. `bound` is never
+ * below PLUGIN_BOUND_FLOOR, so `cap === 64` only passes where 10 × the official maximum is itself at the floor — an
+ * official maximum that is clearly larger (12, 20, 300) makes a floor fallback fail. The old 1000 stays an upper
+ * bound while the formula is still at the floor; above it the cap may not be loosened past the formula.
+ */
+const followsDataBound = (cap, officialMax) => {
+  const bound = dataBound(officialMax);
+  return cap >= bound && cap <= Math.max(1000, bound);
+};
 
 test('shared spawn cap equals the engine cap and a fractional count is not floored', () => {
   assert.equal(PLUGIN_SPAWN_TOTAL, MAX_ALIVE_ENEMIES);
@@ -123,7 +135,7 @@ test('列装 and bond-chess grants loop at most PLUGIN_GAIN_COUNT_MAX', () => {
 });
 
 test('named operator, band, hammer, 黑云 and warden loops stop at the official cap', async () => {
-  const { bbCap, fieldCap } = await import('../../shared/plugins/officialBounds.js');
+  const { bbCap, fieldCap, officialBbMax, officialFieldMax } = await import('../../shared/plugins/officialBounds.js');
   const { setGameData } = await import('../../server/sim/content/support/index.js');
   const { bandMetaHandler } = await import('../../server/sim/content/bands/meta.js');
   const { payHammers } = await import('../../server/sim/content/bonds/core.js');
@@ -137,10 +149,12 @@ test('named operator, band, hammer, 黑云 and warden loops stop at the official
   const countCap = bbCap('count');
   const shockCap = bbCap('attack@times');
   const ammoCap = fieldCap('enemy.sp.maxSp');
-  assert.ok(timesCap >= 64 && timesCap < 1000);
-  assert.ok(countCap >= 64 && countCap < 1000);
-  assert.ok(shockCap >= 64 && shockCap < 1000);
-  assert.ok(ammoCap >= 64 && ammoCap < 1000);
+  // 2026-11-05：夹子跟随 dataBound 公式（10×官方最大值），不再手写 < 1000 ——
+  // 怪物表并入剧情怪后 enemy.sp.maxSp 官方最大值 55→300（enemy_2092_skzamy），上限自然到 3000。
+  assert.ok(followsDataBound(timesCap, officialBbMax('times')), `times cap ${timesCap}, official ${officialBbMax('times')}`);
+  assert.ok(followsDataBound(countCap, officialBbMax('count')), `count cap ${countCap}, official ${officialBbMax('count')}`);
+  assert.ok(followsDataBound(shockCap, officialBbMax('attack@times')), `attack@times cap ${shockCap}, official ${officialBbMax('attack@times')}`);
+  assert.ok(followsDataBound(ammoCap, officialFieldMax('enemy.sp.maxSp')), `enemy.sp.maxSp cap ${ammoCap}, official ${officialFieldMax('enemy.sp.maxSp')}`);
 
   const form = (id) => structuredClone(getData().backups.units[id].forms['2/1/4/0']);
   const zuoleForm = form('char_4121_zuole');

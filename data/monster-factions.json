@@ -1,0 +1,2461 @@
+{
+  "version": 3,
+  "source": "0.4.3 upstream-043-content factions.json (category=faction: entries/pool/branches) + enemies.json contractTrainingTags；20 阵营（0.4.3）+ 源石协议 ORIGINIUM（业主 2026-11-04 新增，第 21 个）+ 规则补全 194 条（业主裁决：不留空，491/491 全覆盖）；规则顺序与命中数见 rules 段，前缀实测见 prefixTable 段，原 99 条候选见 proposed（已采纳）；假想敌系列独立为 IMAGINARY（业主 2026-11-05 裁决，第 22 个阵营）；vt* / mh* / cs* / redace* 按业主裁决归位（vt*→VICTORIA、mh*→SEA_BORN、cs*→LEITHANIEN、redace*→SARGON；mer* 保持 REUNION）",
+  "factions": {
+    "REUNION": {
+      "name": "整合运动",
+      "nameEn": "Reunion"
+    },
+    "URSUS": {
+      "name": "乌萨斯",
+      "nameEn": "Ursus"
+    },
+    "DEEP_POOL": {
+      "name": "深池",
+      "nameEn": "Dublinn"
+    },
+    "VICTORIA": {
+      "name": "维多利亚",
+      "nameEn": "Victoria"
+    },
+    "SARKAZ": {
+      "name": "萨卡兹",
+      "nameEn": "Sarkaz"
+    },
+    "LEITHANIEN": {
+      "name": "莱塔尼亚",
+      "nameEn": "Leithanien"
+    },
+    "YAN": {
+      "name": "大炎",
+      "nameEn": "Yan"
+    },
+    "SEA_BORN": {
+      "name": "海嗣",
+      "nameEn": "Seaborn"
+    },
+    "KAZIMIERZ": {
+      "name": "卡西米尔",
+      "nameEn": "Kazimierz"
+    },
+    "KJERAG": {
+      "name": "谢拉格",
+      "nameEn": "Kjerag"
+    },
+    "SIRACUSA": {
+      "name": "叙拉古",
+      "nameEn": "Siracusa"
+    },
+    "LATERANO": {
+      "name": "拉特兰",
+      "nameEn": "Laterano"
+    },
+    "IBERIA": {
+      "name": "伊比利亚",
+      "nameEn": "Iberia"
+    },
+    "SIESTA": {
+      "name": "汐斯塔安保",
+      "nameEn": "Siesta"
+    },
+    "SARGON": {
+      "name": "萨尔贡",
+      "nameEn": "Sargon"
+    },
+    "BOLIVAR": {
+      "name": "玻利瓦尔",
+      "nameEn": "Bolívar"
+    },
+    "DURIN": {
+      "name": "杜林",
+      "nameEn": "Durin"
+    },
+    "HIGASHI": {
+      "name": "东国",
+      "nameEn": "Higashi"
+    },
+    "SAMI": {
+      "name": "萨米",
+      "nameEn": "Sami"
+    },
+    "COLUMBIA": {
+      "name": "哥伦比亚",
+      "nameEn": "Columbia"
+    },
+    "ORIGINIUM": {
+      "name": "源石协议",
+      "nameEn": "Originium Protocol"
+    },
+    "IMAGINARY": {
+      "name": "假想敌协议",
+      "nameEn": "Imaginary Enemy Protocol"
+    }
+  },
+  "rules": [
+    {
+      "step": 1,
+      "id": "ORIGINIUM",
+      "hits": 32,
+      "criteria": "name 含「源石虫」/「源石」；或 tags 含 origen/originiumartscraft；或 key 词干前缀 mhslim/slime/ftsj/ftzl；或词干含 slime/slim（源石虫族词根，例如 lslime=“庞贝”）"
+    },
+    {
+      "step": 2,
+      "label": "prefab 前缀",
+      "hits": 69,
+      "criteria": "在已映射的 297 条上实测「纯度 100% 且样本 n≥2」的 prefab/spine 前缀，最长优先命中；采用的前缀见 prefixTable 段"
+    },
+    {
+      "step": 3,
+      "label": "name/desc 关键词",
+      "hits": 21,
+      "criteria": "name/desc 的国家/组织词：先国家名、后组织/职务词；「炎」只认「大炎/炎国」（避免火属性误命中）"
+    },
+    {
+      "step": 4,
+      "label": "sibling",
+      "hits": 3,
+      "criteria": "逐级剥掉 _2/_3/_a/_b/_2b/_2c/_04 等后缀，base key 已有阵营则沿用"
+    },
+    {
+      "step": 5,
+      "label": "tags",
+      "hits": 7,
+      "criteria": "sarkaz→SARKAZ、seamonster→SEA_BORN；machine 实测不纯（9 个阵营混用）故跳过"
+    },
+    {
+      "step": 6,
+      "id": "REUNION",
+      "hits": 62,
+      "criteria": "兜底：以上全不中归「整合运动」（敌对通用），清单已单独计数"
+    }
+  ],
+  "prefixTable": {
+    "skz": {
+      "faction": "SARKAZ",
+      "sample": 3,
+      "hits": 41
+    },
+    "lr": {
+      "faction": "SARKAZ",
+      "sample": 8,
+      "hits": 4
+    },
+    "lt": {
+      "faction": "LEITHANIEN",
+      "sample": 7,
+      "hits": 4
+    },
+    "dus": {
+      "faction": "DEEP_POOL",
+      "sample": 8,
+      "hits": 2
+    },
+    "lrs": {
+      "faction": "SARKAZ",
+      "sample": 2,
+      "hits": 2
+    },
+    "sg": {
+      "faction": "SIRACUSA",
+      "sample": 10,
+      "hits": 2
+    },
+    "soti": {
+      "faction": "REUNION",
+      "sample": 4,
+      "hits": 2
+    },
+    "sotid": {
+      "faction": "REUNION",
+      "sample": 2,
+      "hits": 2
+    },
+    "cb": {
+      "faction": "COLUMBIA",
+      "sample": 10,
+      "hits": 1
+    },
+    "dzom": {
+      "faction": "SARKAZ",
+      "sample": 3,
+      "hits": 1
+    },
+    "dzoms": {
+      "faction": "SARKAZ",
+      "sample": 2,
+      "hits": 1
+    },
+    "em": {
+      "faction": "URSUS",
+      "sample": 3,
+      "hits": 1
+    },
+    "ha": {
+      "faction": "REUNION",
+      "sample": 2,
+      "hits": 1
+    },
+    "ice": {
+      "faction": "REUNION",
+      "sample": 2,
+      "hits": 1
+    },
+    "mtr": {
+      "faction": "LATERANO",
+      "sample": 3,
+      "hits": 1
+    },
+    "nh": {
+      "faction": "SARKAZ",
+      "sample": 8,
+      "hits": 1
+    },
+    "shiel": {
+      "faction": "REUNION",
+      "sample": 2,
+      "hits": 1
+    },
+    "yokai": {
+      "faction": "REUNION",
+      "sample": 2,
+      "hits": 1
+    }
+  },
+  "map": {
+    "enemy_10001_trslim": [
+      "ORIGINIUM"
+    ],
+    "enemy_10003_trwlpl": [
+      "REUNION"
+    ],
+    "enemy_1000_gopro": [
+      "REUNION"
+    ],
+    "enemy_1000_gopro_2": [
+      "REUNION"
+    ],
+    "enemy_10018_sgrobh": [
+      "SIRACUSA"
+    ],
+    "enemy_1001_bigbo": [
+      "REUNION"
+    ],
+    "enemy_1001_bigbo_2": [
+      "REUNION"
+    ],
+    "enemy_10027_vtsk": [
+      "VICTORIA"
+    ],
+    "enemy_10028_vtswd": [
+      "VICTORIA"
+    ],
+    "enemy_10029_vtshld": [
+      "VICTORIA"
+    ],
+    "enemy_10030_vtwand": [
+      "VICTORIA"
+    ],
+    "enemy_10031_cnvsld": [
+      "SIRACUSA"
+    ],
+    "enemy_10034_cnvsax": [
+      "SIRACUSA"
+    ],
+    "enemy_10040_cnvbln": [
+      "SIRACUSA"
+    ],
+    "enemy_10042_prtrop": [
+      "IBERIA"
+    ],
+    "enemy_10042_prtrop_2": [
+      "IBERIA"
+    ],
+    "enemy_10043_sailor": [
+      "IBERIA"
+    ],
+    "enemy_10044_wintun": [
+      "IBERIA"
+    ],
+    "enemy_10045_parrot": [
+      "IBERIA"
+    ],
+    "enemy_10054_cjhot": [
+      "YAN"
+    ],
+    "enemy_1005_yokai": [
+      "REUNION"
+    ],
+    "enemy_1005_yokai_2": [
+      "REUNION"
+    ],
+    "enemy_1005_yokai_3": [
+      "REUNION"
+    ],
+    "enemy_10065_ftzlc": [
+      "ORIGINIUM"
+    ],
+    "enemy_10067_ftsjc": [
+      "ORIGINIUM"
+    ],
+    "enemy_1006_shield": [
+      "REUNION"
+    ],
+    "enemy_1006_shield_2": [
+      "REUNION"
+    ],
+    "enemy_1006_shield_3": [
+      "REUNION"
+    ],
+    "enemy_10073_mpcar": [
+      "ORIGINIUM"
+    ],
+    "enemy_1007_slime": [
+      "ORIGINIUM"
+    ],
+    "enemy_1007_slime_3": [
+      "ORIGINIUM"
+    ],
+    "enemy_10081_mpplai": [
+      "ORIGINIUM"
+    ],
+    "enemy_10083_hlbird": [
+      "LATERANO"
+    ],
+    "enemy_10084_hlegle": [
+      "LATERANO"
+    ],
+    "enemy_10085_hllevi_2": [
+      "LATERANO"
+    ],
+    "enemy_10087_hlchgr": [
+      "LATERANO"
+    ],
+    "enemy_1008_ghost": [
+      "REUNION"
+    ],
+    "enemy_10094_crstf": [
+      "REUNION"
+    ],
+    "enemy_10097_crshd": [
+      "REUNION"
+    ],
+    "enemy_10098_crhro": [
+      "REUNION"
+    ],
+    "enemy_10099_crvln": [
+      "REUNION"
+    ],
+    "enemy_1009_lurker": [
+      "REUNION"
+    ],
+    "enemy_1010_demon": [
+      "REUNION",
+      "SARKAZ"
+    ],
+    "enemy_1010_demon_2": [
+      "SARKAZ"
+    ],
+    "enemy_1010_demon_a": [
+      "SARKAZ"
+    ],
+    "enemy_10112_ymgds": [
+      "HIGASHI"
+    ],
+    "enemy_10116_ymgtop": [
+      "HIGASHI"
+    ],
+    "enemy_10118_ymgprc": [
+      "YAN"
+    ],
+    "enemy_10122_uacann_2": [
+      "URSUS"
+    ],
+    "enemy_10124_uashld_2": [
+      "URSUS"
+    ],
+    "enemy_10127_rkmbst_2": [
+      "REUNION"
+    ],
+    "enemy_1012_dcross": [
+      "REUNION",
+      "SARKAZ"
+    ],
+    "enemy_1012_dcross_2": [
+      "SARKAZ"
+    ],
+    "enemy_1012_dcross_a": [
+      "SARKAZ"
+    ],
+    "enemy_10138_xdsnow": [
+      "REUNION"
+    ],
+    "enemy_10141_xdpeng_2": [
+      "REUNION"
+    ],
+    "enemy_10144_xdelk_2": [
+      "REUNION"
+    ],
+    "enemy_10156_mncrer": [
+      "REUNION"
+    ],
+    "enemy_10159_mntrjn": [
+      "REUNION"
+    ],
+    "enemy_10162_mnctpt": [
+      "REUNION"
+    ],
+    "enemy_1016_diaman": [
+      "REUNION"
+    ],
+    "enemy_1017_defdrn": [
+      "REUNION"
+    ],
+    "enemy_1019_jshoot": [
+      "REUNION"
+    ],
+    "enemy_1019_jshoot_2": [
+      "REUNION"
+    ],
+    "enemy_1020_obsv": [
+      "REUNION"
+    ],
+    "enemy_1021_bslime": [
+      "ORIGINIUM"
+    ],
+    "enemy_1022_dmage": [
+      "REUNION",
+      "SARKAZ"
+    ],
+    "enemy_1022_dmage_2": [
+      "SARKAZ"
+    ],
+    "enemy_1023_jmage": [
+      "REUNION"
+    ],
+    "enemy_1024_mortar": [
+      "REUNION"
+    ],
+    "enemy_1024_mortar_2": [
+      "REUNION"
+    ],
+    "enemy_1025_reveng": [
+      "REUNION"
+    ],
+    "enemy_1025_reveng_2": [
+      "REUNION"
+    ],
+    "enemy_1026_aghost": [
+      "REUNION"
+    ],
+    "enemy_1027_mob": [
+      "REUNION"
+    ],
+    "enemy_1039_breakr": [
+      "REUNION"
+    ],
+    "enemy_1039_breakr_2": [
+      "REUNION"
+    ],
+    "enemy_1040_bombd": [
+      "REUNION"
+    ],
+    "enemy_1041_lazerd": [
+      "REUNION"
+    ],
+    "enemy_1041_lazerd_2": [
+      "REUNION"
+    ],
+    "enemy_1042_frostd": [
+      "REUNION"
+    ],
+    "enemy_1043_zomsbr": [
+      "REUNION"
+    ],
+    "enemy_1045_hammer": [
+      "REUNION"
+    ],
+    "enemy_1045_hammer_2": [
+      "REUNION"
+    ],
+    "enemy_1046_agent": [
+      "SIESTA"
+    ],
+    "enemy_1047_sagent": [
+      "SIESTA"
+    ],
+    "enemy_1047_sagent_2": [
+      "SIESTA"
+    ],
+    "enemy_1049_eagent_2": [
+      "SIESTA"
+    ],
+    "enemy_1050_lslime": [
+      "ORIGINIUM"
+    ],
+    "enemy_1053_norgst_2": [
+      "SIESTA"
+    ],
+    "enemy_1056_ganwar": [
+      "REUNION"
+    ],
+    "enemy_1056_ganwar_2": [
+      "REUNION"
+    ],
+    "enemy_1058_traink": [
+      "REUNION"
+    ],
+    "enemy_1060_emouse_2": [
+      "URSUS"
+    ],
+    "enemy_1061_zomshd": [
+      "REUNION"
+    ],
+    "enemy_1062_rager_2": [
+      "REUNION"
+    ],
+    "enemy_1063_rageth_2": [
+      "REUNION"
+    ],
+    "enemy_1064_snsbr": [
+      "REUNION"
+    ],
+    "enemy_1067_snslime": [
+      "ORIGINIUM"
+    ],
+    "enemy_1068_snmage_2": [
+      "REUNION"
+    ],
+    "enemy_1069_icebrk": [
+      "REUNION"
+    ],
+    "enemy_1069_icebrk_2": [
+      "REUNION"
+    ],
+    "enemy_1070_iced": [
+      "REUNION"
+    ],
+    "enemy_1071_dftman": [
+      "SARKAZ"
+    ],
+    "enemy_1071_dftman_2": [
+      "SARKAZ"
+    ],
+    "enemy_1072_dlancer": [
+      "SARKAZ"
+    ],
+    "enemy_1072_dlancer_2": [
+      "SARKAZ"
+    ],
+    "enemy_1073_dscout": [
+      "SARKAZ"
+    ],
+    "enemy_1074_dbskar_2": [
+      "SARKAZ"
+    ],
+    "enemy_1074_dbskar_2b": [
+      "SARKAZ"
+    ],
+    "enemy_1074_dbskar_2c": [
+      "SARKAZ"
+    ],
+    "enemy_1075_dmgswd": [
+      "SARKAZ"
+    ],
+    "enemy_1076_bsthmr_2": [
+      "REUNION"
+    ],
+    "enemy_1080_sotidp": [
+      "REUNION"
+    ],
+    "enemy_1080_sotidp_2": [
+      "REUNION"
+    ],
+    "enemy_1081_sotisd": [
+      "REUNION"
+    ],
+    "enemy_1082_soticn": [
+      "REUNION"
+    ],
+    "enemy_1082_soticn_2": [
+      "REUNION"
+    ],
+    "enemy_1084_sotidm": [
+      "REUNION"
+    ],
+    "enemy_1084_sotidm_2": [
+      "REUNION"
+    ],
+    "enemy_1085_sotiwz": [
+      "REUNION"
+    ],
+    "enemy_1088_ltsmer": [
+      "LEITHANIEN"
+    ],
+    "enemy_1090_mdsnpr_2": [
+      "SARKAZ"
+    ],
+    "enemy_1092_mdgint": [
+      "LEITHANIEN"
+    ],
+    "enemy_1095_ccripr": [
+      "SARGON"
+    ],
+    "enemy_1098_cchmpn": [
+      "SARGON"
+    ],
+    "enemy_1098_cchmpn_2": [
+      "SARGON"
+    ],
+    "enemy_1103_wdkght_3": [
+      "REUNION"
+    ],
+    "enemy_1104_lfkght": [
+      "KAZIMIERZ"
+    ],
+    "enemy_1104_lfkght_3": [
+      "KAZIMIERZ"
+    ],
+    "enemy_1106_byokai": [
+      "KAZIMIERZ"
+    ],
+    "enemy_1107_uoffcr": [
+      "URSUS"
+    ],
+    "enemy_1108_uterer": [
+      "URSUS"
+    ],
+    "enemy_1110_uamord": [
+      "URSUS"
+    ],
+    "enemy_1112_emppnt": [
+      "URSUS"
+    ],
+    "enemy_1112_emppnt_2": [
+      "URSUS"
+    ],
+    "enemy_1113_empace_2": [
+      "URSUS"
+    ],
+    "enemy_1116_liprr": [
+      "COLUMBIA"
+    ],
+    "enemy_1116_liprr_2": [
+      "COLUMBIA"
+    ],
+    "enemy_1118_lidbox": [
+      "COLUMBIA"
+    ],
+    "enemy_1118_lidbox_2": [
+      "COLUMBIA"
+    ],
+    "enemy_1119_vofsd": [
+      "COLUMBIA"
+    ],
+    "enemy_1121_lifbos": [
+      "COLUMBIA"
+    ],
+    "enemy_1121_lifbos_2": [
+      "COLUMBIA"
+    ],
+    "enemy_1123_spsbr_2": [
+      "YAN"
+    ],
+    "enemy_1128_spmage_2": [
+      "REUNION"
+    ],
+    "enemy_1133_harchn": [
+      "REUNION"
+    ],
+    "enemy_1134_diamd": [
+      "ORIGINIUM"
+    ],
+    "enemy_1136_redace": [
+      "SARGON"
+    ],
+    "enemy_1136_redace_2": [
+      "SARGON"
+    ],
+    "enemy_1141_merbow": [
+      "REUNION"
+    ],
+    "enemy_1143_merrpg": [
+      "REUNION"
+    ],
+    "enemy_1144_merlgd": [
+      "REUNION"
+    ],
+    "enemy_1148_dssbr": [
+      "SEA_BORN"
+    ],
+    "enemy_1148_dssbr_2": [
+      "SEA_BORN"
+    ],
+    "enemy_1158_divman": [
+      "BOLIVAR"
+    ],
+    "enemy_1160_hvyslr": [
+      "BOLIVAR"
+    ],
+    "enemy_1160_hvyslr_2": [
+      "BOLIVAR"
+    ],
+    "enemy_1161_tidmag": [
+      "BOLIVAR"
+    ],
+    "enemy_1161_tidmag_2": [
+      "BOLIVAR"
+    ],
+    "enemy_1162_magmot": [
+      "BOLIVAR"
+    ],
+    "enemy_1162_magmot_2": [
+      "BOLIVAR"
+    ],
+    "enemy_1163_hvymot_2": [
+      "BOLIVAR"
+    ],
+    "enemy_1165_duhond": [
+      "DEEP_POOL"
+    ],
+    "enemy_1165_duhond_2": [
+      "DEEP_POOL"
+    ],
+    "enemy_1166_dusbr": [
+      "DEEP_POOL"
+    ],
+    "enemy_1166_dusbr_2": [
+      "DEEP_POOL"
+    ],
+    "enemy_1168_dumage": [
+      "DEEP_POOL"
+    ],
+    "enemy_1168_dumage_2": [
+      "DEEP_POOL"
+    ],
+    "enemy_1169_duphlx": [
+      "DEEP_POOL"
+    ],
+    "enemy_1169_duphlx_2": [
+      "DEEP_POOL"
+    ],
+    "enemy_1170_dushld": [
+      "DEEP_POOL"
+    ],
+    "enemy_1170_dushld_2": [
+      "DEEP_POOL"
+    ],
+    "enemy_1171_durokt": [
+      "DEEP_POOL"
+    ],
+    "enemy_1171_durokt_2": [
+      "DEEP_POOL"
+    ],
+    "enemy_1172_dugago": [
+      "DEEP_POOL"
+    ],
+    "enemy_1172_dugago_2": [
+      "DEEP_POOL"
+    ],
+    "enemy_1174_duholy": [
+      "DEEP_POOL"
+    ],
+    "enemy_1174_duholy_2": [
+      "DEEP_POOL"
+    ],
+    "enemy_1175_dushdo_2": [
+      "DEEP_POOL"
+    ],
+    "enemy_1182_flasrt_3": [
+      "KAZIMIERZ"
+    ],
+    "enemy_1183_mlasrt": [
+      "KAZIMIERZ"
+    ],
+    "enemy_1183_mlasrt_3": [
+      "KAZIMIERZ"
+    ],
+    "enemy_1184_cadkgt_3": [
+      "KAZIMIERZ"
+    ],
+    "enemy_1189_krgaxe": [
+      "KJERAG"
+    ],
+    "enemy_1191_krgrg": [
+      "KJERAG"
+    ],
+    "enemy_1192_krgscr_2": [
+      "KJERAG"
+    ],
+    "enemy_1195_sfyin": [
+      "YAN"
+    ],
+    "enemy_1195_sfyin_2": [
+      "YAN"
+    ],
+    "enemy_1196_msfyin": [
+      "YAN"
+    ],
+    "enemy_1196_msfyin_2": [
+      "YAN"
+    ],
+    "enemy_1197_sfshu": [
+      "YAN"
+    ],
+    "enemy_1197_sfshu_2": [
+      "YAN"
+    ],
+    "enemy_1198_msfshu": [
+      "YAN"
+    ],
+    "enemy_1198_msfshu_2": [
+      "YAN"
+    ],
+    "enemy_1199_sfjin": [
+      "YAN"
+    ],
+    "enemy_1199_sfjin_2": [
+      "YAN"
+    ],
+    "enemy_1200_msfjin": [
+      "YAN"
+    ],
+    "enemy_1200_msfjin_2": [
+      "YAN"
+    ],
+    "enemy_1201_sfzhi_2": [
+      "YAN"
+    ],
+    "enemy_1202_msfzhi": [
+      "YAN"
+    ],
+    "enemy_1202_msfzhi_2": [
+      "YAN"
+    ],
+    "enemy_1203_sfhu": [
+      "YAN"
+    ],
+    "enemy_1203_sfhu_2": [
+      "YAN"
+    ],
+    "enemy_1204_msfhu": [
+      "YAN"
+    ],
+    "enemy_1204_msfhu_2": [
+      "YAN"
+    ],
+    "enemy_1207_sfji": [
+      "YAN"
+    ],
+    "enemy_1207_sfji_2": [
+      "YAN"
+    ],
+    "enemy_1208_msfji": [
+      "YAN"
+    ],
+    "enemy_1208_msfji_2": [
+      "YAN"
+    ],
+    "enemy_1209_sfden": [
+      "YAN"
+    ],
+    "enemy_1209_sfden_2": [
+      "YAN"
+    ],
+    "enemy_1210_msfden": [
+      "YAN"
+    ],
+    "enemy_1210_msfden_2": [
+      "YAN"
+    ],
+    "enemy_1212_mtrfol_2": [
+      "LATERANO"
+    ],
+    "enemy_1213_mtrsnp_2": [
+      "LATERANO"
+    ],
+    "enemy_1216_cansld": [
+      "LATERANO"
+    ],
+    "enemy_1216_cansld_2": [
+      "LATERANO"
+    ],
+    "enemy_1217_rescar_2": [
+      "LATERANO"
+    ],
+    "enemy_1218_bomscr_2": [
+      "LATERANO"
+    ],
+    "enemy_1219_mtrbty": [
+      "LATERANO"
+    ],
+    "enemy_1219_mtrbty_2": [
+      "LATERANO"
+    ],
+    "enemy_1220_dzoms": [
+      "SARKAZ"
+    ],
+    "enemy_1220_dzoms_2": [
+      "SARKAZ"
+    ],
+    "enemy_1220_dzoms_2_a": [
+      "SARKAZ"
+    ],
+    "enemy_1221_dzomg": [
+      "SARKAZ"
+    ],
+    "enemy_1221_dzomg_a": [
+      "SARKAZ"
+    ],
+    "enemy_1222_dpvt": [
+      "SARKAZ"
+    ],
+    "enemy_1223_dmech": [
+      "SARKAZ"
+    ],
+    "enemy_1224_dsuply": [
+      "SARKAZ"
+    ],
+    "enemy_1224_dsuply_b": [
+      "SARKAZ"
+    ],
+    "enemy_1226_dklord": [
+      "SARKAZ"
+    ],
+    "enemy_1228_dslime": [
+      "SARKAZ"
+    ],
+    "enemy_1229_darmy": [
+      "SARKAZ"
+    ],
+    "enemy_1229_darmy_2": [
+      "SARKAZ"
+    ],
+    "enemy_1234_dsubrl": [
+      "SEA_BORN"
+    ],
+    "enemy_1234_dsubrl_2": [
+      "SEA_BORN"
+    ],
+    "enemy_1238_ltmob": [
+      "LEITHANIEN"
+    ],
+    "enemy_1238_ltmob_2": [
+      "LEITHANIEN"
+    ],
+    "enemy_1240_ltgint_2": [
+      "ORIGINIUM"
+    ],
+    "enemy_1242_ltsmag": [
+      "LEITHANIEN"
+    ],
+    "enemy_1243_ltswar": [
+      "LEITHANIEN"
+    ],
+    "enemy_1249_lysdb": [
+      "COLUMBIA"
+    ],
+    "enemy_1249_lysdb_2": [
+      "COLUMBIA"
+    ],
+    "enemy_1250_lyengs": [
+      "COLUMBIA"
+    ],
+    "enemy_1251_lysyta": [
+      "COLUMBIA"
+    ],
+    "enemy_1251_lysyta_2": [
+      "COLUMBIA"
+    ],
+    "enemy_1252_lysytb_2": [
+      "COLUMBIA"
+    ],
+    "enemy_1254_lypa_2": [
+      "COLUMBIA"
+    ],
+    "enemy_1255_lybgpa": [
+      "COLUMBIA"
+    ],
+    "enemy_1255_lybgpa_2": [
+      "COLUMBIA"
+    ],
+    "enemy_1256_lyacpa": [
+      "COLUMBIA"
+    ],
+    "enemy_1256_lyacpa_2": [
+      "COLUMBIA"
+    ],
+    "enemy_1258_durman_2": [
+      "DURIN"
+    ],
+    "enemy_1259_durwar": [
+      "DURIN"
+    ],
+    "enemy_1259_durwar_2": [
+      "DURIN"
+    ],
+    "enemy_1263_durbus": [
+      "REUNION"
+    ],
+    "enemy_1263_durbus_2": [
+      "REUNION"
+    ],
+    "enemy_1264_durgrd": [
+      "DURIN"
+    ],
+    "enemy_1267_nhpbr": [
+      "SARKAZ"
+    ],
+    "enemy_1267_nhpbr_2": [
+      "SARKAZ"
+    ],
+    "enemy_1269_nhfly": [
+      "SARKAZ"
+    ],
+    "enemy_1270_nhstlk": [
+      "SARKAZ"
+    ],
+    "enemy_1270_nhstlk_2": [
+      "SARKAZ"
+    ],
+    "enemy_1271_nhkodo": [
+      "SARKAZ"
+    ],
+    "enemy_1271_nhkodo_2": [
+      "SARKAZ"
+    ],
+    "enemy_1272_nhtank": [
+      "SARKAZ"
+    ],
+    "enemy_1272_nhtank_2": [
+      "SARKAZ"
+    ],
+    "enemy_1273_stmgun": [
+      "VICTORIA"
+    ],
+    "enemy_1273_stmgun_2": [
+      "VICTORIA"
+    ],
+    "enemy_1274_stmram": [
+      "VICTORIA"
+    ],
+    "enemy_1275_dwlock": [
+      "SARKAZ"
+    ],
+    "enemy_1275_dwlock_2": [
+      "SARKAZ"
+    ],
+    "enemy_1276_telex": [
+      "SARKAZ"
+    ],
+    "enemy_1277_sgman": [
+      "SIRACUSA"
+    ],
+    "enemy_1278_sgbow": [
+      "SIRACUSA"
+    ],
+    "enemy_1278_sgbow_2": [
+      "SIRACUSA"
+    ],
+    "enemy_1279_sgbdg": [
+      "SIRACUSA"
+    ],
+    "enemy_1279_sgbdg_2": [
+      "SIRACUSA"
+    ],
+    "enemy_1280_sgmag_2": [
+      "SIRACUSA"
+    ],
+    "enemy_1281_sgcar": [
+      "SIRACUSA"
+    ],
+    "enemy_1281_sgcar_2": [
+      "SIRACUSA"
+    ],
+    "enemy_1283_sgkill": [
+      "SIRACUSA"
+    ],
+    "enemy_1283_sgkill_2": [
+      "SIRACUSA"
+    ],
+    "enemy_1285_sgwlf": [
+      "SIRACUSA"
+    ],
+    "enemy_1287_ducrb": [
+      "REUNION"
+    ],
+    "enemy_1287_ducrb_2": [
+      "REUNION"
+    ],
+    "enemy_1288_duskls": [
+      "DEEP_POOL"
+    ],
+    "enemy_1288_duskls_2": [
+      "DEEP_POOL"
+    ],
+    "enemy_1291_dusrch": [
+      "DEEP_POOL"
+    ],
+    "enemy_1292_duskld": [
+      "DEEP_POOL"
+    ],
+    "enemy_1293_duswrd_3": [
+      "DEEP_POOL"
+    ],
+    "enemy_1299_ymkilr": [
+      "YAN"
+    ],
+    "enemy_1299_ymkilr_2": [
+      "YAN"
+    ],
+    "enemy_1300_ymmir_2": [
+      "YAN"
+    ],
+    "enemy_1302_ymtro": [
+      "REUNION"
+    ],
+    "enemy_1302_ymtro_2": [
+      "YAN"
+    ],
+    "enemy_1305_mhslim": [
+      "ORIGINIUM"
+    ],
+    "enemy_1305_mhslim_2": [
+      "ORIGINIUM"
+    ],
+    "enemy_1306_mhtrtl_2": [
+      "SEA_BORN"
+    ],
+    "enemy_1309_mhboar_2": [
+      "SEA_BORN"
+    ],
+    "enemy_1311_mhkryk_2": [
+      "SEA_BORN"
+    ],
+    "enemy_1313_wdfmr": [
+      "REUNION"
+    ],
+    "enemy_1316_wdpjd": [
+      "VICTORIA"
+    ],
+    "enemy_1317_wdexg": [
+      "SARKAZ"
+    ],
+    "enemy_1317_wdexg_2": [
+      "SARKAZ"
+    ],
+    "enemy_1318_wdsmgc": [
+      "SARKAZ"
+    ],
+    "enemy_1320_wdrrl_2": [
+      "SARKAZ"
+    ],
+    "enemy_1321_wdarft": [
+      "REUNION"
+    ],
+    "enemy_1321_wdarft_2": [
+      "SARKAZ"
+    ],
+    "enemy_1322_wdgyht": [
+      "VICTORIA"
+    ],
+    "enemy_1325_cbgpro": [
+      "COLUMBIA"
+    ],
+    "enemy_1325_cbgpro_2": [
+      "COLUMBIA"
+    ],
+    "enemy_1327_cbrokt": [
+      "COLUMBIA"
+    ],
+    "enemy_1327_cbrokt_2": [
+      "COLUMBIA"
+    ],
+    "enemy_1328_cbjedi": [
+      "COLUMBIA"
+    ],
+    "enemy_1329_cbshld": [
+      "COLUMBIA"
+    ],
+    "enemy_1329_cbshld_2": [
+      "COLUMBIA"
+    ],
+    "enemy_1330_cbrush_2": [
+      "COLUMBIA"
+    ],
+    "enemy_1331_cbsisy_2": [
+      "COLUMBIA"
+    ],
+    "enemy_1332_cbterm_2": [
+      "COLUMBIA"
+    ],
+    "enemy_1332_cbterm_2_2": [
+      "COLUMBIA"
+    ],
+    "enemy_1336_bldbat": [
+      "REUNION"
+    ],
+    "enemy_1342_frtuna": [
+      "LATERANO"
+    ],
+    "enemy_1352_eslime": [
+      "ORIGINIUM"
+    ],
+    "enemy_1355_mrfly": [
+      "REUNION"
+    ],
+    "enemy_1355_mrfly_2": [
+      "REUNION"
+    ],
+    "enemy_1364_spnaxe_2": [
+      "SARKAZ"
+    ],
+    "enemy_1367_dseed": [
+      "REUNION"
+    ],
+    "enemy_1371_ltnflu": [
+      "LEITHANIEN"
+    ],
+    "enemy_1372_ltntpt": [
+      "LEITHANIEN"
+    ],
+    "enemy_1373_ltnhor": [
+      "LEITHANIEN"
+    ],
+    "enemy_1375_ltnclr": [
+      "LEITHANIEN"
+    ],
+    "enemy_1376_ltndru_2": [
+      "LEITHANIEN"
+    ],
+    "enemy_1377_ltnclo": [
+      "LEITHANIEN"
+    ],
+    "enemy_1381_winman": [
+      "KJERAG"
+    ],
+    "enemy_1381_winman_2": [
+      "KJERAG"
+    ],
+    "enemy_1384_winfrz": [
+      "REUNION"
+    ],
+    "enemy_1387_winshd": [
+      "KJERAG"
+    ],
+    "enemy_1388_wingnt": [
+      "KJERAG"
+    ],
+    "enemy_1389_winbab_2": [
+      "KJERAG"
+    ],
+    "enemy_1401_pogpro": [
+      "BOLIVAR"
+    ],
+    "enemy_1402_tgshd_2": [
+      "BOLIVAR"
+    ],
+    "enemy_1403_gunsho_2": [
+      "BOLIVAR"
+    ],
+    "enemy_1404_msnip": [
+      "BOLIVAR"
+    ],
+    "enemy_1407_hummbd": [
+      "BOLIVAR"
+    ],
+    "enemy_1412_mmjump": [
+      "SARKAZ"
+    ],
+    "enemy_1415_mmkabi": [
+      "REUNION"
+    ],
+    "enemy_1415_mmkabi_2": [
+      "REUNION"
+    ],
+    "enemy_1418_mmkonm": [
+      "SARKAZ"
+    ],
+    "enemy_1418_mmkonm_2": [
+      "SARKAZ"
+    ],
+    "enemy_1419_mmcike": [
+      "SARKAZ"
+    ],
+    "enemy_1422_lrsldr": [
+      "SARKAZ"
+    ],
+    "enemy_1422_lrsldr_2": [
+      "SARKAZ"
+    ],
+    "enemy_1423_lrfkkt_2": [
+      "SARKAZ"
+    ],
+    "enemy_1424_lrboom": [
+      "ORIGINIUM"
+    ],
+    "enemy_1425_lrcmra": [
+      "SARKAZ"
+    ],
+    "enemy_1425_lrcmra_2": [
+      "SARKAZ"
+    ],
+    "enemy_1427_lrnazg": [
+      "SARKAZ"
+    ],
+    "enemy_1427_lrnazg_2": [
+      "SARKAZ"
+    ],
+    "enemy_1428_lrsoul": [
+      "SARKAZ"
+    ],
+    "enemy_1428_lrsoul_a": [
+      "SARKAZ"
+    ],
+    "enemy_1429_lrwzrd": [
+      "SARKAZ"
+    ],
+    "enemy_1429_lrwzrd_2": [
+      "SARKAZ"
+    ],
+    "enemy_1430_lrrook": [
+      "SARKAZ"
+    ],
+    "enemy_1430_lrrook_2": [
+      "SARKAZ"
+    ],
+    "enemy_1431_lrmzrd_2": [
+      "SARKAZ"
+    ],
+    "enemy_1433_dsbasi": [
+      "SEA_BORN"
+    ],
+    "enemy_1433_dsbasi_2": [
+      "SEA_BORN"
+    ],
+    "enemy_1438_dspred": [
+      "SEA_BORN"
+    ],
+    "enemy_1439_dslntf": [
+      "SEA_BORN"
+    ],
+    "enemy_1439_dslntf_2": [
+      "SEA_BORN"
+    ],
+    "enemy_1500_skulsr": [
+      "REUNION"
+    ],
+    "enemy_1501_demonk": [
+      "REUNION",
+      "SARKAZ"
+    ],
+    "enemy_1502_crowns": [
+      "REUNION"
+    ],
+    "enemy_1504_cqbw": [
+      "REUNION"
+    ],
+    "enemy_1505_frstar": [
+      "REUNION"
+    ],
+    "enemy_1506_patrt": [
+      "REUNION",
+      "SARKAZ"
+    ],
+    "enemy_1509_mousek": [
+      "YAN"
+    ],
+    "enemy_1510_frstar2": [
+      "REUNION"
+    ],
+    "enemy_1511_mdrock": [
+      "SARKAZ"
+    ],
+    "enemy_1512_mcmstr": [
+      "SARGON"
+    ],
+    "enemy_1513_dekght": [
+      "KAZIMIERZ"
+    ],
+    "enemy_1513_dekght_2": [
+      "KAZIMIERZ"
+    ],
+    "enemy_1516_jakill": [
+      "COLUMBIA"
+    ],
+    "enemy_1517_xi": [
+      "YAN"
+    ],
+    "enemy_1521_dslily": [
+      "IBERIA"
+    ],
+    "enemy_1525_blkswb": [
+      "KJERAG"
+    ],
+    "enemy_1535_wlfmster": [
+      "SIRACUSA"
+    ],
+    "enemy_1539_reid": [
+      "REUNION"
+    ],
+    "enemy_2001_duckmi": [
+      "REUNION"
+    ],
+    "enemy_2001_duckmi_2": [
+      "REUNION"
+    ],
+    "enemy_2002_bearmi": [
+      "URSUS"
+    ],
+    "enemy_2002_bearmi_2": [
+      "URSUS"
+    ],
+    "enemy_2003_rockman": [
+      "ORIGINIUM"
+    ],
+    "enemy_2004_balloon": [
+      "SARKAZ"
+    ],
+    "enemy_2005_axetro": [
+      "SARKAZ"
+    ],
+    "enemy_2008_flking": [
+      "SARKAZ"
+    ],
+    "enemy_2009_csaudc": [
+      "LEITHANIEN"
+    ],
+    "enemy_2010_csdcr": [
+      "LEITHANIEN"
+    ],
+    "enemy_2014_csicer": [
+      "LEITHANIEN"
+    ],
+    "enemy_2015_csicem": [
+      "LEITHANIEN"
+    ],
+    "enemy_2016_csphtm": [
+      "LEITHANIEN"
+    ],
+    "enemy_2017_csphts": [
+      "LEITHANIEN"
+    ],
+    "enemy_2021_syfish": [
+      "SEA_BORN"
+    ],
+    "enemy_2025_syufo": [
+      "SEA_BORN"
+    ],
+    "enemy_2026_syudg": [
+      "IBERIA"
+    ],
+    "enemy_2027_syudg2": [
+      "IBERIA"
+    ],
+    "enemy_2028_syevil": [
+      "REUNION"
+    ],
+    "enemy_2029_symon": [
+      "SEA_BORN"
+    ],
+    "enemy_2034_sythef": [
+      "REUNION"
+    ],
+    "enemy_2034_sythef_2": [
+      "REUNION"
+    ],
+    "enemy_2046_smwar": [
+      "SAMI"
+    ],
+    "enemy_2048_smgrd": [
+      "SAMI"
+    ],
+    "enemy_2050_smsha": [
+      "SAMI"
+    ],
+    "enemy_2052_smgia": [
+      "SAMI"
+    ],
+    "enemy_2063_skzlch": [
+      "SARKAZ"
+    ],
+    "enemy_2064_skzwdd": [
+      "SARKAZ"
+    ],
+    "enemy_2064_skzwdd_a": [
+      "SARKAZ"
+    ],
+    "enemy_2064_skzwdd_b": [
+      "SARKAZ"
+    ],
+    "enemy_2066_skzlcp": [
+      "SARKAZ"
+    ],
+    "enemy_2067_skzcy": [
+      "SARKAZ"
+    ],
+    "enemy_2068_skzirn": [
+      "SARKAZ"
+    ],
+    "enemy_2068_skzirn_b": [
+      "SARKAZ"
+    ],
+    "enemy_2069_skzbox": [
+      "SARKAZ"
+    ],
+    "enemy_2070_skzfbx": [
+      "SARKAZ"
+    ],
+    "enemy_2071_skzdny": [
+      "SARKAZ"
+    ],
+    "enemy_2072_skdny2": [
+      "SARKAZ"
+    ],
+    "enemy_2073_skzrck": [
+      "SARKAZ"
+    ],
+    "enemy_2074_skzgly": [
+      "SARKAZ"
+    ],
+    "enemy_2075_skgly2": [
+      "SARKAZ"
+    ],
+    "enemy_2076_skzklz": [
+      "SARKAZ"
+    ],
+    "enemy_2077_skklz2": [
+      "REUNION"
+    ],
+    "enemy_2078_skzmst": [
+      "SARKAZ"
+    ],
+    "enemy_2079_skmst2": [
+      "REUNION"
+    ],
+    "enemy_2080_skzlwy": [
+      "SARKAZ"
+    ],
+    "enemy_2081_skztxs": [
+      "SARKAZ"
+    ],
+    "enemy_2082_skzdd": [
+      "SARKAZ"
+    ],
+    "enemy_2084_skzcan": [
+      "SARKAZ"
+    ],
+    "enemy_2085_skzjxd": [
+      "SARKAZ"
+    ],
+    "enemy_2085_skzjxd_2": [
+      "SARKAZ"
+    ],
+    "enemy_2089_skzjkl": [
+      "SARKAZ"
+    ],
+    "enemy_2090_skzjbc": [
+      "SARKAZ"
+    ],
+    "enemy_2091_skzgds": [
+      "SARKAZ"
+    ],
+    "enemy_2092_skzamy": [
+      "SARKAZ"
+    ],
+    "enemy_2093_skzams": [
+      "SARKAZ"
+    ],
+    "enemy_2094_skzamb": [
+      "SARKAZ"
+    ],
+    "enemy_2094_skzamb_2": [
+      "SARKAZ"
+    ],
+    "enemy_3001_upeopl": [
+      "URSUS"
+    ],
+    "enemy_3001_upeopl_a": [
+      "URSUS"
+    ],
+    "enemy_3004_speople": [
+      "SIRACUSA"
+    ],
+    "enemy_3005_lpeopl": [
+      "REUNION"
+    ],
+    "enemy_9006_actoxi": [
+      "IMAGINARY"
+    ],
+    "enemy_9007_acelem": [
+      "IMAGINARY"
+    ],
+    "enemy_9008_acbunn": [
+      "IMAGINARY"
+    ],
+    "enemy_9009_acfort": [
+      "IMAGINARY"
+    ],
+    "enemy_9010_acpupp": [
+      "IMAGINARY"
+    ],
+    "enemy_9011_acrefr": [
+      "IMAGINARY"
+    ],
+    "enemy_9012_acloon": [
+      "IMAGINARY"
+    ],
+    "enemy_9013_acstmk": [
+      "IMAGINARY"
+    ],
+    "enemy_9013_acstmk_2": [
+      "IMAGINARY"
+    ],
+    "enemy_9014_acstma": [
+      "IMAGINARY"
+    ],
+    "enemy_9015_acstmb": [
+      "IMAGINARY"
+    ],
+    "enemy_9016_acstmr": [
+      "IMAGINARY"
+    ],
+    "enemy_9017_achunt": [
+      "IMAGINARY"
+    ],
+    "enemy_9017_achunt_2": [
+      "IMAGINARY"
+    ],
+    "enemy_9018_actrpa": [
+      "IMAGINARY"
+    ],
+    "enemy_9019_actrpb": [
+      "IMAGINARY"
+    ],
+    "enemy_9020_actrpc": [
+      "IMAGINARY"
+    ],
+    "enemy_9021_acduml": [
+      "IMAGINARY"
+    ],
+    "enemy_9021_acduml_2": [
+      "IMAGINARY"
+    ],
+    "enemy_9022_acdumm": [
+      "IMAGINARY"
+    ],
+    "enemy_9023_acdums": [
+      "IMAGINARY"
+    ],
+    "enemy_9032_aclionk": [
+      "VICTORIA"
+    ],
+    "enemy_9033_acdeer": [
+      "SAMI"
+    ]
+  },
+  "proposed": {
+    "status": "adopted",
+    "adoptedAt": "2026-11-04",
+    "note": "业主 2026-11-04 裁决：剩余 194 条全部归类，本段 99 条候选（candidates/basis/confidence）已并入 map，保留作原始依据，不再作为待办。",
+    "entries": [
+      {
+        "key": "enemy_10028_vtswd",
+        "candidates": [
+          "VICTORIA"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_10029_vtshld",
+        "candidates": [
+          "VICTORIA"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_10030_vtwand",
+        "candidates": [
+          "VICTORIA"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1005_yokai_3",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "sibling",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1006_shield_3",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "sibling",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1010_demon_a",
+        "candidates": [
+          "REUNION",
+          "SARKAZ"
+        ],
+        "basis": "name",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_1012_dcross_a",
+        "candidates": [
+          "REUNION",
+          "SARKAZ"
+        ],
+        "basis": "name",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_1019_jshoot_2",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "sibling",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1027_mob",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1040_bombd",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1041_lazerd_2",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "sibling",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1069_icebrk_2",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "sibling",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1074_dbskar_2b",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "name",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1074_dbskar_2c",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "name",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1080_sotidp_2",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "sibling",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1082_soticn_2",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "sibling",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1084_sotidm",
+        "candidates": [
+          "REUNION",
+          "SARKAZ"
+        ],
+        "basis": "name",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_1085_sotiwz",
+        "candidates": [
+          "REUNION",
+          "SARKAZ"
+        ],
+        "basis": "name",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_1090_mdsnpr_2",
+        "candidates": [
+          "LEITHANIEN",
+          "SARKAZ"
+        ],
+        "basis": "tag",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_1104_lfkght_3",
+        "candidates": [
+          "KAZIMIERZ"
+        ],
+        "basis": "sibling",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1133_harchn",
+        "candidates": [
+          "BOLIVAR"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1134_diamd",
+        "candidates": [
+          "BOLIVAR"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1136_redace",
+        "candidates": [
+          "BOLIVAR"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1136_redace_2",
+        "candidates": [
+          "BOLIVAR"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1219_mtrbty",
+        "candidates": [
+          "LATERANO"
+        ],
+        "basis": "sibling",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1220_dzoms_2_a",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "sibling",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1221_dzomg_a",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "sibling",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1223_dmech",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "name",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1224_dsuply_b",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "name",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1263_durbus",
+        "candidates": [
+          "DURIN"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1263_durbus_2",
+        "candidates": [
+          "DURIN"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1269_nhfly",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1276_telex",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "tag",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1285_sgwlf",
+        "candidates": [
+          "SIRACUSA"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1287_ducrb",
+        "candidates": [
+          "DEEP_POOL"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1287_ducrb_2",
+        "candidates": [
+          "DEEP_POOL"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1291_dusrch",
+        "candidates": [
+          "DEEP_POOL"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1293_duswrd_3",
+        "candidates": [
+          "DEEP_POOL"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1302_ymtro",
+        "candidates": [
+          "YAN"
+        ],
+        "basis": "sibling",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1313_wdfmr",
+        "candidates": [
+          "VICTORIA"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1317_wdexg",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "name",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1317_wdexg_2",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "name",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1318_wdsmgc",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "name",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1321_wdarft",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "sibling",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1332_cbterm_2_2",
+        "candidates": [
+          "COLUMBIA"
+        ],
+        "basis": "sibling",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1355_mrfly",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1355_mrfly_2",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1384_winfrz",
+        "candidates": [
+          "KJERAG"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1412_mmjump",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "tag",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1418_mmkonm",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "tag",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1418_mmkonm_2",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "tag",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1428_lrsoul",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "tag",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1428_lrsoul_a",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "tag",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1429_lrwzrd",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "tag",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1429_lrwzrd_2",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "tag",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1430_lrrook_2",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "tag",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_1431_lrmzrd_2",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "tag",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_2002_bearmi",
+        "candidates": [
+          "URSUS"
+        ],
+        "basis": "name",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_2002_bearmi_2",
+        "candidates": [
+          "URSUS"
+        ],
+        "basis": "name",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_2027_syudg2",
+        "candidates": [
+          "IBERIA"
+        ],
+        "basis": "name",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_2029_symon",
+        "candidates": [
+          "SEA_BORN"
+        ],
+        "basis": "tag",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_2063_skzlch",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "name",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_2064_skzwdd",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "name",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_2064_skzwdd_a",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "tag",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_2064_skzwdd_b",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "name",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_2066_skzlcp",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "name",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_2068_skzirn_b",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "sibling",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_2072_skdny2",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "tag",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_2075_skgly2",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "tag",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_2080_skzlwy",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "tag",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_2081_skztxs",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "tag",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_2082_skzdd",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "tag",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_2089_skzjkl",
+        "candidates": [
+          "SARKAZ"
+        ],
+        "basis": "tag",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_3001_upeopl",
+        "candidates": [
+          "URSUS"
+        ],
+        "basis": "name",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_3001_upeopl_a",
+        "candidates": [
+          "URSUS"
+        ],
+        "basis": "name",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_3004_speople",
+        "candidates": [
+          "SIRACUSA"
+        ],
+        "basis": "name",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_3005_lpeopl",
+        "candidates": [
+          "SIRACUSA"
+        ],
+        "basis": "handbook",
+        "confidence": "high"
+      },
+      {
+        "key": "enemy_9006_actoxi",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_9007_acelem",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_9008_acbunn",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_9009_acfort",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_9010_acpupp",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_9011_acrefr",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_9012_acloon",
+        "candidates": [
+          "REUNION",
+          "YAN"
+        ],
+        "basis": "name",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_9013_acstmk",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_9013_acstmk_2",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_9014_acstma",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_9015_acstmb",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_9016_acstmr",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_9017_achunt",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_9017_achunt_2",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_9018_actrpa",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_9019_actrpb",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_9020_actrpc",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_9021_acduml",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_9021_acduml_2",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_9022_acdumm",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_9023_acdums",
+        "candidates": [
+          "REUNION"
+        ],
+        "basis": "handbook",
+        "confidence": "low"
+      },
+      {
+        "key": "enemy_9032_aclionk",
+        "candidates": [
+          "VICTORIA"
+        ],
+        "basis": "name",
+        "confidence": "low"
+      }
+    ]
+  }
+}

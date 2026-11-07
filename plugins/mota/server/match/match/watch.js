@@ -102,9 +102,49 @@ export class MatchWatch {
     return this.order.find((q) => ok(q.playerId))?.playerId ?? null;
   }
 
-  /** The field of the player `ps` follows among `fields` (null when that player has none this phase). */
+  /** The manual watch preference of `ps` while it still names a player in the match (never the viewer itself), else null. */
+  _watchPrefOf(ps) {
+    const pid = this.watchPref ? this.watchPref.get(ps.playerId) : null;
+    if (typeof pid !== 'string' || pid === ps.playerId) return null;
+    const t = this.players.get(pid);
+    return t && t.alive && !t.left ? pid : null;
+  }
+
+  /**
+   * The player a DEFENDER of this round attacked (业主 2026-11-05「对战的时候转到对手视图」): the attacker has no field of
+   * its own in COMBAT (combat.js builds the fields from the defenders only) and used to be pushed the field of the seat
+   * order's first player still in, which in 2V2 / 4V4 can be the OTHER defender — it looked like "never switched to my
+   * opponent". The target is the one this seat placed monsters on this round: `this.confrontTargets`
+   * (attacker playerId → target playerId), written by confront.js (enterConfront / assignConfrontTarget, filled for every
+   * attacker by finishConfrontTargets) and cleared at the round boundary (phases.js). Target choice closes at the start
+   * of the round's PREP and the freeze (finishConfront) runs before startCombat, so the table is ready at COMBAT.
+   *
+   * null (the caller keeps its old default) when: not a 攻防回合, not an attacker, the table is not this round's, the seat
+   * has no target, the target is the viewer itself, the target is out / left, or — when `fields` is given — the target has
+   * no field this phase. Only a DEFAULT choice: a manual g.watch (`watchPref`) still wins in `_watchTargetField`.
+   */
+  _confrontWatchTargetOf(ps, fields = null) {
+    if (!ps || typeof this.isRoleRound !== 'function' || this.isRoleRound() !== true) return null;
+    if (typeof this.isAttacker !== 'function' || !this.isAttacker(ps)) return null;
+    const targets = this.confrontTargets;
+    if (!targets || typeof targets.get !== 'function') return null;
+    // only this round's table counts: a stale map from an earlier round never drives the default watch
+    if (this._confrontTargetsRound !== this.round) return null;
+    const pid = targets.get(ps.playerId);
+    if (typeof pid !== 'string' || !pid || pid === ps.playerId) return null;
+    const t = this.players.get(pid);
+    if (!t || !t.alive || t.left) return null;
+    if (Array.isArray(fields) && !fields.some((f) => Array.isArray(f.players) && f.players.includes(pid))) return null;
+    return pid;
+  }
+
+  /**
+   * The field of the player `ps` follows among `fields` (null when that player has none this phase). Default choice order:
+   * a manual watch preference, then — for this round's attacker — the defender it placed monsters on, then
+   * `_watchTargetOf` (the first player still in, seat order).
+   */
   _watchTargetField(ps, fields) {
-    const pid = this._watchTargetOf(ps);
+    const pid = this._watchPrefOf(ps) || this._confrontWatchTargetOf(ps, fields) || this._watchTargetOf(ps);
     return pid ? fields.find((f) => Array.isArray(f.players) && f.players.includes(pid)) || null : null;
   }
 

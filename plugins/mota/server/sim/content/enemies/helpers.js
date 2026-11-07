@@ -326,6 +326,10 @@ export function spawnChildren(b, parent, key, n, opts = {}) {
     const c = b.spawnEnemy(key, {
       pos, route, mods, tag: opts.tag ?? null, countInTotal: opts.countInTotal, dir: opts.dir,
       ownerPlayerId: parent.ownerId ?? null, sourcePlayerId: parent.sourcePlayerId ?? null,
+      // 对抗投放归属（2026-11-06，业主报障「归属丢失」）：分裂 / 召唤出来的子怪也算投放者的 —— 不继承的话，
+      // 投放怪的子怪漏过 / 被击杀都不记到投放席位上（settle 的 confrontKills / confrontLeaks 只认 seat）。
+      // 价格不继承：子怪没有自己的 key 价时 settle 按一只 1 点计（confrontPrice 缺省 = 1）。
+      confrontSeat: Number.isInteger(parent.confrontSeat) ? parent.confrontSeat : null,
     });
     if (c) out.push(c);
   }

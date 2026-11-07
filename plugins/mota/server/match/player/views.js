@@ -8,6 +8,8 @@ import { boardOrder, pieceDir } from '../board.js';
 import { bondList, offBondCounts } from '../bondsMeta.js';
 import { bountyText, bountyCard } from '../choices.js';
 import { relicEffectApplied } from '../match/meltdown.js';
+// 攻方回合（2026-11-04 业主口径）：干员盟约整条链关闭 —— 视图出口闸门用同一个角色判据。
+import { isAttackerRound } from '../monsterBonds.js';
 
 export class PlayerViews {
   pieceView(p, rc = null) {
@@ -110,7 +112,11 @@ export class PlayerViews {
       deployCap: this.deployCap,
       deployCount: this.deployCount,
       // + the mode-off bonds it has members of (`off: true`, the strip's grey 本局禁用 discs — bondsMeta.offBondCounts)
-      bonds: bondList(this.gd, this.bondsView(), { full: true, off: offBondCounts(this.gd, this) }),
+      // 攻方回合（2026-11-04 业主口径：攻方只有怪物方盟约）：视图出口把干员盟约置空。**不动** ps.layers / ps.bonds ——
+      // 那是整局持久的（下一回合他可能变守方，invariants.js 也钉死了 ps.bonds === computeBonds(ps)）。
+      bonds: isAttackerRound(this.m, this)
+        ? []
+        : bondList(this.gd, this.bondsView(), { full: true, off: offBondCounts(this.gd, this) }),
       effects: this.effectsView(),
       nextEnemies: this.m.nextEnemiesFor(this),
       // 对抗模式守方：本回合朝我投来的怪物（私有；攻方/普通模式省略）

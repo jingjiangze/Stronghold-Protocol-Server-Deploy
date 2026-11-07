@@ -21,6 +21,17 @@ function deployPosClass(u) {
   return 'ranged';
 }
 
+/**
+ * 对抗投放（2V2 对称血量）：把一只投放怪记到它的投放席位上 —— `counts[seat]++`（只数，老形状不变）并把它的
+ * 阶位阶梯价累进 `values[seat]`（settle 按价值扣血 / 发奖）。价格来自 spawn spec 的 `confrontPrice`
+ * （match/confront.js 写入）；缺价 ⇒ 一只 1 点，与 settle.js 的 `monsterPriceOf` 取不到时回落 1 同一口径。
+ */
+function tallySeat(seat, counts, values, price) {
+  const k = String(seat);
+  counts[k] = (counts[k] || 0) + 1;
+  values[k] = (values[k] || 0) + (Number.isFinite(price) && price > 0 ? price : 1);
+}
+
 export class BattleDeploy {
   /**
    * Deploy `u` on its home tile, or on `tile` ([r, c]: a one-off landing tile — the home stays the board tile; an
@@ -213,6 +224,8 @@ export class BattleDeploy {
           const pp = this._pp(unit.ownerId);
           if (pp) pp.killedInTotal++;
         }
+        // 对抗投放：这只怪是某位攻方放过来的 —— 它的死记在那位攻方头上（settle 据此扣攻方队伍的共享池）
+        if (unit.confrontSeat != null) tallySeat(unit.confrontSeat, this.confrontKills, this.confrontKillValue, unit.confrontPrice);
         if (killer) killer.stats.kills++;
         if (unit.bounty && unit.bounty.coins > 0) this.addCoins(this._bountyPayee(unit, killer), unit.bounty.coins);
       }
@@ -339,9 +352,14 @@ export class BattleDeploy {
       // born while a 联防 field ran (spawns.js): the leaker never sent it in, so it costs nobody LP and raises no ×N —
       // unite.js uniteSurvivors / spec.js uniteLeft filter it; every other reading keeps counting it as usual
       if (e.uniteRuntime) entry.uniteRuntime = true;
+      // 对抗投放：这条漏怪是某位攻方放过来的 ⇒ settle 把它从「官方漏怪」那笔里排除（否则 counted 与 confrontLeaks
+      // 各扣一次），改由投放怪那一笔按阶位阶梯价扣守方
+      if (e.confrontSeat != null) entry.confrontSeat = e.confrontSeat;
       pp.leaked.push(entry);
       if (e.counted || e.isBoss) pp.perfect = false;
     }
+    // 对抗投放：投放怪没被杀死而是漏过去了 —— 记在投放者席位上（settle 按阶梯价扣守方队伍的共享池）
+    if (e.confrontSeat != null) tallySeat(e.confrontSeat, this.confrontLeaks, this.confrontLeakValue, e.confrontPrice);
     if (e.counted) this.leakedCount++;
     // of the stage's own list, so the capsule's numerator does not move for it. On a 联防 field it is no LP charge either:
     // such a leak carries `uniteRuntime` (spawns.js), and the 联防's billing reads that flag instead of this counter.
