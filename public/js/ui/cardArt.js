@@ -96,10 +96,12 @@ export function illustSources(m, id, opts) {
       if (src) list.push({ id: skinId, name: str(sk.name) || skinId, src });
     }
   }
-  // 精二优先，没有再退回精一那张；两代都没有（极少数只有外观的干员）才退到外观自己的立绘
-  const base = str(rec.portraitE2) || str(rec.portrait) || (list[0] ? list[0].src : null);
+  // 精二优先，没有再退回精一那张；两代都没有（极少数只有外观的干员）才退到外观自己的立绘。
+  // 2026-11-07：`illust` / `illustE2`（高分辨率插图）优先于 portrait —— 有就用好的，没有退回 portrait。
+  // 字段约定：illust = E1、illustE2 = E2（与 assets.json 现有 4 条一致）。
+  const base = str(rec.illustE2) || str(rec.portraitE2) || str(rec.illust) || str(rec.portrait) || (list[0] ? list[0].src : null);
   const e2 = base;
-  const e1 = str(rec.portrait) || base;
+  const e1 = str(rec.illust) || str(rec.portrait) || base;
   const wanted = opts && str(opts.skin) ? String(opts.skin) : null;
   const wornRec = wanted ? get(all, wanted) : null;
   const worn = isObj(wornRec) && (wornRec.charId == null || wornRec.charId === key)
