@@ -11,6 +11,7 @@
 
 import { createStore, loadPref, savePref } from '../store.js';
 import { ownerSkin } from './skins.js';
+import { chessPortraitUrl } from './assetUrls.js'; // seatPortrait（本插件独有）用它
 
 /** 名片干员: the player's own pick (a localStorage pref, sent as room.card). */
 export const CARD_PREF = 'room.card';
